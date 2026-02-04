@@ -91,13 +91,17 @@
         <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="9.0.9" />
     </ItemGroup>
 
-    <!-- Exclude Server-Side SpawnSystem folder from build (for ServUO server only) -->
+    <!-- Exclude Server-Side SpawnSystem folder from compilation but include for distribution -->
     <ItemGroup>
         <Compile Remove="SpawnSystem\**" />
         <EmbeddedResource Remove="SpawnSystem\**" />
         <MauiCss Remove="SpawnSystem\**" />
         <MauiXaml Remove="SpawnSystem\**" />
-        <None Remove="SpawnSystem\**" />
+    </ItemGroup>
+
+    <!-- Include SpawnSystem folder in published output for export functionality -->
+    <ItemGroup>
+      <None Include="SpawnSystem\**\*.*" CopyToPublishDirectory="PreserveNewest" />
     </ItemGroup>
 
     <ItemGroup>

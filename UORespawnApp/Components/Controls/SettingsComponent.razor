@@ -764,20 +764,48 @@ private bool exportSuccess = false;
         
         try
         {
-            Console.WriteLine("Starting server scripts export...");
+            Console.WriteLine("? Starting server scripts export...");
             
-            // Get SpawnSystem folder path
-            var projectRoot = AppDomain.CurrentDomain.BaseDirectory;
-            var spawnSystemPath = Path.Combine(projectRoot, "..", "..", "..", "..", "SpawnSystem");
-            spawnSystemPath = Path.GetFullPath(spawnSystemPath);
+            // Get SpawnSystem folder path - try multiple locations
+            string? spawnSystemPath = null;
+            var baseDir = AppDomain.CurrentDomain.BaseDirectory;
             
-            Console.WriteLine($"SpawnSystem path: {spawnSystemPath}");
+            Console.WriteLine($"?? Base directory: {baseDir}");
             
-            if (!Directory.Exists(spawnSystemPath))
+            // Try relative paths from base directory
+            var possiblePaths = new[]
             {
-                exportMessage = "Error: SpawnSystem folder not found in project. Please ensure the folder exists.";
+                Path.Combine(baseDir, "SpawnSystem"),                                    // Published location
+                Path.Combine(baseDir, "..", "SpawnSystem"),                              // Alternative 1
+                Path.Combine(baseDir, "..", "..", "SpawnSystem"),                        // Alternative 2
+                Path.Combine(baseDir, "..", "..", "..", "..", "SpawnSystem"),           // Development
+                Path.Combine(baseDir, "..", "..", "..", "..", "..", "SpawnSystem")      // Deep development
+            };
+            
+            foreach (var testPath in possiblePaths)
+            {
+                var fullPath = Path.GetFullPath(testPath);
+                Console.WriteLine($"?? Testing: {fullPath}");
+                
+                if (Directory.Exists(fullPath))
+                {
+                    spawnSystemPath = fullPath;
+                    Console.WriteLine($"? Found SpawnSystem at: {spawnSystemPath}");
+                    break;
+                }
+            }
+            
+            if (string.IsNullOrEmpty(spawnSystemPath))
+            {
+                exportMessage = "? Error: SpawnSystem folder not found.\n\n" +
+                               "The SpawnSystem folder should be in the application directory.\n" +
+                               "Please download the source code from GitHub to access server scripts.";
                 exportSuccess = false;
-                Console.WriteLine($"Directory not found: {spawnSystemPath}");
+                Console.WriteLine($"? SpawnSystem not found. Searched paths:");
+                foreach (var path in possiblePaths)
+                {
+                    Console.WriteLine($"   - {Path.GetFullPath(path)}");
+                }
                 return;
             }
             
@@ -790,14 +818,14 @@ private bool exportSuccess = false;
                 File.Delete(tempPath);
             }
             
-            Console.WriteLine($"Creating ZIP at: {tempPath}");
+            Console.WriteLine($"?? Creating ZIP at: {tempPath}");
             
             // Create ZIP file
             System.IO.Compression.ZipFile.CreateFromDirectory(spawnSystemPath, tempPath, 
                 System.IO.Compression.CompressionLevel.Optimal, false);
             
             var zipInfo = new FileInfo(tempPath);
-            Console.WriteLine($"ZIP created successfully ({zipInfo.Length / 1024:N0} KB)");
+            Console.WriteLine($"? ZIP created successfully ({zipInfo.Length / 1024:N0} KB)");
             
             // Copy to Downloads folder or use Share
 #if WINDOWS
@@ -841,16 +869,16 @@ private bool exportSuccess = false;
                 File = new ShareFile(tempPath)
             });
             
-            exportMessage = "Server scripts ready to share!";
+            exportMessage = "? Server scripts ready to share!";
             exportSuccess = true;
-            Console.WriteLine("Share request sent");
+            Console.WriteLine("? Share request sent");
 #endif
         }
         catch (Exception ex)
         {
-            exportMessage = $"Error exporting server scripts: {ex.Message}";
+            exportMessage = $"? Error exporting server scripts: {ex.Message}\n\nStack Trace:\n{ex.StackTrace}";
             exportSuccess = false;
-            Console.WriteLine($"Export error: {ex.Message}");
+            Console.WriteLine($"? Export error: {ex.Message}");
             Console.WriteLine($"Stack trace: {ex.StackTrace}");
         }
         finally
