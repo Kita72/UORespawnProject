@@ -1,7 +1,7 @@
 ﻿# UORespawn Editor
 
 <p align="center">
-  <img src="UORespawnApp/Resources/Splash/splash.svg" alt="UORespawn Logo" width="200"/>
+  <img src="UORespawnApp/Resources/AppIcon/appicon.svg" alt="UORespawn Logo" width="200"/>
 </p>
 
 <p align="center">
