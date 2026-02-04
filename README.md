@@ -149,7 +149,7 @@ Add these predefined NPCs from the bestiary:
 
 ---
 
-## ??? Building from Source
+## ?? Building from Source
 
 ### Prerequisites
 
@@ -221,9 +221,9 @@ UORespawn/
 
 ### Need Help?
 
-- **Wilson (Creator):** [www.servuo.dev/members/wilson.12169](https://www.servuo.dev/members/wilson.12169)
+- **Wilson (Creator):** [ServUO Profile](https://www.servuo.com/members/wilson.12169/)
 - **ServUO Community:** [www.servuo.com](https://www.servuo.com)
-- **Issues:** [GitHub Issues](https://github.com/yourusername/UORespawn/issues)
+- **Issues:** [GitHub Issues](https://github.com/Kita72/UORespawnProject/issues)
 
 ### Contributing
 
@@ -248,19 +248,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - ServUO team for the amazing server platform
 - Ultima Online community for continued support
 - All contributors and testers
-
----
-
-## ?? Screenshots
-
-### Map Spawn Editor
-![Map Editor](docs/screenshots/map-editor.png)
-
-### World Spawn Configuration
-![World Spawn](docs/screenshots/world-spawn.png)
-
-### Settings Panel
-![Settings](docs/screenshots/settings.png)
 
 ---
 
