@@ -1,0 +1,103 @@
+﻿@page "/"
+
+@inject ViewService ViewService
+
+@implements IDisposable
+
+<PageTitle>UORespawn Editor</PageTitle>
+
+@if (ViewService.CurrentView == "home")
+{
+    <div style="position: fixed; top: 0; left: 250px; right: 0; bottom: 0; background-image: url('splash.png'); background-size: cover; background-position: center; background-repeat: no-repeat; z-index: 0;">
+    </div>
+}
+else if (ViewService.CurrentView == "mapview")
+{
+    <MapComponent @key="ViewService.CurrentMap.ToString()" />
+}
+else if (ViewService.CurrentView == "weather")
+{
+    <WeatherComponent />
+}
+else if (ViewService.CurrentView == "worldspawn")
+{
+    <WorldSpawnComponent />
+}
+else if (ViewService.CurrentView == "staticspawn")
+{
+    <StaticSpawnComponent />
+}
+else if (ViewService.CurrentView == "settings")
+{
+    <SettingsComponent />
+}
+else if (ViewService.CurrentView == "instructions")
+{
+    <InstructionsComponent />
+}
+
+@code {
+    protected override void OnInitialized()
+    {
+        ViewService.OnViewChanged += StateHasChanged;
+        ViewService.OnMapChanged += StateHasChanged;
+        
+        // Initialize session and load data
+        InitializeApp();
+        
+        // Default to home view on startup
+        if (string.IsNullOrEmpty(ViewService.CurrentView))
+        {
+            ViewService.SetView("home");
+        }
+    }
+    
+    private void InitializeApp()
+    {
+        try
+        {
+            // Start session
+            Utility.StartSession(new Session());
+            
+            // Initialize spawn dictionary for all maps
+            Utility.InitializeSpawnDictionary();
+            
+            // Load spawn data from CSV if it exists
+            Utility.LoadSpawnData();
+            
+            // Load XML Spawner points (default spawner system locations)
+            XMLSpawnUtility.LoadSpawnerList();
+            
+            // Load bestiary list (needed for spawn modals)
+            _ = LoadBestiaryAsync();
+            
+            Console.WriteLine($"App initialized - Version {Utility.Version}");
+            
+            var totalSpawns = Utility.Spawns.Values.Sum(list => list.Count);
+            Console.WriteLine($"Loaded {totalSpawns} total spawn boxes across all maps");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error initializing app: {ex.Message}");
+        }
+    }
+    
+    private async Task LoadBestiaryAsync()
+    {
+        try
+        {
+            await WorldSpawnUtility.LoadSpawnList();
+            Console.WriteLine($"Bestiary loaded: {WorldSpawnUtility.SpawnList?.Count ?? 0} creatures");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading bestiary: {ex.Message}");
+        }
+    }
+
+    public void Dispose()
+    {
+        ViewService.OnViewChanged -= StateHasChanged;
+        ViewService.OnMapChanged -= StateHasChanged;
+    }
+}

@@ -1,0 +1,204 @@
+@* Reusable modal for adding creatures to spawn categories (Common/Uncommon/Rare) *@
+
+<div class="modal fade @(IsVisible ? "show d-block" : "")" tabindex="-1" style="@(IsVisible ? "background-color: rgba(0,0,0,0.5);" : "")">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <span class="badge @GetCategoryBadgeClass()">@CategoryName</span> @SpawnTypeName
+                </h5>
+                <button type="button" class="btn-close" @onclick="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Search and Add Section -->
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <strong>Add from @SourceListName</strong>
+                    </div>
+                    <div class="card-body">
+                        <div class="input-group mb-3">
+                            <input type="text" 
+                                   class="form-control" 
+                                   placeholder="Search @SourceListName.ToLower()..." 
+                                   @bind="searchQuery" 
+                                   @bind:event="oninput" />
+                            <button class="btn btn-outline-secondary" @onclick="ClearSearch">
+                                <span class="bi bi-x-lg"></span>
+                            </button>
+                        </div>
+                        
+                        <!-- Available List (just like Settings) -->
+                        <div class="available-list">
+                            @if (GetFilteredList().Any())
+                            {
+                                @foreach (var entry in GetFilteredList())
+                                {
+                                    <div class="available-item @(CurrentSpawns.Contains(entry) ? "already-added" : "")" 
+                                         @onclick="() => SelectEntry(entry)">
+                                        <span class="entry-name">@entry</span>
+                                        @if (CurrentSpawns.Contains(entry))
+                                        {
+                                            <span class="badge bg-success">
+                                                <span class="bi bi-check"></span> Added
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <button class="btn btn-sm btn-success" @onclick:stopPropagation="true">
+                                                <span class="bi bi-plus"></span>
+                                            </button>
+                                        }
+                                    </div>
+                                }
+                            }
+                            else if (!string.IsNullOrEmpty(searchQuery))
+                            {
+                                <div class="alert alert-info mb-0">
+                                    No @SourceListName.ToLower() found matching "@searchQuery"
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="alert alert-secondary mb-0">
+                                    Start typing to search @SourceListName.ToLower()...
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Current Spawns List -->
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <strong>Selected @CategoryName @SpawnTypeName (@CurrentSpawns.Count)</strong>
+                        @if (CurrentSpawns.Count > 0)
+                        {
+                            <button class="btn btn-sm btn-outline-danger" @onclick="ClearAll">
+                                <span class="bi bi-trash"></span> Clear All
+                            </button>
+                        }
+                    </div>
+                    <div class="card-body p-0">
+                        @if (CurrentSpawns.Count > 0)
+                        {
+                            <div class="list-group list-group-flush" style="max-height: 300px; overflow-y: auto;">
+                                @foreach (var spawn in CurrentSpawns)
+                                {
+                                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                                        <span>@spawn</span>
+                                        <button class="btn btn-sm btn-danger" @onclick="() => RemoveEntry(spawn)">
+                                            <span class="bi bi-trash"></span>
+                                        </button>
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="alert alert-secondary m-3 mb-0">
+                                No @CategoryName.ToLower() @SpawnTypeName.ToLower() selected. Click items above to add them.
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" @onclick="Close">Close</button>
+                <button type="button" class="btn btn-primary" @onclick="SaveAndClose">
+                    <span class="bi bi-check-lg"></span> Done (@CurrentSpawns.Count)
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public string CategoryName { get; set; } = "Common";
+    [Parameter] public string SpawnTypeName { get; set; } = "Spawns";
+    [Parameter] public string SourceListName { get; set; } = "Bestiary";
+    [Parameter] public List<string> CurrentSpawns { get; set; } = new();
+    [Parameter] public List<string> SourceList { get; set; } = new();
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback OnSave { get; set; }
+    
+    private string searchQuery = "";
+    
+    private List<string> GetFilteredList()
+    {
+        if (SourceList == null || SourceList.Count == 0)
+        {
+            return new List<string>();
+        }
+        
+        if (string.IsNullOrEmpty(searchQuery))
+        {
+            return SourceList;
+        }
+        
+        // Case-insensitive search - EXACTLY like Settings page
+        return SourceList
+            .Where(s => s.Contains(searchQuery, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+    }
+    
+    private string GetCategoryBadgeClass()
+    {
+        return CategoryName.ToLower() switch
+        {
+            "common" => "bg-success",
+            "uncommon" => "bg-warning",
+            "rare" => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
+    
+    private void ClearSearch()
+    {
+        searchQuery = "";
+        StateHasChanged();
+    }
+    
+    private void SelectEntry(string entry)
+    {
+        // Don't add if already in list
+        if (CurrentSpawns.Contains(entry))
+        {
+            return;
+        }
+        
+        CurrentSpawns.Add(entry);
+        Console.WriteLine($"Added {entry} to {CategoryName} {SpawnTypeName}");
+        StateHasChanged();
+    }
+    
+    private void RemoveEntry(string entry)
+    {
+        CurrentSpawns.Remove(entry);
+        Console.WriteLine($"Removed {entry} from {CategoryName} {SpawnTypeName}");
+        StateHasChanged();
+    }
+    
+    private void ClearAll()
+    {
+        CurrentSpawns.Clear();
+        Console.WriteLine($"Cleared all {CategoryName} {SpawnTypeName}");
+        StateHasChanged();
+    }
+    
+    private async Task Close()
+    {
+        IsVisible = false;
+        searchQuery = "";
+        await OnClose.InvokeAsync();
+    }
+    
+    private async Task SaveAndClose()
+    {
+        await OnSave.InvokeAsync();
+        await Close();
+    }
+}
+
+
+

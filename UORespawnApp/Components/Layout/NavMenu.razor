@@ -1,0 +1,124 @@
+@inject ViewService ViewService
+@inject IJSRuntime JS
+
+<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid" style="display: flex; justify-content: center; align-items: center;">
+        <a class="navbar-brand" href="" style="margin: 0;">
+            <img src="logo.png" alt="UORespawn" style="height: 80px; width: auto; display: block;" />
+        </a>
+    </div>
+</div>
+
+<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+
+<div class="nav-scrollable" @onclick="ToggleMenu">
+    <nav class="flex-column">
+        <div class="nav-item px-3">
+            <button class="nav-link btn btn-link @GetActiveClass("home")" @onclick="ShowHome">
+                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
+            </button>
+        </div>
+        <div class="nav-item px-3">
+            <button class="nav-link btn btn-link @GetActiveClass("settings")" @onclick="ShowSettings">
+                <span class="bi bi-gear-fill-nav-menu" aria-hidden="true"></span> Settings
+            </button>
+        </div>
+        <div class="nav-item px-3">
+            <button class="nav-link btn btn-link @GetActiveClass("instructions")" @onclick="ShowInstructions">
+                <span class="bi bi-book-fill-nav-menu" aria-hidden="true"></span> Instructions
+            </button>
+        </div>
+        
+        <hr style="border-color: rgba(255,255,255,0.2); margin: 10px 15px;" />
+        
+        <div class="nav-item px-3 mb-2">
+            <label class="map-label small mb-1">Current Map:</label>
+            <select class="form-select form-select-sm" @onchange="OnMapChanged">
+                <option value="0" selected="@(ViewService.CurrentMap == GameMap.Map0)">Felucca</option>
+                <option value="1" selected="@(ViewService.CurrentMap == GameMap.Map1)">Trammel</option>
+                <option value="2" selected="@(ViewService.CurrentMap == GameMap.Map2)">Ilshenar</option>
+                <option value="3" selected="@(ViewService.CurrentMap == GameMap.Map3)">Malas</option>
+                <option value="4" selected="@(ViewService.CurrentMap == GameMap.Map4)">Tokuno</option>
+                <option value="5" selected="@(ViewService.CurrentMap == GameMap.Map5)">Ter Mur</option>
+            </select>
+        </div>
+        
+        <div class="nav-item px-3">
+            <button class="nav-link btn btn-link @GetActiveClass("mapview")" @onclick="ShowMapView">
+                <span class="bi bi-map-fill-nav-menu" aria-hidden="true"></span> Map Spawn
+            </button>
+        </div>
+        <div class="nav-item px-3">
+            <button class="nav-link btn btn-link @GetActiveClass("weather")" @onclick="ShowWeather">
+                <span class="bi bi-cloud-sun-fill-nav-menu" aria-hidden="true"></span> Weather Spawn
+            </button>
+        </div>
+        <div class="nav-item px-3">
+            <button class="nav-link btn btn-link @GetActiveClass("worldspawn")" @onclick="ShowWorldSpawn">
+                <span class="bi bi-globe-nav-menu" aria-hidden="true"></span> World Spawn
+            </button>
+        </div>
+        <div class="nav-item px-3">
+            <button class="nav-link btn btn-link @GetActiveClass("staticspawn")" @onclick="ShowStaticSpawn">
+                <span class="bi bi-geo-alt-fill-nav-menu" aria-hidden="true"></span> Static Spawn
+            </button>
+        </div>
+        
+        <hr style="border-color: rgba(255,255,255,0.2); margin: 10px 15px;" />
+        
+        <div class="nav-item px-3">
+            <button class="nav-link btn btn-link theme-toggle" @onclick="ToggleTheme">
+                <span class="bi @themeIcon" aria-hidden="true"></span> @themeText
+            </button>
+        </div>
+    </nav>
+</div>
+
+@code {
+    private bool isDarkMode = true;
+    private string themeIcon => isDarkMode ? "bi-sun-fill-nav-menu" : "bi-moon-fill-nav-menu";
+    private string themeText => isDarkMode ? "Light Mode" : "Dark Mode";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("eval", "document.body.classList.add('dark-theme')");
+        }
+    }
+
+    private async Task ToggleTheme()
+    {
+        isDarkMode = !isDarkMode;
+        if (isDarkMode)
+        {
+            await JS.InvokeVoidAsync("eval", "document.body.classList.add('dark-theme'); document.body.classList.remove('light-theme');");
+        }
+        else
+        {
+            await JS.InvokeVoidAsync("eval", "document.body.classList.add('light-theme'); document.body.classList.remove('dark-theme');");
+        }
+    }
+
+    private void ToggleMenu()
+    {
+    }
+
+    private void OnMapChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int mapIndex))
+        {
+            ViewService.SetMap((GameMap)mapIndex);
+        }
+    }
+
+    private void ShowHome() => ViewService.SetView("home");
+    private void ShowMapView() => ViewService.SetView("mapview");
+    private void ShowWeather() => ViewService.SetView("weather");
+    private void ShowWorldSpawn() => ViewService.SetView("worldspawn");
+    private void ShowStaticSpawn() => ViewService.SetView("staticspawn");
+    private void ShowSettings() => ViewService.SetView("settings");
+    private void ShowInstructions() => ViewService.SetView("instructions");
+
+    private string GetActiveClass(string view) => ViewService.CurrentView == view ? "active" : "";
+}

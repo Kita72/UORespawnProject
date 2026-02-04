@@ -1,0 +1,1008 @@
+@using Microsoft.JSInterop
+@using Microsoft.Maui.Graphics
+@using System.Text.Json
+@inject IJSRuntime JS
+@inject ViewService ViewService
+@implements IDisposable
+
+<div class="container-fluid p-3">
+    <div class="row">
+        <div class="col-lg-9">
+            <div class="alert alert-dark mb-2" style="width:800px;">
+                <strong>@GetMapName(ViewService.CurrentMap)</strong> | Size: @imageDim | Mouse: (@mouseWorldX, @mouseWorldY)
+            </div>
+            <div style="position:relative; overflow:hidden; width:800px; height:600px; background:#1a1a1a; border:1px solid #333;">
+                <img id="mapImg" src="@imageSrc" 
+                     style="position:absolute; left:0; top:0; image-rendering:pixelated; transform-origin: top left; transform: scale(2.0);"
+                     @onload="OnImageLoaded" />
+                <canvas id="mapCanvas" width="800" height="600"
+                        style="position:absolute; top:0; left:0; cursor:crosshair;"
+                        @onmousedown="OnMouseDown"
+                        @onmousemove="OnMouseMove"
+                        @onmouseup="OnMouseUp"
+                        @onmouseleave="OnMouseLeave"
+                        @oncontextmenu:preventDefault />
+            </div>
+            <div class="card mt-2 shadow-sm" style="width:800px;">
+                <div class="card-body py-2">
+                    <small class="text-muted">
+                        <strong>Controls:</strong> Left-Drag = Draw Spawn Box | Right-Drag = Pan Map
+                    </small>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3" style="padding-left:15px;">
+            <!-- Mini Map - Collapsible -->
+            <div class="card shadow-sm mb-3 map-card">
+                <div class="card-header text-center d-flex justify-content-between align-items-center">
+                    <button class="btn btn-sm btn-outline-secondary p-1" @onclick="ResetView" title="Reset Position" style="width: 32px; height: 32px;">
+                        <span class="bi bi-arrow-counterclockwise"></span>
+                    </button>
+                    <strong>Mini Map</strong>
+                    <button class="btn btn-sm btn-outline-secondary p-1" @onclick="ToggleMiniMap" title="@(showMiniMap ? "Collapse" : "Expand") Mini Map" style="width: 32px; height: 32px;">
+                        <span class="bi @(showMiniMap ? "bi-chevron-up" : "bi-chevron-down")"></span>
+                    </button>
+                </div>
+                @if (showMiniMap)
+                {
+                    <div class="card-body p-2 minimap-body">
+                        <canvas id="miniMapCanvas" width="250" height="188"
+                                style="cursor:pointer; border:1px solid #333; display:block; image-rendering:pixelated; width: 100%; height: auto;"
+                                @onclick="OnMiniMapClick" />
+                        <div class="d-flex gap-2 mt-2">
+                            <button class="btn btn-sm w-50 @(showXMLSpawners ? "btn-success" : "btn-danger")" @onclick="ToggleXMLSpawners" title="Toggle XML Spawners">
+                                <span class="bi bi-gear-fill"></span> XML
+                            </button>
+                            <button class="btn btn-sm w-50 @(showServerSpawns ? "btn-success" : "btn-danger")" @onclick="ToggleServerSpawns" title="Toggle Server Spawns">
+                                <span class="bi bi-bullseye"></span> Spawns
+                            </button>
+                        </div>
+                    </div>
+                }
+            </div>
+            
+            <!-- Map Spawn List - Flex to fill remaining space -->
+            <div class="card shadow-sm map-card spawn-list-container" style="@GetSpawnListStyle()">
+                <div class="card-header text-center">
+                    <strong>Map Spawn (@GetSpawnCount())</strong>
+                </div>
+                <div class="card-body p-2 spawn-list-body">
+                    @if (GetSpawnList().Any())
+                    {
+                        @foreach (var spawn in GetSpawnList())
+                        {
+                            <div class="spawn-item @(selected == spawn ? "selected" : "")" @onclick="() => SelectSpawn(spawn)">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <strong>ID: @spawn.Position</strong>
+                                            <span class="badge @GetPriorityBadgeClass(spawn.Priority)">P@(spawn.Priority)</span>
+                                            @if (!string.IsNullOrEmpty(spawn.TimedSpawn) && spawn.TimedSpawn != "None")
+                                            {
+                                                <span class="badge bg-info">@spawn.TimedSpawn</span>
+                                            }
+                                        </div>
+                                        @if (selected == spawn)
+                                        {
+                                            <small class="d-block text-muted mt-1">
+                                                X:@spawn.SpawnBox.X Y:@spawn.SpawnBox.Y (@spawn.SpawnBox.Width x @spawn.SpawnBox.Height)
+                                            </small>
+                                        }
+                                    </div>
+                                    <button class="btn btn-danger btn-sm" @onclick="() => DeleteSpawn(spawn)" @onclick:stopPropagation="true">
+                                        <span class="bi bi-trash"></span>
+                                    </button>
+                                </div>
+                                @if (selected == spawn)
+                                {
+                                    <div class="spawn-controls">
+                                        <div class="btn-group w-100 mb-2" role="group">
+                                            <button class="btn btn-sm btn-outline-success" @onclick="() => OpenCategoryModal(spawn, Frequency.Common)" @onclick:stopPropagation="true">
+                                                <span class="bi bi-plus"></span> Common (@spawn.CommonSpawnList.Count)
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-warning" @onclick="() => OpenCategoryModal(spawn, Frequency.UnCommon)" @onclick:stopPropagation="true">
+                                                <span class="bi bi-plus"></span> Uncommon (@spawn.UnCommonSpawnList.Count)
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger" @onclick="() => OpenCategoryModal(spawn, Frequency.Rare)" @onclick:stopPropagation="true">
+                                                <span class="bi bi-plus"></span> Rare (@spawn.RareSpawnList.Count)
+                                            </button>
+                                        </div>
+                                        <div class="d-flex gap-2">
+                                            <select class="form-select form-select-sm" @bind="spawn.TimedSpawn" @bind:after="SaveAfterTimedSpawnChange" @onclick:stopPropagation="true">
+                                                <option value="None">None</option>
+                                                <option value="Witching hour">Witching hour</option>
+                                                <option value="Middle of night">Middle of night</option>
+                                                <option value="Early morning">Early morning</option>
+                                                <option value="Late morning">Late morning</option>
+                                                <option value="Noon">Noon</option>
+                                                <option value="Afternoon">Afternoon</option>
+                                                <option value="Early evening">Early evening</option>
+                                                <option value="Late at night">Late at night</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="alert alert-secondary mb-0">
+                            <small>No spawn boxes created. Draw a box on the map to create one.</small>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Spawn Category Modal -->
+<SpawnCategoryModal IsVisible="@showCategoryModal"
+                    CategoryName="@currentCategory"
+                    SpawnTypeName="Spawns"
+                    SourceListName="Bestiary"
+                    CurrentSpawns="@currentCategorySpawns"
+                    SourceList="@(WorldSpawnUtility.SpawnList ?? new List<string>())"
+                    OnClose="@CloseCategoryModal"
+                    OnSave="@SaveCategoryModal" />
+
+@code {
+private string imageSrc = "";
+private string imageDim = "Loading...";
+private double panX = 0;
+private double panY = 0;
+private int mouseWorldX = 0;
+private int mouseWorldY = 0;
+private SpawnEntity? selected = null;
+    
+private bool isDrawing = false;
+private bool isPanning = false;
+    
+private int imgWidth = 0;
+private int imgHeight = 0;
+    
+// Category modal state
+private bool showCategoryModal = false;
+private string currentCategory = "Common";
+private List<string> currentCategorySpawns = new();
+private SpawnEntity? editingSpawn = null;
+private Frequency editingFrequency = Frequency.Common;
+
+// XML Spawner toggle
+private bool showXMLSpawners = false;
+
+// Server Spawn toggle
+private bool showServerSpawns = false;
+
+// Mini map collapse
+private bool showMiniMap = true;
+    
+    protected override void OnInitialized()
+    {
+        imageSrc = Utility.GetMapImagePath();
+        ViewService.OnMapChanged += HandleMapChanged;
+    }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Install auto-adjustment script
+            await JS.InvokeVoidAsync("eval", @"
+                window.adjustSpawnListHeight = function() {
+                    const spawnListContainer = document.querySelector('.spawn-list-container');
+                    if (!spawnListContainer) return;
+                    
+                    const hasVerticalScrollbar = document.documentElement.scrollHeight > window.innerHeight;
+                    
+                    if (hasVerticalScrollbar) {
+                        const currentMaxHeight = parseInt(getComputedStyle(spawnListContainer).maxHeight);
+                        if (currentMaxHeight > 150) {
+                            const newMaxHeight = Math.max(150, currentMaxHeight - 20);
+                            spawnListContainer.style.maxHeight = newMaxHeight + 'px';
+                            console.log(`?? Reduced spawn list from ${currentMaxHeight}px to ${newMaxHeight}px to prevent page scroll`);
+                            
+                            // Check again recursively until scroll is gone
+                            setTimeout(() => window.adjustSpawnListHeight(), 100);
+                        }
+                    } else {
+                        console.log('? Spawn list height is optimal - no page scroll');
+                    }
+                };
+                
+                // Run initial check after page settles
+                setTimeout(() => window.adjustSpawnListHeight(), 500);
+                
+                // Re-check on window resize
+                window.addEventListener('resize', () => {
+                    setTimeout(() => window.adjustSpawnListHeight(), 100);
+                });
+            ");
+        }
+        
+        // Trigger height adjustment after any render
+        await JS.InvokeVoidAsync("eval", "setTimeout(() => window.adjustSpawnListHeight && window.adjustSpawnListHeight(), 200);");
+    }
+    
+    private void HandleMapChanged()
+    {
+        imageSrc = Utility.GetMapImagePath();
+        selected = null;
+        panX = 0;
+        panY = 0;
+        mouseWorldX = 0;
+        mouseWorldY = 0;
+        imgWidth = 0;
+        imgHeight = 0;
+        imageDim = "Loading...";
+        StateHasChanged();
+    }
+    
+    private async Task OnImageLoaded()
+    {
+        await Task.Delay(100);
+        try
+        {
+            var result = await JS.InvokeAsync<string>("eval", @"
+                (function() {
+                    const img = document.getElementById('mapImg');
+                    if (img && img.naturalWidth > 0) {
+                        return img.naturalWidth + ',' + img.naturalHeight;
+                    }
+                    return '';
+                })()
+            ");
+            
+            if (!string.IsNullOrEmpty(result))
+            {
+                var parts = result.Split(',');
+                if (int.TryParse(parts[0], out int w) && int.TryParse(parts[1], out int h))
+                {
+                    imgWidth = w;
+                    imgHeight = h;
+                    imageDim = $"{w}x{h}";
+                    panX = 0;
+                    panY = 0;
+                    
+                    await JS.InvokeVoidAsync("eval", $"window.mapModule.init({w}, {h})");
+                    await SyncSettingsToJavaScript();
+                    await InitializeMiniMap();
+                    await Redraw();
+                    StateHasChanged();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Image load error: {ex.Message}");
+            imageDim = "Error loading image";
+        }
+    }
+    
+    private async Task InitializeMiniMap()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("eval", $@"
+                (function() {{
+                    const miniCanvas = document.getElementById('miniMapCanvas');
+                    const mainImg = document.getElementById('mapImg');
+                    if (!miniCanvas || !mainImg) return;
+                    
+                    const ctx = miniCanvas.getContext('2d');
+                    const canvasWidth = 250;
+                    const canvasHeight = 188;
+                    
+                    // Calculate aspect ratios
+                    const imageAspect = {imgWidth} / {imgHeight};
+                    const canvasAspect = canvasWidth / canvasHeight;
+                    
+                    let drawWidth, drawHeight, offsetX, offsetY;
+                    
+                    // Fit image to canvas while maintaining aspect ratio
+                    if (imageAspect > canvasAspect) {{
+                        // Image is wider - fit to width, letterbox top/bottom
+                        drawWidth = canvasWidth;
+                        drawHeight = canvasWidth / imageAspect;
+                        offsetX = 0;
+                        offsetY = (canvasHeight - drawHeight) / 2;
+                    }} else {{
+                        // Image is taller - fit to height, pillarbox left/right
+                        drawWidth = canvasHeight * imageAspect;
+                        drawHeight = canvasHeight;
+                        offsetX = (canvasWidth - drawWidth) / 2;
+                        offsetY = 0;
+                    }}
+                    
+                    // Store dimensions for click handling
+                    window.miniMapDimensions = {{
+                        canvasWidth: canvasWidth,
+                        canvasHeight: canvasHeight,
+                        drawWidth: drawWidth,
+                        drawHeight: drawHeight,
+                        offsetX: offsetX,
+                        offsetY: offsetY,
+                        imageWidth: {imgWidth},
+                        imageHeight: {imgHeight}
+                    }};
+                    
+                    // Clear and draw with black background
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+                    
+                    // Draw the map centered and aspect-ratio corrected
+                    ctx.drawImage(mainImg, 0, 0, {imgWidth}, {imgHeight}, offsetX, offsetY, drawWidth, drawHeight);
+                    
+                    console.log(`?? Mini-map: {imgWidth}x{imgHeight} -> ${{drawWidth.toFixed(1)}}x${{drawHeight.toFixed(1)}} at (${{offsetX.toFixed(1)}}, ${{offsetY.toFixed(1)}})`);
+                }})()
+            ");
+            
+            await UpdateMiniMapViewport();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Mini-map init error: {ex.Message}");
+        }
+    }
+    
+    private async Task SyncSettingsToJavaScript()
+    {
+        try
+        {
+            // Get color as hex
+            var color = Settings.BoxColor;
+            var colorHex = $"#{(int)(color.Red * 255):X2}{(int)(color.Green * 255):X2}{(int)(color.Blue * 255):X2}";
+            
+            await JS.InvokeVoidAsync("eval", $@"
+                window.mapModule.updateSettings('{colorHex}', {Settings.BoxLineSize}, {Settings.BoxColorInc});
+            ");
+            
+            Console.WriteLine($"? Settings synced to JavaScript: {colorHex}, {Settings.BoxLineSize}px, inc {Settings.BoxColorInc}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Settings sync error: {ex.Message}");
+        }
+    }
+    
+    private async Task UpdateMiniMapViewport()
+    {
+        try
+        {
+            // Calculate viewport rectangle on mini-map
+            // Mini-map shows full map in properly aspect-ratio'd size
+            
+            // Viewport size at 2x scale = 400x300 world pixels visible
+            double viewportWidthWorld = 400; // 800/2 (viewport width / scale)
+            double viewportHeightWorld = 300; // 600/2 (viewport height / scale)
+            
+            // Current viewport top-left in world coordinates
+            double viewportWorldX = -panX / 2.0;
+            double viewportWorldY = -panY / 2.0;
+            
+            await JS.InvokeVoidAsync("eval", $@"
+                (function() {{
+                    const miniCanvas = document.getElementById('miniMapCanvas');
+                    const mainImg = document.getElementById('mapImg');
+                    if (!miniCanvas || !mainImg || !window.miniMapDimensions) return;
+                    
+                    const ctx = miniCanvas.getContext('2d');
+                    const dims = window.miniMapDimensions;
+                    
+                    // Clear canvas with black background
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(0, 0, dims.canvasWidth, dims.canvasHeight);
+                    
+                    // Redraw the map centered
+                    ctx.drawImage(mainImg, 0, 0, dims.imageWidth, dims.imageHeight, 
+                                  dims.offsetX, dims.offsetY, dims.drawWidth, dims.drawHeight);
+                    
+                    // Calculate viewport position on mini-map
+                    const miniMapScaleX = dims.drawWidth / dims.imageWidth;
+                    const miniMapScaleY = dims.drawHeight / dims.imageHeight;
+                    
+                    const miniX = dims.offsetX + ({viewportWorldX} * miniMapScaleX);
+                    const miniY = dims.offsetY + ({viewportWorldY} * miniMapScaleY);
+                    const miniW = {viewportWidthWorld} * miniMapScaleX;
+                    const miniH = {viewportHeightWorld} * miniMapScaleY;
+                    
+                    // Draw viewport rectangle
+                    ctx.strokeStyle = '#00FF00';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(miniX, miniY, miniW, miniH);
+                    
+                    console.log(`?? Viewport: (${{miniX.toFixed(1)}}, ${{miniY.toFixed(1)}}) ${{miniW.toFixed(1)}}x${{miniH.toFixed(1)}}`);
+                }})()
+            ");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Mini-map update error: {ex.Message}");
+        }
+    }
+    
+    private async Task OnMiniMapClick(MouseEventArgs e)
+    {
+        try
+        {
+            // Get minimap dimensions from JavaScript
+            var dimsJson = await JS.InvokeAsync<string>("eval", @"
+                (function() {
+                    const canvas = document.getElementById('miniMapCanvas');
+                    if (!canvas || !window.miniMapDimensions) return '';
+                    
+                    const dims = window.miniMapDimensions;
+                    return JSON.stringify({
+                        displayWidth: canvas.offsetWidth,
+                        displayHeight: canvas.offsetHeight,
+                        canvasWidth: dims.canvasWidth,
+                        canvasHeight: dims.canvasHeight,
+                        drawWidth: dims.drawWidth,
+                        drawHeight: dims.drawHeight,
+                        offsetX: dims.offsetX,
+                        offsetY: dims.offsetY,
+                        imageWidth: dims.imageWidth,
+                        imageHeight: dims.imageHeight
+                    });
+                })()
+            ");
+            
+            if (string.IsNullOrEmpty(dimsJson)) return;
+            
+            var dims = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, double>>(dimsJson);
+            if (dims == null) return;
+            
+            // Scale click from display coords to canvas coords
+            double scaleX = dims["canvasWidth"] / dims["displayWidth"];
+            double scaleY = dims["canvasHeight"] / dims["displayHeight"];
+            
+            double canvasClickX = e.OffsetX * scaleX;
+            double canvasClickY = e.OffsetY * scaleY;
+            
+            // Check if click is within the drawn map area (not in letterbox/pillarbox)
+            if (canvasClickX < dims["offsetX"] || canvasClickX > dims["offsetX"] + dims["drawWidth"] ||
+                canvasClickY < dims["offsetY"] || canvasClickY > dims["offsetY"] + dims["drawHeight"])
+            {
+                Console.WriteLine($"Click outside map area");
+                return;
+            }
+            
+            // Convert canvas click to position within drawn map
+            double mapClickX = canvasClickX - dims["offsetX"];
+            double mapClickY = canvasClickY - dims["offsetY"];
+            
+            // Convert to world coordinates
+            double worldX = mapClickX * (dims["imageWidth"] / dims["drawWidth"]);
+            double worldY = mapClickY * (dims["imageHeight"] / dims["drawHeight"]);
+            
+            // Center the viewport on this world position
+            // Account for 2x scale and viewport size
+            double newPanX = -(worldX * 2.0) + 400; // Center horizontally
+            double newPanY = -(worldY * 2.0) + 300; // Center vertically
+            
+            panX = newPanX;
+            panY = newPanY;
+            
+            await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
+            await UpdateMiniMapViewport();
+            StateHasChanged();
+            
+            Console.WriteLine($"Mini-map click: canvas({canvasClickX:F0},{canvasClickY:F0}) -> world({worldX:F0},{worldY:F0})");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Mini-map click error: {ex.Message}");
+        }
+    }
+    
+    private async Task OnMouseDown(MouseEventArgs e)
+    {
+        // Update mouse world coordinates
+        await UpdateMouseCoordinates(e.OffsetX, e.OffsetY);
+        
+        if (e.Button == 0) // Left - draw
+        {
+            isDrawing = true;
+            await JS.InvokeVoidAsync("eval", $"window.mapModule.startDrawing({e.OffsetX}, {e.OffsetY})");
+        }
+        else if (e.Button == 2) // Right - pan
+        {
+            isPanning = true;
+            await JS.InvokeVoidAsync("eval", $"window.mapModule.startPanning({e.OffsetX}, {e.OffsetY})");
+        }
+    }
+    
+    private async Task OnMouseMove(MouseEventArgs e)
+    {
+        // Update mouse coordinates on every move
+        await UpdateMouseCoordinates(e.OffsetX, e.OffsetY);
+        
+        if (isDrawing)
+        {
+            await JS.InvokeVoidAsync("eval", $"window.mapModule.updateDrawing({e.OffsetX}, {e.OffsetY})");
+        }
+        else if (isPanning)
+        {
+            await JS.InvokeVoidAsync("eval", $"window.mapModule.updatePanning({e.OffsetX}, {e.OffsetY})");
+        }
+    }
+    
+    private async Task UpdateMouseCoordinates(double screenX, double screenY)
+    {
+        try
+        {
+            var result = await JS.InvokeAsync<string>("eval", $"JSON.stringify(window.mapModule.screenToWorld({screenX}, {screenY}))");
+            if (!string.IsNullOrEmpty(result))
+            {
+                var coords = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, int>>(result);
+                if (coords != null)
+                {
+                    mouseWorldX = coords["x"];
+                    mouseWorldY = coords["y"];
+                    StateHasChanged();
+                }
+            }
+        }
+        catch { }
+    }
+    
+    private async Task OnMouseUp(MouseEventArgs e)
+    {
+        if (isDrawing && Utility.SESSION != null)
+        {
+            isDrawing = false;
+            var rect = await JS.InvokeAsync<RectData>("eval", "window.mapModule.finishDrawing()");
+
+            if (rect != null && rect.Width > 0 && rect.Height > 0)
+            {
+                var spawn = new SpawnEntity
+                {
+                    Position = Utility.Spawns[Utility.SESSION.Current_Map].Count + 1,
+                    SpawnBox = new Rect(rect.X, rect.Y, rect.Width, rect.Height),
+                    TimedSpawn = "None",
+                    CommonSpawnList = new(),
+                    UnCommonSpawnList = new(),
+                    RareSpawnList = new()
+                };
+
+                Utility.AddSpawn(Utility.SESSION.Current_Map, spawn);
+                
+                // Calculate priority based on containment
+                CalculateSpawnPriority(spawn);
+                
+                selected = spawn;
+                
+                Console.WriteLine($"Spawn #{spawn.Position} created at ({spawn.SpawnBox.X},{spawn.SpawnBox.Y}) size {spawn.SpawnBox.Width}x{spawn.SpawnBox.Height} Priority:{spawn.Priority}");
+                
+                // Auto-save spawn data
+                Utility.SaveSpawnData();
+                Console.WriteLine("Auto-saved spawn data");
+                
+                // Force a complete redraw
+                await Redraw();
+                StateHasChanged();
+            }
+            else
+            {
+                Console.WriteLine("Box too small or invalid");
+            }
+        }
+        else if (isPanning)
+        {
+            isPanning = false;
+            var pan = await JS.InvokeAsync<PanData>("eval", "window.mapModule.finishPanning()");
+            if (pan != null)
+            {
+                panX = pan.X;
+                panY = pan.Y;
+                await UpdateMiniMapViewport();
+                StateHasChanged();
+            }
+        }
+    }
+    
+    private void OnMouseLeave()
+    {
+        isDrawing = false;
+        isPanning = false;
+    }
+    
+    private async Task ResetView()
+    {
+        panX = 0;
+        panY = 0;
+        await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
+        await UpdateMiniMapViewport();
+        StateHasChanged();
+    }
+    
+    private async Task ToggleXMLSpawners()
+    {
+        showXMLSpawners = !showXMLSpawners;
+        
+        if (showXMLSpawners)
+        {
+            // Get XML spawners for current map
+            var xmlSpawners = XMLSpawnUtility.GetSpawnersForMap(ViewService.CurrentMap);
+            Console.WriteLine($"Showing {xmlSpawners.Count} XML spawners for {ViewService.CurrentMap}");
+            
+            // Convert to JSON and send to JavaScript
+            var options = new System.Text.Json.JsonSerializerOptions 
+            { 
+                PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+                WriteIndented = false 
+            };
+            var json = System.Text.Json.JsonSerializer.Serialize(xmlSpawners, options);
+            
+            await JS.InvokeVoidAsync("eval", $"window.mapModule.showXMLSpawners({json})");
+        }
+        else
+        {
+            Console.WriteLine($"Hiding XML spawners");
+            await JS.InvokeVoidAsync("eval", "window.mapModule.hideXMLSpawners()");
+        }
+        
+        StateHasChanged();
+    }
+    
+    private int GetXMLSpawnerCount()
+    {
+        return XMLSpawnUtility.GetSpawnersForMap(ViewService.CurrentMap).Count;
+    }
+    
+    private async Task ToggleServerSpawns()
+    {
+        showServerSpawns = !showServerSpawns;
+        
+        if (showServerSpawns)
+        {
+            // Load spawn statistics from server if not already loaded
+            if (!MapDisplayUtility.HasSpawnData)
+            {
+                MapDisplayUtility.InstantiateStatData();
+            }
+            
+            // Get spawn data for current map
+            var spawnData = MapDisplayUtility.GetSpawnDataForMap(ViewService.CurrentMap);
+            Console.WriteLine($"Showing {spawnData.Count} server spawns for {ViewService.CurrentMap}");
+            
+            // Convert to JSON and send to JavaScript
+            var options = new System.Text.Json.JsonSerializerOptions 
+            { 
+                PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+                WriteIndented = false 
+            };
+            var json = System.Text.Json.JsonSerializer.Serialize(spawnData, options);
+            
+            await JS.InvokeVoidAsync("eval", $"window.mapModule.showServerSpawns({json})");
+        }
+        else
+        {
+            Console.WriteLine($"Hiding server spawns");
+            await JS.InvokeVoidAsync("eval", "window.mapModule.hideServerSpawns()");
+        }
+        
+        StateHasChanged();
+    }
+    
+    private int GetServerSpawnCount()
+    {
+        if (!MapDisplayUtility.HasSpawnData)
+        {
+            return 0;
+        }
+        return MapDisplayUtility.GetSpawnDataCount(ViewService.CurrentMap);
+    }
+    
+    private async Task ToggleMiniMap()
+    {
+        showMiniMap = !showMiniMap;
+        StateHasChanged();
+        
+        // Redraw mini map when expanding
+        if (showMiniMap && imgWidth > 0 && imgHeight > 0)
+        {
+            await Task.Delay(50); // Small delay to ensure DOM is ready
+            await InitializeMiniMap();
+        }
+    }
+    
+    private string GetSpawnListStyle()
+    {
+        // Calculate available height for spawn list
+        // Mini map expanded: ~320px (canvas 188px + buttons ~132px)
+        // Mini map collapsed: ~60px (just header)
+        // Page height minus header/padding: ~900px - 100px = 800px
+        // Spawn list should fill remaining space
+        
+        if (showMiniMap)
+        {
+            // Mini map takes ~340px (with card padding), spawn list gets the rest
+            // Max height to prevent page scroll: ~440px
+            return "max-height: 440px;";
+        }
+        else
+        {
+            // Mini map collapsed (~60px), spawn list gets much more space
+            // Max height: ~720px
+            return "max-height: 720px;";
+        }
+    }
+    
+    private async Task Redraw()
+    {
+        try
+        {
+            if (Utility.SESSION != null)
+            {
+                var spawns = Utility.Spawns[Utility.SESSION.Current_Map];
+                Console.WriteLine($"Redrawing {spawns.Count} spawns for {Utility.SESSION.Current_Map}");
+                
+                // Serialize with proper options
+                var options = new JsonSerializerOptions 
+                { 
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                    WriteIndented = false 
+                };
+                var json = System.Text.Json.JsonSerializer.Serialize(spawns, options);
+                
+                Console.WriteLine($"JSON: {json.Substring(0, Math.Min(200, json.Length))}...");
+                
+                await JS.InvokeVoidAsync("eval", $"window.mapModule.redraw({json})");
+                
+                Console.WriteLine($"Redraw complete");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Redraw error: {ex.Message}");
+        }
+    }
+    
+    private string GetMapName(GameMap map)
+    {
+        return map switch
+        {
+            GameMap.Map0 => "Felucca",
+            GameMap.Map1 => "Trammel",
+            GameMap.Map2 => "Ilshenar",
+            GameMap.Map3 => "Malas",
+            GameMap.Map4 => "Tokuno",
+            GameMap.Map5 => "Ter Mur",
+            _ => map.ToString()
+        };
+    }
+    
+    private List<SpawnEntity> GetSpawnList()
+    {
+        if (Utility.SESSION == null) return new List<SpawnEntity>();
+        return Utility.Spawns[Utility.SESSION.Current_Map];
+    }
+    
+    private int GetSpawnCount()
+    {
+        return GetSpawnList().Count;
+    }
+    
+    private void CalculateSpawnPriority(SpawnEntity spawn)
+    {
+        var spawns = GetSpawnList();
+        int maxPriority = 0;
+        
+        // Check containment by all other boxes
+        foreach (var otherSpawn in spawns)
+        {
+            if (otherSpawn == spawn) continue;
+            
+            // Check if spawn is completely contained within otherSpawn
+            if (IsCompletelyContained(spawn.SpawnBox, otherSpawn.SpawnBox))
+            {
+                // This box is inside another, so it should be parent priority + 1
+                maxPriority = Math.Max(maxPriority, otherSpawn.Priority + 1);
+            }
+            // Check if boxes intersect but not contained (share priority)
+            else if (BoxesIntersect(spawn.SpawnBox, otherSpawn.SpawnBox))
+            {
+                // Share the same priority level
+                maxPriority = Math.Max(maxPriority, otherSpawn.Priority);
+            }
+        }
+        
+        spawn.Priority = maxPriority;
+        Console.WriteLine($"Calculated Priority for Spawn #{spawn.Position}: {spawn.Priority}");
+    }
+    
+    private bool IsCompletelyContained(Rect inner, Rect outer)
+    {
+        return inner.Left >= outer.Left &&
+               inner.Right <= outer.Right &&
+               inner.Top >= outer.Top &&
+               inner.Bottom <= outer.Bottom &&
+               !(inner.Left == outer.Left && inner.Right == outer.Right && 
+                 inner.Top == outer.Top && inner.Bottom == outer.Bottom);
+    }
+    
+    private bool BoxesIntersect(Rect box1, Rect box2)
+    {
+        return !(box1.Right < box2.Left || box1.Left > box2.Right ||
+                 box1.Bottom < box2.Top || box1.Top > box2.Bottom);
+    }
+    
+    private string GetPriorityBadgeClass(int priority)
+    {
+        return priority switch
+        {
+            0 => "bg-secondary",
+            1 => "bg-primary",
+            2 => "bg-info",
+            3 => "bg-warning",
+            _ => "bg-danger"
+        };
+    }
+    
+    private async Task SelectSpawn(SpawnEntity spawn)
+    {
+        selected = spawn;
+        
+        // Jump to spawn location on map
+        await JumpToSpawn(spawn);
+        
+        StateHasChanged();
+    }
+    
+    private async Task JumpToSpawn(SpawnEntity spawn)
+    {
+        // Calculate the center of the spawn box
+        double centerX = spawn.SpawnBox.X + (spawn.SpawnBox.Width / 2.0);
+        double centerY = spawn.SpawnBox.Y + (spawn.SpawnBox.Height / 2.0);
+        
+        // Center the viewport on this position
+        // Account for 2x scale and viewport size (800x600 at 2x = 400x300 world pixels)
+        double newPanX = -(centerX * 2.0) + 400; // Center horizontally
+        double newPanY = -(centerY * 2.0) + 300; // Center vertically
+        
+        panX = newPanX;
+        panY = newPanY;
+        
+        await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
+        await UpdateMiniMapViewport();
+        
+        Console.WriteLine($"Jumped to Spawn #{spawn.Position} at ({centerX:F0}, {centerY:F0})");
+    }
+    
+    private async Task DeleteSpawn(SpawnEntity spawn)
+    {
+        if (Utility.SESSION == null) return;
+        
+        var spawns = Utility.Spawns[Utility.SESSION.Current_Map];
+        spawns.Remove(spawn);
+        
+        // Reindex positions (IDs)
+        for (int i = 0; i < spawns.Count; i++)
+        {
+            spawns[i].Position = i + 1;
+        }
+        
+        // Recalculate priorities for all remaining spawns
+        RecalculateAllPriorities();
+        
+        // Clear selection if deleted spawn was selected
+        if (selected == spawn)
+        {
+            selected = null;
+        }
+        
+        // Auto-save spawn data
+        Utility.SaveSpawnData();
+        Console.WriteLine("Auto-saved after delete");
+        
+        await Redraw();
+        StateHasChanged();
+    }
+    
+    private void RecalculateAllPriorities()
+    {
+        var spawns = GetSpawnList();
+        
+        // Reset all priorities first
+        foreach (var spawn in spawns)
+        {
+            spawn.Priority = 0;
+        }
+        
+        // Recalculate each spawn's priority
+        foreach (var spawn in spawns)
+        {
+            CalculateSpawnPriority(spawn);
+        }
+    }
+    
+    // Public method to refresh settings when changed in Settings page
+    public async Task RefreshMapSettings()
+    {
+        await SyncSettingsToJavaScript();
+    }
+    
+    private void SaveAfterTimedSpawnChange()
+    {
+        Utility.SaveSpawnData();
+        Console.WriteLine("Auto-saved after timed spawn change");
+    }
+    
+    private void OpenCategoryModal(SpawnEntity spawn, Frequency frequency)
+    {
+        editingSpawn = spawn;
+        editingFrequency = frequency;
+        
+        // IMPORTANT: Create a NEW copy of the list to avoid reference issues
+        var sourceList = frequency switch
+        {
+            Frequency.Common => spawn.CommonSpawnList,
+            Frequency.UnCommon => spawn.UnCommonSpawnList,
+            Frequency.Rare => spawn.RareSpawnList,
+            _ => new List<string>()
+        };
+        
+        // Create a brand new list with copies of the strings
+        currentCategorySpawns = new List<string>(sourceList);
+        
+        currentCategory = frequency.ToString();
+        showCategoryModal = true;
+        StateHasChanged();
+        
+        Console.WriteLine($"Opened {frequency} modal for Spawn #{spawn.Position} with {currentCategorySpawns.Count} creatures");
+    }
+    
+    private void CloseCategoryModal()
+    {
+        showCategoryModal = false;
+        editingSpawn = null;
+        StateHasChanged();
+    }
+    
+    private void SaveCategoryModal()
+    {
+        if (editingSpawn != null)
+        {
+            // Clear the target list and copy from the modal list
+            var targetList = editingFrequency switch
+            {
+                Frequency.Common => editingSpawn.CommonSpawnList,
+                Frequency.UnCommon => editingSpawn.UnCommonSpawnList,
+                Frequency.Rare => editingSpawn.RareSpawnList,
+                _ => null
+            };
+            
+            if (targetList != null)
+            {
+                targetList.Clear();
+                
+                // Only add non-empty names
+                foreach (var name in currentCategorySpawns)
+                {
+                    if (!string.IsNullOrWhiteSpace(name))
+                    {
+                        targetList.Add(name);
+                    }
+                    else
+                    {
+                        Console.WriteLine($"WARNING: Skipped empty creature name in {currentCategory} for Spawn #{editingSpawn.Position}");
+                    }
+                }
+                
+                Console.WriteLine($"Saved {targetList.Count} {currentCategory} spawns for Spawn #{editingSpawn.Position}");
+            }
+            
+            // Save the data
+            Utility.SaveSpawnData();
+        }
+        
+        StateHasChanged();
+    }
+    
+    public void Dispose()
+    {
+        ViewService.OnMapChanged -= HandleMapChanged;
+    }
+}

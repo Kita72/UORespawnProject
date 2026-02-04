@@ -1,0 +1,645 @@
+﻿@page "/instructions"
+
+<div class="container-fluid p-3">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            
+            <!-- Header -->
+            <div class="card map-card mb-4">
+                <div class="card-header text-center">
+                    <h3 class="mb-0">
+                        <span class="bi bi-book"></span> UORespawn Editor - Instructions
+                    </h3>
+                </div>
+                <div class="card-body text-center">
+                    <p class="lead mb-2">Welcome to the UORespawn Editor!</p>
+                    <p class="text-muted mb-0">
+                        A powerful tool for creating and managing dynamic spawn configurations for Ultima Online servers running ServUO.
+                    </p>
+                    <p class="text-muted mb-0 small">
+                        Version @Utility.Version | Built with .NET MAUI
+                    </p>
+                </div>
+            </div>
+
+            <!-- Table of Contents -->
+            <div class="card map-card mb-4">
+                <div class="card-header">
+                    <strong><span class="bi bi-list-ol"></span> Table of Contents</strong>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <ul class="list-unstyled mb-0">
+                                <li><a href="#getting-started" class="text-decoration-none">1. Getting Started</a></li>
+                                <li><a href="#map-editor" class="text-decoration-none">2. Map Spawn Editor</a></li>
+                                <li><a href="#world-spawn" class="text-decoration-none">3. World Spawn System</a></li>
+                                <li><a href="#static-spawn" class="text-decoration-none">4. Static Spawn System</a></li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <ul class="list-unstyled mb-0">
+                                <li><a href="#weather" class="text-decoration-none">5. Weather Settings</a></li>
+                                <li><a href="#settings" class="text-decoration-none">6. Settings & Configuration</a></li>
+                                <li><a href="#server-integration" class="text-decoration-none">7. Server Integration</a></li>
+                                <li><a href="#tips" class="text-decoration-none">8. Tips & Best Practices</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 1. Getting Started -->
+            <div class="card map-card mb-4" id="getting-started">
+                <div class="card-header">
+                    <strong><span class="bi bi-play-circle"></span> 1. Getting Started</strong>
+                </div>
+                <div class="card-body">
+                    <h6 class="text-primary">What is UORespawn?</h6>
+                    <p>
+                        UORespawn is a sophisticated spawn management system that provides three complementary ways to populate 
+                        your Ultima Online world with creatures and animals:
+                    </p>
+                    <ul>
+                        <li><strong>Map Spawns:</strong> Manual spawn boxes you draw directly on the map</li>
+                        <li><strong>World Spawns:</strong> Automatic spawns based on terrain tile types (grass, forest, water, etc.)</li>
+                        <li><strong>Static Spawns:</strong> Creatures that spawn near world objects (trees, rocks, buildings)</li>
+                    </ul>
+
+                    <h6 class="text-primary mt-4">First Steps</h6>
+                    <ol>
+                        <li>Navigate using the <strong>left sidebar menu</strong></li>
+                        <li>Configure your <strong>Settings</strong> (especially the Server Integration folder)</li>
+                        <li>Choose your map from the <strong>map selector dropdown</strong></li>
+                        <li>Start creating spawns using any of the three systems!</li>
+                    </ol>
+
+                    <div class="alert alert-info mt-3">
+                        <span class="bi bi-lightbulb"></span> <strong>Tip:</strong> All changes are auto-saved! 
+                        If you've configured a ServUO Data folder, files sync automatically.
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Map Spawn Editor -->
+            <div class="card map-card mb-4" id="map-editor">
+                <div class="card-header">
+                    <strong><span class="bi bi-map"></span> 2. Map Spawn Editor</strong>
+                </div>
+                <div class="card-body">
+                    <h6 class="text-primary">Creating Spawn Boxes</h6>
+                    <ol>
+                        <li>Click <strong>"Map Spawn"</strong> in the left navigation</li>
+                        <li>Select your map from the dropdown (Felucca, Trammel, Ilshenar, etc.)</li>
+                        <li><strong>Left-click and drag</strong> on the map to draw a spawn box</li>
+                        <li>Release to create the spawn box (minimum 3x3 pixels)</li>
+                        <li>Click on the spawn in the right panel to edit it</li>
+                    </ol>
+
+                    <h6 class="text-primary mt-4">Map Controls</h6>
+                    <ul>
+                        <li><strong>Left-Drag:</strong> Draw spawn box</li>
+                        <li><strong>Right-Drag:</strong> Pan the map</li>
+                        <li><strong>Mini-Map:</strong> Click anywhere to jump to that location</li>
+                        <li><strong>Reset Button:</strong> Return to map origin (0, 0)</li>
+                    </ul>
+
+                    <h6 class="text-primary mt-4">Adding Creatures</h6>
+                    <ol>
+                        <li>Select a spawn box from the list</li>
+                        <li>Click the <strong>Common</strong>, <strong>Uncommon</strong>, or <strong>Rare</strong> button</li>
+                        <li>In the modal, search and add creatures from the bestiary</li>
+                        <li>Click <strong>Save</strong> - changes auto-save immediately</li>
+                    </ol>
+
+                    <h6 class="text-primary mt-4">Priority System</h6>
+                    <p>
+                        Spawn boxes have a <strong>Priority</strong> value (P0, P1, P2, etc.) shown in badges:
+                    </p>
+                    <ul>
+                        <li><strong>P0:</strong> Base priority (no overlap)</li>
+                        <li><strong>P1+:</strong> Nested or overlapping spawns get higher priority</li>
+                        <li>Higher priority spawns appear <strong>brighter</strong> on the map</li>
+                    </ul>
+
+                    <h6 class="text-primary mt-4">Timed Spawns</h6>
+                    <p>
+                        Use the dropdown to spawn creatures at specific times:
+                    </p>
+                    <ul>
+                        <li>Witching hour, Middle of night, Early morning, etc.</li>
+                        <li>Great for nocturnal creatures or day/night variations</li>
+                    </ul>
+
+                    <h6 class="text-primary mt-4">Mini Map Features</h6>
+                    <ul>
+                        <li><strong>Green Rectangle:</strong> Shows your current viewport</li>
+                        <li><strong>Click Anywhere:</strong> Jump to that location</li>
+                        <li><strong>Reset Button:</strong> Icon in top-left corner</li>
+                        <li><strong>Toggle Buttons:</strong>
+                            <ul>
+                                <li><span class="badge bg-success">Green</span> = Feature ON</li>
+                                <li><span class="badge bg-danger">Red</span> = Feature OFF</li>
+                            </ul>
+                        </li>
+                        <li><strong>XML:</strong> Show default XML spawner locations (green boxes)</li>
+                        <li><strong>Spawns:</strong> Show server spawn statistics (heatmap)</li>
+                    </ul>
+
+                    <div class="alert alert-warning mt-3">
+                        <span class="bi bi-exclamation-triangle"></span> <strong>Note:</strong> The spawn heatmap 
+                        requires server-side statistics data. Use the <code>[PushRespawnStats</code> command in-game 
+                        to generate the data that the editor visualizes on the map.
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. World Spawn System -->
+            <div class="card map-card mb-4" id="world-spawn">
+                <div class="card-header">
+                    <strong><span class="bi bi-grid-3x3-gap"></span> 3. World Spawn System</strong>
+                </div>
+                <div class="card-body">
+                    <h6 class="text-primary">How It Works</h6>
+                    <p>
+                        World Spawns automatically place creatures based on <strong>terrain tile types</strong>. 
+                        When a player enters an area, the system checks the ground tiles and spawns appropriate creatures.
+                    </p>
+
+                    <h6 class="text-primary mt-4">Configuration</h6>
+                    <ol>
+                        <li>Click <strong>"World Spawn"</strong> in the navigation</li>
+                        <li>Select a <strong>tile type</strong> from the left list (Grass, Forest, Jungle, etc.)</li>
+                        <li>Configure <strong>Animals</strong> (passive) and <strong>Creatures</strong> (hostile) separately</li>
+                        <li>Set spawns for three frequency tiers:
+                            <ul>
+                                <li><strong>Common:</strong> Spawns frequently</li>
+                                <li><strong>Uncommon:</strong> Spawns occasionally</li>
+                                <li><strong>Rare:</strong> Spawns rarely</li>
+                            </ul>
+                        </li>
+                    </ol>
+
+                    <h6 class="text-primary mt-4">Tile Types Available</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <ul>
+                                <li>Grass / Dirt</li>
+                                <li>Forest / Jungle</li>
+                                <li>Snow / Ice</li>
+                                <li>Swamp</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <ul>
+                                <li>Sand / Desert</li>
+                                <li>Water (Fresh/Salt)</li>
+                                <li>Cave / Dungeon</li>
+                                <li>Mountain / Rock</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <h6 class="text-primary mt-4">Example Setup</h6>
+                    <p><strong>Forest Tile:</strong></p>
+                    <ul>
+                        <li><strong>Animals - Common:</strong> Deer, Rabbit, Squirrel</li>
+                        <li><strong>Animals - Rare:</strong> Great Hart, White Wolf</li>
+                        <li><strong>Creatures - Common:</strong> Orc, Ettin</li>
+                        <li><strong>Creatures - Rare:</strong> Orc Lord, Ettin Warrior</li>
+                    </ul>
+
+                    <div class="alert alert-info mt-3">
+                        <span class="bi bi-lightbulb"></span> <strong>Tip:</strong> World Spawns apply to ALL maps! 
+                        Configure once, and it works everywhere grass, forest, water, etc. appears.
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. Static Spawn System -->
+            <div class="card map-card mb-4" id="static-spawn">
+                <div class="card-header">
+                    <strong><span class="bi bi-geo-alt-fill"></span> 4. Static Spawn System</strong>
+                </div>
+                <div class="card-body">
+                    <h6 class="text-primary">How It Works</h6>
+                    <p>
+                        Static Spawns place creatures near <strong>world objects</strong> like trees, rocks, buildings, etc. 
+                        When a player approaches, the system checks nearby statics and spawns appropriate creatures.
+                    </p>
+
+                    <h6 class="text-primary mt-4">Configuration</h6>
+                    <ol>
+                        <li>Click <strong>"Static Spawn"</strong> in the navigation</li>
+                        <li>Use the <strong>search box</strong> to find a static item (e.g., "tree", "rock", "sign")</li>
+                        <li>Select a static from the list</li>
+                        <li>Configure creatures for three frequency tiers (Common, Uncommon, Rare)</li>
+                        <li>Click <strong>Edit</strong> to add/remove creatures</li>
+                    </ol>
+
+                    <h6 class="text-primary mt-4">Example Setups</h6>
+                    <p><strong>Near Trees:</strong></p>
+                    <ul>
+                        <li>Common: Orc, Ettin</li>
+                        <li>Rare: Orc Captain, Ettin Warrior</li>
+                    </ul>
+
+                    <p><strong>Near Graveyards:</strong></p>
+                    <ul>
+                        <li>Common: Zombie, Skeleton</li>
+                        <li>Uncommon: Ghoul, Wraith</li>
+                        <li>Rare: Lich, Skeletal Knight</li>
+                    </ul>
+
+                    <p><strong>Near Forges/Anvils:</strong></p>
+                    <ul>
+                        <li>Common: Fire Elemental</li>
+                        <li>Rare: Daemon, Balron</li>
+                    </ul>
+
+                    <div class="alert alert-info mt-3">
+                        <span class="bi bi-lightbulb"></span> <strong>Tip:</strong> You can configure thousands of 
+                        different static items! Use the search to find specific objects in your world.
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5. Weather Settings -->
+            <div class="card map-card mb-4" id="weather">
+                <div class="card-header">
+                    <strong><span class="bi bi-cloud-rain"></span> 5. Weather Settings</strong>
+                </div>
+                <div class="card-body">
+                    <h6 class="text-primary">Weather-Based Spawning</h6>
+                    <p>
+                        Control the <strong>chance</strong> (0.1 to 1.0) that weather affects spawns:
+                    </p>
+                    <ul>
+                        <li><strong>0.1 (10%):</strong> Weather rarely affects spawns</li>
+                        <li><strong>0.5 (50%):</strong> Moderate weather influence</li>
+                        <li><strong>1.0 (100%):</strong> Weather always affects spawns</li>
+                    </ul>
+
+                    <h6 class="text-primary mt-4">How It Works</h6>
+                    <p>
+                        When weather is active (rain, storm, etc.), different creatures may spawn. 
+                        Configure weather-specific spawns in the Weather page using the visual sliders.
+                    </p>
+
+                    <div class="alert alert-info mt-3">
+                        <span class="bi bi-lightbulb"></span> <strong>Example:</strong> During storms, you might spawn 
+                        more Air Elementals, Storm Demons, or water creatures near shores.
+                    </div>
+                </div>
+            </div>
+
+            <!-- 6. Settings & Configuration -->
+            <div class="card map-card mb-4" id="settings">
+                <div class="card-header">
+                    <strong><span class="bi bi-gear"></span> 6. Settings & Configuration</strong>
+                </div>
+                <div class="card-body">
+                    <h6 class="text-primary">Spawn Settings</h6>
+                    <ul>
+                        <li><strong>Spawn Range Min/Max:</strong> Distance from player where creatures can spawn</li>
+                        <li><strong>Max Mob:</strong> Maximum creatures per spawn box</li>
+                        <li><strong>Max Crowd:</strong> Maximum creatures in an area</li>
+                        <li><strong>Creature/Common/Uncommon/Rare Chances:</strong> Probability for each tier</li>
+                        <li><strong>Water/Weather/Static Chances:</strong> Environmental spawn probabilities</li>
+                    </ul>
+
+                    <h6 class="text-primary mt-4">Spawn Options</h6>
+                    <ul>
+                        <li><strong>Scale Spawn:</strong> Increase spawns based on player count in area</li>
+                        <li><strong>Rift Spawn:</strong> Allow Trammel creatures to spawn in Felucca</li>
+                        <li><strong>Debug Spawn:</strong> Enable placeholder spawns for testing</li>
+                    </ul>
+
+                    <h6 class="text-primary mt-4">Spawn Box Appearance</h6>
+                    <ul>
+                        <li><strong>Box Color:</strong> Choose the color for spawn box borders</li>
+                        <li><strong>Line Thickness:</strong> Width of spawn box lines (1-5px)</li>
+                        <li><strong>Priority Color Increment:</strong> How much brighter each priority level appears</li>
+                    </ul>
+
+                    <h6 class="text-primary mt-4">Custom Maps</h6>
+                    <p>Replace map images with your custom UO maps:</p>
+                    <ol>
+                        <li>Select the map to replace (Map0-Map5)</li>
+                        <li>Click <strong>Browse BMP</strong></li>
+                        <li>Select a BMP file with correct dimensions:
+                            <ul>
+                                <li>Map0/Map1 (Felucca/Trammel): 7168x4096</li>
+                                <li>Map2 (Ilshenar): 2304x1600</li>
+                                <li>Map3 (Malas): 2560x2048</li>
+                                <li>Map4 (Tokuno): 1448x1448</li>
+                                <li>Map5 (Ter Mur): 1280x4096</li>
+                            </ul>
+                        </li>
+                        <li>Original maps are automatically backed up</li>
+                        <li>Use <strong>Restore</strong> to revert to original</li>
+                    </ol>
+
+                    <h6 class="text-primary mt-4">Bestiary Management</h6>
+                    <ul>
+                        <li><strong>Add creatures:</strong> Type name and click Add</li>
+                        <li><strong>Search:</strong> Filter the creature list</li>
+                        <li><strong>Remove:</strong> Click trash icon next to creature</li>
+                        <li><strong>Reset to Default:</strong> Restore original bestiary list</li>
+                        <li><strong>Custom Badge:</strong> Shows when using a modified bestiary</li>
+                    </ul>
+
+                    <h6 class="text-primary mt-4">Special NPCs in Bestiary</h6>
+                    <p>The bestiary includes predefined special NPCs with unique behaviors and effects. These can be used in any spawn system (Map, World, or Static):</p>
+                    
+                    <p><strong>Interactive NPCs:</strong></p>
+                    <ul>
+                        <li><code>TownNPC</code> - Random NPCs to make your towns come to life!</li>
+                        <li><code>WorldNPC</code> - Random travelers for roads or points of interest</li>
+                        <li><code>AmbushNPC</code> - Triggers when player runs over - spawns a gang of random brigand bandits!</li>
+                        <li><code>EffectNPC</code> - Tile reactive NPC - produces random effects!</li>
+                    </ul>
+
+                    <p><strong>Damage Effect NPCs (Hostile):</strong></p>
+                    <ul>
+                        <li><code>WaveEffectNPC</code> - Tile triggers wave damage effect</li>
+                        <li><code>WindEffectNPC</code> - Tile triggers wind damage effect</li>
+                        <li><code>FireEffectNPC</code> - Tile triggers fire damage effect</li>
+                        <li><code>MistEffectNPC</code> - Tile triggers mist damage effect</li>
+                        <li><code>PoisonEffectNPC</code> - Tile triggers poison damage effect</li>
+                        <li><code>ElectricEffectNPC</code> - Tile triggers electric damage effect</li>
+                        <li><code>ExplosionEffectNPC</code> - Tile triggers explosion damage effect</li>
+                        <li><code>SmokeEffectNPC</code> - Tile triggers smoke damage effect</li>
+                    </ul>
+
+                    <p><strong>Healing Effect NPCs (Beneficial):</strong></p>
+                    <ul>
+                        <li><code>GlowEffectNPC</code> - Tile triggers healing glow effect</li>
+                        <li><code>ConfettiEffectNPC</code> - Tile triggers healing confetti effect</li>
+                        <li><code>MagicEffectNPC</code> - Tile triggers healing magic effect</li>
+                    </ul>
+
+                    <div class="alert alert-info mt-3">
+                        <span class="bi bi-lightbulb"></span> <strong>Usage Tips:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li><strong>TownNPC:</strong> Add to Common spawns in cities for ambient population</li>
+                            <li><strong>AmbushNPC:</strong> Place in Rare spawns along roads for surprise encounters</li>
+                            <li><strong>Effect NPCs:</strong> Use in dungeons or special areas for environmental hazards/healing zones</li>
+                            <li><strong>WorldNPC:</strong> Add to roads and crossroads for traveling merchants and adventurers</li>
+                        </ul>
+                    </div>
+
+                    <div class="alert alert-warning mt-3">
+                        <span class="bi bi-exclamation-triangle"></span> <strong>Note:</strong> Effect NPCs are tile-reactive - 
+                        they trigger when players walk over specific locations. Use sparingly to avoid overwhelming players!
+                    </div>
+                </div>
+            </div>
+
+            <!-- 7. Server Integration -->
+            <div class="card map-card mb-4" id="server-integration">
+                <div class="card-header">
+                    <strong><span class="bi bi-server"></span> 7. Server Integration</strong>
+                </div>
+                <div class="card-body">
+                    <h6 class="text-primary">How UORespawn Works</h6>
+                    <p>
+                        UORespawn is a <strong>player-centric spawn system</strong> where players become the spawners.
+                        Instead of placing XML spawners throughout the world, creatures spawn dynamically around players
+                        based on their location, terrain, and nearby objects.
+                    </p>
+
+                    <h6 class="text-primary mt-4">Server-Side Installation (Required)</h6>
+                    <p><strong>Step 1: Download Server Scripts</strong></p>
+                    <ol>
+                        <li>Go to <strong>Settings</strong> in the editor</li>
+                        <li>In the "Server Integration" section, click <strong>Download Server Scripts</strong></li>
+                        <li>Save the <code>UORespawn_ServerScripts.zip</code> file</li>
+                        <li>Extract the ZIP - you'll find a <code>SpawnSystem</code> folder inside</li>
+                    </ol>
+                    
+                    <p><strong>Step 2: Install on ServUO</strong></p>
+                    <ol>
+                        <li>Copy the entire <code>SpawnSystem</code> folder to <code>ServUO\Scripts\Custom\SpawnSystem\</code></li>
+                        <li>Compile your ServUO server (rebuild solution)</li>
+                        <li>Start the server - UORespawn initializes automatically</li>
+                    </ol>
+                    <p class="small text-muted">
+                        Look for console messages: "|-|-|-|-|-|-|-| UORespawn |-|-|-|-|-|-|-|"
+                    </p>
+
+                    <p><strong>Step 3: Generate Required Files</strong></p>
+                    <p>In-game, use these commands (Administrator access required):</p>
+                    <ul>
+                        <li><code>[GenRespawnList</code> - Creates bestiary of spawnable creatures</li>
+                        <li><code>[GenStaticList</code> - Creates list of world static items</li>
+                        <li><code>[GenSpawnerList</code> - Creates list of XML spawner locations</li>
+                    </ul>
+                    <p class="small text-muted">
+                        These files provide the editor with available creatures, statics, and XML spawner data to work with.
+                    </p>
+
+                    <h6 class="text-primary mt-4">Automatic File Syncing (Windows/macOS)</h6>
+                    <ol>
+                        <li>In the editor, go to <strong>Settings</strong></li>
+                        <li>Click <strong>Browse</strong> under "Server Integration"</li>
+                        <li>Select your <code>ServUO\Data\</code> folder</li>
+                        <li>All spawn files will now auto-sync when you make changes!</li>
+                    </ol>
+
+                    <h6 class="text-primary mt-4">Files Generated by Editor</h6>
+                    <p>The editor creates these files automatically:</p>
+                    <ul>
+                        <li><code>UOR_Spawn.csv</code> - Map spawn boxes (manual placements)</li>
+                        <li><code>UOR_WorldSpawn.csv</code> - World tile spawns (automatic)</li>
+                        <li><code>UOR_StaticSpawn.csv</code> - Static object spawns</li>
+                        <li><code>UOR_SpawnSettings.csv</code> - Spawn system configuration</li>
+                    </ul>
+
+                    <h6 class="text-primary mt-4">In-Game Commands</h6>
+                    <p><strong>Core Commands:</strong></p>
+                    <ul>
+                        <li><code>[ReloadRespawn</code> - Reload spawn files after editing (no server restart needed!)</li>
+                        <li><code>[PushRespawn</code> - Manually trigger spawns for all online players</li>
+                        <li><code>[DebugRespawn</code> - Toggle debug mode (spawns placeholders for testing)</li>
+                        <li><code>[TrackRespawn</code> - View spawn statistics and counts</li>
+                        <li><code>[ClearRespawn</code> - Delete all spawned creatures (⚠️ use with caution)</li>
+                    </ul>
+
+                    <p><strong>File Generation Commands:</strong></p>
+                    <ul>
+                        <li><code>[GenRespawnList</code> - Generate/update bestiary list</li>
+                        <li><code>[GenStaticList</code> - Generate/update static items list</li>
+                        <li><code>[GenSpawnerList</code> - Generate/update XML spawner locations</li>
+                        <li><code>[PushRespawnStats</code> - Save spawn statistics for heatmap visualization</li>
+                    </ul>
+
+                    <div class="alert alert-info mt-3">
+                        <span class="bi bi-lightbulb"></span> <strong>Command Syntax:</strong> All commands start with 
+                        <code>[</code> (bracket) but do NOT end with a closing bracket. For example: type <code>[ReloadRespawn</code> 
+                        and press Enter - that's it!
+                    </div>
+
+                    <h6 class="text-primary mt-4">Workflow: Editor → Server</h6>
+                    <ol>
+                        <li><strong>Create spawns</strong> using the editor (Map, World, or Static)</li>
+                        <li><strong>Files auto-save</strong> to <code>ServUO\Data\</code> (if configured)</li>
+                        <li><strong>In-game:</strong> <code>[ReloadRespawn</code> to load new configurations</li>
+                        <li><strong>Test:</strong> Walk around - spawns appear dynamically around you!</li>
+                        <li><strong>Monitor:</strong> Use <code>[TrackRespawn</code> to see active spawn counts</li>
+                        <li><strong>Visualize:</strong> Use editor's heatmap to see spawn distribution patterns</li>
+                    </ol>
+
+                    <h6 class="text-primary mt-4">Platform Support</h6>
+                    <div class="alert alert-info">
+                        <span class="bi bi-info-circle"></span> <strong>Automatic syncing is supported on:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>✅ Windows</li>
+                            <li>✅ macOS</li>
+                        </ul>
+                    </div>
+                    <div class="alert alert-warning">
+                        <span class="bi bi-exclamation-triangle"></span> <strong>On iOS/Android:</strong>
+                        Server integration is not available. Files are saved locally and must be manually transferred to your server.
+                    </div>
+
+                    <h6 class="text-primary mt-4">Manual File Transfer</h6>
+                    <p>If automatic syncing is not available:</p>
+                    <ol>
+                        <li>Find files in the editor's <code>Data</code> folder</li>
+                        <li>Copy all <code>UOR_*.csv</code> files</li>
+                        <li>Paste them into your server's <code>ServUO\Data\</code> folder</li>
+                        <li>In-game: <code>[ReloadRespawn</code> to apply changes</li>
+                    </ol>
+
+                    <h6 class="text-primary mt-4">Compatibility with XML Spawners</h6>
+                    <p>
+                        UORespawn works <strong>alongside</strong> XML spawners - they complement each other:
+                    </p>
+                    <ul>
+                        <li><strong>XML Spawners:</strong> Use for boss rooms, quest NPCs, town guards, static encounters</li>
+                        <li><strong>UORespawn:</strong> Use for wilderness, dungeons, roads, random dynamic encounters</li>
+                        <li><strong>Overlap Prevention:</strong> The editor shows XML spawner locations (green boxes) to help you avoid conflicts</li>
+                    </ul>
+
+                    <h6 class="text-primary mt-4">How Dynamic Spawning Works</h6>
+                    <p>Unlike XML spawners which exist at fixed locations:</p>
+                    <ol>
+                        <li>Players move through the world</li>
+                        <li>System evaluates: location, terrain, nearby objects, weather</li>
+                        <li>Creatures spawn in range (10-50 tiles) based on your configurations</li>
+                        <li>Creatures despawn when players move away</li>
+                        <li>System tracks all spawns and cleans up automatically</li>
+                    </ol>
+
+                    <div class="alert alert-success mt-3">
+                        <span class="bi bi-check-circle"></span> <strong>Pro Tip:</strong> Run all three generation commands 
+                        (<code>[GenRespawnList</code>, <code>[GenStaticList</code>, <code>[GenSpawnerList</code>) when you 
+                        first set up the system. This gives the editor complete information about your server's creatures, 
+                        static objects, and existing XML spawner locations!
+                    </div>
+                </div>
+            </div>
+
+            <!-- 8. Tips & Best Practices -->
+            <div class="card map-card mb-4" id="tips">
+                <div class="card-header">
+                    <strong><span class="bi bi-star"></span> 8. Tips & Best Practices</strong>
+                </div>
+                <div class="card-body">
+                    <h6 class="text-primary">Map Spawn Tips</h6>
+                    <ul>
+                        <li>Start with <strong>larger spawn boxes</strong> for roaming creatures</li>
+                        <li>Use <strong>smaller boxes</strong> for stationary guards or dungeon spawns</li>
+                        <li>Place <strong>rare creatures</strong> in hard-to-reach locations</li>
+                        <li>Use <strong>priority</strong> to layer spawns (outdoor -> dungeon entrance -> inner rooms)</li>
+                        <li>Combine <strong>multiple frequency tiers</strong> for variety</li>
+                    </ul>
+
+                    <h6 class="text-primary mt-4">World Spawn Tips</h6>
+                    <ul>
+                        <li>Balance <strong>animals vs creatures</strong> (more passive wildlife, fewer monsters)</li>
+                        <li>Make <strong>dangerous creatures rare</strong> in common areas</li>
+                        <li>Use <strong>water spawns</strong> for sea serpents, kraken, water elementals</li>
+                        <li><strong>Desert</strong> should have heat-resistant creatures</li>
+                        <li><strong>Snow/Ice</strong> areas need cold-adapted spawns</li>
+                    </ul>
+
+                    <h6 class="text-primary mt-4">Static Spawn Tips</h6>
+                    <ul>
+                        <li>Match creatures to the <strong>environment</strong> (e.g., graveyards = undead)</li>
+                        <li>Keep static spawns <strong>rarer</strong> than world/map spawns to avoid overcrowding</li>
+                        <li>Use <strong>themed spawns</strong> (forges = fire creatures, altars = demons)</li>
+                        <li><strong>Towns/Cities</strong> should have minimal hostile spawns</li>
+                    </ul>
+
+                    <h6 class="text-primary mt-4">Performance Tips</h6>
+                    <ul>
+                        <li>Avoid <strong>overlapping</strong> too many spawn systems in one area</li>
+                        <li>Use <strong>Scale Spawn</strong> carefully - can create lag with many players</li>
+                        <li>Test spawns on your <strong>test server</strong> first</li>
+                        <li>Monitor <strong>spawn statistics</strong> with the heatmap feature</li>
+                    </ul>
+
+                    <h6 class="text-primary mt-4">Testing Workflow</h6>
+                    <ol>
+                        <li>Create spawns in the editor</li>
+                        <li>Files auto-sync to server (if configured)</li>
+                        <li>Use <code>[ReloadRespawn</code> in-game</li>
+                        <li>Test with <code>[DebugRespawn</code> to see spawn zones</li>
+                        <li>Adjust in editor and reload</li>
+                        <li>View results with the spawn heatmap</li>
+                    </ol>
+
+                    <div class="alert alert-success mt-3">
+                        <span class="bi bi-check-circle"></span> <strong>Remember:</strong> All changes are saved 
+                        automatically! There's no "Save" button needed - your work is always preserved.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Support & Resources -->
+            <div class="card map-card mb-4">
+                <div class="card-header">
+                    <strong><span class="bi bi-question-circle"></span> Support & Resources</strong>
+                </div>
+                <div class="card-body">
+                    <h6 class="text-primary">Need Help?</h6>
+                    <p>For support, questions, or feature requests, please contact:</p>
+                    <ul>
+                        <li>
+                            <strong>Wilson (Creator):</strong> 
+                            <a href="https://www.servuo.com/members/wilson.12169/" target="_blank">
+                                ServUO Profile
+                            </a>
+                        </li>
+                        <li><strong>ServUO Community:</strong> <a href="https://www.servuo.com" target="_blank">www.servuo.com</a></li>
+                        <li><strong>ServUO Discord:</strong> Join for real-time community support and discussions</li>
+                    </ul>
+
+                    <h6 class="text-primary mt-4">Additional Resources</h6>
+                    <ul>
+                        <li><strong>Bestiary:</strong> 600+ creatures included by default, fully customizable</li>
+                        <li><strong>Map Support:</strong> All 6 standard UO maps (Felucca, Trammel, Ilshenar, Malas, Tokuno, Ter Mur)</li>
+                        <li><strong>Custom Content:</strong> Add your own custom creatures to the bestiary</li>
+                        <li><strong>Server Scripts:</strong> Complete C# source code included in SpawnSystem folder</li>
+                        <li><strong>Cross-Platform:</strong> Works on Windows and macOS</li>
+                    </ul>
+
+                    <div class="alert alert-primary mt-3">
+                        <span class="bi bi-heart-fill"></span> <strong>Thank you for using UORespawn!</strong>
+                        <p class="mb-0 mt-2 small">
+                            This tool was created to make spawn management easier and more powerful for the 
+                            ServUO community. Happy spawning!
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@code {
+    // No code-behind needed for static instructions
+}

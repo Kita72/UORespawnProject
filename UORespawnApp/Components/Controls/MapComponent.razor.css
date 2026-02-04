@@ -1,0 +1,307 @@
+/* Map Card Styling */
+.map-card {
+    border: 1px solid #dee2e6;
+    transition: all 0.2s ease;
+}
+
+.map-card .card-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+    padding: 0.75rem;
+    font-weight: 600;
+}
+
+.minimap-body {
+    background: #000;
+}
+
+body.dark-theme .map-card {
+    background-color: #1a1a1a;
+    border-color: #3a3a3a;
+}
+
+body.dark-theme .map-card .card-header {
+    background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+    border-bottom-color: rgba(255, 255, 255, 0.05);
+}
+
+body.dark-theme .map-card .card-body {
+    background-color: #1a1a1a;
+    color: #e0e0e0;
+}
+
+body.light-theme .map-card {
+    background-color: #ffffff;
+    border-color: #dee2e6;
+}
+
+body.light-theme .map-card .card-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+body.light-theme .map-card .card-body {
+    background-color: #ffffff;
+}
+
+/* Spawn Item Styling */
+.spawn-item {
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background-color: #ffffff;
+    user-select: none;
+}
+
+.spawn-item:hover {
+    background-color: #f8f9fa;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+    border-color: #c0c0c0;
+}
+
+.spawn-item.selected {
+    background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+    padding: 10px;
+}
+
+body.dark-theme .spawn-item {
+    background-color: #252525;
+    border-color: #3a3a3a;
+    color: #e0e0e0;
+}
+
+body.dark-theme .spawn-item:hover {
+    background-color: #2d2d2d;
+    border-color: #4a4a4a;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+body.dark-theme .spawn-item.selected {
+    background: linear-gradient(135deg, #667eea20 0%, #764ba220 100%);
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+body.dark-theme .spawn-item .text-muted {
+    color: #999 !important;
+}
+
+/* Button Styling */
+.spawn-item .btn {
+    opacity: 0.9;
+    transition: all 0.2s ease;
+    border: none;
+}
+
+.spawn-item .btn:hover {
+    opacity: 1;
+    transform: scale(1.05);
+}
+
+.spawn-item .btn:focus {
+    outline: none;
+    box-shadow: none;
+}
+
+.spawn-item .btn-danger {
+    background-color: #dc3545;
+}
+
+.spawn-item .btn-danger:hover {
+    background-color: #c82333;
+}
+
+body.dark-theme .spawn-item .btn-danger {
+    background-color: #c82333;
+}
+
+body.dark-theme .spawn-item .btn-danger:hover {
+    background-color: #bd2130;
+}
+
+/* Badge Styling */
+.spawn-item .badge {
+    margin-right: 4px;
+    font-size: 0.75rem;
+    padding: 0.25em 0.6em;
+    font-weight: 600;
+}
+
+/* Spawn Controls Styling */
+.spawn-controls {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #e0e0e0;
+}
+
+body.dark-theme .spawn-controls {
+    border-top-color: #3a3a3a;
+}
+
+.spawn-controls .btn-group {
+    gap: 4px;
+}
+
+.spawn-controls .btn {
+    font-size: 0.75rem;
+    padding: 6px 10px;
+    border-width: 1.5px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.spawn-controls .btn:focus {
+    outline: none;
+    box-shadow: none;
+}
+
+.spawn-controls .btn-outline-success {
+    color: #28a745;
+    border-color: #28a745;
+    background-color: transparent;
+}
+
+.spawn-controls .btn-outline-success:hover {
+    color: white;
+    background-color: #28a745;
+    border-color: #28a745;
+}
+
+.spawn-controls .btn-outline-warning {
+    color: #ffc107;
+    border-color: #ffc107;
+    background-color: transparent;
+}
+
+.spawn-controls .btn-outline-warning:hover {
+    color: #212529;
+    background-color: #ffc107;
+    border-color: #ffc107;
+}
+
+.spawn-controls .btn-outline-danger {
+    color: #dc3545;
+    border-color: #dc3545;
+    background-color: transparent;
+}
+
+.spawn-controls .btn-outline-danger:hover {
+    color: white;
+    background-color: #dc3545;
+    border-color: #dc3545;
+}
+
+body.dark-theme .spawn-controls .btn-outline-success {
+    color: #4ade80;
+    border-color: #4ade80;
+}
+
+body.dark-theme .spawn-controls .btn-outline-success:hover {
+    color: #000;
+    background-color: #4ade80;
+    border-color: #4ade80;
+}
+
+body.dark-theme .spawn-controls .btn-outline-warning {
+    color: #fbbf24;
+    border-color: #fbbf24;
+}
+
+body.dark-theme .spawn-controls .btn-outline-warning:hover {
+    color: #000;
+    background-color: #fbbf24;
+    border-color: #fbbf24;
+}
+
+body.dark-theme .spawn-controls .btn-outline-danger {
+    color: #f87171;
+    border-color: #f87171;
+}
+
+body.dark-theme .spawn-controls .btn-outline-danger:hover {
+    color: #000;
+    background-color: #f87171;
+    border-color: #f87171;
+}
+
+/* Form Select Styling */
+.spawn-controls .form-select {
+    border: 1.5px solid #ced4da;
+    transition: all 0.2s ease;
+}
+
+.spawn-controls .form-select:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.15);
+}
+
+body.dark-theme .spawn-controls .form-select {
+    background-color: #2a2a2a;
+    color: #e0e0e0;
+    border-color: #3a3a3a;
+}
+
+body.dark-theme .spawn-controls .form-select:focus {
+    background-color: #2a2a2a;
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+
+.gap-2 {
+    gap: 0.5rem;
+}
+
+/* Spawn List Container - Fixed height with scroll */
+.spawn-list-container {
+    display: flex;
+    flex-direction: column;
+    transition: max-height 0.3s ease;
+}
+
+.spawn-list-container .spawn-list-body {
+    overflow-y: auto;
+    overflow-x: hidden;
+    flex: 1;
+}
+
+/* Custom scrollbar for spawn list */
+.spawn-list-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+.spawn-list-body::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.spawn-list-body::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+.spawn-list-body::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+body.dark-theme .spawn-list-body::-webkit-scrollbar-track {
+    background: #1a1a1a;
+}
+
+body.dark-theme .spawn-list-body::-webkit-scrollbar-thumb {
+    background: #4a4a4a;
+}
+
+body.dark-theme .spawn-list-body::-webkit-scrollbar-thumb:hover {
+    background: #666;
+}
+
+/* Mini map collapse animation */
+.card-body {
+    transition: all 0.3s ease;
+}
+
