@@ -1,4 +1,4 @@
-# UORespawn Editor
+﻿# UORespawn Editor
 
 <p align="center">
   <img src="UORespawnApp/Resources/Images/logo.png" alt="UORespawn Logo" width="200"/>
@@ -9,30 +9,30 @@
 </p>
 
 <p align="center">
-  <a href="#features">Features</a> �
-  <a href="#download">Download</a> �
-  <a href="#installation">Installation</a> �
-  <a href="#usage">Usage</a> �
-  <a href="#building">Building</a> �
+  <a href="#features">Features</a> •
+  <a href="#download">Download</a> •
+  <a href="#installation">Installation</a> •
+  <a href="#usage">Usage</a> •
+  <a href="#building">Building</a> •
   <a href="#support">Support</a>
 </p>
 
 ---
 
-## ?? About
+## 📌 About
 
 UORespawn is a modern .NET MAUI application that provides a comprehensive visual interface for creating and managing spawn systems in Ultima Online ServUO servers. It offers three complementary spawn methods to populate your world with creatures and NPCs.
 
-### Version: 1.0.0.3
+**Version:** 1.0.0.3  
 **Platform:** Windows, macOS  
 **Framework:** .NET 9 MAUI with Blazor  
 **License:** MIT
 
 ---
 
-## ? Features
+## ✨ Features
 
-### ??? **Map Spawn Editor**
+### 🗺️ **Map Spawn Editor**
 - Visual map-based spawn box creation
 - Draw spawn areas with left-click and drag
 - Pan the map with right-click and drag
@@ -42,33 +42,33 @@ UORespawn is a modern .NET MAUI application that provides a comprehensive visual
 - XML spawner location overlay
 - Server spawn heatmap visualization
 
-### ?? **World Spawn System**
+### 🌍 **World Spawn System**
 - Tile-based automatic spawning
 - Configure spawns for terrain types (grass, forest, water, desert, etc.)
 - Separate animal and creature spawns
 - Three frequency tiers: Common, Uncommon, Rare
 - Applies globally to all maps
 
-### ?? **Static Spawn System**
+### 🏛️ **Static Spawn System**
 - Spawn creatures near world objects
 - Configure spawns for thousands of static items
 - Search functionality for easy static selection
 - Themed spawns (graveyards, forges, altars, etc.)
 
-### ?? **Advanced Settings**
+### ⚙️ **Advanced Settings**
 - Customizable spawn parameters (range, max mobs, crowd control)
 - Adjustable spawn chances for all frequency tiers
 - Spawn box appearance customization
 - Custom map image support (with backup/restore)
 - Bestiary management with special NPCs
 
-### ?? **Server Integration**
+### 🔄 **Server Integration**
 - Auto-sync with ServUO Data folder (Windows/macOS)
 - File watcher for real-time updates
 - Manual export option for all platforms
 - Supports all standard UO maps (Felucca, Trammel, Ilshenar, Malas, Tokuno, Ter Mur)
 
-### ?? **Special NPCs**
+### 👥 **Special NPCs**
 - **TownNPC** - Random NPCs for ambient town life
 - **WorldNPC** - Random travelers for roads
 - **AmbushNPC** - Player-triggered brigand ambushes
@@ -76,10 +76,11 @@ UORespawn is a modern .NET MAUI application that provides a comprehensive visual
 
 ---
 
-## ?? Download
+## 📥 Download
 
-### Latest Release
-**[Download UORespawn v1.0.0.3 for Windows](https://github.com/yourusername/UORespawn/releases/latest)**
+**Latest Release:** [v1.0.0.3](https://github.com/Kita72/UORespawnProject/releases/latest)
+
+Download the latest version from the [Releases](https://github.com/Kita72/UORespawnProject/releases) page.
 
 ### Requirements
 - **OS:** Windows 10/11 (64-bit) or macOS 12+
@@ -89,7 +90,7 @@ UORespawn is a modern .NET MAUI application that provides a comprehensive visual
 
 ---
 
-## ?? Installation
+## 🚀 Installation
 
 ### Windows
 
@@ -114,7 +115,7 @@ UORespawn is a modern .NET MAUI application that provides a comprehensive visual
 
 ---
 
-## ?? Usage
+## 📖 Usage
 
 ### Quick Start
 
@@ -149,7 +150,7 @@ Add these predefined NPCs from the bestiary:
 
 ---
 
-## ?? Building from Source
+## 🔨 Building from Source
 
 ### Prerequisites
 
@@ -189,35 +190,35 @@ dotnet publish -f net9.0-maccatalyst -c Release
 
 ---
 
-## ?? Project Structure
+## 📁 Project Structure
 
 ```
 UORespawn/
-??? UORespawnApp/              # Main MAUI application
-?   ??? Components/            # Blazor components
-?   ?   ??? Layout/           # Navigation and layout
-?   ?   ??? Pages/            # Page components
-?   ?   ??? MapComponent.razor
-?   ?   ??? WorldSpawnComponent.razor
-?   ?   ??? StaticSpawnComponent.razor
-?   ?   ??? SettingsComponent.razor
-?   ?   ??? InstructionsComponent.razor
-?   ??? Scripts/              # Utility scripts
-?   ??? wwwroot/              # Static web assets
-?   ?   ??? maps/            # Map images
-?   ?   ??? js/              # JavaScript interop
-?   ?   ??? css/             # Styles
-?   ??? Data/                 # Spawn data files
-?   ??? Resources/            # App resources
-??? README.md
-??? LICENSE
-??? .gitignore
-??? UORespawnProject.sln
+├── UORespawnApp/              # Main MAUI application
+│   ├── Components/            # Blazor components
+│   │   ├── Layout/           # Navigation and layout
+│   │   ├── Pages/            # Page components
+│   │   ├── MapComponent.razor
+│   │   ├── WorldSpawnComponent.razor
+│   │   ├── StaticSpawnComponent.razor
+│   │   ├── SettingsComponent.razor
+│   │   └── InstructionsComponent.razor
+│   ├── Scripts/              # Utility scripts
+│   ├── wwwroot/              # Static web assets
+│   │   ├── maps/            # Map images
+│   │   ├── js/              # JavaScript interop
+│   │   └── css/             # Styles
+│   ├── Data/                 # Spawn data files
+│   └── Resources/            # App resources
+├── README.md
+├── LICENSE
+├── .gitignore
+└── UORespawnProject.sln
 ```
 
 ---
 
-## ?? Support
+## 💬 Support
 
 ### Need Help?
 
@@ -237,13 +238,13 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ---
 
-## ?? License
+## 📜 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
-## ?? Acknowledgments
+## 🙏 Acknowledgments
 
 - ServUO team for the amazing server platform
 - Ultima Online community for continued support
@@ -252,7 +253,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ---
 
 <p align="center">
-  Made with ?? for the ServUO community
+  Made with ❤️ for the ServUO community
 </p>
 
 <p align="center">
