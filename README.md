@@ -1,7 +1,7 @@
 ﻿# UORespawn Editor
 
 <p align="center">
-  <img src="UORespawnApp/Resources/Images/logo.png" alt="UORespawn Logo" width="200"/>
+  <img src="UORespawnApp/Resources/Splash/splash.svg" alt="UORespawn Logo" width="200"/>
 </p>
 
 <p align="center">
@@ -23,7 +23,7 @@
 
 UORespawn is a modern .NET MAUI application that provides a comprehensive visual interface for creating and managing spawn systems in Ultima Online ServUO servers. It offers three complementary spawn methods to populate your world with creatures and NPCs.
 
-**Version:** 1.0.0.3  
+**Version:** 2.0.0.1  
 **Platform:** Windows, macOS  
 **Framework:** .NET 9 MAUI with Blazor  
 **License:** MIT
@@ -78,7 +78,7 @@ UORespawn is a modern .NET MAUI application that provides a comprehensive visual
 
 ## 📥 Download
 
-**Latest Release:** [v1.0.0.3](https://github.com/Kita72/UORespawnProject/releases/latest)
+**Latest Release:** [v2.0.0.1](https://github.com/Kita72/UORespawnProject/releases/latest)
 
 Download the latest version from the [Releases](https://github.com/Kita72/UORespawnProject/releases) page.
 
@@ -163,8 +163,8 @@ Add these predefined NPCs from the bestiary:
 ### Clone and Build
 
 ```bash
-git clone https://github.com/yourusername/UORespawn.git
-cd UORespawn
+git clone https://github.com/Kita72/UORespawnProject.git
+cd UORespawnProject
 dotnet restore
 dotnet build
 ```
