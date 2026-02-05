@@ -53,39 +53,106 @@
         {
             string statsFolderPath = Path.Combine(Settings.ServUODataFolder, "UOR_Stats");
 
+            Console.WriteLine($"📂 Looking for spawn stats in: {statsFolderPath}");
+
             if (Directory.Exists(statsFolderPath))
             {
-                foreach (string filePath in Directory.GetFiles(statsFolderPath))
+                var files = Directory.GetFiles(statsFolderPath, "*.txt");
+                Console.WriteLine($"📄 Found {files.Length} stat files");
+
+                int totalLines = 0;
+                int successfulLines = 0;
+                int skippedLines = 0;
+
+                foreach (string filePath in files)
                 {
                     try
                     {
+                        Console.WriteLine($"📖 Reading: {Path.GetFileName(filePath)}");
+                        int fileLineCount = 0;
+
                         foreach (string line in File.ReadLines(filePath))
                         {
+                            totalLines++;
+                            fileLineCount++;
+
+                            if (string.IsNullOrWhiteSpace(line))
+                            {
+                                skippedLines++;
+                                continue;
+                            }
+
                             string[] parts = line.Split('|');
 
                             if (parts.Length == 7)
                             {
-                                string shortTime = parts[0];
-                                string playerName = parts[1];
-
-                                if (Enum.TryParse(parts[2], out GameMap map))
+                                try
                                 {
-                                    int playerX = int.Parse(parts[3]);
-                                    int playerY = int.Parse(parts[4]);
-                                    int spawnX = int.Parse(parts[5]);
-                                    int spawnY = int.Parse(parts[6]);
+                                    string shortTime = parts[0].Trim();      // "4:46 PM"
+                                    string playerName = parts[1].Trim();     // "Maliki"
+                                    string mapString = parts[2].Trim();      // "Trammel"
 
-                                    SpawnStats.Add((shortTime, playerName, map, new Microsoft.Maui.Graphics.Point(playerX, playerY), new Microsoft.Maui.Graphics.Point(spawnX, spawnY)));
+                                    // Convert map name to GameMap enum
+                                    GameMap map = ConvertMapNameToEnum(mapString);
+
+                                    int playerX = int.Parse(parts[3].Trim());
+                                    int playerY = int.Parse(parts[4].Trim());
+                                    int spawnX = int.Parse(parts[5].Trim());
+                                    int spawnY = int.Parse(parts[6].Trim());
+
+                                    SpawnStats.Add((shortTime, playerName, map, 
+                                        new Microsoft.Maui.Graphics.Point(playerX, playerY), 
+                                        new Microsoft.Maui.Graphics.Point(spawnX, spawnY)));
+
+                                    successfulLines++;
+                                }
+                                catch (Exception ex)
+                                {
+                                    Console.WriteLine($"⚠️ Error parsing line: '{line}' - {ex.Message}");
+                                    skippedLines++;
                                 }
                             }
+                            else
+                            {
+                                Console.WriteLine($"⚠️ Invalid line format (expected 7 parts, got {parts.Length}): '{line}'");
+                                skippedLines++;
+                            }
                         }
+
+                        Console.WriteLine($"   ✅ Processed {fileLineCount} lines from {Path.GetFileName(filePath)}");
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"Error reading file {filePath}: {ex.Message}");
+                        Console.WriteLine($"❌ Error reading file {Path.GetFileName(filePath)}: {ex.Message}");
                     }
                 }
+
+                Console.WriteLine($"");
+                Console.WriteLine($"📊 SUMMARY:");
+                Console.WriteLine($"   Total lines: {totalLines}");
+                Console.WriteLine($"   Successfully parsed: {successfulLines}");
+                Console.WriteLine($"   Skipped/errors: {skippedLines}");
+                Console.WriteLine($"   Spawn events loaded: {SpawnStats.Count}");
             }
+            else
+            {
+                Console.WriteLine($"❌ UOR_Stats folder not found at: {statsFolderPath}");
+            }
+        }
+
+        private static GameMap ConvertMapNameToEnum(string mapName)
+        {
+            // Handle both full names and enum names
+            return mapName.ToLower() switch
+            {
+                "felucca" or "map0" => GameMap.Map0,
+                "trammel" or "map1" => GameMap.Map1,
+                "ilshenar" or "map2" => GameMap.Map2,
+                "malas" or "map3" => GameMap.Map3,
+                "tokuno" or "map4" => GameMap.Map4,
+                "termur" or "ter mur" or "map5" => GameMap.Map5,
+                _ => throw new ArgumentException($"Unknown map name: {mapName}")
+            };
         }
 
         internal static void ClearSpawnData()
