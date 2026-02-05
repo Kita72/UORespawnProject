@@ -166,6 +166,12 @@ private int imgWidth = 0;
 private int imgHeight = 0;
 
 private ElementReference mapContainerRef;
+
+// Store last position for each map (static so it persists across component instances)
+private static Dictionary<GameMap, (double panX, double panY)> mapPositions = new();
+
+// Track which map we're currently viewing
+private GameMap currentMapTracked = GameMap.Map0;
     
 // Category modal state
 private bool showCategoryModal = false;
@@ -192,6 +198,12 @@ private bool showMiniMap = true;
         {
             imageSrc = "maps/Map0.bmp";
             Logger.Warning("GetMapImagePath returned empty, defaulting to Map0");
+        }
+        
+        // Track the initial map
+        if (Utility.SESSION != null)
+        {
+            currentMapTracked = Utility.SESSION.Current_Map;
         }
         
         ViewService.OnMapChanged += HandleMapChanged;
@@ -240,15 +252,30 @@ private bool showMiniMap = true;
     
     private void HandleMapChanged()
     {
+        // Save current position for the OLD map (the one we're leaving)
+        if (imgWidth > 0)
+        {
+            mapPositions[currentMapTracked] = (panX, panY);
+            Logger.Info($"Saved position for {currentMapTracked}: ({panX:F0}, {panY:F0})");
+        }
+        
+        // Update to track the NEW map
+        if (Utility.SESSION != null)
+        {
+            currentMapTracked = Utility.SESSION.Current_Map;
+            Logger.Info($"Switching to map: {currentMapTracked}");
+        }
+        
         imageSrc = Utility.GetMapImagePath();
         selected = null;
-        panX = 0;
-        panY = 0;
         mouseWorldX = 0;
         mouseWorldY = 0;
         imgWidth = 0;
         imgHeight = 0;
         imageDim = "Loading...";
+        
+        // Note: panX and panY will be restored in OnImageLoaded after map loads
+        
         StateHasChanged();
     }
     
@@ -275,12 +302,28 @@ private bool showMiniMap = true;
                     imgWidth = w;
                     imgHeight = h;
                     imageDim = $"{w}x{h}";
-                    panX = 0;
-                    panY = 0;
+                    
+                    // Restore saved position for THIS map (currentMapTracked)
+                    if (mapPositions.TryGetValue(currentMapTracked, out var savedPos))
+                    {
+                        panX = savedPos.panX;
+                        panY = savedPos.panY;
+                        Logger.Info($"Restored position for {currentMapTracked}: ({panX:F0}, {panY:F0})");
+                    }
+                    else
+                    {
+                        panX = 0;
+                        panY = 0;
+                        Logger.Info($"First visit to {currentMapTracked}, starting at (0, 0)");
+                    }
                     
                     await JS.InvokeVoidAsync("eval", $"window.mapModule.init({w}, {h})");
                     await SyncSettingsToJavaScript();
                     await InitializeMiniMap();
+                    
+                    // Apply the restored (or reset) pan position
+                    await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
+                    
                     await Redraw();
                     StateHasChanged();
                 }
@@ -497,6 +540,9 @@ private bool showMiniMap = true;
             panX = newPanX;
             panY = newPanY;
             
+            // Save the new position for the current map
+            mapPositions[currentMapTracked] = (panX, panY);
+            
             await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
             await UpdateMiniMapViewport();
             StateHasChanged();
@@ -612,6 +658,10 @@ private bool showMiniMap = true;
             {
                 panX = pan.X;
                 panY = pan.Y;
+                
+                // Save the new position for the current map immediately
+                mapPositions[currentMapTracked] = (panX, panY);
+                
                 await UpdateMiniMapViewport();
                 StateHasChanged();
             }
@@ -628,6 +678,11 @@ private bool showMiniMap = true;
     {
         panX = 0;
         panY = 0;
+        
+        // Clear the saved position for the CURRENT map
+        mapPositions.Remove(currentMapTracked);
+        Logger.Info($"Reset position for {currentMapTracked} to (0, 0)");
+        
         await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
         await UpdateMiniMapViewport();
         StateHasChanged();
@@ -670,6 +725,10 @@ private bool showMiniMap = true;
         if (handled)
         {
             await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
+            
+            // Save the new position for the current map
+            mapPositions[currentMapTracked] = (panX, panY);
+            
             await UpdateMiniMapViewport();
             StateHasChanged();
         }
@@ -972,6 +1031,9 @@ private bool showMiniMap = true;
         
         panX = newPanX;
         panY = newPanY;
+        
+        // Save the new position for the current map
+        mapPositions[currentMapTracked] = (panX, panY);
         
         await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
         await UpdateMiniMapViewport();
