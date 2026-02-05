@@ -657,15 +657,59 @@ private bool showMiniMap = true;
         
         if (showServerSpawns)
         {
+            Console.WriteLine($"?? Toggling ON server spawn statistics for {ViewService.CurrentMap}");
+            
+            // Check if ServUO folder is configured
+            if (string.IsNullOrEmpty(Settings.ServUODataFolder))
+            {
+                Console.WriteLine("?? Server Data folder not configured!");
+                Console.WriteLine("?? Go to Settings and set your ServUO Data folder path");
+                showServerSpawns = false;
+                StateHasChanged();
+                return;
+            }
+            
+            // Check if UOR_Stats folder exists
+            string statsFolderPath = Path.Combine(Settings.ServUODataFolder, "UOR_Stats");
+            if (!Directory.Exists(statsFolderPath))
+            {
+                Console.WriteLine($"?? UOR_Stats folder not found at: {statsFolderPath}");
+                Console.WriteLine("?? Run [PushRespawnStats] command in-game to generate stat files");
+                showServerSpawns = false;
+                StateHasChanged();
+                return;
+            }
+            
             // Load spawn statistics from server if not already loaded
             if (!MapDisplayUtility.HasSpawnData)
             {
+                Console.WriteLine($"?? Loading spawn statistics from: {statsFolderPath}");
                 MapDisplayUtility.InstantiateStatData();
+                
+                if (!MapDisplayUtility.HasSpawnData)
+                {
+                    Console.WriteLine("?? No spawn statistics files found!");
+                    Console.WriteLine("?? Play on your server to generate spawn data, then run [PushRespawnStats]");
+                    showServerSpawns = false;
+                    StateHasChanged();
+                    return;
+                }
+                
+                Console.WriteLine($"? Loaded spawn statistics successfully!");
             }
             
             // Get spawn data for current map
             var spawnData = MapDisplayUtility.GetSpawnDataForMap(ViewService.CurrentMap);
-            Console.WriteLine($"Showing {spawnData.Count} server spawns for {ViewService.CurrentMap}");
+            int totalCount = MapDisplayUtility.GetSpawnDataCount(ViewService.CurrentMap);
+            Console.WriteLine($"?? Found {totalCount} spawn events for {ViewService.CurrentMap}");
+            
+            if (spawnData.Count == 0)
+            {
+                Console.WriteLine($"?? No spawn data for {ViewService.CurrentMap} - try a different map");
+                showServerSpawns = false;
+                StateHasChanged();
+                return;
+            }
             
             // Convert to JSON and send to JavaScript
             var options = new System.Text.Json.JsonSerializerOptions 
@@ -676,10 +720,11 @@ private bool showMiniMap = true;
             var json = System.Text.Json.JsonSerializer.Serialize(spawnData, options);
             
             await JS.InvokeVoidAsync("eval", $"window.mapModule.showServerSpawns({json})");
+            Console.WriteLine($"? Displayed {spawnData.Count} spawn points on map");
         }
         else
         {
-            Console.WriteLine($"Hiding server spawns");
+            Console.WriteLine($"?? Hiding server spawn statistics");
             await JS.InvokeVoidAsync("eval", "window.mapModule.hideServerSpawns()");
         }
         
