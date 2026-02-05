@@ -1,12 +1,14 @@
 # UORespawn Windows Publish Script
-# This creates a self-contained Windows executable package
+# This creates a self-contained .NET 10 Windows executable package
 
 $version = "2.0.0.1"
 $projectPath = "UORespawnApp"
 $outputBase = ".\Releases"
+$publishOutput = "$outputBase\windows-x64"
 
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "UORespawn v$version - Windows Publisher" -ForegroundColor Cyan
+Write-Host "  .NET 10 Self-Contained Build" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -22,8 +24,11 @@ if (Test-Path "$projectPath\bin") {
 if (Test-Path "$projectPath\obj") {
     Remove-Item "$projectPath\obj" -Recurse -Force -ErrorAction SilentlyContinue
 }
+if (Test-Path $publishOutput) {
+    Remove-Item $publishOutput -Recurse -Force -ErrorAction SilentlyContinue
+}
 
-# Publish Windows x64 (Self-contained with single file)
+# Publish Windows x64 (Self-contained with CoreCLR runtime)
 Write-Host ""
 Write-Host "Publishing Windows x64 (Self-Contained)..." -ForegroundColor Green
 Write-Host "This may take a few minutes..." -ForegroundColor Yellow
@@ -33,10 +38,9 @@ dotnet publish $projectPath `
 -c Release `
 -r win-x64 `
 --self-contained true `
--p:PublishSingleFile=true `
--p:IncludeNativeLibrariesForSelfExtract=true `
--p:PublishTrimmed=false `
--p:EnableCompressionInSingleFile=true
+-p:RuntimeIdentifierOverride=win10-x64 `
+-p:UseMonoRuntime=false `
+-o $publishOutput
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host ""
@@ -44,8 +48,12 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
-# Get publish path
-$publishPath = "$projectPath\bin\Release\net10.0-windows10.0.19041.0\win-x64\publish"
+# Verify publish output
+$publishPath = $publishOutput
+
+
+# Verify publish output
+$publishPath = $publishOutput
 
 if (-not (Test-Path $publishPath)) {
     Write-Host ""
@@ -53,11 +61,17 @@ if (-not (Test-Path $publishPath)) {
     exit 1
 }
 
+if (-not (Test-Path "$publishPath\UORespawnApp.exe")) {
+    Write-Host ""
+    Write-Host "? UORespawnApp.exe not found!" -ForegroundColor Red
+    exit 1
+}
+
 # Create ZIP package
 Write-Host ""
 Write-Host "Creating distribution package..." -ForegroundColor Green
 
-$zipName = "UORespawn-v$version-Windows-x64.zip"
+$zipName = "UORespawn-v$version-Windows-x64-NET10.zip"
 $zipPath = Join-Path $outputBase $zipName
 
 # Remove old ZIP if exists
@@ -78,7 +92,10 @@ Write-Host "========================================" -ForegroundColor Green
 Write-Host ""
 Write-Host "Package: $zipName" -ForegroundColor Cyan
 Write-Host "Size: $("{0:N2}" -f $fileSize) MB" -ForegroundColor Cyan
+Write-Host "Framework: .NET 10.0 (Self-Contained)" -ForegroundColor Cyan
+Write-Host "Runtime: CoreCLR (Windows)" -ForegroundColor Cyan
 Write-Host "Location: $(Resolve-Path $zipPath)" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "?? Ready to upload to GitHub Releases!" -ForegroundColor Yellow
 Write-Host ""
+
