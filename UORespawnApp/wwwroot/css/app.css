@@ -27,6 +27,22 @@ button:active:focus {
     filter: brightness(0.95);
 }
 
+/* Override for minimap toggle buttons - no filters, use proper Bootstrap colors */
+.minimap-body .btn-success,
+.minimap-body .btn-danger {
+    filter: none !important;
+}
+
+.minimap-body .btn-success:hover,
+.minimap-body .btn-danger:hover {
+    filter: none !important;
+}
+
+.minimap-body .btn-success:active,
+.minimap-body .btn-danger:active {
+    filter: none !important;
+}
+
 /* Dark Theme (Default) */
 body.dark-theme {
     background-color: #0a0a0a;

@@ -55,15 +55,17 @@
                 </div>
                 @if (showMiniMap)
                 {
-                    <div class="card-body p-2 minimap-body">
+                    <div class="card-body p-2 minimap-body" @key="@("minimap-body")">
                         <canvas id="miniMapCanvas" width="250" height="188"
                                 style="cursor:pointer; border:1px solid #333; display:block; image-rendering:pixelated; width: 100%; height: auto;"
                                 @onclick="OnMiniMapClick" />
                         <div class="d-flex gap-2 mt-2">
-                            <button class="btn btn-sm w-50 @(showXMLSpawners ? "btn-success" : "btn-danger")" @onclick="ToggleXMLSpawners" title="Toggle XML Spawners">
+                            <button class="btn btn-sm w-50 @(showXMLSpawners ? "btn-success" : "btn-danger")" 
+                                    @onclick="ToggleXMLSpawners" title="Toggle XML Spawners">
                                 <span class="bi bi-gear-fill"></span> XML
                             </button>
-                            <button class="btn btn-sm w-50 @(showServerSpawns ? "btn-success" : "btn-danger")" @onclick="ToggleServerSpawns" title="Toggle Server Spawns">
+                            <button class="btn btn-sm w-50 @(showServerSpawns ? "btn-success" : "btn-danger")" 
+                                    @onclick="ToggleServerSpawns" title="Toggle Server Spawns">
                                 <span class="bi bi-bullseye"></span> Spawns
                             </button>
                         </div>
@@ -200,11 +202,11 @@ private List<string> currentCategorySpawns = new();
 private SpawnEntity? editingSpawn = null;
 private Frequency editingFrequency = Frequency.Common;
 
-// XML Spawner toggle
-private bool showXMLSpawners = false;
+// XML Spawner toggle (static to persist across map changes)
+private static bool showXMLSpawners = false;
 
-// Server Spawn toggle
-private bool showServerSpawns = false;
+// Server Spawn toggle (static to persist across map changes)
+private static bool showServerSpawns = false;
 
 // Mini map collapse
 private bool showMiniMap = true;
@@ -336,6 +338,43 @@ private int? spawnSearchId = null;
                     await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
                     
                     await Redraw();
+                    
+                    // Re-apply XML spawners if toggle is ON
+                    if (showXMLSpawners)
+                    {
+                        var xmlSpawners = XMLSpawnUtility.GetSpawnersForMap(ViewService.CurrentMap);
+                        if (xmlSpawners.Count > 0)
+                        {
+                            var options = new System.Text.Json.JsonSerializerOptions 
+                            { 
+                                PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+                                WriteIndented = false 
+                            };
+                            var json = System.Text.Json.JsonSerializer.Serialize(xmlSpawners, options);
+                            await JS.InvokeVoidAsync("eval", $"window.mapModule.showXMLSpawners({json})");
+                            Logger.Info($"Re-applied XML spawners for {ViewService.CurrentMap}: {xmlSpawners.Count} spawners");
+                        }
+                        await InvokeAsync(StateHasChanged); // Force UI update for button state
+                    }
+                    
+                    // Re-apply server spawns if toggle is ON
+                    if (showServerSpawns && MapDisplayUtility.HasSpawnData)
+                    {
+                        var spawnData = MapDisplayUtility.GetSpawnDataForMap(ViewService.CurrentMap);
+                        if (spawnData.Count > 0)
+                        {
+                            var options = new System.Text.Json.JsonSerializerOptions 
+                            { 
+                                PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+                                WriteIndented = false 
+                            };
+                            var json = System.Text.Json.JsonSerializer.Serialize(spawnData, options);
+                            await JS.InvokeVoidAsync("eval", $"window.mapModule.showServerSpawns({json})");
+                            Logger.Info($"Re-applied server spawns for {ViewService.CurrentMap}: {spawnData.Count} spawn points");
+                        }
+                        await InvokeAsync(StateHasChanged); // Force UI update for button state
+                    }
+                    
                     StateHasChanged();
                 }
             }
@@ -1317,3 +1356,5 @@ private int? spawnSearchId = null;
         ViewService.OnMapChanged -= HandleMapChanged;
     }
 }
+
+

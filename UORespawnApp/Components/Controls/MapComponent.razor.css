@@ -220,23 +220,23 @@ button:active:focus {
     border-color: inherit !important;
 }
 
-/* Mini Map and Control Buttons */
+/* Mini Map and Control Buttons - Exclude minimap toggle buttons */
 .card-header .btn,
-.card-body .btn,
+.card-body .spawn-controls .btn,
 .alert .btn {
     transition: all 0.2s ease;
     border: 1px solid transparent;
 }
 
 .card-header .btn:hover,
-.card-body .btn:hover,
+.card-body .spawn-controls .btn:hover,
 .alert .btn:hover {
     transform: translateY(-1px);
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .card-header .btn:active,
-.card-body .btn:active,
+.card-body .spawn-controls .btn:active,
 .alert .btn:active {
     transform: translateY(0);
 }
@@ -294,45 +294,62 @@ body.dark-theme .alert .btn-outline-primary:hover {
     background-color: #667eea;
 }
 
-/* XML and Spawn Toggle Buttons */
-.btn-success,
-.btn-danger {
+/* XML and Spawn Toggle Buttons - Override card-body .btn rules */
+.minimap-body .btn-success,
+.minimap-body .btn-danger {
     transition: all 0.2s ease;
+    border: 1px solid !important;
 }
 
-.btn-success:hover {
+.minimap-body .btn-success {
+    background-color: #28a745 !important;
+    border-color: #28a745 !important;
+    color: white !important;
+}
+
+.minimap-body .btn-danger {
+    background-color: #dc3545 !important;
+    border-color: #dc3545 !important;
+    color: white !important;
+}
+
+.minimap-body .btn-success:hover {
     transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(40, 167, 69, 0.3);
+    box-shadow: 0 2px 4px rgba(40, 167, 69, 0.3) !important;
+    background-color: #218838 !important;
+    border-color: #1e7e34 !important;
 }
 
-.btn-danger:hover {
+.minimap-body .btn-danger:hover {
     transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(220, 53, 69, 0.3);
+    box-shadow: 0 2px 4px rgba(220, 53, 69, 0.3) !important;
+    background-color: #c82333 !important;
+    border-color: #bd2130 !important;
 }
 
-.btn-success:active,
-.btn-danger:active {
+.minimap-body .btn-success:active,
+.minimap-body .btn-danger:active {
     transform: translateY(0);
 }
 
-body.dark-theme .btn-success {
-    background-color: #28a745;
-    border-color: #28a745;
+body.dark-theme .minimap-body .btn-success {
+    background-color: #28a745 !important;
+    border-color: #28a745 !important;
 }
 
-body.dark-theme .btn-success:hover {
-    background-color: #34ce57;
-    border-color: #34ce57;
+body.dark-theme .minimap-body .btn-success:hover {
+    background-color: #34ce57 !important;
+    border-color: #34ce57 !important;
 }
 
-body.dark-theme .btn-danger {
-    background-color: #dc3545;
-    border-color: #dc3545;
+body.dark-theme .minimap-body .btn-danger {
+    background-color: #dc3545 !important;
+    border-color: #dc3545 !important;
 }
 
-body.dark-theme .btn-danger:hover {
-    background-color: #e74c3c;
-    border-color: #e74c3c;
+body.dark-theme .minimap-body .btn-danger:hover {
+    background-color: #e74c3c !important;
+    border-color: #e74c3c !important;
 }
 
 /* Mini Map Header Buttons (Reset & Collapse) */
