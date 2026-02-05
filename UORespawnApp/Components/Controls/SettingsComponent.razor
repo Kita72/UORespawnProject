@@ -78,10 +78,35 @@
                     {
                         @if (!string.IsNullOrEmpty(Settings.ServUODataFolder))
                         {
-                            <div class="alert alert-success mb-0">
+                            <div class="alert alert-success mb-3">
                                 <span class="bi bi-check-circle"></span> Server folder configured: <strong>@Settings.ServUODataFolder</strong>
                                 <br />
                                 <small>Files will automatically sync when changes are made</small>
+                            </div>
+
+                            <!-- Import from Server Button -->
+                            <div class="mb-0">
+                                <button class="btn btn-primary w-100" @onclick="ImportFromServer" disabled="@isImporting">
+                                    @if (isImporting)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2"></span>
+                                        <text>Importing...</text>
+                                    }
+                                    else
+                                    {
+                                        <span class="bi bi-cloud-download me-2"></span>
+                                        <text>Import Spawn Files from Server</text>
+                                    }
+                                </button>
+                                <small class="text-muted d-block mt-2 text-center">
+                                    Imports UOR_Spawn.csv, UOR_WorldSpawn.csv, UOR_StaticSpawn.csv, UOR_SpawnSettings.csv
+                                </small>
+                                @if (!string.IsNullOrEmpty(importMessage))
+                                {
+                                    <div class="alert @(importSuccess ? "alert-success" : "alert-danger") mt-3 mb-0" style="white-space: pre-line;">
+                                        @importMessage
+                                    </div>
+                                }
                             </div>
                         }
                         else
@@ -387,6 +412,9 @@ private string boxColorHex = "#8B0000";
 private bool isExporting = false;
 private string exportMessage = "";
 private bool exportSuccess = false;
+private bool isImporting = false;
+private string importMessage = "";
+private bool importSuccess = false;
     
     protected override async Task OnInitializedAsync()
     {
@@ -648,7 +676,7 @@ private bool exportSuccess = false;
             if (File.Exists(destinationPath))
             {
                 File.Copy(destinationPath, backupPath, true);
-                Console.WriteLine($"?? Original map backed up to: {backupPath}");
+                Console.WriteLine($"Original map backed up to: {backupPath}");
             }
             
             // STEP 9: COPY NEW MAP FILE
@@ -756,6 +784,54 @@ private bool exportSuccess = false;
         StateHasChanged();
     }
     
+    private async Task ImportFromServer()
+    {
+        isImporting = true;
+        importMessage = "";
+        StateHasChanged();
+        
+        await Task.Delay(100); // Brief delay to show UI update
+        
+        try
+        {
+            var (success, message, filesImported) = ServerImportUtility.ImportFromServer();
+            
+            importSuccess = success;
+            importMessage = message;
+            
+            // If import was successful, reload the data
+            if (success && filesImported > 0)
+            {
+                try
+                {
+                    // Reload spawn data
+                    Utility.LoadSpawnData();
+                    await WorldSpawnUtility.LoadWorldSpawnList();
+                    await WorldSpawnUtility.LoadStaticSpawnList();
+                    
+                    importMessage += "\n\nData reloaded successfully!";
+                    Console.WriteLine("Data reloaded after import");
+                }
+                catch (Exception ex)
+                {
+                    importMessage += $"\n\nWarning: Files imported but reload failed: {ex.Message}";
+                    Console.WriteLine($"Reload failed: {ex.Message}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            importSuccess = false;
+            importMessage = $"Import failed: {ex.Message}";
+            Console.WriteLine($"Import exception: {ex.Message}");
+        }
+        finally
+        {
+            isImporting = false;
+            StateHasChanged();
+        }
+    }
+
     private async Task ExportServerScripts()
     {
         isExporting = true;
@@ -764,13 +840,13 @@ private bool exportSuccess = false;
         
         try
         {
-            Console.WriteLine("? Starting server scripts export...");
+            Console.WriteLine("Starting server scripts export...");
             
             // Get SpawnSystem folder path - try multiple locations
             string? spawnSystemPath = null;
             var baseDir = AppDomain.CurrentDomain.BaseDirectory;
             
-            Console.WriteLine($"?? Base directory: {baseDir}");
+            Console.WriteLine($"Base directory: {baseDir}");
             
             // Try relative paths from base directory
             var possiblePaths = new[]
@@ -785,23 +861,23 @@ private bool exportSuccess = false;
             foreach (var testPath in possiblePaths)
             {
                 var fullPath = Path.GetFullPath(testPath);
-                Console.WriteLine($"?? Testing: {fullPath}");
+                Console.WriteLine($"Testing: {fullPath}");
                 
                 if (Directory.Exists(fullPath))
                 {
                     spawnSystemPath = fullPath;
-                    Console.WriteLine($"? Found SpawnSystem at: {spawnSystemPath}");
+                    Console.WriteLine($"Found SpawnSystem at: {spawnSystemPath}");
                     break;
                 }
             }
             
             if (string.IsNullOrEmpty(spawnSystemPath))
             {
-                exportMessage = "? Error: SpawnSystem folder not found.\n\n" +
+                exportMessage = "Error: SpawnSystem folder not found.\n\n" +
                                "The SpawnSystem folder should be in the application directory.\n" +
                                "Please download the source code from GitHub to access server scripts.";
                 exportSuccess = false;
-                Console.WriteLine($"? SpawnSystem not found. Searched paths:");
+                Console.WriteLine($"SpawnSystem not found. Searched paths:");
                 foreach (var path in possiblePaths)
                 {
                     Console.WriteLine($"   - {Path.GetFullPath(path)}");
@@ -818,14 +894,14 @@ private bool exportSuccess = false;
                 File.Delete(tempPath);
             }
             
-            Console.WriteLine($"?? Creating ZIP at: {tempPath}");
+            Console.WriteLine($"Creating ZIP at: {tempPath}");
             
             // Create ZIP file
             System.IO.Compression.ZipFile.CreateFromDirectory(spawnSystemPath, tempPath, 
                 System.IO.Compression.CompressionLevel.Optimal, false);
             
             var zipInfo = new FileInfo(tempPath);
-            Console.WriteLine($"? ZIP created successfully ({zipInfo.Length / 1024:N0} KB)");
+            Console.WriteLine($"ZIP created successfully ({zipInfo.Length / 1024:N0} KB)");
             
             // Copy to Downloads folder or use Share
 #if WINDOWS
@@ -851,9 +927,9 @@ private bool exportSuccess = false;
             
             File.Copy(tempPath, downloadsPath, true);
             
-            exportMessage = $"? Server scripts exported to Downloads folder:\n{downloadsPath}";
+            exportMessage = $"Server scripts exported to Downloads folder:\n{downloadsPath}";
             exportSuccess = true;
-            Console.WriteLine($"? File saved to: {downloadsPath}");
+            Console.WriteLine($"File saved to: {downloadsPath}");
             
             // Open Downloads folder
             try
@@ -876,9 +952,9 @@ private bool exportSuccess = false;
         }
         catch (Exception ex)
         {
-            exportMessage = $"? Error exporting server scripts: {ex.Message}\n\nStack Trace:\n{ex.StackTrace}";
+            exportMessage = $"Error exporting server scripts: {ex.Message}\n\nStack Trace:\n{ex.StackTrace}";
             exportSuccess = false;
-            Console.WriteLine($"? Export error: {ex.Message}");
+            Console.WriteLine($"Export error: {ex.Message}");
             Console.WriteLine($"Stack trace: {ex.StackTrace}");
         }
         finally
