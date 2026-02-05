@@ -3,6 +3,30 @@ html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
+/* Global Button Focus Removal - No more ugly blue borders! */
+.btn:focus,
+.btn:active:focus,
+.btn.active:focus,
+.btn-link:focus,
+button:focus,
+button:active:focus {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+/* Smooth button transitions */
+.btn {
+    transition: all 0.2s ease;
+}
+
+.btn:hover {
+    filter: brightness(1.1);
+}
+
+.btn:active {
+    filter: brightness(0.95);
+}
+
 /* Dark Theme (Default) */
 body.dark-theme {
     background-color: #0a0a0a;
@@ -118,8 +142,18 @@ a, .btn-link {
     border-color: #1861ac;
 }
 
-.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
+/* Form controls can keep their focus for accessibility */
+.form-control:focus,
+.form-check-input:focus {
     box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+}
+
+/* But buttons should not have ugly focus borders */
+.btn:focus,
+.btn:active:focus,
+.btn-link.nav-link:focus {
+    box-shadow: none !important;
+    outline: none !important;
 }
 
 .content {

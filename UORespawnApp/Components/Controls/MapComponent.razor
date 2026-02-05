@@ -43,12 +43,12 @@
             <!-- Mini Map - Collapsible -->
             <div class="card shadow-sm mb-3 map-card">
                 <div class="card-header text-center d-flex justify-content-between align-items-center">
-                    <button class="btn btn-sm btn-outline-secondary p-1" @onclick="ResetView" title="Reset Position" style="width: 32px; height: 32px;">
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="ResetView" title="Reset View & Zoom" style="width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center;">
                         <span class="bi bi-arrow-counterclockwise"></span>
                     </button>
                     <strong>Mini Map</strong>
-                    <button class="btn btn-sm btn-outline-secondary p-1" @onclick="ToggleMiniMap" title="@(showMiniMap ? "Collapse" : "Expand") Mini Map" style="width: 32px; height: 32px;">
-                        <span class="bi @(showMiniMap ? "bi-chevron-up" : "bi-chevron-down")"></span>
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="ToggleMiniMap" title="@(showMiniMap ? "Collapse Mini Map" : "Expand Mini Map")" style="width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center;">
+                        <span class="bi @(showMiniMap ? "bi-list" : "bi-chevron-down")"></span>
                     </button>
                 </div>
                 @if (showMiniMap)
@@ -71,8 +71,18 @@
             
             <!-- Map Spawn List - Flex to fill remaining space -->
             <div class="card shadow-sm map-card spawn-list-container" style="@GetSpawnListStyle()">
-                <div class="card-header text-center">
-                    <strong>Map Spawn (@GetSpawnCount())</strong>
+                <div class="card-header text-center spawn-list-header">
+                    <strong>Map Spawn</strong>
+                    <input type="number" 
+                           class="spawn-search-input" 
+                           @bind="spawnSearchId" 
+                           @bind:event="oninput"
+                           @bind:after="OnSpawnSearchChanged"
+                           min="1" 
+                           max="@GetSpawnCount()" 
+                           placeholder="ID" 
+                           title="Jump to spawn ID" />
+                    <strong>/ @GetSpawnCount()</strong>
                 </div>
                 <div class="card-body p-2 spawn-list-body">
                     @if (GetSpawnList().Any())
@@ -196,6 +206,9 @@ private bool showServerSpawns = false;
 
 // Mini map collapse
 private bool showMiniMap = true;
+
+// Spawn search ID
+private int? spawnSearchId = null;
     
     protected override void OnInitialized()
     {
@@ -297,6 +310,7 @@ private bool showMiniMap = true;
         imgWidth = 0;
         imgHeight = 0;
         imageDim = "Loading...";
+        spawnSearchId = null; // Reset spawn search when changing maps
         
         // Note: JavaScript will apply these values in OnImageLoaded after map loads
         
@@ -1010,12 +1024,67 @@ private bool showMiniMap = true;
         if (Utility.SESSION == null) return new List<SpawnEntity>();
         
         // Safely get spawn list with null check for dictionary key
-        if (Utility.Spawns.TryGetValue(Utility.SESSION.Current_Map, out var spawnList))
+        if (!Utility.Spawns.TryGetValue(Utility.SESSION.Current_Map, out var spawnList))
         {
-            return spawnList;
+            return new List<SpawnEntity>();
         }
         
-        return new List<SpawnEntity>();
+        // If search ID is set and valid, reorder list to start from that ID
+        if (spawnSearchId.HasValue && spawnSearchId.Value > 0)
+        {
+            var searchId = spawnSearchId.Value;
+            
+            // Split list: spawns from searchId onwards, then spawns before searchId (wrap around)
+            var fromId = spawnList.Where(s => s.Position >= searchId).OrderBy(s => s.Position);
+            var beforeId = spawnList.Where(s => s.Position < searchId).OrderBy(s => s.Position);
+            
+            return fromId.Concat(beforeId).ToList();
+        }
+        
+        // Default: return in Position order
+        return spawnList.OrderBy(s => s.Position).ToList();
+    }
+    
+    private async Task OnSpawnSearchChanged()
+    {
+        // Validate and clamp the search ID to valid range
+        if (spawnSearchId.HasValue)
+        {
+            int maxCount = GetSpawnCount();
+            
+            if (maxCount == 0)
+            {
+                // No spawns, clear the search
+                spawnSearchId = null;
+                return;
+            }
+            
+            // Clamp value to valid range (1 to spawn count)
+            if (spawnSearchId.Value > maxCount)
+            {
+                spawnSearchId = maxCount;
+                Logger.Info($"Search ID clamped to max: {maxCount}");
+            }
+            else if (spawnSearchId.Value < 1)
+            {
+                spawnSearchId = 1;
+                Logger.Info("Search ID clamped to min: 1");
+            }
+        }
+        
+        // Auto-jump to the spawn when search ID changes
+        if (spawnSearchId.HasValue && spawnSearchId.Value > 0 && Utility.SESSION != null)
+        {
+            var spawns = Utility.Spawns[Utility.SESSION.Current_Map];
+            var targetSpawn = spawns.FirstOrDefault(s => s.Position == spawnSearchId.Value);
+            
+            if (targetSpawn != null)
+            {
+                selected = targetSpawn;
+                await JumpToSpawn(targetSpawn);
+                Logger.Info($"Quick search: jumped to Spawn #{targetSpawn.Position}");
+            }
+        }
     }
     
     private int GetSpawnCount()

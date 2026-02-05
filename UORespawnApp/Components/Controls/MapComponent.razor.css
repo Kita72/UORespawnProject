@@ -1,3 +1,95 @@
+/* Spawn List Header with Search Input */
+.spawn-list-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.spawn-search-input {
+    width: 50px;
+    padding: 2px 6px;
+    border: 1px solid #6c757d;
+    border-radius: 3px;
+    text-align: center;
+    font-size: 0.9rem;
+    font-weight: bold;
+    background: rgba(255, 255, 255, 0.1);
+    color: inherit;
+}
+
+.spawn-search-input:focus {
+    outline: none;
+    border-color: #0d6efd;
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.spawn-search-input::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+    font-weight: normal;
+}
+
+/* Hide number input spinners */
+.spawn-search-input::-webkit-inner-spin-button,
+.spawn-search-input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.spawn-search-input[type=number] {
+    -moz-appearance: textfield;
+}
+
+/* Mini Map Header Button Styling - Remove borders and backgrounds */
+.card-header .btn {
+    border: none !important;
+    background: none !important;
+    box-shadow: none !important;
+    padding: 0;
+    margin: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.card-header .btn:hover {
+    opacity: 0.8;
+    transform: scale(1.1);
+    background: none !important;
+    border: none !important;
+}
+
+.card-header .btn:active {
+    transform: scale(0.95);
+}
+
+/* Mini Map Button Icons - Using SVG backgrounds like NavMenu */
+.card-header .btn .bi {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    vertical-align: middle;
+}
+
+.bi-arrow-counterclockwise {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='white' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M8 3a5 5 0 1 1-4.546 2.914.5.5 0 0 0-.908-.417A6 6 0 1 0 8 2v1z'/%3E%3Cpath d='M8 4.466V.534a.25.25 0 0 0-.41-.192L5.23 2.308a.25.25 0 0 0 0 .384l2.36 1.966A.25.25 0 0 0 8 4.466z'/%3E%3C/svg%3E");
+}
+
+.bi-list {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='white' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5z'/%3E%3C/svg%3E");
+}
+
+.bi-chevron-down {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='white' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
+}
+
 /* Map Card Styling */
 .map-card {
     border: 1px solid #dee2e6;
@@ -91,7 +183,152 @@ body.dark-theme .spawn-item .text-muted {
     color: #999 !important;
 }
 
-/* Button Styling */
+/* Global Button Styling - Remove ugly focus borders */
+.btn:focus,
+.btn:active,
+.btn:active:focus,
+.btn.active:focus,
+button:focus,
+button:active,
+button:active:focus {
+    outline: none !important;
+    box-shadow: none !important;
+    border-color: inherit !important;
+}
+
+/* Mini Map and Control Buttons */
+.card-header .btn,
+.card-body .btn,
+.alert .btn {
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+}
+
+.card-header .btn:hover,
+.card-body .btn:hover,
+.alert .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.card-header .btn:active,
+.card-body .btn:active,
+.alert .btn:active {
+    transform: translateY(0);
+}
+
+/* Zoom Button Styling */
+.alert .btn-primary {
+    background-color: #667eea;
+    border-color: #667eea;
+}
+
+.alert .btn-primary:hover {
+    background-color: #5568d3;
+    border-color: #5568d3;
+}
+
+.alert .btn-primary:active {
+    background-color: #4557bc;
+    border-color: #4557bc;
+}
+
+.alert .btn-outline-primary {
+    color: #667eea;
+    border-color: #667eea;
+    background-color: transparent;
+}
+
+.alert .btn-outline-primary:hover {
+    color: white;
+    background-color: #667eea;
+    border-color: #667eea;
+}
+
+.alert .btn-outline-primary:active {
+    background-color: #5568d3;
+    border-color: #5568d3;
+}
+
+body.dark-theme .alert .btn-primary {
+    background-color: #5568d3;
+    border-color: #5568d3;
+}
+
+body.dark-theme .alert .btn-primary:hover {
+    background-color: #667eea;
+    border-color: #667eea;
+}
+
+body.dark-theme .alert .btn-outline-primary {
+    color: #667eea;
+    border-color: #667eea;
+}
+
+body.dark-theme .alert .btn-outline-primary:hover {
+    color: white;
+    background-color: #667eea;
+}
+
+/* XML and Spawn Toggle Buttons */
+.btn-success,
+.btn-danger {
+    transition: all 0.2s ease;
+}
+
+.btn-success:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(40, 167, 69, 0.3);
+}
+
+.btn-danger:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(220, 53, 69, 0.3);
+}
+
+.btn-success:active,
+.btn-danger:active {
+    transform: translateY(0);
+}
+
+body.dark-theme .btn-success {
+    background-color: #28a745;
+    border-color: #28a745;
+}
+
+body.dark-theme .btn-success:hover {
+    background-color: #34ce57;
+    border-color: #34ce57;
+}
+
+body.dark-theme .btn-danger {
+    background-color: #dc3545;
+    border-color: #dc3545;
+}
+
+body.dark-theme .btn-danger:hover {
+    background-color: #e74c3c;
+    border-color: #e74c3c;
+}
+
+/* Mini Map Header Buttons (Reset & Collapse) */
+.card-header .btn-outline-secondary {
+    color: rgba(255, 255, 255, 0.8);
+    border-color: rgba(255, 255, 255, 0.3);
+    background-color: transparent;
+}
+
+.card-header .btn-outline-secondary:hover {
+    color: white;
+    background-color: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+.card-header .btn-outline-secondary:active {
+    background-color: rgba(255, 255, 255, 0.25);
+}
+
+/* Spawn Item Button Styling */
 .spawn-item .btn {
     opacity: 0.9;
     transition: all 0.2s ease;
@@ -101,11 +338,6 @@ body.dark-theme .spawn-item .text-muted {
 .spawn-item .btn:hover {
     opacity: 1;
     transform: scale(1.05);
-}
-
-.spawn-item .btn:focus {
-    outline: none;
-    box-shadow: none;
 }
 
 .spawn-item .btn-danger {
@@ -155,9 +387,12 @@ body.dark-theme .spawn-controls {
     transition: all 0.2s ease;
 }
 
-.spawn-controls .btn:focus {
-    outline: none;
-    box-shadow: none;
+.spawn-controls .btn:hover {
+    transform: translateY(-1px);
+}
+
+.spawn-controls .btn:active {
+    transform: translateY(0);
 }
 
 .spawn-controls .btn-outline-success {
@@ -170,6 +405,7 @@ body.dark-theme .spawn-controls {
     color: white;
     background-color: #28a745;
     border-color: #28a745;
+    box-shadow: 0 2px 4px rgba(40, 167, 69, 0.2);
 }
 
 .spawn-controls .btn-outline-warning {
@@ -182,6 +418,7 @@ body.dark-theme .spawn-controls {
     color: #212529;
     background-color: #ffc107;
     border-color: #ffc107;
+    box-shadow: 0 2px 4px rgba(255, 193, 7, 0.2);
 }
 
 .spawn-controls .btn-outline-danger {
@@ -194,6 +431,7 @@ body.dark-theme .spawn-controls {
     color: white;
     background-color: #dc3545;
     border-color: #dc3545;
+    box-shadow: 0 2px 4px rgba(220, 53, 69, 0.2);
 }
 
 body.dark-theme .spawn-controls .btn-outline-success {
@@ -205,6 +443,7 @@ body.dark-theme .spawn-controls .btn-outline-success:hover {
     color: #000;
     background-color: #4ade80;
     border-color: #4ade80;
+    box-shadow: 0 2px 4px rgba(74, 222, 128, 0.3);
 }
 
 body.dark-theme .spawn-controls .btn-outline-warning {
@@ -216,6 +455,7 @@ body.dark-theme .spawn-controls .btn-outline-warning:hover {
     color: #000;
     background-color: #fbbf24;
     border-color: #fbbf24;
+    box-shadow: 0 2px 4px rgba(251, 191, 36, 0.3);
 }
 
 body.dark-theme .spawn-controls .btn-outline-danger {
@@ -227,6 +467,7 @@ body.dark-theme .spawn-controls .btn-outline-danger:hover {
     color: #000;
     background-color: #f87171;
     border-color: #f87171;
+    box-shadow: 0 2px 4px rgba(248, 113, 113, 0.3);
 }
 
 /* Form Select Styling */
