@@ -23,8 +23,10 @@ namespace UORespawnApp
                 Utility.InitializeSpawnDictionary();
                 
                 try { Utility.LoadSpawnData(); } catch { /* No spawn data file yet */ }
-                try { WorldSpawnUtility.LoadWorldSpawnList(); } catch { /* No world spawn list yet */ }
-                try { WorldSpawnUtility.LoadStaticSpawnList(); } catch { /* No static spawn list yet */ }
+                
+                // Load async data synchronously during startup (blocking is acceptable here)
+                try { WorldSpawnUtility.LoadWorldSpawnList().GetAwaiter().GetResult(); } catch { /* No world spawn list yet */ }
+                try { WorldSpawnUtility.LoadStaticSpawnList().GetAwaiter().GetResult(); } catch { /* No static spawn list yet */ }
                 try { XMLSpawnUtility.LoadSpawnerList(); } catch { /* No spawner list yet */ }
                 try { XMLSpawnUtility.LoadStaticList(); } catch { /* No static list yet */ }
 

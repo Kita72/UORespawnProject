@@ -223,10 +223,10 @@
         WorldTile.snow_event
     };
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         // Load existing spawn data (reuses WorldEntity system)
-        WorldSpawnUtility.LoadWorldSpawnList();
+        await WorldSpawnUtility.LoadWorldSpawnList();
         
         Console.WriteLine($"WeatherComponent initialized - {WeatherTypes.Length} weather types available");
     }
@@ -291,7 +291,7 @@
         StateHasChanged();
     }
 
-    private void SaveModal()
+    private async Task SaveModal()
     {
         if (selectedWeather == null) return;
 
@@ -313,7 +313,7 @@
         }
 
         // Auto-save
-        WorldSpawnUtility.SaveWorldSpawnList();
+        await WorldSpawnUtility.SaveWorldSpawnList();
         Console.WriteLine($"Saved {tempSpawnList.Count} {currentFrequency} {(currentIsMob ? "creatures" : "animals")} for {selectedWeather}");
         
         StateHasChanged();

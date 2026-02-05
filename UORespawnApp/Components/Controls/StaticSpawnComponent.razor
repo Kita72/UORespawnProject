@@ -186,7 +186,7 @@ protected override async Task OnInitializedAsync()
     availableStatics = WorldSpawnUtility.StaticList ?? new List<string>();
         
     // Load existing static spawn data
-    WorldSpawnUtility.LoadStaticSpawnList();
+    await WorldSpawnUtility.LoadStaticSpawnList();
         
     Console.WriteLine($"StaticSpawnComponent initialized - {availableStatics.Count} static types, {WorldSpawnUtility.StaticSpawnList?.Count ?? 0} configured");
     
@@ -270,7 +270,7 @@ private StaticEntity GetOrCreateStaticEntity(string name)
         StateHasChanged();
     }
 
-    private void SaveModal()
+    private async Task SaveModal()
     {
         if (selectedStatic == null) return;
 
@@ -312,7 +312,7 @@ private StaticEntity GetOrCreateStaticEntity(string name)
         }
 
         // Auto-save
-        WorldSpawnUtility.SaveStaticSpawnList();
+        await WorldSpawnUtility.SaveStaticSpawnList();
         Console.WriteLine($"Saved {tempSpawnList.Count} {currentFrequency} creatures for {selectedStatic.Name}");
         
         StateHasChanged();

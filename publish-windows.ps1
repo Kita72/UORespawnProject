@@ -29,14 +29,14 @@ Write-Host "Publishing Windows x64 (Self-Contained)..." -ForegroundColor Green
 Write-Host "This may take a few minutes..." -ForegroundColor Yellow
 
 dotnet publish $projectPath `
-    -f net9.0-windows10.0.19041.0 `
-    -c Release `
-    -r win-x64 `
-    --self-contained true `
-    -p:PublishSingleFile=true `
-    -p:IncludeNativeLibrariesForSelfExtract=true `
-    -p:PublishTrimmed=false `
-    -p:EnableCompressionInSingleFile=true
+-f net10.0-windows10.0.19041.0 `
+-c Release `
+-r win-x64 `
+--self-contained true `
+-p:PublishSingleFile=true `
+-p:IncludeNativeLibrariesForSelfExtract=true `
+-p:PublishTrimmed=false `
+-p:EnableCompressionInSingleFile=true
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host ""
@@ -45,7 +45,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 # Get publish path
-$publishPath = "$projectPath\bin\Release\net9.0-windows10.0.19041.0\win-x64\publish"
+$publishPath = "$projectPath\bin\Release\net10.0-windows10.0.19041.0\win-x64\publish"
 
 if (-not (Test-Path $publishPath)) {
     Write-Host ""

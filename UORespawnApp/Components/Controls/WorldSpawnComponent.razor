@@ -217,10 +217,10 @@
     private bool currentIsMob = false;
     private List<string> tempSpawnList = new();
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         // Load existing spawn data (this will initialize entities if needed)
-        WorldSpawnUtility.LoadWorldSpawnList();
+        await WorldSpawnUtility.LoadWorldSpawnList();
         
         Console.WriteLine($"WorldSpawnComponent initialized - {WorldSpawnUtility.WorldSpawnList?.Count ?? 0} maps loaded");
     }
@@ -284,7 +284,7 @@
         StateHasChanged();
     }
 
-    private void SaveModal()
+    private async Task SaveModal()
     {
         if (selectedTile == null) return;
 
@@ -319,7 +319,7 @@
         }
 
         // Auto-save
-        WorldSpawnUtility.SaveWorldSpawnList();
+        await WorldSpawnUtility.SaveWorldSpawnList();
         Console.WriteLine($"Saved {tempSpawnList.Count} {currentFrequency} {(currentIsMob ? "creatures" : "animals")} for {selectedTile}");
         
         StateHasChanged();

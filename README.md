@@ -25,7 +25,7 @@ UORespawn is a modern .NET MAUI application that provides a comprehensive visual
 
 **Version:** 2.0.0.1  
 **Platform:** Windows, macOS  
-**Framework:** .NET 9 MAUI with Blazor  
+**Framework:** .NET 10 MAUI with Blazor  
 **License:** MIT
 
 ---
@@ -84,7 +84,7 @@ Download the latest version from the [Releases](https://github.com/Kita72/UOResp
 
 ### Requirements
 - **OS:** Windows 10/11 (64-bit) or macOS 12+
-- **.NET:** .NET 9 Runtime (included in installer)
+- **.NET:** .NET 10 Runtime (included in installer)
 - **Disk Space:** ~50 MB
 - **Optional:** ServUO server for auto-sync
 
@@ -154,8 +154,8 @@ Add these predefined NPCs from the bestiary:
 
 ### Prerequisites
 
-- [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)
-- [Visual Studio 2022](https://visualstudio.microsoft.com/) (v17.8 or later)
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
+- [Visual Studio 2025](https://visualstudio.microsoft.com/) or [Visual Studio 2022](https://visualstudio.microsoft.com/) (v17.14 or later)
 - Workloads:
   - .NET Multi-platform App UI development
   - ASP.NET and web development
@@ -180,12 +180,12 @@ dotnet run
 
 **Windows:**
 ```bash
-dotnet publish -f net9.0-windows10.0.19041.0 -c Release
+dotnet publish -f net10.0-windows10.0.19041.0 -c Release
 ```
 
 **macOS:**
 ```bash
-dotnet publish -f net9.0-maccatalyst -c Release
+dotnet publish -f net10.0-maccatalyst -c Release
 ```
 
 ---

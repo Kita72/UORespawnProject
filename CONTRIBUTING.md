@@ -50,8 +50,8 @@ Enhancement suggestions are tracked as GitHub issues. When creating an enhanceme
 
 ### Prerequisites
 
-- .NET 9 SDK
-- Visual Studio 2022 (v17.8+) with:
+- .NET 10 SDK
+- Visual Studio 2025 or Visual Studio 2022 (v17.14+) with:
   - .NET Multi-platform App UI development workload
   - ASP.NET and web development workload
 
@@ -68,7 +68,7 @@ dotnet build
 
 ```bash
 cd UORespawnApp
-dotnet run --framework net9.0-windows10.0.19041.0
+dotnet run --framework net10.0-windows10.0.19041.0
 ```
 
 ## Coding Standards

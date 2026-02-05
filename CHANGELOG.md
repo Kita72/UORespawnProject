@@ -43,7 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Platform compatibility checks
 
 ### Technical
-- Built with .NET 9
+- Built with .NET 10
 - MAUI Blazor Hybrid architecture
 - JavaScript interop for map rendering
 - File system watcher with debouncing

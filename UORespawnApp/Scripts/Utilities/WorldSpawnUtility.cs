@@ -64,19 +64,21 @@ namespace UORespawnApp
                 }
 
                 // Priority 2: Try to load from Resources/Raw folder
-                using var stream = await FileSystem.OpenAppPackageFileAsync("UOR_SpawnerList.txt");
-                using var reader = new StreamReader(stream);
-                
-                while (!reader.EndOfStream)
                 {
-                    var line = await reader.ReadLineAsync();
-                    if (!string.IsNullOrWhiteSpace(line))
+                    using var stream = await FileSystem.OpenAppPackageFileAsync("UOR_SpawnerList.txt");
+                    using var reader = new StreamReader(stream);
+                    
+                    string? line;
+                    while ((line = await reader.ReadLineAsync()) != null)
                     {
-                        SpawnList.Add(line.Trim());
+                        if (!string.IsNullOrWhiteSpace(line))
+                        {
+                            SpawnList.Add(line.Trim());
+                        }
                     }
+                    SpawnList.Sort();
+                    Console.WriteLine($"Loaded {SpawnList.Count} creatures from bestiary file");
                 }
-                SpawnList.Sort();
-                Console.WriteLine($"Loaded {SpawnList.Count} creatures from bestiary file");
             }
             catch
             {
@@ -375,14 +377,13 @@ namespace UORespawnApp
                 }
 
                 // Priority 2: Try to load from Resources/Raw folder (MAUI package)
-                try
                 {
                     using var stream = await FileSystem.OpenAppPackageFileAsync("UOR_StaticList.txt");
                     using var reader = new StreamReader(stream);
                     
-                    while (!reader.EndOfStream)
+                    string? line;
+                    while ((line = await reader.ReadLineAsync()) != null)
                     {
-                        var line = await reader.ReadLineAsync();
                         if (!string.IsNullOrWhiteSpace(line))
                         {
                             StaticList.Add(line.Trim());
@@ -395,10 +396,6 @@ namespace UORespawnApp
                         Console.WriteLine($"Loaded {StaticList.Count} statics from package file");
                         return;
                     }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Failed to load from package: {ex.Message}");
                 }
 
                 // Priority 3: Try direct file path (development environment)
@@ -564,7 +561,7 @@ namespace UORespawnApp
             }
         }
 
-        internal static void SaveWorldSpawnList()
+        internal static async Task SaveWorldSpawnList()
         {
             try
             {
@@ -575,13 +572,13 @@ namespace UORespawnApp
 
                 if (string.IsNullOrEmpty(Settings.ServUODataFolder) || !Directory.Exists(Settings.ServUODataFolder))
                 {
-                    WorldSave(WorldSpawnFile);
+                    await WorldSave(WorldSpawnFile);
                 }
                 else
                 {
-                    WorldSave(WorldSpawnFile);
+                    await WorldSave(WorldSpawnFile);
 
-                    WorldSave(Path.Combine(Settings.ServUODataFolder, "UOR_WorldSpawn.csv"));
+                    await WorldSave(Path.Combine(Settings.ServUODataFolder, "UOR_WorldSpawn.csv"));
                 }
 
             }
@@ -591,9 +588,9 @@ namespace UORespawnApp
             }
         }
 
-        private static void WorldSave(string filePath)
+        private static async Task WorldSave(string filePath)
         {
-            using var streamWriter = new StreamWriter(filePath);
+            await using var streamWriter = new StreamWriter(filePath);
 
             foreach (var worldEntity in WorldSpawnList)
             {
@@ -605,7 +602,7 @@ namespace UORespawnApp
                 if (tilesWithSpawns.Count > 0)
                 {
                     // Write map header with count of tiles that have spawns
-                    streamWriter.WriteLine($"{(int)worldEntity.MapHandle},{tilesWithSpawns.Count}");
+                    await streamWriter.WriteLineAsync($"{(int)worldEntity.MapHandle},{tilesWithSpawns.Count}");
 
                     foreach (var kvp in tilesWithSpawns)
                     {
@@ -621,14 +618,14 @@ namespace UORespawnApp
                         // Only write the line if there are valid spawns
                         if (!string.IsNullOrEmpty(spawns))
                         {
-                            streamWriter.WriteLine($"{tile}|{spawns}");
+                            await streamWriter.WriteLineAsync($"{tile}|{spawns}");
                         }
                     }
                 }
             }
         }
 
-        internal static void LoadWorldSpawnList()
+        internal static async Task LoadWorldSpawnList()
         {
             try
             {
@@ -640,7 +637,7 @@ namespace UORespawnApp
                     // Initialize fresh world entities
                     InitiateWorldTileSpawn();
 
-                    var lines = File.ReadLines(WorldSpawnFile).ToArray();
+                    var lines = await File.ReadAllLinesAsync(WorldSpawnFile);
 
                     WorldEntity? currentEntity = null;
 
@@ -706,7 +703,7 @@ namespace UORespawnApp
             }
         }
 
-        internal static void SaveStaticSpawnList()
+        internal static async Task SaveStaticSpawnList()
         {
             try
             {
@@ -717,13 +714,13 @@ namespace UORespawnApp
 
                 if (string.IsNullOrEmpty(Settings.ServUODataFolder) || !Directory.Exists(Settings.ServUODataFolder))
                 {
-                    StaticSave(StaticSpawnFile);
+                    await StaticSave(StaticSpawnFile);
                 }
                 else
                 {
-                    StaticSave(StaticSpawnFile);
+                    await StaticSave(StaticSpawnFile);
 
-                    StaticSave(Path.Combine(Settings.ServUODataFolder, "UOR_StaticSpawn.csv"));
+                    await StaticSave(Path.Combine(Settings.ServUODataFolder, "UOR_StaticSpawn.csv"));
                 }
 
             }
@@ -733,9 +730,9 @@ namespace UORespawnApp
             }
         }
 
-        private static void StaticSave(string filePath)
+        private static async Task StaticSave(string filePath)
         {
-            using var streamWriter = new StreamWriter(filePath);
+            await using var streamWriter = new StreamWriter(filePath);
 
             foreach (var staticEntity in StaticSpawnList)
             {
@@ -746,17 +743,17 @@ namespace UORespawnApp
                 
                 if (validSpawns.Count > 0)
                 {
-                    streamWriter.WriteLine($"{staticEntity.Name},{validSpawns.Count}");
+                    await streamWriter.WriteLineAsync($"{staticEntity.Name},{validSpawns.Count}");
 
                     foreach (var (freq, name) in validSpawns)
                     {
-                        streamWriter.WriteLine($"{freq},{name}");
+                        await streamWriter.WriteLineAsync($"{freq},{name}");
                     }
                 }
             }
         }
 
-        internal static void LoadStaticSpawnList()
+        internal static async Task LoadStaticSpawnList()
         {
             try
             {
@@ -766,7 +763,7 @@ namespace UORespawnApp
 
                     StaticSpawnList.Clear();
 
-                    var lines = File.ReadLines(StaticSpawnFile).ToArray();
+                    var lines = await File.ReadAllLinesAsync(StaticSpawnFile);
 
                     for (int index = 0; index < lines.Length;)
                     {
