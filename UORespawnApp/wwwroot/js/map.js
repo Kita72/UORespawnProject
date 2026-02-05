@@ -1,6 +1,6 @@
 /**
  * Map Module - Simple pan and draw spawn boxes
- * Map is scaled 2.0x for better detail, viewport is 800x600
+ * Map supports 1x (actual size) and 2x (zoomed) viewing
  */
 window.mapModule = {
 canvas: null,
@@ -11,7 +11,7 @@ imageWidth: 0,
 imageHeight: 0,
 viewportWidth: 800,
 viewportHeight: 600,
-scale: 2.0, // Map displayed at 2x size
+scale: 2.0, // Default 2x zoom, can be changed to 1.0 for actual size
     
 // Pan offset (how much the map has moved)
 panX: 0,
@@ -63,6 +63,15 @@ boxColorInc: 0.3,
         console.log(`? Settings updated: color=${this.boxColor}, lineSize=${this.boxLineSize}, colorInc=${this.boxColorInc}`);
         
         // Redraw with new settings
+        this.redrawAll();
+    },
+    
+    // Set zoom level (1.0 = actual size, 2.0 = 2x zoomed)
+    setZoomLevel: function(zoomLevel) {
+        console.log(`? Zoom level changed from ${this.scale}x to ${zoomLevel}x`);
+        this.scale = zoomLevel;
+        
+        // Redraw everything at new scale
         this.redrawAll();
     },
     

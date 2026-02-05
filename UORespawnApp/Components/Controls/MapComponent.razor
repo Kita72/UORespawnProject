@@ -8,15 +8,20 @@
 <div class="container-fluid p-3">
     <div class="row">
         <div class="col-lg-9">
-            <div class="alert alert-dark mb-2" style="width:800px;">
-                <strong>@GetMapName(ViewService.CurrentMap)</strong> | Size: @imageDim | Mouse: (@mouseWorldX, @mouseWorldY)
+            <div class="alert alert-dark mb-2 d-flex justify-content-between align-items-center" style="width:800px;">
+                <div>
+                    <strong>@GetMapName(ViewService.CurrentMap)</strong> | Size: @imageDim | Mouse: (@mouseWorldX, @mouseWorldY)
+                </div>
+                <button class="btn btn-sm @(zoomLevel == 2.0 ? "btn-primary" : "btn-outline-primary")" @onclick="ToggleZoom" title="Toggle Zoom (1x / 2x)">
+                    <span class="bi bi-zoom-@(zoomLevel == 2.0 ? "in" : "out")"></span> @(zoomLevel == 1.0 ? "1x" : "2x")
+                </button>
             </div>
             <div style="position:relative; overflow:hidden; width:800px; height:600px; background:#1a1a1a; border:1px solid #333;" 
                  tabindex="0" 
                  @onkeydown="OnKeyDown"
                  @ref="mapContainerRef">
                 <img id="mapImg" src="@imageSrc" 
-                     style="position:absolute; left:0; top:0; image-rendering:pixelated; transform-origin: top left; transform: scale(2.0);"
+                     style="position:absolute; left:0; top:0; image-rendering:pixelated; transform-origin: top left; transform: scale(@(zoomLevel.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)));"
                      @onload="OnImageLoaded" />
                 <canvas id="mapCanvas" width="800" height="600"
                         style="position:absolute; top:0; left:0; cursor:crosshair;"
@@ -167,8 +172,11 @@ private int imgHeight = 0;
 
 private ElementReference mapContainerRef;
 
-// Store last position for each map (static so it persists across component instances)
-private static Dictionary<GameMap, (double panX, double panY)> mapPositions = new();
+// Zoom level (1.0 = actual size, 2.0 = 2x zoomed in)
+private double zoomLevel = 2.0;
+
+// Store last position AND zoom for each map (static so it persists across component instances)
+private static Dictionary<GameMap, (double panX, double panY, double zoom)> mapPositions = new();
 
 // Track which map we're currently viewing
 private GameMap currentMapTracked = GameMap.Map0;
@@ -252,11 +260,11 @@ private bool showMiniMap = true;
     
     private void HandleMapChanged()
     {
-        // Save current position for the OLD map (the one we're leaving)
+        // Save current position AND zoom for the OLD map (the one we're leaving)
         if (imgWidth > 0)
         {
-            mapPositions[currentMapTracked] = (panX, panY);
-            Logger.Info($"Saved position for {currentMapTracked}: ({panX:F0}, {panY:F0})");
+            mapPositions[currentMapTracked] = (panX, panY, zoomLevel);
+            Logger.Info($"Saved position and zoom for {currentMapTracked}: ({panX:F0}, {panY:F0}) @ {zoomLevel}x");
         }
         
         // Update to track the NEW map
@@ -264,6 +272,22 @@ private bool showMiniMap = true;
         {
             currentMapTracked = Utility.SESSION.Current_Map;
             Logger.Info($"Switching to map: {currentMapTracked}");
+        }
+        
+        // Restore position AND zoom for the NEW map IMMEDIATELY so rendering is correct from the start
+        if (mapPositions.TryGetValue(currentMapTracked, out var savedPos))
+        {
+            panX = savedPos.panX;
+            panY = savedPos.panY;
+            zoomLevel = savedPos.zoom;
+            Logger.Info($"Pre-loaded position and zoom for {currentMapTracked}: ({panX:F0}, {panY:F0}) @ {zoomLevel}x");
+        }
+        else
+        {
+            panX = 0;
+            panY = 0;
+            zoomLevel = 2.0; // Default to 2x zoom for new maps
+            Logger.Info($"New map {currentMapTracked}, defaulting to (0, 0) @ 2x zoom");
         }
         
         imageSrc = Utility.GetMapImagePath();
@@ -274,7 +298,7 @@ private bool showMiniMap = true;
         imgHeight = 0;
         imageDim = "Loading...";
         
-        // Note: panX and panY will be restored in OnImageLoaded after map loads
+        // Note: JavaScript will apply these values in OnImageLoaded after map loads
         
         StateHasChanged();
     }
@@ -303,21 +327,27 @@ private bool showMiniMap = true;
                     imgHeight = h;
                     imageDim = $"{w}x{h}";
                     
-                    // Restore saved position for THIS map (currentMapTracked)
+                    // Restore saved position AND zoom for THIS map (currentMapTracked)
                     if (mapPositions.TryGetValue(currentMapTracked, out var savedPos))
                     {
                         panX = savedPos.panX;
                         panY = savedPos.panY;
-                        Logger.Info($"Restored position for {currentMapTracked}: ({panX:F0}, {panY:F0})");
+                        zoomLevel = savedPos.zoom;
+                        Logger.Info($"Restored position and zoom for {currentMapTracked}: ({panX:F0}, {panY:F0}) @ {zoomLevel}x");
                     }
                     else
                     {
                         panX = 0;
                         panY = 0;
-                        Logger.Info($"First visit to {currentMapTracked}, starting at (0, 0)");
+                        zoomLevel = 2.0; // Default to 2x zoom
+                        Logger.Info($"First visit to {currentMapTracked}, starting at (0, 0) @ 2x");
                     }
                     
                     await JS.InvokeVoidAsync("eval", $"window.mapModule.init({w}, {h})");
+                    
+                    // Set the zoom level in JavaScript BEFORE any coordinate calculations
+                    await JS.InvokeVoidAsync("eval", $"window.mapModule.setZoomLevel({zoomLevel.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)})");
+                    
                     await SyncSettingsToJavaScript();
                     await InitializeMiniMap();
                     
@@ -429,13 +459,15 @@ private bool showMiniMap = true;
             // Calculate viewport rectangle on mini-map
             // Mini-map shows full map in properly aspect-ratio'd size
             
-            // Viewport size at 2x scale = 400x300 world pixels visible
-            double viewportWidthWorld = 400; // 800/2 (viewport width / scale)
-            double viewportHeightWorld = 300; // 600/2 (viewport height / scale)
+            // Viewport size depends on current zoom level
+            // At 2x zoom: 800/2 = 400 world pixels wide, 600/2 = 300 world pixels tall
+            // At 1x zoom: 800/1 = 800 world pixels wide, 600/1 = 600 world pixels tall
+            double viewportWidthWorld = 800.0 / zoomLevel;
+            double viewportHeightWorld = 600.0 / zoomLevel;
             
             // Current viewport top-left in world coordinates
-            double viewportWorldX = -panX / 2.0;
-            double viewportWorldY = -panY / 2.0;
+            double viewportWorldX = -panX / zoomLevel;
+            double viewportWorldY = -panY / zoomLevel;
             
             await JS.InvokeVoidAsync("eval", $@"
                 (function() {{
@@ -533,15 +565,15 @@ private bool showMiniMap = true;
             double worldY = mapClickY * (dims["imageHeight"] / dims["drawHeight"]);
             
             // Center the viewport on this world position
-            // Account for 2x scale and viewport size
-            double newPanX = -(worldX * 2.0) + 400; // Center horizontally
-            double newPanY = -(worldY * 2.0) + 300; // Center vertically
+            // Account for current zoom level and viewport size
+            double newPanX = -(worldX * zoomLevel) + 400; // Center horizontally (800/2)
+            double newPanY = -(worldY * zoomLevel) + 300; // Center vertically (600/2)
             
             panX = newPanX;
             panY = newPanY;
             
-            // Save the new position for the current map
-            mapPositions[currentMapTracked] = (panX, panY);
+            // Save the new position for the current map (preserve zoom)
+            mapPositions[currentMapTracked] = (panX, panY, zoomLevel);
             
             await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
             await UpdateMiniMapViewport();
@@ -659,8 +691,8 @@ private bool showMiniMap = true;
                 panX = pan.X;
                 panY = pan.Y;
                 
-                // Save the new position for the current map immediately
-                mapPositions[currentMapTracked] = (panX, panY);
+                // Save the new position for the current map immediately (preserve zoom)
+                mapPositions[currentMapTracked] = (panX, panY, zoomLevel);
                 
                 await UpdateMiniMapViewport();
                 StateHasChanged();
@@ -678,13 +710,52 @@ private bool showMiniMap = true;
     {
         panX = 0;
         panY = 0;
+        zoomLevel = 2.0; // Reset to default 2x zoom
         
         // Clear the saved position for the CURRENT map
         mapPositions.Remove(currentMapTracked);
-        Logger.Info($"Reset position for {currentMapTracked} to (0, 0)");
+        Logger.Info($"Reset position and zoom for {currentMapTracked} to (0, 0) @ 2x");
         
         await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
         await UpdateMiniMapViewport();
+        StateHasChanged();
+    }
+    
+    private async Task ToggleZoom()
+    {
+        // Calculate the current center of the viewport in world coordinates
+        // This is what we want to keep centered after zoom changes
+        double centerWorldX = (-panX / zoomLevel) + (800.0 / 2.0 / zoomLevel);
+        double centerWorldY = (-panY / zoomLevel) + (600.0 / 2.0 / zoomLevel);
+        
+        Logger.Info($"Current center before zoom: world ({centerWorldX:F0}, {centerWorldY:F0}) at {zoomLevel}x");
+        
+        // Toggle between 1x (actual size) and 2x (zoomed in)
+        double oldZoom = zoomLevel;
+        zoomLevel = zoomLevel == 2.0 ? 1.0 : 2.0;
+        
+        // Recalculate pan to keep the same world position centered
+        // Formula: panX = -(centerWorldX * newZoom) + (viewport_width / 2)
+        panX = -(centerWorldX * zoomLevel) + 400; // 800/2
+        panY = -(centerWorldY * zoomLevel) + 300; // 600/2
+        
+        Logger.Info($"New center after zoom: world ({centerWorldX:F0}, {centerWorldY:F0}) at {zoomLevel}x, pan=({panX:F0}, {panY:F0})");
+        
+        // Update JavaScript zoom level immediately
+        await JS.InvokeVoidAsync("eval", $"window.mapModule.setZoomLevel({zoomLevel.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)})");
+        
+        // Apply the new pan position
+        await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
+        
+        // Save the new zoom level and position for current map
+        mapPositions[currentMapTracked] = (panX, panY, zoomLevel);
+        
+        // Redraw everything to ensure boxes are correctly positioned
+        await Redraw();
+        
+        // Update mini-map viewport with new zoom
+        await UpdateMiniMapViewport();
+        
         StateHasChanged();
     }
     
@@ -726,8 +797,8 @@ private bool showMiniMap = true;
         {
             await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
             
-            // Save the new position for the current map
-            mapPositions[currentMapTracked] = (panX, panY);
+            // Save the new position for the current map (preserve zoom)
+            mapPositions[currentMapTracked] = (panX, panY, zoomLevel);
             
             await UpdateMiniMapViewport();
             StateHasChanged();
@@ -1024,16 +1095,17 @@ private bool showMiniMap = true;
         double centerX = spawn.SpawnBox.X + (spawn.SpawnBox.Width / 2.0);
         double centerY = spawn.SpawnBox.Y + (spawn.SpawnBox.Height / 2.0);
         
+        
         // Center the viewport on this position
-        // Account for 2x scale and viewport size (800x600 at 2x = 400x300 world pixels)
-        double newPanX = -(centerX * 2.0) + 400; // Center horizontally
-        double newPanY = -(centerY * 2.0) + 300; // Center vertically
+        // Account for current zoom level and viewport size
+        double newPanX = -(centerX * zoomLevel) + 400; // Center horizontally (800/2)
+        double newPanY = -(centerY * zoomLevel) + 300; // Center vertically (600/2)
         
         panX = newPanX;
         panY = newPanY;
         
-        // Save the new position for the current map
-        mapPositions[currentMapTracked] = (panX, panY);
+        // Save the new position for the current map (preserve zoom)
+        mapPositions[currentMapTracked] = (panX, panY, zoomLevel);
         
         await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
         await UpdateMiniMapViewport();
