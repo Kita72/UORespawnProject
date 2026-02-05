@@ -631,6 +631,13 @@ namespace UORespawnApp
         {
             try
             {
+                // Skip reload if data already loaded (unless empty/not initialized)
+                if (WorldSpawnList.Count > 0 && WorldSpawnList.Any(e => e.WorldSpawn.Count > 0))
+                {
+                    Logger.Info("LoadWorldSpawnList skipped - data already loaded");
+                    return;
+                }
+                
                 Logger.Info("=== LoadWorldSpawnList START ===");
                 Logger.Info($"WorldSpawnFile path: {WorldSpawnFile}");
                 Logger.Info($"File.Exists: {File.Exists(WorldSpawnFile)}");
@@ -943,10 +950,6 @@ namespace UORespawnApp
             {
                 Logger.Error("Error loading StaticSpawnList", ex);
             }
-            finally
-            {
-                XMLSpawnUtility.LoadSpawnerList();
-            }
         }
 
         // SYNCHRONOUS version for startup - avoids deadlock with GetAwaiter().GetResult()
@@ -1008,10 +1011,6 @@ namespace UORespawnApp
             catch (Exception ex)
             {
                 Logger.Error("Error loading StaticSpawnList", ex);
-            }
-            finally
-            {
-                XMLSpawnUtility.LoadSpawnerList();
             }
         }
 

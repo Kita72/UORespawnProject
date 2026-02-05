@@ -2,7 +2,7 @@ namespace UORespawnApp.Scripts.Utilities;
 
 /// <summary>
 /// Simple file-based logger that writes to daily log files in the app's Data directory.
-/// Thread-safe and performance-optimized.
+/// Thread-safe and performance-optimized with lazy initialization.
 /// </summary>
 public static class Logger
 {
@@ -10,20 +10,40 @@ public static class Logger
     private static readonly object _lock = new object();
     private static string? _currentLogFile;
     private static DateTime _currentLogDate;
+    private static bool _initialized = false;
 
     static Logger()
     {
-        // Store logs in the app's local data folder
-        LogDirectory = Path.Combine(FileSystem.AppDataDirectory, "Logs");
-        Directory.CreateDirectory(LogDirectory);
-        
+        // Store logs in the Data/Logs folder alongside spawn files and maps
+        LogDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data", "Logs");
         _currentLogDate = DateTime.Today;
-        _currentLogFile = GetLogFilePath(DateTime.Today);
+    }
+
+    private static void EnsureInitialized()
+    {
+        if (_initialized) return;
         
-        // Clean up old logs on startup (keep last 7 days)
-        CleanupOldLogs();
-        
-        Info("=== Application Started ===");
+        lock (_lock)
+        {
+            if (_initialized) return; // Double-check inside lock
+            
+            try
+            {
+                Directory.CreateDirectory(LogDirectory);
+                _currentLogFile = GetLogFilePath(DateTime.Today);
+                
+                // Defer cleanup to background task to avoid blocking startup
+                Task.Run(() => CleanupOldLogs());
+                
+                _initialized = true;
+                Write("INFO", "=== Application Started ===");
+            }
+            catch
+            {
+                // If initialization fails, remain uninitialized but don't crash
+                _initialized = true; // Mark as initialized to avoid repeated failures
+            }
+        }
     }
 
     /// <summary>
@@ -31,6 +51,7 @@ public static class Logger
     /// </summary>
     public static void Info(string message)
     {
+        EnsureInitialized();
         Write("INFO", message);
     }
 
@@ -39,6 +60,7 @@ public static class Logger
     /// </summary>
     public static void Warning(string message)
     {
+        EnsureInitialized();
         Write("WARN", message);
     }
 
@@ -47,6 +69,7 @@ public static class Logger
     /// </summary>
     public static void Error(string message)
     {
+        EnsureInitialized();
         Write("ERROR", message);
     }
 
@@ -55,6 +78,7 @@ public static class Logger
     /// </summary>
     public static void Error(string message, Exception ex)
     {
+        EnsureInitialized();
         Write("ERROR", $"{message} | Exception: {ex.GetType().Name} - {ex.Message}\n{ex.StackTrace}");
     }
 

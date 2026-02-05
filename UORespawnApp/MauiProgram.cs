@@ -94,6 +94,22 @@ namespace UORespawnApp
                 { 
                     Logger.Error("LoadStaticList failed", ex);
                 }
+                
+                // Load bestiary (creature list) synchronously
+                try
+                {
+                    // Use sync wrapper to avoid async deadlock
+                    Task.Run(async () => await WorldSpawnUtility.LoadSpawnList()).Wait();
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error("LoadSpawnList (bestiary) failed", ex);
+                }
+                
+                Logger.Info($"App initialized - Version {Utility.Version}");
+                
+                var totalSpawns = Utility.Spawns.Values.Sum(list => list.Count);
+                Logger.Info($"Loaded {totalSpawns} total spawn boxes across all maps");
 
                 // Copy map images to wwwroot
                 var wwwrootPath = Path.Combine(AppContext.BaseDirectory, "wwwroot", "maps");

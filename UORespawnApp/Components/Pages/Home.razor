@@ -42,57 +42,22 @@ else if (ViewService.CurrentView == "instructions")
         ViewService.OnViewChanged += StateHasChanged;
         ViewService.OnMapChanged += StateHasChanged;
         
-        // Initialize session and load data
-        InitializeApp();
+        // MauiProgram already initialized session and loaded all data
+        // Just log the component initialization
+        try
+        {
+            var totalSpawns = Utility.Spawns.Values.Sum(list => list.Count);
+            Logger.Info($"Home component initialized - {totalSpawns} total spawn boxes loaded");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Error in Home.OnInitialized", ex);
+        }
         
         // Default to home view on startup
         if (string.IsNullOrEmpty(ViewService.CurrentView))
         {
             ViewService.SetView("home");
-        }
-    }
-    
-    private void InitializeApp()
-    {
-        try
-        {
-            // Start session
-            Utility.StartSession(new Session());
-            
-            // Initialize spawn dictionary for all maps
-            Utility.InitializeSpawnDictionary();
-            
-            // Load spawn data from CSV if it exists
-            Utility.LoadSpawnData();
-            
-            // Load XML Spawner points (default spawner system locations)
-            XMLSpawnUtility.LoadSpawnerList();
-            
-            // Load bestiary list (needed for spawn modals)
-            _ = LoadBestiaryAsync();
-            
-            Logger.Info($"App initialized - Version {Utility.Version}");
-            
-            
-            var totalSpawns = Utility.Spawns.Values.Sum(list => list.Count);
-            Logger.Info($"Loaded {totalSpawns} total spawn boxes across all maps");
-        }
-        catch (Exception ex)
-        {
-            Logger.Error("Error initializing app", ex);
-        }
-    }
-    
-    private async Task LoadBestiaryAsync()
-    {
-        try
-        {
-            await WorldSpawnUtility.LoadSpawnList();
-            Logger.Info($"Bestiary loaded: {WorldSpawnUtility.SpawnList?.Count ?? 0} creatures");
-        }
-        catch (Exception ex)
-        {
-            Logger.Error("Error loading bestiary", ex);
         }
     }
 
