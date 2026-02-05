@@ -35,6 +35,10 @@ boxColor: '#8B0000',
 boxLineSize: 2,
 boxColorInc: 0.3,
     
+// Keyboard panning state
+keyStates: new Set(),
+panAnimationId: null,
+    
     init: function(imgWidth, imgHeight) {
         this.canvas = document.getElementById('mapCanvas');
         this.img = document.getElementById('mapImg');
@@ -409,6 +413,57 @@ boxColorInc: 0.3,
         console.log(`?? Hiding server spawns`);
         this.serverSpawns = null;
         this.redrawAll();
+    },
+    
+    // Smooth keyboard panning functions
+    addKey: function(key) {
+        const wasEmpty = this.keyStates.size === 0;
+        this.keyStates.add(key.toLowerCase());
+        
+        // Start animation loop if this is the first key
+        if (wasEmpty) {
+            this.startKeyPanning();
+        }
+    },
+    
+    removeKey: function(key) {
+        this.keyStates.delete(key.toLowerCase());
+    },
+    
+    startKeyPanning: function() {
+        if (this.panAnimationId !== null) return; // Already running
+        
+        const panStep = 5; // pixels per frame at 60fps (~300 pixels/second)
+        
+        const animate = () => {
+            if (this.keyStates.size === 0) {
+                this.panAnimationId = null;
+                return; // Stop animation when no keys pressed
+            }
+            
+            let deltaX = 0;
+            let deltaY = 0;
+            
+            // Check all pressed keys and accumulate movement (supports diagonals!)
+            if (this.keyStates.has('w') || this.keyStates.has('arrowup')) deltaY += panStep;
+            if (this.keyStates.has('s') || this.keyStates.has('arrowdown')) deltaY -= panStep;
+            if (this.keyStates.has('a') || this.keyStates.has('arrowleft')) deltaX += panStep;
+            if (this.keyStates.has('d') || this.keyStates.has('arrowright')) deltaX -= panStep;
+            
+            // Apply pan
+            this.panX += deltaX;
+            this.panY += deltaY;
+            this.applyPan(this.panX, this.panY);
+            
+            // Continue animation
+            this.panAnimationId = requestAnimationFrame(animate);
+        };
+        
+        this.panAnimationId = requestAnimationFrame(animate);
+    },
+    
+    getPanPosition: function() {
+        return { x: this.panX, y: this.panY };
     }
 };
 

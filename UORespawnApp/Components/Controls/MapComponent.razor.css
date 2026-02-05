@@ -1,3 +1,27 @@
+/* Right Column Flexbox Container */
+.right-column-container {
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 80px); /* Aligned with control bar bottom */
+    min-height: 600px; /* Prevent over-shrinking */
+}
+
+/* Spawn List Container - Flex to Fill Space */
+.spawn-list-container {
+    display: flex;
+    flex-direction: column;
+    flex: 1; /* Grow to fill remaining space after mini map */
+    min-height: 200px; /* Prevent collapsing too small */
+    overflow: hidden; /* Prevent container from expanding */
+}
+
+/* Spawn List Body - Scrollable */
+.spawn-list-body {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
 /* Spawn List Header with Search Input */
 .spawn-list-header {
     display: flex;

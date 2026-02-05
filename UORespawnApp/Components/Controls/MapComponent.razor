@@ -19,6 +19,8 @@
             <div style="position:relative; overflow:hidden; width:800px; height:600px; background:#1a1a1a; border:1px solid #333;" 
                  tabindex="0" 
                  @onkeydown="OnKeyDown"
+                 @onkeyup="OnKeyUp"
+                 @onmouseenter="OnMapMouseEnter"
                  @ref="mapContainerRef">
                 <img id="mapImg" src="@imageSrc" 
                      style="position:absolute; left:0; top:0; image-rendering:pixelated; transform-origin: top left; transform: scale(@(zoomLevel.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)));"
@@ -39,7 +41,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-lg-3" style="padding-left:15px;">
+        <div class="col-lg-3 right-column-container" style="padding-left:15px;">
             <!-- Mini Map - Collapsible -->
             <div class="card shadow-sm mb-3 map-card">
                 <div class="card-header text-center d-flex justify-content-between align-items-center">
@@ -70,7 +72,7 @@
             </div>
             
             <!-- Map Spawn List - Flex to fill remaining space -->
-            <div class="card shadow-sm map-card spawn-list-container" style="@GetSpawnListStyle()">
+            <div class="card shadow-sm map-card spawn-list-container">
                 <div class="card-header text-center spawn-list-header">
                     <strong>Map Spawn</strong>
                     <input type="number" 
@@ -232,43 +234,8 @@ private int? spawnSearchId = null;
     
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
-        {
-            // Install auto-adjustment script
-            await JS.InvokeVoidAsync("eval", @"
-                window.adjustSpawnListHeight = function() {
-                    const spawnListContainer = document.querySelector('.spawn-list-container');
-                    if (!spawnListContainer) return;
-                    
-                    const hasVerticalScrollbar = document.documentElement.scrollHeight > window.innerHeight;
-                    
-                    if (hasVerticalScrollbar) {
-                        const currentMaxHeight = parseInt(getComputedStyle(spawnListContainer).maxHeight);
-                        if (currentMaxHeight > 150) {
-                            const newMaxHeight = Math.max(150, currentMaxHeight - 20);
-                            spawnListContainer.style.maxHeight = newMaxHeight + 'px';
-                            console.log(`?? Reduced spawn list from ${currentMaxHeight}px to ${newMaxHeight}px to prevent page scroll`);
-                            
-                            // Check again recursively until scroll is gone
-                            setTimeout(() => window.adjustSpawnListHeight(), 100);
-                        }
-                    } else {
-                        console.log('? Spawn list height is optimal - no page scroll');
-                    }
-                };
-                
-                // Run initial check after page settles
-                setTimeout(() => window.adjustSpawnListHeight(), 500);
-                
-                // Re-check on window resize
-                window.addEventListener('resize', () => {
-                    setTimeout(() => window.adjustSpawnListHeight(), 100);
-                });
-            ");
-        }
-        
-        // Trigger height adjustment after any render
-        await JS.InvokeVoidAsync("eval", "setTimeout(() => window.adjustSpawnListHeight && window.adjustSpawnListHeight(), 200);");
+        // No longer needed - using CSS flexbox for spawn list sizing
+        await Task.CompletedTask;
     }
     
     private void HandleMapChanged()
@@ -690,6 +657,10 @@ private int? spawnSearchId = null;
                 // Force a complete redraw
                 await Redraw();
                 StateHasChanged();
+                
+                // Auto-scroll to the newly created spawn in the list
+                await Task.Delay(100); // Small delay to ensure DOM is updated
+                await ScrollToSelectedSpawn();
             }
             else
             {
@@ -775,48 +746,58 @@ private int? spawnSearchId = null;
     
     private async Task OnKeyDown(KeyboardEventArgs e)
     {
-        // Pan speed: 50 pixels per key press
-        const int panStep = 50;
-        bool handled = false;
-        
-        // Arrow keys and WASD for panning
-        switch (e.Key.ToLower())
+        // Check if it's a panning key (WASD or arrows)
+        var key = e.Key.ToLower();
+        if (key == "w" || key == "a" || key == "s" || key == "d" ||
+            key == "arrowup" || key == "arrowdown" || key == "arrowleft" || key == "arrowright")
         {
-            case "arrowup":
-            case "w":
-                panY += panStep;
-                handled = true;
-                break;
-                
-            case "arrowdown":
-            case "s":
-                panY -= panStep;
-                handled = true;
-                break;
-                
-            case "arrowleft":
-            case "a":
-                panX += panStep;
-                handled = true;
-                break;
-                
-            case "arrowright":
-            case "d":
-                panX -= panStep;
-                handled = true;
-                break;
+            // Add key to active set and start smooth animation
+            await JS.InvokeVoidAsync("eval", $"window.mapModule.addKey('{key}')");
         }
+    }
+    
+    private async Task OnKeyUp(KeyboardEventArgs e)
+    {
+        // Remove key from active set
+        var key = e.Key.ToLower();
+        await JS.InvokeVoidAsync("eval", $"window.mapModule.removeKey('{key}')");
         
-        if (handled)
+        // Sync pan position from JavaScript back to C#
+        try
         {
-            await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
-            
-            // Save the new position for the current map (preserve zoom)
-            mapPositions[currentMapTracked] = (panX, panY, zoomLevel);
-            
-            await UpdateMiniMapViewport();
-            StateHasChanged();
+            var result = await JS.InvokeAsync<string>("eval", "JSON.stringify(window.mapModule.getPanPosition())");
+            if (!string.IsNullOrEmpty(result))
+            {
+                var pos = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, double>>(result);
+                if (pos != null)
+                {
+                    panX = pos["x"];
+                    panY = pos["y"];
+                    
+                    // Save the new position for the current map (preserve zoom)
+                    mapPositions[currentMapTracked] = (panX, panY, zoomLevel);
+                    
+                    await UpdateMiniMapViewport();
+                    StateHasChanged();
+                }
+            }
         }
+        catch { }
+    }
+    
+    private async Task OnMapMouseEnter()
+    {
+        // Auto-focus the map container when mouse enters so keyboard controls work immediately
+        try
+        {
+            await JS.InvokeVoidAsync("eval", @"
+                (function() {
+                    const container = document.querySelector('[tabindex=""0""]');
+                    if (container) container.focus();
+                })()
+            ");
+        }
+        catch { }
     }
     
     private async Task ToggleXMLSpawners()
@@ -1233,6 +1214,25 @@ private int? spawnSearchId = null;
     public async Task RefreshMapSettings()
     {
         await SyncSettingsToJavaScript();
+    }
+    
+    private async Task ScrollToSelectedSpawn()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("eval", @"
+                (function() {
+                    const selected = document.querySelector('.spawn-item.selected');
+                    if (selected) {
+                        selected.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                })()
+            ");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Scroll to spawn error", ex);
+        }
     }
     
     private void SaveAfterTimedSpawnChange()
