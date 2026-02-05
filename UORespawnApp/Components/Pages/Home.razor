@@ -71,14 +71,15 @@ else if (ViewService.CurrentView == "instructions")
             // Load bestiary list (needed for spawn modals)
             _ = LoadBestiaryAsync();
             
-            Console.WriteLine($"App initialized - Version {Utility.Version}");
+            Logger.Info($"App initialized - Version {Utility.Version}");
+            
             
             var totalSpawns = Utility.Spawns.Values.Sum(list => list.Count);
-            Console.WriteLine($"Loaded {totalSpawns} total spawn boxes across all maps");
+            Logger.Info($"Loaded {totalSpawns} total spawn boxes across all maps");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error initializing app: {ex.Message}");
+            Logger.Error("Error initializing app", ex);
         }
     }
     
@@ -87,11 +88,11 @@ else if (ViewService.CurrentView == "instructions")
         try
         {
             await WorldSpawnUtility.LoadSpawnList();
-            Console.WriteLine($"Bestiary loaded: {WorldSpawnUtility.SpawnList?.Count ?? 0} creatures");
+            Logger.Info($"Bestiary loaded: {WorldSpawnUtility.SpawnList?.Count ?? 0} creatures");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading bestiary: {ex.Message}");
+            Logger.Error("Error loading bestiary", ex);
         }
     }
 

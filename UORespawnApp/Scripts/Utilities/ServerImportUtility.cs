@@ -1,3 +1,5 @@
+using UORespawnApp.Scripts.Utilities;
+
 namespace UORespawnApp
 {
     /// <summary>
@@ -53,7 +55,7 @@ namespace UORespawnApp
                     {
                         skippedCount++;
                         skippedFileNames.Add(fileName);
-                        Console.WriteLine($"Skipped: {fileName} - not found on server");
+                        Logger.Warning($"Server import skipped: {fileName} - not found on server");
                         continue;
                     }
 
@@ -64,11 +66,11 @@ namespace UORespawnApp
                         
                         importedCount++;
                         importedFileNames.Add(fileName);
-                        Console.WriteLine($"Imported: {fileName}");
+                        Logger.Info($"Server import successful: {fileName}");
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"Error importing {fileName}: {ex.Message}");
+                        Logger.Error($"Error importing {fileName}", ex);
                         skippedCount++;
                         skippedFileNames.Add(fileName);
                     }
@@ -92,7 +94,7 @@ namespace UORespawnApp
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Import Error: {ex.Message}");
+                Logger.Error("Server import failed", ex);
                 return (false, $"Import failed: {ex.Message}", 0);
             }
         }

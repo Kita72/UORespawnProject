@@ -11,7 +11,10 @@
             <div class="alert alert-dark mb-2" style="width:800px;">
                 <strong>@GetMapName(ViewService.CurrentMap)</strong> | Size: @imageDim | Mouse: (@mouseWorldX, @mouseWorldY)
             </div>
-            <div style="position:relative; overflow:hidden; width:800px; height:600px; background:#1a1a1a; border:1px solid #333;">
+            <div style="position:relative; overflow:hidden; width:800px; height:600px; background:#1a1a1a; border:1px solid #333;" 
+                 tabindex="0" 
+                 @onkeydown="OnKeyDown"
+                 @ref="mapContainerRef">
                 <img id="mapImg" src="@imageSrc" 
                      style="position:absolute; left:0; top:0; image-rendering:pixelated; transform-origin: top left; transform: scale(2.0);"
                      @onload="OnImageLoaded" />
@@ -26,7 +29,7 @@
             <div class="card mt-2 shadow-sm" style="width:800px;">
                 <div class="card-body py-2">
                     <small class="text-muted">
-                        <strong>Controls:</strong> Left-Drag = Draw Spawn Box | Right-Drag = Pan Map
+                        <strong>Controls:</strong> Left-Drag = Draw Spawn Box | Right-Drag = Pan Map | Arrow Keys/WASD = Pan Map
                     </small>
                 </div>
             </div>
@@ -161,6 +164,8 @@ private bool isPanning = false;
     
 private int imgWidth = 0;
 private int imgHeight = 0;
+
+private ElementReference mapContainerRef;
     
 // Category modal state
 private bool showCategoryModal = false;
@@ -186,7 +191,7 @@ private bool showMiniMap = true;
         if (string.IsNullOrEmpty(imageSrc))
         {
             imageSrc = "maps/Map0.bmp";
-            Console.WriteLine("Warning: GetMapImagePath returned empty, defaulting to Map0");
+            Logger.Warning("GetMapImagePath returned empty, defaulting to Map0");
         }
         
         ViewService.OnMapChanged += HandleMapChanged;
@@ -283,7 +288,7 @@ private bool showMiniMap = true;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Image load error: {ex.Message}");
+            Logger.Error("Image load error", ex);
             imageDim = "Error loading image";
         }
     }
@@ -350,7 +355,7 @@ private bool showMiniMap = true;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Mini-map init error: {ex.Message}");
+            Logger.Error("Mini-map init error", ex);
         }
     }
     
@@ -366,11 +371,11 @@ private bool showMiniMap = true;
                 window.mapModule.updateSettings('{colorHex}', {Settings.BoxLineSize}, {Settings.BoxColorInc});
             ");
             
-            Console.WriteLine($"? Settings synced to JavaScript: {colorHex}, {Settings.BoxLineSize}px, inc {Settings.BoxColorInc}");
+            Logger.Info($"Settings synced to JavaScript: {colorHex}, {Settings.BoxLineSize}px, inc {Settings.BoxColorInc}");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Settings sync error: {ex.Message}");
+            Logger.Error("Settings sync error", ex);
         }
     }
     
@@ -426,7 +431,7 @@ private bool showMiniMap = true;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Mini-map update error: {ex.Message}");
+            Logger.Error("Mini-map update error", ex);
         }
     }
     
@@ -472,7 +477,7 @@ private bool showMiniMap = true;
             if (canvasClickX < dims["offsetX"] || canvasClickX > dims["offsetX"] + dims["drawWidth"] ||
                 canvasClickY < dims["offsetY"] || canvasClickY > dims["offsetY"] + dims["drawHeight"])
             {
-                Console.WriteLine($"Click outside map area");
+                Logger.Info("Mini-map click outside map area");
                 return;
             }
             
@@ -496,11 +501,11 @@ private bool showMiniMap = true;
             await UpdateMiniMapViewport();
             StateHasChanged();
             
-            Console.WriteLine($"Mini-map click: canvas({canvasClickX:F0},{canvasClickY:F0}) -> world({worldX:F0},{worldY:F0})");
+            Logger.Info($"Mini-map click: canvas({canvasClickX:F0},{canvasClickY:F0}) -> world({worldX:F0},{worldY:F0})");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Mini-map click error: {ex.Message}");
+            Logger.Error("Mini-map click error", ex);
         }
     }
     
@@ -564,9 +569,12 @@ private bool showMiniMap = true;
 
             if (rect != null && rect.Width > 0 && rect.Height > 0)
             {
+                // Safely get the current spawn list for this map
+                var currentSpawnList = GetSpawnList();
+                
                 var spawn = new SpawnEntity
                 {
-                    Position = Utility.Spawns[Utility.SESSION.Current_Map].Count + 1,
+                    Position = currentSpawnList.Count + 1,
                     SpawnBox = new Rect(rect.X, rect.Y, rect.Width, rect.Height),
                     TimedSpawn = "None",
                     CommonSpawnList = new(),
@@ -581,11 +589,11 @@ private bool showMiniMap = true;
                 
                 selected = spawn;
                 
-                Console.WriteLine($"Spawn #{spawn.Position} created at ({spawn.SpawnBox.X},{spawn.SpawnBox.Y}) size {spawn.SpawnBox.Width}x{spawn.SpawnBox.Height} Priority:{spawn.Priority}");
+                Logger.Info($"Spawn #{spawn.Position} created at ({spawn.SpawnBox.X},{spawn.SpawnBox.Y}) size {spawn.SpawnBox.Width}x{spawn.SpawnBox.Height} Priority:{spawn.Priority}");
                 
                 // Auto-save spawn data
                 Utility.SaveSpawnData();
-                Console.WriteLine("Auto-saved spawn data");
+                Logger.Info("Auto-saved spawn data");
                 
                 // Force a complete redraw
                 await Redraw();
@@ -593,7 +601,7 @@ private bool showMiniMap = true;
             }
             else
             {
-                Console.WriteLine("Box too small or invalid");
+                Logger.Info("Box too small or invalid");
             }
         }
         else if (isPanning)
@@ -625,6 +633,48 @@ private bool showMiniMap = true;
         StateHasChanged();
     }
     
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        // Pan speed: 50 pixels per key press
+        const int panStep = 50;
+        bool handled = false;
+        
+        // Arrow keys and WASD for panning
+        switch (e.Key.ToLower())
+        {
+            case "arrowup":
+            case "w":
+                panY += panStep;
+                handled = true;
+                break;
+                
+            case "arrowdown":
+            case "s":
+                panY -= panStep;
+                handled = true;
+                break;
+                
+            case "arrowleft":
+            case "a":
+                panX += panStep;
+                handled = true;
+                break;
+                
+            case "arrowright":
+            case "d":
+                panX -= panStep;
+                handled = true;
+                break;
+        }
+        
+        if (handled)
+        {
+            await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
+            await UpdateMiniMapViewport();
+            StateHasChanged();
+        }
+    }
+    
     private async Task ToggleXMLSpawners()
     {
         showXMLSpawners = !showXMLSpawners;
@@ -633,7 +683,7 @@ private bool showMiniMap = true;
         {
             // Get XML spawners for current map
             var xmlSpawners = XMLSpawnUtility.GetSpawnersForMap(ViewService.CurrentMap);
-            Console.WriteLine($"Showing {xmlSpawners.Count} XML spawners for {ViewService.CurrentMap}");
+            Logger.Info($"Showing {xmlSpawners.Count} XML spawners for {ViewService.CurrentMap}");
             
             // Convert to JSON and send to JavaScript
             var options = new System.Text.Json.JsonSerializerOptions 
@@ -647,7 +697,7 @@ private bool showMiniMap = true;
         }
         else
         {
-            Console.WriteLine($"Hiding XML spawners");
+            Logger.Info("Hiding XML spawners");
             await JS.InvokeVoidAsync("eval", "window.mapModule.hideXMLSpawners()");
         }
         
@@ -665,13 +715,13 @@ private bool showMiniMap = true;
         
         if (showServerSpawns)
         {
-            Console.WriteLine($"?? Toggling ON server spawn statistics for {ViewService.CurrentMap}");
+            Logger.Info($"Toggling ON server spawn statistics for {ViewService.CurrentMap}");
             
             // Check if ServUO folder is configured
             if (string.IsNullOrEmpty(Settings.ServUODataFolder))
             {
-                Console.WriteLine("?? Server Data folder not configured!");
-                Console.WriteLine("?? Go to Settings and set your ServUO Data folder path");
+                Logger.Warning("Server Data folder not configured!");
+                Logger.Warning("Go to Settings and set your ServUO Data folder path");
                 showServerSpawns = false;
                 StateHasChanged();
                 return;
@@ -681,8 +731,8 @@ private bool showMiniMap = true;
             string statsFolderPath = Path.Combine(Settings.ServUODataFolder, "UOR_Stats");
             if (!Directory.Exists(statsFolderPath))
             {
-                Console.WriteLine($"?? UOR_Stats folder not found at: {statsFolderPath}");
-                Console.WriteLine("?? Run [PushRespawnStats] command in-game to generate stat files");
+                Logger.Warning($"UOR_Stats folder not found at: {statsFolderPath}");
+                Logger.Warning("Run [PushRespawnStats] command in-game to generate stat files");
                 showServerSpawns = false;
                 StateHasChanged();
                 return;
@@ -691,29 +741,29 @@ private bool showMiniMap = true;
             // Load spawn statistics from server if not already loaded
             if (!MapDisplayUtility.HasSpawnData)
             {
-                Console.WriteLine($"?? Loading spawn statistics from: {statsFolderPath}");
+                Logger.Info($"Loading spawn statistics from: {statsFolderPath}");
                 MapDisplayUtility.InstantiateStatData();
                 
                 if (!MapDisplayUtility.HasSpawnData)
                 {
-                    Console.WriteLine("?? No spawn statistics files found!");
-                    Console.WriteLine("?? Play on your server to generate spawn data, then run [PushRespawnStats]");
+                    Logger.Warning("No spawn statistics files found!");
+                    Logger.Warning("Play on your server to generate spawn data, then run [PushRespawnStats]");
                     showServerSpawns = false;
                     StateHasChanged();
                     return;
                 }
                 
-                Console.WriteLine($"? Loaded spawn statistics successfully!");
+                Logger.Info("Loaded spawn statistics successfully!");
             }
             
             // Get spawn data for current map
             var spawnData = MapDisplayUtility.GetSpawnDataForMap(ViewService.CurrentMap);
             int totalCount = MapDisplayUtility.GetSpawnDataCount(ViewService.CurrentMap);
-            Console.WriteLine($"?? Found {totalCount} spawn events for {ViewService.CurrentMap}");
+            Logger.Info($"Found {totalCount} spawn events for {ViewService.CurrentMap}");
             
             if (spawnData.Count == 0)
             {
-                Console.WriteLine($"?? No spawn data for {ViewService.CurrentMap} - try a different map");
+                Logger.Warning($"No spawn data for {ViewService.CurrentMap} - try a different map");
                 showServerSpawns = false;
                 StateHasChanged();
                 return;
@@ -728,11 +778,11 @@ private bool showMiniMap = true;
             var json = System.Text.Json.JsonSerializer.Serialize(spawnData, options);
             
             await JS.InvokeVoidAsync("eval", $"window.mapModule.showServerSpawns({json})");
-            Console.WriteLine($"? Displayed {spawnData.Count} spawn points on map");
+            Logger.Info($"Displayed {spawnData.Count} spawn points on map");
         }
         else
         {
-            Console.WriteLine($"?? Hiding server spawn statistics");
+            Logger.Info("Hiding server spawn statistics");
             await JS.InvokeVoidAsync("eval", "window.mapModule.hideServerSpawns()");
         }
         
@@ -790,7 +840,7 @@ private bool showMiniMap = true;
             if (Utility.SESSION != null)
             {
                 var spawns = Utility.Spawns[Utility.SESSION.Current_Map];
-                Console.WriteLine($"Redrawing {spawns.Count} spawns for {Utility.SESSION.Current_Map}");
+                Logger.Info($"Redrawing {spawns.Count} spawns for {Utility.SESSION.Current_Map}");
                 
                 // Serialize with proper options
                 var options = new JsonSerializerOptions 
@@ -800,16 +850,14 @@ private bool showMiniMap = true;
                 };
                 var json = System.Text.Json.JsonSerializer.Serialize(spawns, options);
                 
-                Console.WriteLine($"JSON: {json.Substring(0, Math.Min(200, json.Length))}...");
-                
                 await JS.InvokeVoidAsync("eval", $"window.mapModule.redraw({json})");
                 
-                Console.WriteLine($"Redraw complete");
+                Logger.Info("Redraw complete");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Redraw error: {ex.Message}");
+            Logger.Error("Redraw error", ex);
         }
     }
     
@@ -870,7 +918,7 @@ private bool showMiniMap = true;
         }
         
         spawn.Priority = maxPriority;
-        Console.WriteLine($"Calculated Priority for Spawn #{spawn.Position}: {spawn.Priority}");
+        Logger.Info($"Calculated Priority for Spawn #{spawn.Position}: {spawn.Priority}");
     }
     
     private bool IsCompletelyContained(Rect inner, Rect outer)
@@ -928,7 +976,7 @@ private bool showMiniMap = true;
         await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
         await UpdateMiniMapViewport();
         
-        Console.WriteLine($"Jumped to Spawn #{spawn.Position} at ({centerX:F0}, {centerY:F0})");
+        Logger.Info($"Jumped to Spawn #{spawn.Position} at ({centerX:F0}, {centerY:F0})");
     }
     
     private async Task DeleteSpawn(SpawnEntity spawn)
@@ -955,7 +1003,7 @@ private bool showMiniMap = true;
         
         // Auto-save spawn data
         Utility.SaveSpawnData();
-        Console.WriteLine("Auto-saved after delete");
+        Logger.Info("Auto-saved after delete");
         
         await Redraw();
         StateHasChanged();
@@ -987,7 +1035,7 @@ private bool showMiniMap = true;
     private void SaveAfterTimedSpawnChange()
     {
         Utility.SaveSpawnData();
-        Console.WriteLine("Auto-saved after timed spawn change");
+        Logger.Info("Auto-saved after timed spawn change");
     }
     
     private void OpenCategoryModal(SpawnEntity spawn, Frequency frequency)
@@ -1011,7 +1059,7 @@ private bool showMiniMap = true;
         showCategoryModal = true;
         StateHasChanged();
         
-        Console.WriteLine($"Opened {frequency} modal for Spawn #{spawn.Position} with {currentCategorySpawns.Count} creatures");
+        Logger.Info($"Opened {frequency} modal for Spawn #{spawn.Position} with {currentCategorySpawns.Count} creatures");
     }
     
     private void CloseCategoryModal()
@@ -1047,11 +1095,11 @@ private bool showMiniMap = true;
                     }
                     else
                     {
-                        Console.WriteLine($"WARNING: Skipped empty creature name in {currentCategory} for Spawn #{editingSpawn.Position}");
+                        Logger.Warning($"Skipped empty creature name in {currentCategory} for Spawn #{editingSpawn.Position}");
                     }
                 }
                 
-                Console.WriteLine($"Saved {targetList.Count} {currentCategory} spawns for Spawn #{editingSpawn.Position}");
+                Logger.Info($"Saved {targetList.Count} {currentCategory} spawns for Spawn #{editingSpawn.Position}");
             }
             
             // Save the data

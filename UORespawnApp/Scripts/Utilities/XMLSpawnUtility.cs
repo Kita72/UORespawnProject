@@ -1,3 +1,5 @@
+using UORespawnApp.Scripts.Utilities;
+
 namespace UORespawnApp
 {
     internal static class XMLSpawnUtility
@@ -53,19 +55,19 @@ namespace UORespawnApp
                                 Width = range,
                                 Height = range
                             });
-                        }
                     }
-
-                    Console.WriteLine($"Loaded {Spawns.Count} XML spawner points");
                 }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Error loading spawner list: {ex.Message}");
+
+                Logger.Info($"Loaded {Spawns.Count} XML spawner points");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error loading XML spawner list", ex);
                 }
             }
             else
             {
-                Console.WriteLine($"Spawner list not found: {fileLoc}");
+                Logger.Warning($"XML spawner list not found: {fileLoc}");
             }
         }
 
@@ -87,10 +89,10 @@ namespace UORespawnApp
                 try
                 {
                     WorldSpawnUtility.SetStaticList([.. File.ReadAllLines(fileLoc)]);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Error loading static list: {ex.Message}");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error loading XML static list", ex);
                 }
             }
         }

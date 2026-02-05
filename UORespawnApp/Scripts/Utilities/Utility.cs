@@ -1,3 +1,5 @@
+using UORespawnApp.Scripts.Utilities;
+
 namespace UORespawnApp
 {
     public enum GameMap
@@ -77,7 +79,7 @@ namespace UORespawnApp
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error saving spawn data: {ex.Message}");
+                Logger.Error("Error saving spawn data", ex);
             }
             finally
             {
@@ -198,13 +200,13 @@ namespace UORespawnApp
                     
                     if (entitiesLoaded > 0)
                     {
-                        Console.WriteLine($"Loaded spawn data: {Spawns.Count} maps with {entitiesLoaded} entities");
+                        Logger.Info($"Loaded spawn data: {Spawns.Count} maps with {entitiesLoaded} entities");
                     }
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error loading spawn data: {ex.Message}");
+                Logger.Error("Error loading spawn data", ex);
             }
         }
 
@@ -229,7 +231,7 @@ namespace UORespawnApp
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error saving chance data: {ex.Message}");
+                Logger.Error("Error saving chance data", ex);
             }
         }
 

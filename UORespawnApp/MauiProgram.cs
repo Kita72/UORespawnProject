@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using UORespawnApp.Scripts.Utilities;
 
 namespace UORespawnApp
 {
@@ -40,7 +41,7 @@ namespace UORespawnApp
                     if (!File.Exists(file))
                     {
                         File.Create(file).Dispose();
-                        Console.WriteLine($"Created empty CSV file: {Path.GetFileName(file)}");
+                        Logger.Info($"Created empty CSV file: {Path.GetFileName(file)}");
                     }
                 }
                 
@@ -54,8 +55,7 @@ namespace UORespawnApp
                 } 
                 catch (Exception ex) 
                 { 
-                    Console.WriteLine($"LoadSpawnData failed: {ex.Message}");
-                    System.Diagnostics.Debug.WriteLine($"LoadSpawnData error: {ex}");
+                    Logger.Error("LoadSpawnData failed", ex);
                 }
                 
                 // Load world and static spawn data synchronously (avoids async deadlock)
@@ -65,8 +65,7 @@ namespace UORespawnApp
                 } 
                 catch (Exception ex) 
                 {
-                    Console.WriteLine($"LoadWorldSpawnList failed: {ex.Message}");
-                    System.Diagnostics.Debug.WriteLine($"LoadWorldSpawnList error: {ex}");
+                    Logger.Error("LoadWorldSpawnList failed", ex);
                 }
                 
                 try 
@@ -75,8 +74,7 @@ namespace UORespawnApp
                 } 
                 catch (Exception ex) 
                 {
-                    Console.WriteLine($"LoadStaticSpawnList failed: {ex.Message}");
-                    System.Diagnostics.Debug.WriteLine($"LoadStaticSpawnList error: {ex}");
+                    Logger.Error("LoadStaticSpawnList failed", ex);
                 }
                 
                 try 
@@ -85,8 +83,7 @@ namespace UORespawnApp
                 } 
                 catch (Exception ex) 
                 { 
-                    Console.WriteLine($"LoadSpawnerList failed: {ex.Message}");
-                    System.Diagnostics.Debug.WriteLine($"LoadSpawnerList error: {ex}");
+                    Logger.Error("LoadSpawnerList failed", ex);
                 }
                 
                 try 
@@ -95,8 +92,7 @@ namespace UORespawnApp
                 } 
                 catch (Exception ex) 
                 { 
-                    Console.WriteLine($"LoadStaticList failed: {ex.Message}");
-                    System.Diagnostics.Debug.WriteLine($"LoadStaticList error: {ex}");
+                    Logger.Error("LoadStaticList failed", ex);
                 }
 
                 // Copy map images to wwwroot

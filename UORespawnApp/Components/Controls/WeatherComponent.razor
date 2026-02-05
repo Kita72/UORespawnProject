@@ -228,7 +228,7 @@
         // Load existing spawn data (reuses WorldEntity system)
         await WorldSpawnUtility.LoadWorldSpawnList();
         
-        Console.WriteLine($"WeatherComponent initialized - {WeatherTypes.Length} weather types available");
+        Logger.Info($"WeatherComponent initialized - {WeatherTypes.Length} weather types available");
     }
 
     private List<WorldTile> GetWeatherTypes()
@@ -314,7 +314,7 @@
 
         // Auto-save
         await WorldSpawnUtility.SaveWorldSpawnList();
-        Console.WriteLine($"Saved {tempSpawnList.Count} {currentFrequency} {(currentIsMob ? "creatures" : "animals")} for {selectedWeather}");
+        Logger.Info($"Saved {tempSpawnList.Count} {currentFrequency} {(currentIsMob ? "creatures" : "animals")} for {selectedWeather}");
         
         StateHasChanged();
     }

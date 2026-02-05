@@ -222,7 +222,7 @@
         // Load existing spawn data (this will initialize entities if needed)
         await WorldSpawnUtility.LoadWorldSpawnList();
         
-        Console.WriteLine($"WorldSpawnComponent initialized - {WorldSpawnUtility.WorldSpawnList?.Count ?? 0} maps loaded");
+        Logger.Info($"WorldSpawnComponent initialized - {WorldSpawnUtility.WorldSpawnList?.Count ?? 0} maps loaded");
     }
 
     private void SelectTile(WorldTile tile)
@@ -314,13 +314,13 @@
             }
             else
             {
-                Console.WriteLine($"WARNING: Skipped empty creature name in {currentFrequency} {(currentIsMob ? "creatures" : "animals")}");
+                Logger.Warning($"Skipped empty creature name in {currentFrequency} {(currentIsMob ? "creatures" : "animals")}");
             }
         }
 
         // Auto-save
         await WorldSpawnUtility.SaveWorldSpawnList();
-        Console.WriteLine($"Saved {tempSpawnList.Count} {currentFrequency} {(currentIsMob ? "creatures" : "animals")} for {selectedTile}");
+        Logger.Info($"Saved {tempSpawnList.Count} {currentFrequency} {(currentIsMob ? "creatures" : "animals")} for {selectedTile}");
         
         StateHasChanged();
     }

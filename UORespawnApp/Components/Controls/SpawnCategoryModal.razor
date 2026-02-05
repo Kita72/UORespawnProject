@@ -167,22 +167,23 @@
             return;
         }
         
+        
         CurrentSpawns.Add(entry);
-        Console.WriteLine($"Added {entry} to {CategoryName} {SpawnTypeName}");
+        Logger.Info($"Added {entry} to {CategoryName} {SpawnTypeName}");
         StateHasChanged();
     }
     
     private void RemoveEntry(string entry)
     {
         CurrentSpawns.Remove(entry);
-        Console.WriteLine($"Removed {entry} from {CategoryName} {SpawnTypeName}");
+        Logger.Info($"Removed {entry} from {CategoryName} {SpawnTypeName}");
         StateHasChanged();
     }
     
     private void ClearAll()
     {
         CurrentSpawns.Clear();
-        Console.WriteLine($"Cleared all {CategoryName} {SpawnTypeName}");
+        Logger.Info($"Cleared all {CategoryName} {SpawnTypeName}");
         StateHasChanged();
     }
     

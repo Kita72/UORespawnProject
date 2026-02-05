@@ -1,4 +1,6 @@
-﻿namespace UORespawnApp
+﻿using UORespawnApp.Scripts.Utilities;
+
+namespace UORespawnApp
 {
     public partial class App : Application
     {
@@ -19,13 +21,13 @@
                 _dataWatcher = new DataWatcher(() =>
                 {
                     // Callback when server files change
-                    Console.WriteLine("📂 Server data files have been updated!");
+                    Logger.Info("Server data files have been updated!");
                     // Could trigger UI refresh here if needed
                 });
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"⚠️ DataWatcher failed to start: {ex.Message}");
+                Logger.Warning($"DataWatcher failed to start: {ex.Message}");
             }
         }
 

@@ -1,4 +1,6 @@
-﻿namespace UORespawnApp
+﻿using UORespawnApp.Scripts.Utilities;
+
+namespace UORespawnApp
 {
     internal static class MapDisplayUtility
     {
@@ -53,12 +55,12 @@
         {
             string statsFolderPath = Path.Combine(Settings.ServUODataFolder, "UOR_Stats");
 
-            Console.WriteLine($"📂 Looking for spawn stats in: {statsFolderPath}");
+            Logger.Info($"Looking for spawn stats in: {statsFolderPath}");
 
             if (Directory.Exists(statsFolderPath))
             {
                 var files = Directory.GetFiles(statsFolderPath, "*.txt");
-                Console.WriteLine($"📄 Found {files.Length} stat files");
+                Logger.Info($"Found {files.Length} stat files");
 
                 int totalLines = 0;
                 int successfulLines = 0;
@@ -68,7 +70,7 @@
                 {
                     try
                     {
-                        Console.WriteLine($"📖 Reading: {Path.GetFileName(filePath)}");
+                        Logger.Info($"Reading spawn stats: {Path.GetFileName(filePath)}");
                         int fileLineCount = 0;
 
                         foreach (string line in File.ReadLines(filePath))
@@ -108,35 +110,30 @@
                                 }
                                 catch (Exception ex)
                                 {
-                                    Console.WriteLine($"⚠️ Error parsing line: '{line}' - {ex.Message}");
+                                    Logger.Warning($"Error parsing spawn stat line: '{line}' - {ex.Message}");
                                     skippedLines++;
                                 }
                             }
                             else
                             {
-                                Console.WriteLine($"⚠️ Invalid line format (expected 7 parts, got {parts.Length}): '{line}'");
+                                Logger.Warning($"Invalid spawn stat line format (expected 7 parts, got {parts.Length}): '{line}'");
                                 skippedLines++;
                             }
                         }
 
-                        Console.WriteLine($"   ✅ Processed {fileLineCount} lines from {Path.GetFileName(filePath)}");
+                        Logger.Info($"Processed {fileLineCount} lines from {Path.GetFileName(filePath)}");
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"❌ Error reading file {Path.GetFileName(filePath)}: {ex.Message}");
+                        Logger.Error($"Error reading spawn stats file {Path.GetFileName(filePath)}", ex);
                     }
                 }
 
-                Console.WriteLine($"");
-                Console.WriteLine($"📊 SUMMARY:");
-                Console.WriteLine($"   Total lines: {totalLines}");
-                Console.WriteLine($"   Successfully parsed: {successfulLines}");
-                Console.WriteLine($"   Skipped/errors: {skippedLines}");
-                Console.WriteLine($"   Spawn events loaded: {SpawnStats.Count}");
+                Logger.Info($"Spawn stats summary - Total lines: {totalLines}, Successfully parsed: {successfulLines}, Skipped/errors: {skippedLines}, Spawn events loaded: {SpawnStats.Count}");
             }
             else
             {
-                Console.WriteLine($"❌ UOR_Stats folder not found at: {statsFolderPath}");
+                Logger.Warning($"UOR_Stats folder not found at: {statsFolderPath}");
             }
         }
 
@@ -159,7 +156,7 @@
         {
             SpawnStats.Clear();
             playerColorCache.Clear();
-            Console.WriteLine("?? Cleared spawn statistics data");
+            Logger.Info("Cleared spawn statistics data");
         }
     }
 

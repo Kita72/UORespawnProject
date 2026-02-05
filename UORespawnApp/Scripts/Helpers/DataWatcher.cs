@@ -1,4 +1,6 @@
-﻿namespace UORespawnApp
+﻿using UORespawnApp.Scripts.Utilities;
+
+namespace UORespawnApp
 {
     internal class DataWatcher : IDisposable
     {
@@ -18,7 +20,7 @@
             if (!IsSupported)
             {
                 _watcher = null;
-                Console.WriteLine("⚠️ DataWatcher not supported on this platform (requires Windows or macOS)");
+                Logger.Warning("DataWatcher not supported on this platform (requires Windows or macOS)");
                 return;
             }
             
@@ -36,11 +38,11 @@
                     };
 
                     SetupWatcher();
-                    Console.WriteLine($"📂 DataWatcher started for: {Settings.ServUODataFolder}");
+                    Logger.Info($"DataWatcher started for: {Settings.ServUODataFolder}");
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"⚠️ DataWatcher failed to start: {ex.Message}");
+                    Logger.Warning($"DataWatcher failed to start: {ex.Message}");
                     _watcher?.Dispose();
                     _watcher = null;
                 }
@@ -48,7 +50,7 @@
             else
             {
                 _watcher = null;
-                Console.WriteLine("⚠️ DataWatcher not started - No ServUO folder configured");
+                Logger.Warning("DataWatcher not started - No ServUO folder configured");
             }
         }
 
@@ -77,7 +79,7 @@
             
             if (!string.IsNullOrEmpty(e.Name))
             {
-                Console.WriteLine($"📄 File changed: {e.Name}");
+                Logger.Info($"File changed: {e.Name}");
                 
                 try
                 {
@@ -92,7 +94,7 @@
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"❌ Error processing file change: {ex.Message}");
+                    Logger.Error("Error processing file change", ex);
                 }
             }
         }
@@ -115,11 +117,11 @@
             {
                 await WorldSpawnUtility.LoadSpawnList();
                 _onDataChanged?.Invoke();
-                Console.WriteLine("✅ Bestiary reloaded from server");
+                Logger.Info("Bestiary reloaded from server");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Error reloading bestiary: {ex.Message}");
+                Logger.Error("Error reloading bestiary", ex);
             }
         }
 
@@ -129,11 +131,11 @@
             {
                 await WorldSpawnUtility.LoadStaticList();
                 _onDataChanged?.Invoke();
-                Console.WriteLine("✅ Static list reloaded from server");
+                Logger.Info("Static list reloaded from server");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Error reloading static list: {ex.Message}");
+                Logger.Error("Error reloading static list", ex);
             }
         }
 
@@ -144,7 +146,7 @@
                 _watcher.Changed -= OnChanged;
                 _watcher.Created -= OnChanged;
                 _watcher.Dispose();
-                Console.WriteLine("📂 DataWatcher stopped");
+                Logger.Info("DataWatcher stopped");
             }
         }
     }

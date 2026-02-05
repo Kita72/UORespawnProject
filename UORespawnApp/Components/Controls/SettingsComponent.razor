@@ -431,11 +431,11 @@ private bool importSuccess = false;
         try
         {
             Utility.SaveChanceData();
-            Console.WriteLine("Auto-saved settings on page leave");
+            Logger.Info("Auto-saved settings on page leave");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error auto-saving settings: {ex.Message}");
+            Logger.Error("Error auto-saving settings", ex);
         }
     }
     
@@ -542,18 +542,18 @@ private bool importSuccess = false;
             if (folder != null)
             {
                 Settings.ServUODataFolder = folder.Path;
-                Console.WriteLine($"?? ServUO folder selected: {folder.Path}");
+                Logger.Info($"ServUO folder selected: {folder.Path}");
                 StateHasChanged();
             }
 #else
-            // For other platforms, show instruction
-            Console.WriteLine("Folder picker not available on this platform. Please enter path manually.");
+// For other platforms, show instruction
+Logger.Info("Folder picker not available on this platform. Please enter path manually.");
             await Task.CompletedTask;
 #endif
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error browsing folder: {ex.Message}");
+            Logger.Error("Error browsing folder", ex);
         }
     }
     
@@ -591,7 +591,7 @@ private bool importSuccess = false;
     {
         try
         {
-            Console.WriteLine($"Processing map upload: {file.FileName}");
+            Logger.Info($"Processing map upload: {file.FileName}");
             
             // Get expected dimensions for selected map
             var (expectedWidth, expectedHeight) = GetMapDimensions(selectedMapToReplace);
@@ -601,7 +601,7 @@ private bool importSuccess = false;
             {
                 mapUploadMessage = "Error: File must be a BMP image (.bmp extension)";
                 mapUploadSuccess = false;
-                Console.WriteLine($"Invalid file extension: {file.FileName}");
+                Logger.Warning($"Invalid file extension: {file.FileName}");
                 StateHasChanged();
                 return;
             }
@@ -614,7 +614,7 @@ private bool importSuccess = false;
             {
                 mapUploadMessage = "Error: File is too small to be a valid BMP image";
                 mapUploadSuccess = false;
-                Console.WriteLine($"File too small: {stream.Length} bytes");
+                Logger.Warning($"File too small: {stream.Length} bytes");
                 StateHasChanged();
                 return;
             }
@@ -628,7 +628,7 @@ private bool importSuccess = false;
             {
                 mapUploadMessage = $"Error: File is not a valid BMP image (invalid signature: {header[0]:X2}{header[1]:X2})";
                 mapUploadSuccess = false;
-                Console.WriteLine($"Invalid BMP signature");
+                Logger.Warning("Invalid BMP signature");
                 StateHasChanged();
                 return;
             }
@@ -641,7 +641,7 @@ private bool importSuccess = false;
             // Handle negative height (top-down BMP)
             actualHeight = Math.Abs(actualHeight);
             
-            Console.WriteLine($"BMP dimensions: {actualWidth}x{actualHeight} (expected: {expectedWidth}x{expectedHeight})");
+            Logger.Info($"BMP dimensions: {actualWidth}x{actualHeight} (expected: {expectedWidth}x{expectedHeight})");
             
             // STEP 5: VALIDATE DIMENSIONS MATCH
             if (actualWidth != expectedWidth || actualHeight != expectedHeight)
@@ -649,7 +649,7 @@ private bool importSuccess = false;
                 mapUploadMessage = $"Error: Image dimensions {actualWidth}x{actualHeight} " +
                                   $"do not match required {expectedWidth}x{expectedHeight} for {selectedMapToReplace}";
                 mapUploadSuccess = false;
-                Console.WriteLine($"Dimension mismatch");
+                Logger.Warning("Dimension mismatch");
                 StateHasChanged();
                 return;
             }
@@ -658,7 +658,7 @@ private bool importSuccess = false;
             short bitDepth = BitConverter.ToInt16(header, 28);
             if (bitDepth != 24 && bitDepth != 32)
             {
-                Console.WriteLine($"Warning: BMP has {bitDepth}-bit color depth (recommended: 24-bit or 32-bit)");
+                Logger.Warning($"BMP has {bitDepth}-bit color depth (recommended: 24-bit or 32-bit)");
             }
             
             // STEP 7: PREPARE DESTINATION PATH
@@ -668,7 +668,7 @@ private bool importSuccess = false;
             if (!string.IsNullOrEmpty(destinationDir) && !Directory.Exists(destinationDir))
             {
                 Directory.CreateDirectory(destinationDir);
-                Console.WriteLine($"Created directory: {destinationDir}");
+                Logger.Info($"Created directory: {destinationDir}");
             }
             
             // STEP 8: BACKUP EXISTING MAP
@@ -676,7 +676,7 @@ private bool importSuccess = false;
             if (File.Exists(destinationPath))
             {
                 File.Copy(destinationPath, backupPath, true);
-                Console.WriteLine($"Original map backed up to: {backupPath}");
+                Logger.Info($"Original map backed up to: {backupPath}");
             }
             
             // STEP 9: COPY NEW MAP FILE
@@ -690,15 +690,14 @@ private bool importSuccess = false;
                               (File.Exists(backupPath) ? " - Original backed up" : "");
             mapUploadSuccess = true;
             
-            Console.WriteLine($"Map uploaded successfully to: {destinationPath}");
-            Console.WriteLine($"File size: {new FileInfo(destinationPath).Length / 1024 / 1024:F2} MB");
+            Logger.Info($"Map uploaded successfully to: {destinationPath}");
+            Logger.Info($"File size: {new FileInfo(destinationPath).Length / 1024 / 1024:F2} MB");
         }
         catch (Exception ex)
         {
             mapUploadMessage = $"Error uploading map: {ex.Message}";
             mapUploadSuccess = false;
-            Console.WriteLine($"Map upload error: {ex.Message}");
-            Console.WriteLine($"Stack trace: {ex.StackTrace}");
+            Logger.Error("Map upload failed", ex);
         }
         
         StateHasChanged();
@@ -732,14 +731,15 @@ private bool importSuccess = false;
             var backupPath = $"{mapPath}.backup";
             hasMapBackup = File.Exists(backupPath);
             
+            
             if (hasMapBackup)
             {
-                Console.WriteLine($"Backup found for {selectedMapToReplace}");
+                Logger.Info($"Backup found for {selectedMapToReplace}");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error checking for backup: {ex.Message}");
+            Logger.Error("Error checking for backup", ex);
             hasMapBackup = false;
         }
         
@@ -769,16 +769,17 @@ private bool importSuccess = false;
             // Copy backup over current map
             File.Copy(backupPath, mapPath, true);
             
+            
             mapUploadMessage = $"{selectedMapToReplace} restored from backup successfully!";
             mapUploadSuccess = true;
             
-            Console.WriteLine($"Restored {selectedMapToReplace} from backup");
+            Logger.Info($"Restored {selectedMapToReplace} from backup");
         }
         catch (Exception ex)
         {
             mapUploadMessage = $"Error restoring backup: {ex.Message}";
             mapUploadSuccess = false;
-            Console.WriteLine($"Restore error: {ex.Message}");
+            Logger.Error("Restore backup failed", ex);
         }
         
         StateHasChanged();
@@ -803,14 +804,14 @@ private bool importSuccess = false;
             if (success && filesImported > 0)
             {
                 importMessage += "\n\n** Please restart the application to load the imported files. **";
-                Console.WriteLine("Import complete - restart required to load data");
+                Logger.Info("Import complete - restart required to load data");
             }
         }
         catch (Exception ex)
         {
             importSuccess = false;
             importMessage = $"Import failed: {ex.Message}";
-            Console.WriteLine($"Import exception: {ex.Message}");
+            Logger.Error("Import exception", ex);
         }
         finally
         {
@@ -827,13 +828,13 @@ private bool importSuccess = false;
         
         try
         {
-            Console.WriteLine("Starting server scripts export...");
+            Logger.Info("Starting server scripts export...");
             
             // Get SpawnSystem folder path - try multiple locations
             string? spawnSystemPath = null;
             var baseDir = AppDomain.CurrentDomain.BaseDirectory;
             
-            Console.WriteLine($"Base directory: {baseDir}");
+            Logger.Info($"Base directory: {baseDir}");
             
             // Try relative paths from base directory
             var possiblePaths = new[]
@@ -848,12 +849,12 @@ private bool importSuccess = false;
             foreach (var testPath in possiblePaths)
             {
                 var fullPath = Path.GetFullPath(testPath);
-                Console.WriteLine($"Testing: {fullPath}");
+                Logger.Info($"Testing: {fullPath}");
                 
                 if (Directory.Exists(fullPath))
                 {
                     spawnSystemPath = fullPath;
-                    Console.WriteLine($"Found SpawnSystem at: {spawnSystemPath}");
+                    Logger.Info($"Found SpawnSystem at: {spawnSystemPath}");
                     break;
                 }
             }
@@ -864,11 +865,7 @@ private bool importSuccess = false;
                                "The SpawnSystem folder should be in the application directory.\n" +
                                "Please download the source code from GitHub to access server scripts.";
                 exportSuccess = false;
-                Console.WriteLine($"SpawnSystem not found. Searched paths:");
-                foreach (var path in possiblePaths)
-                {
-                    Console.WriteLine($"   - {Path.GetFullPath(path)}");
-                }
+                Logger.Warning($"SpawnSystem not found. Searched paths: {string.Join(", ", possiblePaths.Select(Path.GetFullPath))}");
                 return;
             }
             
@@ -881,14 +878,16 @@ private bool importSuccess = false;
                 File.Delete(tempPath);
             }
             
-            Console.WriteLine($"Creating ZIP at: {tempPath}");
+            
+            Logger.Info($"Creating ZIP at: {tempPath}");
             
             // Create ZIP file
             System.IO.Compression.ZipFile.CreateFromDirectory(spawnSystemPath, tempPath, 
                 System.IO.Compression.CompressionLevel.Optimal, false);
             
+            
             var zipInfo = new FileInfo(tempPath);
-            Console.WriteLine($"ZIP created successfully ({zipInfo.Length / 1024:N0} KB)");
+            Logger.Info($"ZIP created successfully ({zipInfo.Length / 1024:N0} KB)");
             
             // Copy to Downloads folder or use Share
 #if WINDOWS
@@ -898,9 +897,10 @@ private bool importSuccess = false;
             
             File.Copy(tempPath, downloadsPath, true);
             
+            
             exportMessage = $"? Server scripts exported to Downloads folder:\n{downloadsPath}";
             exportSuccess = true;
-            Console.WriteLine($"? File saved to: {downloadsPath}");
+            Logger.Info($"File saved to: {downloadsPath}");
             
             // Open Downloads folder
             try
@@ -914,9 +914,10 @@ private bool importSuccess = false;
             
             File.Copy(tempPath, downloadsPath, true);
             
+            
             exportMessage = $"Server scripts exported to Downloads folder:\n{downloadsPath}";
             exportSuccess = true;
-            Console.WriteLine($"File saved to: {downloadsPath}");
+            Logger.Info($"File saved to: {downloadsPath}");
             
             // Open Downloads folder
             try
@@ -932,17 +933,17 @@ private bool importSuccess = false;
                 File = new ShareFile(tempPath)
             });
             
+            
             exportMessage = "? Server scripts ready to share!";
             exportSuccess = true;
-            Console.WriteLine("? Share request sent");
+            Logger.Info("Share request sent");
 #endif
         }
         catch (Exception ex)
         {
             exportMessage = $"Error exporting server scripts: {ex.Message}\n\nStack Trace:\n{ex.StackTrace}";
             exportSuccess = false;
-            Console.WriteLine($"Export error: {ex.Message}");
-            Console.WriteLine($"Stack trace: {ex.StackTrace}");
+            Logger.Error("Export error", ex);
         }
         finally
         {

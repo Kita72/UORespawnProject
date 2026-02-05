@@ -1,3 +1,5 @@
+using UORespawnApp.Scripts.Utilities;
+
 namespace UORespawnApp
 {
     internal static class WorldSpawnUtility
@@ -59,7 +61,7 @@ namespace UORespawnApp
                         }
                     }
                     SpawnList.Sort();
-                    Console.WriteLine($"Loaded {SpawnList.Count} creatures from custom bestiary");
+                    Logger.Info($"Loaded {SpawnList.Count} creatures from custom bestiary");
                     return;
                 }
 
@@ -77,13 +79,13 @@ namespace UORespawnApp
                         }
                     }
                     SpawnList.Sort();
-                    Console.WriteLine($"Loaded {SpawnList.Count} creatures from bestiary file");
+                    Logger.Info($"Loaded {SpawnList.Count} creatures from bestiary file");
                 }
             }
             catch
             {
                 // Priority 3: Fallback to embedded bestiary list
-                Console.WriteLine("Loading embedded bestiary list...");
+                Logger.Info("Loading embedded bestiary list...");
                 LoadEmbeddedBestiary();
             }
         }
@@ -109,11 +111,11 @@ namespace UORespawnApp
 
                 // Save to custom file
                 await File.WriteAllLinesAsync(CustomBestiaryFile, SpawnList);
-                Console.WriteLine($"Saved {SpawnList.Count} creatures to custom bestiary");
+                Logger.Info($"Saved {SpawnList.Count} creatures to custom bestiary");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error saving custom bestiary: {ex.Message}");
+                Logger.Error("Error saving custom bestiary", ex);
             }
         }
 
@@ -125,7 +127,7 @@ namespace UORespawnApp
                 if (File.Exists(CustomBestiaryFile))
                 {
                     File.Delete(CustomBestiaryFile);
-                    Console.WriteLine("Deleted custom bestiary file");
+                    Logger.Info("Deleted custom bestiary file");
                 }
 
                 // Clear and reload
@@ -136,7 +138,7 @@ namespace UORespawnApp
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error resetting bestiary: {ex.Message}");
+                Logger.Error("Error resetting bestiary", ex);
                 return false;
             }
         }
@@ -280,7 +282,7 @@ namespace UORespawnApp
             ];
             
             SpawnList.Sort();
-            Console.WriteLine($"? Loaded {SpawnList.Count} creatures from embedded bestiary");
+            Logger.Info($"Loaded {SpawnList.Count} creatures from embedded bestiary");
         }
 
         internal static void SetSpawnList(List<string> list)
@@ -372,7 +374,7 @@ namespace UORespawnApp
                         }
                     }
                     StaticList.Sort();
-                    Console.WriteLine($"Loaded {StaticList.Count} statics from custom list");
+                    Logger.Info($"Loaded {StaticList.Count} statics from custom list");
                     return;
                 }
 
@@ -393,7 +395,7 @@ namespace UORespawnApp
                     if (StaticList.Count > 0)
                     {
                         StaticList.Sort();
-                        Console.WriteLine($"Loaded {StaticList.Count} statics from package file");
+                        Logger.Info($"Loaded {StaticList.Count} statics from package file");
                         return;
                     }
                 }
@@ -410,17 +412,17 @@ namespace UORespawnApp
                         }
                     }
                     StaticList.Sort();
-                    Console.WriteLine($"Loaded {StaticList.Count} statics from direct file path");
+                    Logger.Info($"Loaded {StaticList.Count} statics from direct file path");
                     return;
                 }
 
                 // Priority 4: Fallback to embedded static list (minimal safety net)
-                Console.WriteLine("Loading minimal embedded static list as fallback...");
+                Logger.Info("Loading minimal embedded static list as fallback...");
                 LoadEmbeddedStaticList();
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error loading static list: {ex.Message}");
+                Logger.Error("Error loading static list", ex);
                 LoadEmbeddedStaticList();
             }
         }
@@ -446,11 +448,11 @@ namespace UORespawnApp
 
                 // Save to custom file
                 await File.WriteAllLinesAsync(CustomStaticFile, StaticList);
-                Console.WriteLine($"Saved {StaticList.Count} statics to custom list");
+                Logger.Info($"Saved {StaticList.Count} statics to custom list");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error saving custom static list: {ex.Message}");
+                Logger.Error("Error saving custom static list", ex);
             }
         }
 
@@ -462,7 +464,7 @@ namespace UORespawnApp
                 if (File.Exists(CustomStaticFile))
                 {
                     File.Delete(CustomStaticFile);
-                    Console.WriteLine("Deleted custom static list file");
+                    Logger.Info("Deleted custom static list file");
                 }
 
                 // Clear and reload
@@ -473,7 +475,7 @@ namespace UORespawnApp
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error resetting static list: {ex.Message}");
+                Logger.Error("Error resetting static list", ex);
                 return false;
             }
         }
@@ -507,7 +509,7 @@ namespace UORespawnApp
             ];
             
             StaticList.Sort();
-            Console.WriteLine($"?? Loaded {StaticList.Count} statics from embedded list");
+            Logger.Info($"Loaded {StaticList.Count} statics from embedded list");
         }
 
         internal static bool ValidStatic(string? name)
@@ -584,7 +586,7 @@ namespace UORespawnApp
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error saving WorldSpawnList: {ex.Message}");
+                Logger.Error("Error saving WorldSpawnList", ex);
             }
         }
 
@@ -629,23 +631,23 @@ namespace UORespawnApp
         {
             try
             {
-                Console.WriteLine($"=== LoadWorldSpawnList START ===");
-                Console.WriteLine($"WorldSpawnFile path: {WorldSpawnFile}");
-                Console.WriteLine($"File.Exists: {File.Exists(WorldSpawnFile)}");
-                Console.WriteLine($"WorldSpawnList.Count before: {WorldSpawnList.Count}");
+                Logger.Info("=== LoadWorldSpawnList START ===");
+                Logger.Info($"WorldSpawnFile path: {WorldSpawnFile}");
+                Logger.Info($"File.Exists: {File.Exists(WorldSpawnFile)}");
+                Logger.Info($"WorldSpawnList.Count before: {WorldSpawnList.Count}");
                 
                 if (File.Exists(WorldSpawnFile))
                 {
-                    Console.WriteLine($"File found, clearing WorldSpawnList...");
+                    Logger.Info("File found, clearing WorldSpawnList...");
                     // Clear existing data to prevent duplicates
                     WorldSpawnList.Clear();
                     
                     // Initialize fresh world entities
                     InitiateWorldTileSpawn();
-                    Console.WriteLine($"Initialized {WorldSpawnList.Count} world entities");
+                    Logger.Info($"Initialized {WorldSpawnList.Count} world entities");
 
                     var lines = await File.ReadAllLinesAsync(WorldSpawnFile);
-                    Console.WriteLine($"Read {lines.Length} lines from file");
+                    Logger.Info($"Read {lines.Length} lines from file");
 
                     WorldEntity? currentEntity = null;
                     int lineNumber = 0;
@@ -657,7 +659,6 @@ namespace UORespawnApp
                         
                         if (string.IsNullOrWhiteSpace(line))
                         {
-                            Console.WriteLine($"Line {lineNumber}: Skipping empty line");
                             continue;
                         }
                         
@@ -668,7 +669,6 @@ namespace UORespawnApp
                             var mapHandle = (GameMap)Utility.IsValidMapID(parts[0]);
 
                             currentEntity = WorldSpawnList.Find(e => e.MapHandle == mapHandle);
-                            Console.WriteLine($"Line {lineNumber}: Switching to map {mapHandle}");
                         }
                         else
                         {
@@ -677,13 +677,13 @@ namespace UORespawnApp
                             // Use TryParse to handle malformed CSV data gracefully
                             if (parts.Length < 2)
                             {
-                                Console.WriteLine($"WARNING: Invalid world spawn line format (expected |), skipping: {line}");
+                                Logger.Warning($"Invalid world spawn line format (expected |), skipping: {line}");
                                 continue;
                             }
 
                             if (!Enum.TryParse<WorldTile>(parts[0], out var tile))
                             {
-                                Console.WriteLine($"WARNING: Invalid WorldTile value '{parts[0]}' in world spawn data, skipping entry");
+                                Logger.Warning($"Invalid WorldTile value '{parts[0]}' in world spawn data, skipping entry");
                                 continue;
                             }
 
@@ -700,19 +700,19 @@ namespace UORespawnApp
                                     // Skip empty or whitespace names to prevent ghost spawns
                                     if (string.IsNullOrWhiteSpace(name))
                                     {
-                                        Console.WriteLine($"WARNING: Skipped empty spawn name in tile {tile}");
+                                        Logger.Warning($"Skipped empty spawn name in tile {tile}");
                                         continue;
                                     }
                                     
                                     if (!Enum.TryParse<Frequency>(spawnParts[1], out var freq))
                                     {
-                                        Console.WriteLine($"WARNING: Invalid Frequency value '{spawnParts[1]}' for {name}, skipping entry");
+                                        Logger.Warning($"Invalid Frequency value '{spawnParts[1]}' for {name}, skipping entry");
                                         continue;
                                     }
                                     
                                     if (!bool.TryParse(spawnParts[2], out var isMob))
                                     {
-                                        Console.WriteLine($"WARNING: Invalid boolean value '{spawnParts[2]}' for {name}, skipping entry");
+                                        Logger.Warning($"Invalid boolean value '{spawnParts[2]}' for {name}, skipping entry");
                                         continue;
                                     }
                                     
@@ -725,27 +725,23 @@ namespace UORespawnApp
                         }
                     }
                     
-                    Console.WriteLine($"=== LoadWorldSpawnList COMPLETE ===");
-                    Console.WriteLine($"Total spawns added: {spawnsAdded}");
-                    Console.WriteLine($"WorldSpawnList has {WorldSpawnList.Count} world entities");
-                    Console.WriteLine($"Loaded world spawn data from {WorldSpawnFile}");
+                    Logger.Info($"LoadWorldSpawnList complete: {spawnsAdded} spawns added, {WorldSpawnList.Count} world entities from {WorldSpawnFile}");
                 }
                 else
                 {
-                    Console.WriteLine($"=== LoadWorldSpawnList: FILE NOT FOUND ===");
-                    Console.WriteLine($"Expected path: {WorldSpawnFile}");
+                    Logger.Warning($"LoadWorldSpawnList: File not found at {WorldSpawnFile}");
                     // No file exists, initialize empty world entities
                     if (WorldSpawnList.Count < 6)
                     {
                         WorldSpawnList.Clear();
                         InitiateWorldTileSpawn();
-                        Console.WriteLine("No world spawn file found, initialized empty data");
+                        Logger.Info("No world spawn file found, initialized empty data");
                     }
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error loading WorldSpawnList: {ex.Message}");
+                Logger.Error("Error loading WorldSpawnList", ex);
             }
         }
 
@@ -813,7 +809,7 @@ namespace UORespawnApp
                     
                     if (spawnsAdded > 0)
                     {
-                        Console.WriteLine($"Loaded world spawn data: {WorldSpawnList.Count} maps with {spawnsAdded} spawns");
+                        Logger.Info($"Loaded world spawn data: {WorldSpawnList.Count} maps with {spawnsAdded} spawns");
                     }
                 }
                 else
@@ -827,7 +823,7 @@ namespace UORespawnApp
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error loading WorldSpawnList: {ex.Message}");
+                Logger.Error("Error loading WorldSpawnList", ex);
             }
         }
 
@@ -854,7 +850,7 @@ namespace UORespawnApp
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error saving WorldSpawnList: {ex.Message}");
+                Logger.Error("Error saving StaticSpawnList", ex);
             }
         }
 
@@ -912,7 +908,7 @@ namespace UORespawnApp
                                 // Bounds check to prevent crash on malformed CSV
                                 if (index >= lines.Length)
                                 {
-                                    Console.WriteLine($"ERROR: Static spawn file truncated for '{staticName}' - expected {spawnCount} spawns but file ended early");
+                                    Logger.Error($"Static spawn file truncated for '{staticName}' - expected {spawnCount} spawns but file ended early");
                                     break;
                                 }
 
@@ -925,7 +921,7 @@ namespace UORespawnApp
                                     // Skip empty or whitespace names to prevent ghost spawns
                                     if (string.IsNullOrWhiteSpace(spawnName))
                                     {
-                                        Console.WriteLine($"WARNING: Skipped empty spawn name for static {staticName}");
+                                        Logger.Warning($"Skipped empty spawn name for static {staticName}");
                                         continue;
                                     }
                                     
@@ -945,7 +941,7 @@ namespace UORespawnApp
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error loading WorldSpawnList: {ex.Message}");
+                Logger.Error("Error loading StaticSpawnList", ex);
             }
             finally
             {
@@ -1011,7 +1007,7 @@ namespace UORespawnApp
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error loading StaticSpawnList: {ex.Message}");
+                Logger.Error("Error loading StaticSpawnList", ex);
             }
             finally
             {

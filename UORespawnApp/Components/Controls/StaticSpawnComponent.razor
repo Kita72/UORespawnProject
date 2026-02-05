@@ -188,7 +188,7 @@ protected override async Task OnInitializedAsync()
     // Load existing static spawn data
     await WorldSpawnUtility.LoadStaticSpawnList();
         
-    Console.WriteLine($"StaticSpawnComponent initialized - {availableStatics.Count} static types, {WorldSpawnUtility.StaticSpawnList?.Count ?? 0} configured");
+    Logger.Info($"StaticSpawnComponent initialized - {availableStatics.Count} static types, {WorldSpawnUtility.StaticSpawnList?.Count ?? 0} configured");
     
     // Force UI refresh after data is loaded
     StateHasChanged();
@@ -301,7 +301,7 @@ private StaticEntity GetOrCreateStaticEntity(string name)
             }
             else
             {
-                Console.WriteLine($"WARNING: Skipped empty creature name in {currentFrequency} for {selectedStatic.Name}");
+                Logger.Warning($"Skipped empty creature name in {currentFrequency} for {selectedStatic.Name}");
             }
         }
 
@@ -313,7 +313,7 @@ private StaticEntity GetOrCreateStaticEntity(string name)
 
         // Auto-save
         await WorldSpawnUtility.SaveStaticSpawnList();
-        Console.WriteLine($"Saved {tempSpawnList.Count} {currentFrequency} creatures for {selectedStatic.Name}");
+        Logger.Info($"Saved {tempSpawnList.Count} {currentFrequency} creatures for {selectedStatic.Name}");
         
         StateHasChanged();
     }
