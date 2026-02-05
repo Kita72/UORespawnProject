@@ -2,28 +2,52 @@ namespace UORespawnApp
 {
     internal static class Settings
     {
+        // Cache for frequently accessed settings to avoid repeated Preferences.Get() calls
+        private static string? _cachedServUODataFolder;
+        private static Color? _cachedBoxColor;
+        private static double? _cachedBoxColorInc;
+        private static int? _cachedBoxLineSize;
+        
+        // Initialize cache on first access
+        static Settings()
+        {
+            LoadCache();
+        }
+        
+        private static void LoadCache()
+        {
+            _cachedServUODataFolder = Preferences.Get("ServUODataFolder", "");
+            
+            var colorString = Preferences.Get("BoxColor", "#8B0000");
+            try
+            {
+                _cachedBoxColor = Color.FromArgb(colorString);
+            }
+            catch
+            {
+                _cachedBoxColor = Color.FromArgb("#8B0000");
+            }
+            
+            _cachedBoxColorInc = Preferences.Get("BoxColorInc", 0.3);
+            _cachedBoxLineSize = Preferences.Get("BoxLineSize", 2);
+        }
+        
         public static string ServUODataFolder
         {
-            get => Preferences.Get("ServUODataFolder", "");
-            set => Preferences.Set("ServUODataFolder", value);
+            get => _cachedServUODataFolder ?? "";
+            set
+            {
+                _cachedServUODataFolder = value;
+                Preferences.Set("ServUODataFolder", value);
+            }
         }
 
         public static Color BoxColor
         {
-            get
-            {
-                var colorString = Preferences.Get("BoxColor", "#8B0000"); // Dark Red default
-                try
-                {
-                    return Color.FromArgb(colorString);
-                }
-                catch
-                {
-                    return Color.FromArgb("#8B0000"); // Fallback to dark red
-                }
-            }
+            get => _cachedBoxColor ?? Color.FromArgb("#8B0000");
             set
             {
+                _cachedBoxColor = value;
                 var hex = $"#{(int)(value.Red * 255):X2}{(int)(value.Green * 255):X2}{(int)(value.Blue * 255):X2}";
                 Preferences.Set("BoxColor", hex);
             }
@@ -31,14 +55,22 @@ namespace UORespawnApp
 
         public static double BoxColorInc
         {
-            get => Preferences.Get("BoxColorInc", 0.3);
-            set => Preferences.Set("BoxColorInc", value);
+            get => _cachedBoxColorInc ?? 0.3;
+            set
+            {
+                _cachedBoxColorInc = value;
+                Preferences.Set("BoxColorInc", value);
+            }
         }
 
         public static int BoxLineSize
         {
-            get => Preferences.Get("BoxLineSize", 2);
-            set => Preferences.Set("BoxLineSize", value);
+            get => _cachedBoxLineSize ?? 2;
+            set
+            {
+                _cachedBoxLineSize = value;
+                Preferences.Set("BoxLineSize", value);
+            }
         }
 
         public static double CreatureChance

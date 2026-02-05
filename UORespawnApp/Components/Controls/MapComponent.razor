@@ -181,6 +181,14 @@ private bool showMiniMap = true;
     protected override void OnInitialized()
     {
         imageSrc = Utility.GetMapImagePath();
+        
+        // Fallback to default map if path is empty
+        if (string.IsNullOrEmpty(imageSrc))
+        {
+            imageSrc = "maps/Map0.bmp";
+            Console.WriteLine("Warning: GetMapImagePath returned empty, defaulting to Map0");
+        }
+        
         ViewService.OnMapChanged += HandleMapChanged;
     }
     
@@ -822,7 +830,14 @@ private bool showMiniMap = true;
     private List<SpawnEntity> GetSpawnList()
     {
         if (Utility.SESSION == null) return new List<SpawnEntity>();
-        return Utility.Spawns[Utility.SESSION.Current_Map];
+        
+        // Safely get spawn list with null check for dictionary key
+        if (Utility.Spawns.TryGetValue(Utility.SESSION.Current_Map, out var spawnList))
+        {
+            return spawnList;
+        }
+        
+        return new List<SpawnEntity>();
     }
     
     private int GetSpawnCount()

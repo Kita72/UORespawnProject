@@ -756,10 +756,7 @@ namespace UORespawnApp
             {
                 if (File.Exists(WorldSpawnFile))
                 {
-                    // Clear existing data to prevent duplicates
                     WorldSpawnList.Clear();
-                    
-                    // Initialize fresh world entities
                     InitiateWorldTileSpawn();
 
                     var lines = File.ReadAllLines(WorldSpawnFile);  // SYNCHRONOUS
@@ -785,18 +782,9 @@ namespace UORespawnApp
                         {
                             parts = line.Split('|');
 
-                            // Use TryParse to handle malformed CSV data gracefully
-                            if (parts.Length < 2)
-                            {
-                                Console.WriteLine($"WARNING: Invalid world spawn line format (expected |), skipping: {line}");
-                                continue;
-                            }
+                            if (parts.Length < 2) continue;
 
-                            if (!Enum.TryParse<WorldTile>(parts[0], out var tile))
-                            {
-                                Console.WriteLine($"WARNING: Invalid WorldTile value '{parts[0]}' in world spawn data, skipping entry");
-                                continue;
-                            }
+                            if (!Enum.TryParse<WorldTile>(parts[0], out var tile)) continue;
 
                             var spawnDetails = parts[1].Split('*');
 
@@ -808,24 +796,11 @@ namespace UORespawnApp
                                 {
                                     var name = spawnParts[0];
                                     
-                                    // Skip empty or whitespace names to prevent ghost spawns
-                                    if (string.IsNullOrWhiteSpace(name))
-                                    {
-                                        Console.WriteLine($"WARNING: Skipped empty spawn name in tile {tile}");
-                                        continue;
-                                    }
+                                    if (string.IsNullOrWhiteSpace(name)) continue;
                                     
-                                    if (!Enum.TryParse<Frequency>(spawnParts[1], out var freq))
-                                    {
-                                        Console.WriteLine($"WARNING: Invalid Frequency value '{spawnParts[1]}' for {name}, skipping entry");
-                                        continue;
-                                    }
+                                    if (!Enum.TryParse<Frequency>(spawnParts[1], out var freq)) continue;
                                     
-                                    if (!bool.TryParse(spawnParts[2], out var isMob))
-                                    {
-                                        Console.WriteLine($"WARNING: Invalid boolean value '{spawnParts[2]}' for {name}, skipping entry");
-                                        continue;
-                                    }
+                                    if (!bool.TryParse(spawnParts[2], out var isMob)) continue;
                                     
                                     var tileEntity = new TileEntity(freq, name, isMob);
 
@@ -836,16 +811,17 @@ namespace UORespawnApp
                         }
                     }
                     
-                    Console.WriteLine($"Loaded world spawn data: {WorldSpawnList.Count} maps with {spawnsAdded} total spawns");
+                    if (spawnsAdded > 0)
+                    {
+                        Console.WriteLine($"Loaded world spawn data: {WorldSpawnList.Count} maps with {spawnsAdded} spawns");
+                    }
                 }
                 else
                 {
-                    // No file exists, initialize empty world entities
                     if (WorldSpawnList.Count < 6)
                     {
                         WorldSpawnList.Clear();
                         InitiateWorldTileSpawn();
-                        Console.WriteLine("No world spawn file found, initialized empty world spawn data");
                     }
                 }
             }
@@ -985,7 +961,6 @@ namespace UORespawnApp
                 if (File.Exists(StaticSpawnFile))
                 {
                     StaticSpawnList ??= [];
-
                     StaticSpawnList.Clear();
 
                     var lines = File.ReadAllLines(StaticSpawnFile);  // SYNCHRONOUS
@@ -998,7 +973,11 @@ namespace UORespawnApp
                         {
                             var staticName = parts[0];
 
-                            var spawnCount = int.Parse(parts[1]);
+                            if (!int.TryParse(parts[1], out var spawnCount))
+                            {
+                                index++;
+                                continue;
+                            }
 
                             List<(Frequency freq, string name)> spawn = [];
 
@@ -1006,12 +985,7 @@ namespace UORespawnApp
                             {
                                 index++;
 
-                                // Bounds check to prevent crash on malformed CSV
-                                if (index >= lines.Length)
-                                {
-                                    Console.WriteLine($"ERROR: Static spawn file truncated for '{staticName}' - expected {spawnCount} spawns but file ended early");
-                                    break;
-                                }
+                                if (index >= lines.Length) break;
 
                                 var lineParts = lines[index].Split(',');
 
@@ -1019,12 +993,7 @@ namespace UORespawnApp
                                 {
                                     var spawnName = lineParts[1];
                                     
-                                    // Skip empty or whitespace names to prevent ghost spawns
-                                    if (string.IsNullOrWhiteSpace(spawnName))
-                                    {
-                                        Console.WriteLine($"WARNING: Skipped empty spawn name for static {staticName}");
-                                        continue;
-                                    }
+                                    if (string.IsNullOrWhiteSpace(spawnName)) continue;
                                     
                                     if (Enum.TryParse(lineParts[0], out Frequency freq))
                                     {
