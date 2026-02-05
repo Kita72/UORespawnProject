@@ -114,10 +114,17 @@ namespace UORespawnApp
                     Spawns.Clear();
 
                     using var streamReader = new StreamReader(SpawnFile);
-
+                    
+                    int lineNumber = 0;
                     while (!streamReader.EndOfStream)
                     {
+                        lineNumber++;
                         var line = streamReader.ReadLine();
+                        
+                        if (string.IsNullOrWhiteSpace(line))
+                        {
+                            continue;
+                        }
 
                         var parts = line?.Split(':');
 
@@ -137,14 +144,40 @@ namespace UORespawnApp
                                 {
                                     var entityDetails = details[0].Split(',');
 
-                                    if (entityDetails.Length == 6)
+                                if (entityDetails.Length == 6)
                                     {
-                                        var position = int.Parse(entityDetails[0]);
+                                        // Use TryParse to handle malformed CSV data gracefully
+                                        if (!int.TryParse(entityDetails[0], out var position))
+                                        {
+                                            Console.WriteLine($"WARNING: Invalid position value in spawn data at line {lineNumber}, skipping entry");
+                                            continue;
+                                        }
+                                        
                                         var timed = entityDetails[1];
-                                        var x = int.Parse(entityDetails[2]);
-                                        var y = int.Parse(entityDetails[3]);
-                                        var width = int.Parse(entityDetails[4]);
-                                        var height = int.Parse(entityDetails[5]);
+                                        
+                                        if (!int.TryParse(entityDetails[2], out var x))
+                                        {
+                                            Console.WriteLine($"WARNING: Invalid x coordinate in spawn data at line {lineNumber}, skipping entry");
+                                            continue;
+                                        }
+                                        
+                                        if (!int.TryParse(entityDetails[3], out var y))
+                                        {
+                                            Console.WriteLine($"WARNING: Invalid y coordinate in spawn data at line {lineNumber}, skipping entry");
+                                            continue;
+                                        }
+                                        
+                                        if (!int.TryParse(entityDetails[4], out var width))
+                                        {
+                                            Console.WriteLine($"WARNING: Invalid width value in spawn data at line {lineNumber}, skipping entry");
+                                            continue;
+                                        }
+                                        
+                                        if (!int.TryParse(entityDetails[5], out var height))
+                                        {
+                                            Console.WriteLine($"WARNING: Invalid height value in spawn data at line {lineNumber}, skipping entry");
+                                            continue;
+                                        }
 
                                         // Filter out empty strings when loading - split on empty sections creates [""]
                                         var commonSpawnList = details[1].Split('*')
@@ -169,14 +202,25 @@ namespace UORespawnApp
                                             RareSpawnList = rareSpawnList
                                         };
 
-                                        entities.Add(spawnEntityObject);
+                                    entities.Add(spawnEntityObject);
                                     }
                                 }
                             }
 
-                            Spawns.Add(map, entities);
+                            // Use indexer instead of Add to handle multiple lines per map
+                            if (!Spawns.ContainsKey(map))
+                            {
+                                Spawns[map] = entities;
+                            }
+                            else
+                            {
+                                // Append to existing list for this map
+                                Spawns[map].AddRange(entities);
+                            }
                         }
                     }
+                    
+                    Console.WriteLine($"Loaded spawn data: {Spawns.Count} maps with {Spawns.Sum(kvp => kvp.Value.Count)} total spawn entities");
                 }
             }
             catch (Exception ex)

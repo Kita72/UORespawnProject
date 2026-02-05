@@ -41,6 +41,7 @@ namespace UORespawnApp
                 int importedCount = 0;
                 int skippedCount = 0;
                 List<string> importedFileNames = new();
+                List<string> skippedFileNames = new();
 
                 foreach (string fileName in SpawnFiles)
                 {
@@ -51,21 +52,26 @@ namespace UORespawnApp
                     if (!File.Exists(serverFile))
                     {
                         skippedCount++;
+                        skippedFileNames.Add(fileName);
+                        Console.WriteLine($"Skipped: {fileName} - not found on server");
                         continue;
                     }
 
-                    // Create backup of existing local file
-                    if (File.Exists(localFile))
+                    try
                     {
-                        string backupFile = $"{localFile}.backup";
-                        File.Copy(localFile, backupFile, true);
+                        // Simple copy from server to local, overwrite existing
+                        File.Copy(serverFile, localFile, true);
+                        
+                        importedCount++;
+                        importedFileNames.Add(fileName);
+                        Console.WriteLine($"Imported: {fileName}");
                     }
-
-                    // Copy from server to local
-                    File.Copy(serverFile, localFile, true);
-                    importedCount++;
-                    importedFileNames.Add(fileName);
-                    Console.WriteLine($"Imported: {fileName}");
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error importing {fileName}: {ex.Message}");
+                        skippedCount++;
+                        skippedFileNames.Add(fileName);
+                    }
                 }
 
                 if (importedCount == 0)
@@ -78,7 +84,8 @@ namespace UORespawnApp
                 
                 if (skippedCount > 0)
                 {
-                    message += $"\n\n({skippedCount} file(s) not found on server)";
+                    message += $"\n\nSkipped {skippedCount} file(s):\n" + 
+                              string.Join("\n", skippedFileNames.Select(f => $"- {f}"));
                 }
 
                 return (true, message, importedCount);

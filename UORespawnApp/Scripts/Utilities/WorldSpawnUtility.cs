@@ -629,20 +629,38 @@ namespace UORespawnApp
         {
             try
             {
+                Console.WriteLine($"=== LoadWorldSpawnList START ===");
+                Console.WriteLine($"WorldSpawnFile path: {WorldSpawnFile}");
+                Console.WriteLine($"File.Exists: {File.Exists(WorldSpawnFile)}");
+                Console.WriteLine($"WorldSpawnList.Count before: {WorldSpawnList.Count}");
+                
                 if (File.Exists(WorldSpawnFile))
                 {
+                    Console.WriteLine($"File found, clearing WorldSpawnList...");
                     // Clear existing data to prevent duplicates
                     WorldSpawnList.Clear();
                     
                     // Initialize fresh world entities
                     InitiateWorldTileSpawn();
+                    Console.WriteLine($"Initialized {WorldSpawnList.Count} world entities");
 
                     var lines = await File.ReadAllLinesAsync(WorldSpawnFile);
+                    Console.WriteLine($"Read {lines.Length} lines from file");
 
                     WorldEntity? currentEntity = null;
+                    int lineNumber = 0;
+                    int spawnsAdded = 0;
 
                     foreach (var line in lines)
                     {
+                        lineNumber++;
+                        
+                        if (string.IsNullOrWhiteSpace(line))
+                        {
+                            Console.WriteLine($"Line {lineNumber}: Skipping empty line");
+                            continue;
+                        }
+                        
                         var parts = line.Split(',');
 
                         if (parts.Length == 2)
@@ -650,12 +668,24 @@ namespace UORespawnApp
                             var mapHandle = (GameMap)Utility.IsValidMapID(parts[0]);
 
                             currentEntity = WorldSpawnList.Find(e => e.MapHandle == mapHandle);
+                            Console.WriteLine($"Line {lineNumber}: Switching to map {mapHandle}");
                         }
                         else
                         {
                             parts = line.Split('|');
 
-                            var tile = Enum.Parse<WorldTile>(parts[0]);
+                            // Use TryParse to handle malformed CSV data gracefully
+                            if (parts.Length < 2)
+                            {
+                                Console.WriteLine($"WARNING: Invalid world spawn line format (expected |), skipping: {line}");
+                                continue;
+                            }
+
+                            if (!Enum.TryParse<WorldTile>(parts[0], out var tile))
+                            {
+                                Console.WriteLine($"WARNING: Invalid WorldTile value '{parts[0]}' in world spawn data, skipping entry");
+                                continue;
+                            }
 
                             var spawnDetails = parts[1].Split('*');
 
@@ -674,17 +704,139 @@ namespace UORespawnApp
                                         continue;
                                     }
                                     
-                                    var freq = Enum.Parse<Frequency>(spawnParts[1]);
-                                    var isMob = bool.Parse(spawnParts[2]);
+                                    if (!Enum.TryParse<Frequency>(spawnParts[1], out var freq))
+                                    {
+                                        Console.WriteLine($"WARNING: Invalid Frequency value '{spawnParts[1]}' for {name}, skipping entry");
+                                        continue;
+                                    }
+                                    
+                                    if (!bool.TryParse(spawnParts[2], out var isMob))
+                                    {
+                                        Console.WriteLine($"WARNING: Invalid boolean value '{spawnParts[2]}' for {name}, skipping entry");
+                                        continue;
+                                    }
+                                    
                                     var tileEntity = new TileEntity(freq, name, isMob);
 
                                     currentEntity?.AddSpawn(tile, tileEntity);
+                                    spawnsAdded++;
                                 }
                             }
                         }
                     }
                     
+                    Console.WriteLine($"=== LoadWorldSpawnList COMPLETE ===");
+                    Console.WriteLine($"Total spawns added: {spawnsAdded}");
+                    Console.WriteLine($"WorldSpawnList has {WorldSpawnList.Count} world entities");
                     Console.WriteLine($"Loaded world spawn data from {WorldSpawnFile}");
+                }
+                else
+                {
+                    Console.WriteLine($"=== LoadWorldSpawnList: FILE NOT FOUND ===");
+                    Console.WriteLine($"Expected path: {WorldSpawnFile}");
+                    // No file exists, initialize empty world entities
+                    if (WorldSpawnList.Count < 6)
+                    {
+                        WorldSpawnList.Clear();
+                        InitiateWorldTileSpawn();
+                        Console.WriteLine("No world spawn file found, initialized empty data");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error loading WorldSpawnList: {ex.Message}");
+            }
+        }
+
+        // SYNCHRONOUS version for startup - avoids deadlock with GetAwaiter().GetResult()
+        internal static void LoadWorldSpawnListSync()
+        {
+            try
+            {
+                if (File.Exists(WorldSpawnFile))
+                {
+                    // Clear existing data to prevent duplicates
+                    WorldSpawnList.Clear();
+                    
+                    // Initialize fresh world entities
+                    InitiateWorldTileSpawn();
+
+                    var lines = File.ReadAllLines(WorldSpawnFile);  // SYNCHRONOUS
+
+                    WorldEntity? currentEntity = null;
+                    int spawnsAdded = 0;
+
+                    foreach (var line in lines)
+                    {
+                        if (string.IsNullOrWhiteSpace(line))
+                        {
+                            continue;
+                        }
+                        
+                        var parts = line.Split(',');
+
+                        if (parts.Length == 2)
+                        {
+                            var mapHandle = (GameMap)Utility.IsValidMapID(parts[0]);
+                            currentEntity = WorldSpawnList.Find(e => e.MapHandle == mapHandle);
+                        }
+                        else
+                        {
+                            parts = line.Split('|');
+
+                            // Use TryParse to handle malformed CSV data gracefully
+                            if (parts.Length < 2)
+                            {
+                                Console.WriteLine($"WARNING: Invalid world spawn line format (expected |), skipping: {line}");
+                                continue;
+                            }
+
+                            if (!Enum.TryParse<WorldTile>(parts[0], out var tile))
+                            {
+                                Console.WriteLine($"WARNING: Invalid WorldTile value '{parts[0]}' in world spawn data, skipping entry");
+                                continue;
+                            }
+
+                            var spawnDetails = parts[1].Split('*');
+
+                            foreach (var spawnDetail in spawnDetails)
+                            {
+                                var spawnParts = spawnDetail.Split(':');
+
+                                if (spawnParts.Length >= 3)
+                                {
+                                    var name = spawnParts[0];
+                                    
+                                    // Skip empty or whitespace names to prevent ghost spawns
+                                    if (string.IsNullOrWhiteSpace(name))
+                                    {
+                                        Console.WriteLine($"WARNING: Skipped empty spawn name in tile {tile}");
+                                        continue;
+                                    }
+                                    
+                                    if (!Enum.TryParse<Frequency>(spawnParts[1], out var freq))
+                                    {
+                                        Console.WriteLine($"WARNING: Invalid Frequency value '{spawnParts[1]}' for {name}, skipping entry");
+                                        continue;
+                                    }
+                                    
+                                    if (!bool.TryParse(spawnParts[2], out var isMob))
+                                    {
+                                        Console.WriteLine($"WARNING: Invalid boolean value '{spawnParts[2]}' for {name}, skipping entry");
+                                        continue;
+                                    }
+                                    
+                                    var tileEntity = new TileEntity(freq, name, isMob);
+
+                                    currentEntity?.AddSpawn(tile, tileEntity);
+                                    spawnsAdded++;
+                                }
+                            }
+                        }
+                    }
+                    
+                    Console.WriteLine($"Loaded world spawn data: {WorldSpawnList.Count} maps with {spawnsAdded} total spawns");
                 }
                 else
                 {
@@ -693,7 +845,7 @@ namespace UORespawnApp
                     {
                         WorldSpawnList.Clear();
                         InitiateWorldTileSpawn();
-                        Console.WriteLine("No world spawn file found, initialized empty data");
+                        Console.WriteLine("No world spawn file found, initialized empty world spawn data");
                     }
                 }
             }
@@ -781,6 +933,13 @@ namespace UORespawnApp
                             {
                                 index++;
 
+                                // Bounds check to prevent crash on malformed CSV
+                                if (index >= lines.Length)
+                                {
+                                    Console.WriteLine($"ERROR: Static spawn file truncated for '{staticName}' - expected {spawnCount} spawns but file ended early");
+                                    break;
+                                }
+
                                 var lineParts = lines[index].Split(',');
 
                                 if (lineParts.Length == 2)
@@ -811,6 +970,79 @@ namespace UORespawnApp
             catch (Exception ex)
             {
                 Console.WriteLine($"Error loading WorldSpawnList: {ex.Message}");
+            }
+            finally
+            {
+                XMLSpawnUtility.LoadSpawnerList();
+            }
+        }
+
+        // SYNCHRONOUS version for startup - avoids deadlock with GetAwaiter().GetResult()
+        internal static void LoadStaticSpawnListSync()
+        {
+            try
+            {
+                if (File.Exists(StaticSpawnFile))
+                {
+                    StaticSpawnList ??= [];
+
+                    StaticSpawnList.Clear();
+
+                    var lines = File.ReadAllLines(StaticSpawnFile);  // SYNCHRONOUS
+
+                    for (int index = 0; index < lines.Length;)
+                    {
+                        var parts = lines[index].Split(',');
+
+                        if (parts.Length >= 2)
+                        {
+                            var staticName = parts[0];
+
+                            var spawnCount = int.Parse(parts[1]);
+
+                            List<(Frequency freq, string name)> spawn = [];
+
+                            for (int i = 0; i < spawnCount; i++)
+                            {
+                                index++;
+
+                                // Bounds check to prevent crash on malformed CSV
+                                if (index >= lines.Length)
+                                {
+                                    Console.WriteLine($"ERROR: Static spawn file truncated for '{staticName}' - expected {spawnCount} spawns but file ended early");
+                                    break;
+                                }
+
+                                var lineParts = lines[index].Split(',');
+
+                                if (lineParts.Length == 2)
+                                {
+                                    var spawnName = lineParts[1];
+                                    
+                                    // Skip empty or whitespace names to prevent ghost spawns
+                                    if (string.IsNullOrWhiteSpace(spawnName))
+                                    {
+                                        Console.WriteLine($"WARNING: Skipped empty spawn name for static {staticName}");
+                                        continue;
+                                    }
+                                    
+                                    if (Enum.TryParse(lineParts[0], out Frequency freq))
+                                    {
+                                        spawn.Add((freq, spawnName));
+                                    }
+                                }
+                            }
+
+                            StaticSpawnList.Add(new StaticEntity(staticName, spawn));
+                        }
+
+                        index++;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error loading StaticSpawnList: {ex.Message}");
             }
             finally
             {

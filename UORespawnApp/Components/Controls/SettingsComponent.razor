@@ -799,24 +799,11 @@ private bool importSuccess = false;
             importSuccess = success;
             importMessage = message;
             
-            // If import was successful, reload the data
+            // If import was successful, show restart message
             if (success && filesImported > 0)
             {
-                try
-                {
-                    // Reload spawn data
-                    Utility.LoadSpawnData();
-                    await WorldSpawnUtility.LoadWorldSpawnList();
-                    await WorldSpawnUtility.LoadStaticSpawnList();
-                    
-                    importMessage += "\n\nData reloaded successfully!";
-                    Console.WriteLine("Data reloaded after import");
-                }
-                catch (Exception ex)
-                {
-                    importMessage += $"\n\nWarning: Files imported but reload failed: {ex.Message}";
-                    Console.WriteLine($"Reload failed: {ex.Message}");
-                }
+                importMessage += "\n\n** Please restart the application to load the imported files. **";
+                Console.WriteLine("Import complete - restart required to load data");
             }
         }
         catch (Exception ex)

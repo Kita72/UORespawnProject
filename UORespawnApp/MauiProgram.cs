@@ -19,16 +19,85 @@ namespace UORespawnApp
 
             try
             {
+                // Ensure Data folder and all required CSV files exist before loading
+                var localDataFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data");
+                if (!Directory.Exists(localDataFolder))
+                {
+                    Directory.CreateDirectory(localDataFolder);
+                }
+                
+                // Create empty CSV files if they don't exist
+                var requiredFiles = new[]
+                {
+                    Path.Combine(localDataFolder, "UOR_Spawn.csv"),
+                    Path.Combine(localDataFolder, "UOR_WorldSpawn.csv"),
+                    Path.Combine(localDataFolder, "UOR_StaticSpawn.csv"),
+                    Path.Combine(localDataFolder, "UOR_SpawnSettings.csv")
+                };
+                
+                foreach (var file in requiredFiles)
+                {
+                    if (!File.Exists(file))
+                    {
+                        File.Create(file).Dispose();
+                        Console.WriteLine($"Created empty CSV file: {Path.GetFileName(file)}");
+                    }
+                }
+                
+                // Initialize session and load spawn data
                 Utility.StartSession(new Session());
                 Utility.InitializeSpawnDictionary();
                 
-                try { Utility.LoadSpawnData(); } catch { /* No spawn data file yet */ }
+                try 
+                { 
+                    Utility.LoadSpawnData(); 
+                } 
+                catch (Exception ex) 
+                { 
+                    Console.WriteLine($"LoadSpawnData failed: {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine($"LoadSpawnData error: {ex}");
+                }
                 
-                // Load async data synchronously during startup (blocking is acceptable here)
-                try { WorldSpawnUtility.LoadWorldSpawnList().GetAwaiter().GetResult(); } catch { /* No world spawn list yet */ }
-                try { WorldSpawnUtility.LoadStaticSpawnList().GetAwaiter().GetResult(); } catch { /* No static spawn list yet */ }
-                try { XMLSpawnUtility.LoadSpawnerList(); } catch { /* No spawner list yet */ }
-                try { XMLSpawnUtility.LoadStaticList(); } catch { /* No static list yet */ }
+                // Load world and static spawn data synchronously (avoids async deadlock)
+                try 
+                {
+                    WorldSpawnUtility.LoadWorldSpawnListSync();
+                } 
+                catch (Exception ex) 
+                {
+                    Console.WriteLine($"LoadWorldSpawnList failed: {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine($"LoadWorldSpawnList error: {ex}");
+                }
+                
+                try 
+                {
+                    WorldSpawnUtility.LoadStaticSpawnListSync();
+                } 
+                catch (Exception ex) 
+                {
+                    Console.WriteLine($"LoadStaticSpawnList failed: {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine($"LoadStaticSpawnList error: {ex}");
+                }
+                
+                try 
+                { 
+                    XMLSpawnUtility.LoadSpawnerList(); 
+                } 
+                catch (Exception ex) 
+                { 
+                    Console.WriteLine($"LoadSpawnerList failed: {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine($"LoadSpawnerList error: {ex}");
+                }
+                
+                try 
+                { 
+                    XMLSpawnUtility.LoadStaticList(); 
+                } 
+                catch (Exception ex) 
+                { 
+                    Console.WriteLine($"LoadStaticList failed: {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine($"LoadStaticList error: {ex}");
+                }
 
                 // Copy map images to wwwroot
                 var wwwrootPath = Path.Combine(AppContext.BaseDirectory, "wwwroot", "maps");
