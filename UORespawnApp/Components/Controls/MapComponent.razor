@@ -234,12 +234,6 @@ private int? spawnSearchId = null;
         ViewService.OnMapChanged += HandleMapChanged;
     }
     
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        // No longer needed - using CSS flexbox for spawn list sizing
-        await Task.CompletedTask;
-    }
-    
     private void HandleMapChanged()
     {
         // Save current position AND zoom for the OLD map (the one we're leaving)

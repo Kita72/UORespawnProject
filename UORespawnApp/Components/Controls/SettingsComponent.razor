@@ -5,7 +5,7 @@
             <!-- ServUO Data Folder -->
             <div class="card map-card mb-3">
                 <div class="card-header text-center">
-                    <strong>Server Integration</strong>
+                    <strong class="text-primary">Server Integration</strong>
                 </div>
                 <div class="card-body">
                     @if (!DataWatcher.IsSupported)
@@ -122,16 +122,16 @@
             <!-- Spawn Settings -->
             <div class="card map-card mb-3">
                 <div class="card-header text-center">
-                    <strong>Spawn Settings</strong>
+                    <strong class="text-primary">Spawn Settings</strong>
                 </div>
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Spawn Range Min</label>
+                            <label class="form-label">Min Range</label>
                             <input type="number" class="form-control" @bind="Settings.MinRange" min="0" />
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Spawn Range Max</label>
+                            <label class="form-label">Max Range</label>
                             <input type="number" class="form-control" @bind="Settings.MaxRange" min="0" />
                         </div>
                     </div>
@@ -140,10 +140,12 @@
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Max Crowd</label>
                             <input type="number" class="form-control" @bind="Settings.MaxCrowd" min="0" />
+                            <small class="text-muted">Maximum spawns allowed within Min Range</small>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Max Mob</label>
                             <input type="number" class="form-control" @bind="Settings.MaxMob" min="0" />
+                            <small class="text-muted">Maximum spawns allowed within Max Range</small>
                         </div>
                     </div>
                     
@@ -250,7 +252,7 @@
             <!-- Tool Settings -->
             <div class="card map-card mb-3">
                 <div class="card-header text-center">
-                    <strong>Spawn Box Appearance</strong>
+                    <strong class="text-primary">Spawn Box Appearance</strong>
                 </div>
                 <div class="card-body">
                     <div class="row">
@@ -291,7 +293,7 @@
             <!-- Map Replacement -->
             <div class="card map-card mb-3">
                 <div class="card-header text-center">
-                    <strong>Custom Maps</strong>
+                    <strong class="text-primary">Custom Maps</strong>
                 </div>
                 <div class="card-body">
                     <div class="mb-3">
@@ -334,7 +336,7 @@
             <!-- Bestiary -->
             <div class="card map-card mb-3">
                 <div class="card-header text-center">
-                    <strong>Bestiary (@GetSpawnCount() Creatures)</strong>
+                    <strong class="text-primary">Bestiary (@GetSpawnCount() Creatures)</strong>
                 </div>
                 <div class="card-body">
                     <div class="input-group mb-2">
