@@ -78,6 +78,10 @@
     </ItemGroup>
 
     <ItemGroup>
+      <Content Include="Resources\Images\splash.png">
+        <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </Content>
       <Content Include="Resources\Raw\growl.wav">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </Content>
@@ -106,6 +110,9 @@
     <!-- Include SpawnSystem folder in published output for export functionality -->
     <ItemGroup>
       <None Include="SpawnSystem\**\*.*" CopyToPublishDirectory="PreserveNewest" />
+    </ItemGroup>
+    <ItemGroup>
+      <MauiImage Remove="Resources\Images\splash.png" />
     </ItemGroup>
 
     <ItemGroup>
