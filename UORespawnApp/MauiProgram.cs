@@ -21,6 +21,9 @@ namespace UORespawnApp
             
             // Register BackgroundDataLoader as a singleton service
             builder.Services.AddSingleton<BackgroundDataLoader>();
+            
+            // Register UpdateChecker as a singleton service
+            builder.Services.AddSingleton<UpdateChecker>();
 
             try
             {

@@ -187,9 +187,17 @@ body.light-theme .map-label {
 
     .nav-scrollable {
         /* Never collapse the sidebar for wide screens */
-        display: block;
+        display: flex;
+        flex-direction: column;
         /* Allow sidebar to scroll for tall menus */
         height: calc(100vh - 6rem);
         overflow-y: auto;
+    }
+    
+    .nav-scrollable nav {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-height: 0;
     }
 }

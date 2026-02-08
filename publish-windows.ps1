@@ -71,7 +71,7 @@ if (-not (Test-Path "$publishPath\UORespawnApp.exe")) {
 Write-Host ""
 Write-Host "Creating distribution package..." -ForegroundColor Green
 
-$zipName = "UORespawn-v$version-Windows-x64-NET10.zip"
+$zipName = "UORespawn-v$version-Windows.zip"
 $zipPath = Join-Path $outputBase $zipName
 
 # Remove old ZIP if exists

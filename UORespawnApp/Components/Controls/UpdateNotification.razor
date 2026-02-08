@@ -1,0 +1,113 @@
+@using UORespawnApp.Scripts.Services
+@inject UpdateChecker UpdateChecker
+@inject NavigationManager Navigation
+@implements IDisposable
+
+<div class="update-section">
+    @if (isChecking)
+    {
+        <div class="update-checking">
+            <div class="spinner-border spinner-border-sm text-light me-2" role="status">
+                <span class="visually-hidden">Checking...</span>
+            </div>
+            <small class="text-light">Checking for updates...</small>
+        </div>
+    }
+    else if (updateInfo?.HasUpdate == true)
+    {
+        <button class="btn btn-warning btn-sm w-100 mb-2" @onclick="OpenReleases">
+            <span class="bi bi-arrow-up-circle-fill me-1"></span>
+            Update Available!
+            <div class="small">v@(updateInfo.LatestVersion)</div>
+        </button>
+        <div class="version-text">
+            Current: v@(UpdateChecker.CurrentVersion)
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(updateInfo?.ErrorMessage))
+    {
+        <button class="btn btn-outline-secondary btn-sm w-100 mb-2" @onclick="CheckForUpdates" disabled="@(isChecking)">
+            <span class="bi bi-exclamation-triangle me-1"></span>
+            Check Failed
+        </button>
+        <div class="version-text">
+            v@(UpdateChecker.CurrentVersion)
+            <button class="btn btn-link btn-sm p-0 ms-2" @onclick="CheckForUpdates" title="Retry check">
+                <span class="bi bi-arrow-clockwise"></span>
+            </button>
+        </div>
+    }
+    else
+    {
+        <button class="btn btn-success btn-sm w-100 mb-2" @onclick="OpenReleases">
+            <span class="bi bi-check-circle-fill me-1"></span>
+            Up to Date
+        </button>
+        <div class="version-text">
+            v@(UpdateChecker.CurrentVersion)
+            <button class="btn btn-link btn-sm p-0 ms-2" @onclick="CheckForUpdates" title="Check for updates">
+                <span class="bi bi-arrow-clockwise"></span>
+            </button>
+        </div>
+    }
+</div>
+
+@code {
+    private UpdateInfo? updateInfo;
+    private bool isChecking = false;
+    private System.Threading.Timer? _autoCheckTimer;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        // Check for updates on startup (after 3 second delay to not interfere with initial load)
+        await Task.Delay(3000);
+        await CheckForUpdates();
+        
+        // Set up auto-check every 6 hours
+        _autoCheckTimer = new System.Threading.Timer(async _ =>
+        {
+            await InvokeAsync(async () => await CheckForUpdates());
+        }, null, TimeSpan.FromHours(6), TimeSpan.FromHours(6));
+    }
+    
+    private async Task CheckForUpdates()
+    {
+        if (isChecking) return;
+        
+        isChecking = true;
+        StateHasChanged();
+        
+        try
+        {
+            updateInfo = await UpdateChecker.CheckForUpdateAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Error checking for updates in UI", ex);
+        }
+        finally
+        {
+            isChecking = false;
+            StateHasChanged();
+        }
+    }
+    
+    private async Task OpenReleases()
+    {
+        try
+        {
+            var url = updateInfo?.ReleaseUrl ?? "https://github.com/Kita72/UORespawnProject/releases";
+            await Launcher.OpenAsync(new Uri(url));
+            Logger.Info($"Opened releases page: {url}");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Error opening releases page", ex);
+        }
+    }
+    
+    public void Dispose()
+    {
+        _autoCheckTimer?.Dispose();
+    }
+}
