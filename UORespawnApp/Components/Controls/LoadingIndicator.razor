@@ -1,0 +1,63 @@
+@using UORespawnApp.Scripts.Services
+@inject BackgroundDataLoader BackgroundLoader
+@implements IDisposable
+
+@if (!BackgroundLoader.IsComplete && BackgroundLoader.IsLoading)
+{
+    <div class="loading-banner">
+        <div class="container-fluid">
+            <div class="d-flex align-items-center justify-content-between py-2">
+                <div class="d-flex align-items-center">
+                    <div class="spinner-border spinner-border-sm text-light me-2" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <span class="text-light">
+                        <strong>Loading application data...</strong>
+                        <small class="ms-2">(@BackgroundLoader.CompletedSteps/@BackgroundDataLoader.TotalSteps)</small>
+                    </span>
+                </div>
+                <div class="progress" style="width: 200px; height: 8px;">
+                    <div class="progress-bar bg-light" 
+                         role="progressbar" 
+                         style="width: @BackgroundLoader.ProgressPercentage"
+                         aria-valuenow="@BackgroundLoader.ProgressPercentage" 
+                         aria-valuemin="0" 
+                         aria-valuemax="100">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private System.Threading.Timer? _refreshTimer;
+
+    protected override void OnInitialized()
+    {
+        // Subscribe to loading events
+        BackgroundLoader.AllDataLoaded += OnAllDataLoaded;
+        
+        // Refresh UI periodically while loading
+        if (BackgroundLoader.IsLoading)
+        {
+            _refreshTimer = new System.Threading.Timer(_ =>
+            {
+                InvokeAsync(StateHasChanged);
+            }, null, TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(500));
+        }
+    }
+
+    private void OnAllDataLoaded(object? sender, EventArgs e)
+    {
+        _refreshTimer?.Dispose();
+        _refreshTimer = null;
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        BackgroundLoader.AllDataLoaded -= OnAllDataLoaded;
+        _refreshTimer?.Dispose();
+    }
+}

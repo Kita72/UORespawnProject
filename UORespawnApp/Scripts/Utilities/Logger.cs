@@ -7,7 +7,7 @@ namespace UORespawnApp.Scripts.Utilities;
 public static class Logger
 {
     private static readonly string LogDirectory;
-    private static readonly object _lock = new object();
+    private static readonly Lock _lock = new();
     private static string? _currentLogFile;
     private static DateTime _currentLogDate;
     private static bool _initialized = false;

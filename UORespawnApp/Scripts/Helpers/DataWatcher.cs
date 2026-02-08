@@ -2,7 +2,7 @@
 
 namespace UORespawnApp
 {
-    internal class DataWatcher : IDisposable
+    internal partial class DataWatcher : IDisposable
     {
         private readonly FileSystemWatcher? _watcher;
         private readonly Action? _onDataChanged;
@@ -63,7 +63,6 @@ namespace UORespawnApp
             }
         }
 
-#pragma warning disable CS4014 // Suppress async void warning for event handler
         private async void OnChanged(object sender, FileSystemEventArgs e)
         {
             // Debounce - prevent multiple rapid fire events
@@ -98,7 +97,6 @@ namespace UORespawnApp
                 }
             }
         }
-#pragma warning restore CS4014
 
         private static bool IsBestiaryFile(string fileName)
         {

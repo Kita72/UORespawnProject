@@ -187,7 +187,7 @@ private int imgHeight = 0;
 private ElementReference mapContainerRef;
 
 // Zoom level (1.0 = actual size, 2.0 = 2x zoomed in)
-private double zoomLevel = 2.0;
+private double zoomLevel = 1.0;
 
 // Store last position AND zoom for each map (static so it persists across component instances)
 private static Dictionary<GameMap, (double panX, double panY, double zoom)> mapPositions = new();
@@ -262,8 +262,8 @@ private int? spawnSearchId = null;
         {
             panX = 0;
             panY = 0;
-            zoomLevel = 2.0; // Default to 2x zoom for new maps
-            Logger.Info($"New map {currentMapTracked}, defaulting to (0, 0) @ 2x zoom");
+            zoomLevel = 1.0; // Default to 1x zoom for new maps
+            Logger.Info($"New map {currentMapTracked}, defaulting to (0, 0) @ 1x zoom");
         }
         
         imageSrc = Utility.GetMapImagePath();
@@ -316,8 +316,8 @@ private int? spawnSearchId = null;
                     {
                         panX = 0;
                         panY = 0;
-                        zoomLevel = 2.0; // Default to 2x zoom
-                        Logger.Info($"First visit to {currentMapTracked}, starting at (0, 0) @ 2x");
+                        zoomLevel = 1.0; // Default to 1x zoom
+                        Logger.Info($"First visit to {currentMapTracked}, starting at (0, 0) @ 1x");
                     }
                     
                     await JS.InvokeVoidAsync("eval", $"window.mapModule.init({w}, {h})");
@@ -728,11 +728,11 @@ private int? spawnSearchId = null;
     {
         panX = 0;
         panY = 0;
-        zoomLevel = 2.0; // Reset to default 2x zoom
+        zoomLevel = 1.0; // Reset to default 1x zoom
         
         // Clear the saved position for the CURRENT map
         mapPositions.Remove(currentMapTracked);
-        Logger.Info($"Reset position and zoom for {currentMapTracked} to (0, 0) @ 2x");
+        Logger.Info($"Reset position and zoom for {currentMapTracked} to (0, 0) @ 1x");
         
         await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
         await UpdateMiniMapViewport();

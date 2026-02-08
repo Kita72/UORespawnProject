@@ -7,13 +7,13 @@ namespace UORespawnApp
     /// </summary>
     internal static class ServerImportUtility
     {
-        private static readonly string[] SpawnFiles = new[]
-        {
+        private static readonly string[] SpawnFiles =
+        [
             "UOR_Spawn.csv",
             "UOR_WorldSpawn.csv",
             "UOR_StaticSpawn.csv",
             "UOR_SpawnSettings.csv"
-        };
+        ];
 
         /// <summary>
         /// Imports spawn CSV files from server to local data folder
@@ -42,8 +42,8 @@ namespace UORespawnApp
 
                 int importedCount = 0;
                 int skippedCount = 0;
-                List<string> importedFileNames = new();
-                List<string> skippedFileNames = new();
+                List<string> importedFileNames = [];
+                List<string> skippedFileNames = [];
 
                 foreach (string fileName in SpawnFiles)
                 {

@@ -187,13 +187,13 @@ namespace UORespawnApp
                             }
 
                             // Use indexer instead of Add to handle multiple lines per map
-                            if (!Spawns.ContainsKey(map))
+                            if (!Spawns.TryGetValue(map, out List<SpawnEntity>? value))
                             {
                                 Spawns[map] = entities;
                             }
                             else
                             {
-                                Spawns[map].AddRange(entities);
+                                value.AddRange(entities);
                             }
                         }
                     }

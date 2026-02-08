@@ -25,6 +25,11 @@
         <EnableDefaultCssItems>false</EnableDefaultCssItems>
         <EnableDefaultCompileItems>true</EnableDefaultCompileItems>
         <Nullable>enable</Nullable>
+        
+        <!-- Suppress CsWinRT warnings for Blazor components -->
+        <!-- CsWinRT1028: Class should be partial (false positive for Razor components) -->
+        <!-- CsWinRT1030: Async method warnings (false positive for Blazor event handlers) -->
+        <NoWarn>$(NoWarn);CsWinRT1028;CsWinRT1030</NoWarn>
 
         <!-- Display name -->
         <ApplicationTitle>UORespawnApp</ApplicationTitle>

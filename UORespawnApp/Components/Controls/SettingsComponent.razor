@@ -354,7 +354,17 @@
                     </div>
                     
                     <div class="bestiary-list">
-                        @if (GetFilteredSpawns().Any())
+                        @if (!BackgroundLoader.IsBestiaryLoaded)
+                        {
+                            <div class="text-center py-4">
+                                <div class="spinner-border text-primary mb-3" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="text-muted mb-0">Loading bestiary...</p>
+                                <small class="text-muted">@GetSpawnCount() creatures</small>
+                            </div>
+                        }
+                        else if (GetFilteredSpawns().Any())
                         {
                             @foreach (var spawn in GetFilteredSpawns())
                             {
@@ -374,8 +384,8 @@
                         }
                         else
                         {
-                            <div class="alert alert-secondary mb-0">
-                                Loading bestiary...
+                            <div class="alert alert-warning mb-0">
+                                No creatures in bestiary. Add some to get started!
                             </div>
                         }
                     </div>
@@ -399,6 +409,7 @@
 </div>
 
 @inject NavigationManager Navigation
+@inject BackgroundDataLoader BackgroundLoader
 @using System.IO.Compression
 @implements IDisposable
 
@@ -420,15 +431,31 @@ private bool importSuccess = false;
     
     protected override async Task OnInitializedAsync()
     {
-        await WorldSpawnUtility.LoadSpawnList();
+        // Subscribe to bestiary loaded event
+        BackgroundLoader.BestiaryLoaded += OnBestiaryLoaded;
         
         // Initialize box color hex from settings
         var color = Settings.BoxColor;
         boxColorHex = $"#{(int)(color.Red * 255):X2}{(int)(color.Green * 255):X2}{(int)(color.Blue * 255):X2}";
+        
+        // If bestiary is already loaded, trigger state update
+        if (BackgroundLoader.IsBestiaryLoaded)
+        {
+            StateHasChanged();
+        }
+    }
+    
+    private void OnBestiaryLoaded(object? sender, EventArgs e)
+    {
+        // Refresh UI when bestiary finishes loading
+        InvokeAsync(StateHasChanged);
     }
     
     public void Dispose()
     {
+        // Unsubscribe from events
+        BackgroundLoader.BestiaryLoaded -= OnBestiaryLoaded;
+        
         // Auto-save settings when leaving the page
         try
         {

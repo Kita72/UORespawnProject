@@ -1,34 +1,25 @@
-﻿using UORespawnApp.Scripts.Utilities;
+﻿using UORespawnApp.Scripts.Services;
+using UORespawnApp.Scripts.Utilities;
 
 namespace UORespawnApp
 {
     public partial class App : Application
     {
-        private DataWatcher? _dataWatcher;
+        private readonly BackgroundDataLoader _backgroundLoader;
         
-        public App()
+        public App(BackgroundDataLoader backgroundLoader)
         {
             InitializeComponent();
             
-            // Start DataWatcher for server file sync
-            InitializeDataWatcher();
-        }
-        
-        private void InitializeDataWatcher()
-        {
-            try
+            _backgroundLoader = backgroundLoader;
+            
+            // Start background data loading after constructor completes
+            // This allows the UI to render first
+            Dispatcher.Dispatch(async () =>
             {
-                _dataWatcher = new DataWatcher(() =>
-                {
-                    // Callback when server files change
-                    Logger.Info("Server data files have been updated!");
-                    // Could trigger UI refresh here if needed
-                });
-            }
-            catch (Exception ex)
-            {
-                Logger.Warning($"DataWatcher failed to start: {ex.Message}");
-            }
+                await Task.Delay(100); // Brief delay to ensure UI is rendered
+                await _backgroundLoader.LoadAllDataAsync();
+            });
         }
 
         protected override Window CreateWindow(IActivationState? activationState)
@@ -58,24 +49,24 @@ namespace UORespawnApp
                     if (appWindow != null)
                     {
                         var presenter = appWindow.Presenter as Microsoft.UI.Windowing.OverlappedPresenter;
-                        if (presenter != null)
-                        {
-                            presenter.Maximize();
-                        }
+
+                        presenter?.Maximize();
                     }
                 }
             };
 #endif
             
-            // Clean up DataWatcher when window is destroyed
+            // Clean up BackgroundDataLoader when window is destroyed
             window.Destroying += (s, e) =>
             {
-                _dataWatcher?.Dispose();
+                _backgroundLoader?.Dispose();
             };
             
             return window;
         }
     }
 }
+
+
 
 

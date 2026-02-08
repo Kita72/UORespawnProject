@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using UORespawnApp.Scripts.Services;
 using UORespawnApp.Scripts.Utilities;
 
 namespace UORespawnApp
@@ -17,17 +18,24 @@ namespace UORespawnApp
 
             builder.Services.AddMauiBlazorWebView();
             builder.Services.AddSingleton<ViewService>();
+            
+            // Register BackgroundDataLoader as a singleton service
+            builder.Services.AddSingleton<BackgroundDataLoader>();
 
             try
             {
-                // Ensure Data folder and all required CSV files exist before loading
+                // MINIMAL STARTUP - Only critical initialization, no data loading!
+                Logger.Info($"UORespawn v{Utility.Version} - Starting minimal initialization...");
+                
+                // Step 1: Ensure Data folder exists
                 var localDataFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data");
                 if (!Directory.Exists(localDataFolder))
                 {
                     Directory.CreateDirectory(localDataFolder);
+                    Logger.Info("Created Data folder");
                 }
                 
-                // Create empty CSV files if they don't exist
+                // Step 2: Create empty CSV files if they don't exist
                 var requiredFiles = new[]
                 {
                     Path.Combine(localDataFolder, "UOR_Spawn.csv"),
@@ -45,97 +53,16 @@ namespace UORespawnApp
                     }
                 }
                 
-                // Initialize session and load spawn data
+                // Step 3: Initialize session and empty spawn dictionary
                 Utility.StartSession(new Session());
                 Utility.InitializeSpawnDictionary();
                 
-                try 
-                { 
-                    Utility.LoadSpawnData(); 
-                } 
-                catch (Exception ex) 
-                { 
-                    Logger.Error("LoadSpawnData failed", ex);
-                }
-                
-                // Load world and static spawn data synchronously (avoids async deadlock)
-                try 
-                {
-                    WorldSpawnUtility.LoadWorldSpawnListSync();
-                } 
-                catch (Exception ex) 
-                {
-                    Logger.Error("LoadWorldSpawnList failed", ex);
-                }
-                
-                try 
-                {
-                    WorldSpawnUtility.LoadStaticSpawnListSync();
-                } 
-                catch (Exception ex) 
-                {
-                    Logger.Error("LoadStaticSpawnList failed", ex);
-                }
-                
-                try 
-                { 
-                    XMLSpawnUtility.LoadSpawnerList(); 
-                } 
-                catch (Exception ex) 
-                { 
-                    Logger.Error("LoadSpawnerList failed", ex);
-                }
-                
-                try 
-                { 
-                    XMLSpawnUtility.LoadStaticList(); 
-                } 
-                catch (Exception ex) 
-                { 
-                    Logger.Error("LoadStaticList failed", ex);
-                }
-                
-                // Load bestiary (creature list) synchronously
-                try
-                {
-                    // Use sync wrapper to avoid async deadlock
-                    Task.Run(async () => await WorldSpawnUtility.LoadSpawnList()).Wait();
-                }
-                catch (Exception ex)
-                {
-                    Logger.Error("LoadSpawnList (bestiary) failed", ex);
-                }
-                
-                Logger.Info($"App initialized - Version {Utility.Version}");
-                
-                var totalSpawns = Utility.Spawns.Values.Sum(list => list.Count);
-                Logger.Info($"Loaded {totalSpawns} total spawn boxes across all maps");
-
-                // Copy map images to wwwroot
-                var wwwrootPath = Path.Combine(AppContext.BaseDirectory, "wwwroot", "maps");
-                Directory.CreateDirectory(wwwrootPath);
-                var dataPath = Path.Combine(AppContext.BaseDirectory, "Data");
-                if (Directory.Exists(dataPath))
-                {
-                    foreach (var file in Directory.GetFiles(dataPath, "*.bmp"))
-                    {
-                        try
-                        {
-                            var dest = Path.Combine(wwwrootPath, Path.GetFileName(file));
-                            if (!File.Exists(dest))
-                            {
-                                File.Copy(file, dest);
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            System.Diagnostics.Debug.WriteLine($"Error copying map file: {ex.Message}");
-                        }
-                    }
-                }
+                Logger.Info("Minimal initialization complete - UI ready to launch");
+                Logger.Info("Data loading will continue in background after UI renders");
             }
             catch (Exception ex)
             {
+                Logger.Error("Error during minimal initialization", ex);
                 System.Diagnostics.Debug.WriteLine($"Error during initialization: {ex.Message}");
             }
 
