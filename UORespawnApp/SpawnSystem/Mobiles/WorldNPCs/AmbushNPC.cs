@@ -16,8 +16,6 @@ namespace Server.Custom.SpawnSystem.Mobiles
             Hidden = true;
 
             IsParagon = true;
-
-            Deaths = SpawnSysSettings.MARKER;
         }
 
         public AmbushNPC(Serial serial) : base(serial)
@@ -162,11 +160,9 @@ namespace Server.Custom.SpawnSystem.Mobiles
 
         private void Spawn(Mobile member, int i, Mobile victim)
         {
-            member.Deaths = SpawnSysSettings.MARKER;
-
             member.OnBeforeSpawn(Location, Map);
 
-            Point3D location = new Point3D(0,0,0);
+            Point3D location;
 
             switch (Utility.Random(8))
             {
@@ -182,6 +178,8 @@ namespace Server.Custom.SpawnSystem.Mobiles
             }
 
             member.MoveToWorld(location, Map);
+
+            SpawnSysCore.AddSpawnToList(member);
 
             member.Say("ATTACK!");
 
@@ -229,7 +227,7 @@ namespace Server.Custom.SpawnSystem.Mobiles
         {
             base.Deserialize(reader);
 
-            int version = reader.ReadInt();
+            _= reader.ReadInt();
         }
     }
 }

@@ -1,11 +1,14 @@
 using System;
 using System.IO;
 using System.Linq;
-using Server.Mobiles;
-using Server.Commands;
 using System.Reflection;
 using System.Collections.Generic;
+
+using Server.Mobiles;
+using Server.Commands;
 using Server.Custom.SpawnSystem.Mobiles;
+
+using static Server.Custom.SpawnSystem.SpawnSysSettings;
 
 namespace Server.Custom.SpawnSystem
 {
@@ -37,9 +40,9 @@ namespace Server.Custom.SpawnSystem
         [Description("UORespawn: Turn Debug On/Off")]
         public static void ToggleDebug_OnCommand(CommandEventArgs e)
         {
-            SpawnSysDataBase.EnableDebugSpawn = !SpawnSysDataBase.EnableDebugSpawn;
+            ENABLE_DEBUG = !ENABLE_DEBUG;
 
-            string state = SpawnSysDataBase.EnableDebugSpawn ? "ON" : "OFF";
+            string state = ENABLE_DEBUG ? "ON" : "OFF";
 
             e.Mobile.SendMessage($"UORespawn Debug - {state}");
         }
@@ -50,24 +53,16 @@ namespace Server.Custom.SpawnSystem
         public static void TrackRespawn_OnCommand(CommandEventArgs e)
         {
             int trackedCount = SpawnSysCore.GetTrackedSpawnCount();
-            int validCount = 0;
-            int tamedCount = 0;
-            int deletedCount = 0;
 
-            var details = SpawnSysCore.GetTrackedSpawnDetails();
-
-            validCount = details.ValidCount;
-            tamedCount = details.TamedCount;
-            deletedCount = details.DeletedCount;
+            var (ValidCount, DeletedCount) = SpawnSysCore.GetTrackedSpawnDetails();
 
             e.Mobile.SendMessage(68, "===== UORespawn Tracking Statistics =====");
             e.Mobile.SendMessage(85, $"Total Tracked: {trackedCount}");
-            e.Mobile.SendMessage(85, $"Valid Spawns: {validCount}");
-            e.Mobile.SendMessage(85, $"Tamed/Stabled: {tamedCount}");
-            e.Mobile.SendMessage(85, $"Deleted/Invalid: {deletedCount}");
+            e.Mobile.SendMessage(85, $"Valid Spawns: {ValidCount}");
+            e.Mobile.SendMessage(85, $"Deleted/Invalid: {DeletedCount}");
             e.Mobile.SendMessage(68, "=========================================");
 
-            Console.WriteLine($"UORespawn: {e.Mobile.Name} checked tracking - {trackedCount} total, {validCount} valid");
+            SpawnSysUtility.SendConsoleMsg(ConsoleColor.Yellow, $"{e.Mobile.Name} Checked tracking - {trackedCount} total, {ValidCount} valid");
         }
 
         // ClearRespawn
@@ -78,8 +73,8 @@ namespace Server.Custom.SpawnSystem
             int deletedCount = SpawnSysCore.ClearAllTrackedSpawns();
 
             e.Mobile.SendMessage(38, $"UORespawn: Cleared and deleted {deletedCount} tracked spawns!");
-            
-            Console.WriteLine($"UORespawn: {e.Mobile.Name} cleared all tracked spawns - {deletedCount} deleted");
+
+            SpawnSysUtility.SendConsoleMsg(ConsoleColor.Yellow, $"{e.Mobile.Name} Cleared all tracked spawns - {deletedCount} deleted");
         }
 
         // GenRespawnList
@@ -105,7 +100,7 @@ namespace Server.Custom.SpawnSystem
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"UORespawn: List Failed to Generate? : {ex}");
+                SpawnSysUtility.SendConsoleMsg(ConsoleColor.Red, $"List Failed to Generate? : {ex}");
 
                 return;
             }

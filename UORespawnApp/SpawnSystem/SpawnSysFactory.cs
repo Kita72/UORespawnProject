@@ -1,15 +1,25 @@
 using System;
-using Server.Mobiles;
+using System.IO;
 using System.Collections.Generic;
+
+using Server.Mobiles;
 using Server.Custom.SpawnSystem.Mobiles;
+
+using static Server.Custom.SpawnSystem.SpawnSysSettings;
 
 namespace Server.Custom.SpawnSystem
 {
     internal static class SpawnSysFactory
     {
-        internal static List<(DateTime, PlayerMobile, Map, Point2D, Point2D)> SpawnStats { get; private set; } = new List<(DateTime, PlayerMobile, Map, Point2D, Point2D)>();
+        private static readonly string STAT_DIR = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data", "UOR_Stats");
+
+        private static List<(DateTime, PlayerMobile, Map, Point2D, Point2D)> SpawnStats { get; set; } = new List<(DateTime, PlayerMobile, Map, Point2D, Point2D)>();
 
         internal static int NightMod = 1;
+
+        internal static int DebugMessageTrottle = 0;
+
+        private const int MAX_DEBUG_MESSAGES = 25;
 
         internal static string GetSpawnName(PlayerMobile pm, Map map, Region region, Point3D location, bool isWater)
         {
@@ -58,14 +68,43 @@ namespace Server.Custom.SpawnSystem
             }
 
             // Staff - Debug
-            if (pm.IsStaff() && SpawnSysDataBase.EnableDebugSpawn)
+            if (pm.IsStaff() && ENABLE_DEBUG)
             {
-                pm.SendMessage(53, $"Spawned PH: [{location}]");
+                if ( DebugMessageTrottle < MAX_DEBUG_MESSAGES)
+                {
+                    DebugMessageTrottle++;
+                }
+                else
+                {
+                    DebugMessageTrottle = 0;
+
+                    pm.SendMessage(53, $"{MAX_DEBUG_MESSAGES} Placeholders Queried");
+                }
 
                 return nameof(PlaceHolder);
             }
 
             return string.Empty;
+        }
+
+        internal static void SaveStats()
+        {
+
+            if (!Directory.Exists(STAT_DIR))
+            {
+                Directory.CreateDirectory(STAT_DIR);
+            }
+
+            foreach (var spawn in SpawnStats)
+            {
+                string converted = $"{spawn.Item1:t}|{spawn.Item2.Name}|{spawn.Item3}|{spawn.Item4.X}|{spawn.Item4.Y}|{spawn.Item5.X}|{spawn.Item5.Y}";
+
+                File.AppendAllText(Path.Combine(STAT_DIR, $"{DateTime.Now.Year}_{DateTime.Now.DayOfYear}.txt"), converted + Environment.NewLine);
+            }
+
+            SpawnStats.Clear();
+
+            SpawnSysUtility.CleanUpOldFiles(STAT_DIR);
         }
     }
 }

@@ -1,115 +1,120 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Threading.Tasks;
+using System.Collections.Generic;
+
 using Server.Items;
 using Server.Mobiles;
 using Server.Commands;
 using Server.Targeting;
-using System.Reflection;
-using System.Threading.Tasks;
-using System.Collections.Generic;
+
+using static Server.Custom.SpawnSystem.SpawnSysSettings;
 using CPA = Server.CommandPropertyAttribute;
 
 namespace Server.Custom.SpawnSystem
 {
     internal static class SpawnSysUtility
     {
-        internal static int Max_Mobs = SpawnSysSettings.MAX_MOBS;
-
-        private static readonly int min_Range = SpawnSysSettings.MIN_RANGE;
-
-        internal static int Max_Range = SpawnSysSettings.MAX_RANGE;
-
-        private static readonly int max_Crowd = SpawnSysSettings.MAX_CROWD;
-
-        private static readonly double isWater_Chance = SpawnSysSettings.CHANCE_ISWATER;
-
         internal static Point3D Default_Point = new Point3D(0, 0, 0);
 
-        internal static async Task LoadSpawn(PlayerMobile pm, Map map, Point3D location)
+        private static readonly Dictionary<string, Type> _TypeCache = new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase);
+
+        internal static void LoadSpawn(PlayerMobile pm, Map map, Point3D location)
         {
-            await Task.Run(() =>
+            if (map == null || map == Map.Internal) return;
+
+            try
             {
-                try
+                IPooledEnumerable eable = map.GetMobilesInRange(location, MAX_RANGE);
+
+                int area_MobCount = 0;
+
+                foreach (Mobile m in eable)
                 {
-                    var area_Pool = map.GetMobilesInRange(location, Max_Range);
+                    if (m.Player || (m is BaseCreature bc && (bc.Controlled || bc.IsStabled))) continue;
+                    area_MobCount++;
+                }
 
-                    int area_MobCount = 0;
-                    foreach (var m in area_Pool)
+                eable.Free();
+
+                if (area_MobCount < MAX_MOBS)
+                {
+                    string mob_Name = string.Empty;
+
+                    Point3D spawnPoint = Default_Point;
+
+                    Region region = map.DefaultRegion;
+
+                    bool isWater = false;
+
+                    bool isGoodSpawn = false;
+
+                    int attempts = 0;
+                    int maxAttempts = 10;
+
+                    do
                     {
-                        area_MobCount++;
-                    }
-
-                    area_Pool.Free();
-
-                    if (area_MobCount < Max_Mobs)
-                    {
-                        string mob_Name = string.Empty;
-
-                        Point3D spawnPoint = Default_Point;
-
-                        Region region = map.DefaultRegion;
-
-                        bool isWater = false;
-
-                        bool isGoodSpawn = false;
-
-                        do
+                        if (attempts++ > maxAttempts)
                         {
-                            spawnPoint = GetSpawnPoint(location, min_Range, Max_Range, map);
+                            isGoodSpawn = false;
+                            break;
+                        }
 
-                            // Cave : Use 'rock' spawn tile type!
-                            if (spawnPoint.Z > pm.Location.Z + 20)
+                        spawnPoint = GetSpawnPoint(location, MIN_RANGE, MAX_RANGE, map);
+
+                        // Cave : Use 'rock' spawn tile type!
+                        if (spawnPoint.Z > pm.Location.Z + 20)
+                        {
+                            spawnPoint.Z = pm.Location.Z;
+                        }
+
+                        region = Region.Find(spawnPoint, map);
+
+                        if (region != null && region != map.DefaultRegion)
+                        {
+                            if (!region.AllowSpawn())
                             {
-                                spawnPoint.Z = pm.Location.Z;
+                                spawnPoint = Default_Point;
                             }
+                        }
 
-                            region = Region.Find(spawnPoint, map);
+                        if (!IsCrowded(map, spawnPoint))
+                        {
+                            isWater = CanSpawnWater(map, spawnPoint);
 
-                            if (region != null && region != map.DefaultRegion)
+                            if (isWater)
                             {
-                                if (!region.AllowSpawn())
-                                {
-                                    spawnPoint = Default_Point;
-                                }
-                            }
-
-                            if (!IsCrowded(map, spawnPoint))
-                            {
-                                isWater = CanSpawnWater(map, spawnPoint);
-
-                                if (isWater)
-                                {
-                                    isGoodSpawn = Utility.RandomDouble() < isWater_Chance;
-                                }
-                                else
-                                {
-                                    isGoodSpawn = map.CanSpawnMobile(spawnPoint.X, spawnPoint.Y, spawnPoint.Z);
-                                }
+                                isGoodSpawn = Utility.RandomDouble() < CHANCE_WATER;
                             }
                             else
                             {
-                                isGoodSpawn = false;
+                                isGoodSpawn = map.CanSpawnMobile(spawnPoint.X, spawnPoint.Y, spawnPoint.Z);
                             }
                         }
-                        while (!isGoodSpawn);
-
-                        if (isGoodSpawn)
+                        else
                         {
-                            mob_Name = SpawnSysFactory.GetSpawnName(pm, map, region, spawnPoint, isWater);
+                            isGoodSpawn = false;
+                        }
+                    }
+                    while (!isGoodSpawn);
 
-                            if (!string.IsNullOrEmpty(mob_Name))
-                            {
-                                SpawnSysCore.EnqueueSpawn(pm, mob_Name, spawnPoint);
-                            }
+                    if (isGoodSpawn)
+                    {
+                        mob_Name = SpawnSysFactory.GetSpawnName(pm, map, region, spawnPoint, isWater);
+
+                        if (!string.IsNullOrEmpty(mob_Name))
+                        {
+                            SpawnSysCore.EnqueueSpawn(pm, mob_Name, spawnPoint);
                         }
                     }
                 }
-                catch (Exception ex)
-                {
-                    SendConsoleMsg(ConsoleColor.DarkRed, $"Spawn Location Error: {ex.Message}");
-                }
-            });
+            }
+            catch (Exception ex)
+            {
+                SendConsoleMsg(ConsoleColor.DarkRed, $"Spawn Location Error: {ex.Message}");
+            }
         }
 
         private static Point3D GetSpawnPoint(Point3D center, int minRange, int maxRange, Map map)
@@ -137,7 +142,7 @@ namespace Server.Custom.SpawnSystem
         {
             if (location != Default_Point)
             {
-                var mobiles = map.GetMobilesInRange(location, min_Range);
+                var mobiles = map.GetMobilesInRange(location, MIN_RANGE);
 
                 int mobCount = 0;
                 foreach (var m in mobiles)
@@ -147,7 +152,7 @@ namespace Server.Custom.SpawnSystem
 
                 mobiles.Free();
 
-                return mobCount >= max_Crowd;
+                return mobCount >= MAX_CROWD;
             }
 
             return true;
@@ -167,7 +172,16 @@ namespace Server.Custom.SpawnSystem
 
         internal static Mobile GetSpawn(ref List<Mobile> mobs, string spawn)
         {
-            Type mob_Type = ScriptCompiler.FindTypeByName(Spawner.ParseType(spawn))?? typeof(Rat);
+            string parsedName = Spawner.ParseType(spawn);
+
+            if (!_TypeCache.TryGetValue(parsedName, out Type mob_Type))
+            {
+                mob_Type = ScriptCompiler.FindTypeByName(parsedName);
+
+                if (mob_Type == null) mob_Type = typeof(Rat); // Fallback
+
+                _TypeCache[parsedName] = mob_Type;
+            }
 
             Mobile mob = null;
 
@@ -308,11 +322,13 @@ namespace Server.Custom.SpawnSystem
             return null;
         }
 
-        internal static void CleanUpStatFiles(string folderPath)
+        internal static void CleanUpOldFiles(string folderPath, int days = 7)
         {
             try
             {
                 string[] files = Directory.GetFiles(folderPath, "*.txt");
+
+                int count = 0;
 
                 foreach (string file in files)
                 {
@@ -320,10 +336,17 @@ namespace Server.Custom.SpawnSystem
 
                     int daysDifference = (DateTime.Now - fileInfo.CreationTime).Days;
 
-                    if (daysDifference > 7)
+                    if (daysDifference > days)
                     {
                         File.Delete(file);
+
+                        count++;
                     }
+                }
+
+                if (count > 0)
+                {
+                    SendConsoleMsg(ConsoleColor.DarkRed, $"Cleaned Up {count} Files!");
                 }
             }
             catch (Exception ex)
@@ -417,7 +440,7 @@ namespace Server.Custom.SpawnSystem
         {
             Console.ForegroundColor = color;
 
-            Console.WriteLine($"UORespawn: {message}");
+            Console.WriteLine($"[UORespawn]: {message}");
 
             Console.ResetColor();
         }

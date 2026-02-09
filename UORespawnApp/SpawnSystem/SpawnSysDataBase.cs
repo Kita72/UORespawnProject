@@ -8,39 +8,17 @@ namespace Server.Custom.SpawnSystem
 {
     internal static class SpawnSysDataBase
     {
-        private const string Version = "2.0.0.1";
-
         private static readonly string WorldSpawnFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data", "UOR_WorldSpawn.csv");
 
         private static readonly string StaticSpawnFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data", "UOR_StaticSpawn.csv");
 
         private static readonly string SpawnFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data", "UOR_Spawn.csv");
 
-        private static readonly string ChanceFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data", "UOR_SpawnSettings.csv");
-
         internal static List<WorldEntity> WorldSpawns { get; private set; } = new List<WorldEntity>();
 
         internal static List<StaticEntity> StaticSpawns { get; private set; } = new List<StaticEntity>();
 
         internal static Dictionary<Map, List<SpawnEntity>> Spawns { get; private set; } = new Dictionary<Map, List<SpawnEntity>>();
-
-        //General
-        internal static int MaxMobs { get; private set; } = 15;
-        internal static int MinRange { get; private set; } = 10;
-        internal static int MaxRange { get; private set; } = 50;
-        internal static int MaxCrowd { get; private set; } = 1;
-        internal static double WaterChance { get; private set; } = 0.5;
-        internal static double WeatherChance { get; private set; } = 0.1;
-        internal static double StaticChance { get; private set; } = 0.1;
-        internal static bool ScaleSpawn { get; private set; } = false;
-
-        //Spawns
-        internal static double CreatureChance { get; private set; } = 0.1;
-        internal static double CommonChance { get; private set; } = 1.0;
-        internal static double UnCommonChance { get; private set; } = 0.5;
-        internal static double RareChance { get; private set; } = 0.1;
-        internal static bool EnableRiftSpawn { get; private set; } = false;
-        internal static bool EnableDebugSpawn { get; set; } = false;
 
         internal static void AddWorldEntity(WorldEntity entity)
         {
@@ -60,7 +38,7 @@ namespace Server.Custom.SpawnSystem
 
             LoadSpawnData();
 
-            LoadSpawnSettings();
+            SpawnSysSettings.LoadSpawnSettings();
 
             SpawnSysUtility.SendConsoleMsg(ConsoleColor.Yellow, "Spawn Loaded...");
         }
@@ -79,7 +57,7 @@ namespace Server.Custom.SpawnSystem
 
             LoadSpawnData();
 
-            LoadSpawnSettings();
+            SpawnSysSettings.LoadSpawnSettings();
         }
 
         internal static void LoadWorldSpawn()
@@ -277,126 +255,19 @@ namespace Server.Custom.SpawnSystem
                         }
                     }
                 }
-            }
-            catch (Exception ex)
-            {
-                SpawnSysUtility.SendConsoleMsg(ConsoleColor.DarkRed, $"Loading Spawn Data Error: {ex.Message}");
-            }
-        }
 
-        internal static void LoadSpawnSettings()
-        {
-            try
-            {
-                if (File.Exists(ChanceFile))
+                foreach (var map in Map.Maps)
                 {
-                    var lines = File.ReadLines(ChanceFile).ToArray();
-
-                    if (lines.Length == 15)
+                    if (map != null && !Spawns.ContainsKey(map))
                     {
-                        if (int.TryParse(lines[0].Split(':').Last(), out int val))
-                        {
-                            MaxMobs = val;
-                        }
-
-                        if (int.TryParse(lines[1].Split(':').Last(), out val))
-                        {
-                            MinRange = val;
-                        }
-
-                        if (int.TryParse(lines[2].Split(':').Last(), out val))
-                        {
-                            MaxRange = val;
-                        }
-
-                        if (int.TryParse(lines[3].Split(':').Last(), out val))
-                        {
-                            MaxCrowd = val;
-                        }
-
-                        if (double.TryParse(lines[4].Split(':').Last(), out double chance))
-                        {
-                            WaterChance = chance;
-                        }
-
-                        if (double.TryParse(lines[5].Split(':').Last(), out chance))
-                        {
-                            WeatherChance = chance;
-                        }
-
-                        if (double.TryParse(lines[6].Split(':').Last(), out chance))
-                        {
-                            StaticChance = chance;
-                        }
-
-                        if (bool.TryParse(lines[7].Split(':').Last(), out bool enable))
-                        {
-                            ScaleSpawn = enable;
-                        }
-
-                        if (double.TryParse(lines[8].Split(':').Last(), out chance))
-                        {
-                            CreatureChance = chance;
-                        }
-
-                        if (double.TryParse(lines[9].Split(':').Last(), out chance))
-                        {
-                            CommonChance = chance;
-                        }
-
-                        if (double.TryParse(lines[10].Split(':').Last(), out chance))
-                        {
-                            UnCommonChance = chance;
-                        }
-
-                        if (double.TryParse(lines[11].Split(':').Last(), out chance))
-                        {
-                            RareChance = chance;
-                        }
-
-                        if (bool.TryParse(lines[12].Split(':').Last(), out enable))
-                        {
-                            EnableRiftSpawn = enable;
-                        }
-
-                        if (bool.TryParse(lines[13].Split(':').Last(), out enable))
-                        {
-                            EnableDebugSpawn = enable;
-                        }
-
-                        string version = lines[14].Split(':').Last();
-
-                        if (!string.IsNullOrEmpty(version))
-                        {
-                            if (Version != version)
-                            {
-                                SpawnSysUtility.SendConsoleMsg(ConsoleColor.Yellow, "Update Needed => Update Scripts!");
-                            }
-                        }
-
-                        SpawnSysSettings.InitializeStats();
+                        Spawns[map] = new List<SpawnEntity>();
                     }
                 }
             }
             catch (Exception ex)
             {
-                SpawnSysUtility.SendConsoleMsg(ConsoleColor.DarkRed, $"Loading Spawn Chance Error: {ex.Message}");
+                SpawnSysUtility.SendConsoleMsg(ConsoleColor.DarkRed, $"Loading Spawn Data Error: {ex.Message}");
             }
-        }
-
-        internal static Frequency GetFreq(double chance)
-        {
-            if (chance <= RareChance)
-            {
-                return Frequency.Rare;
-            }
-
-            if (chance <= UnCommonChance)
-            {
-                return Frequency.UnCommon;
-            }
-
-            return Frequency.Common;
         }
     }
 }

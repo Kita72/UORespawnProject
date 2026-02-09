@@ -1,5 +1,6 @@
 using System.Collections.Generic;
-using System.Linq;
+
+using static Server.Custom.SpawnSystem.SpawnSysSettings;
 
 namespace Server.Custom.SpawnSystem
 {
@@ -30,13 +31,13 @@ namespace Server.Custom.SpawnSystem
                         tileName = Utility.RandomList("cave", "cave floor");
                     }
 
-                    var spawnList = entity.GetSpawnList(tileName, SpawnSysDataBase.GetFreq(Utility.RandomDouble()));
+                    var spawnList = entity.GetSpawnList(tileName, GetFreq(Utility.RandomDouble()));
 
                     if (spawnList.Count > 0)
                     {
                         List<TileEntity> refinedList = new List<TileEntity>();
 
-                        if (Utility.RandomDouble() < (SpawnSysDataBase.CreatureChance * SpawnSysFactory.NightMod))
+                        if (Utility.RandomDouble() < (CHANCE_CREATURE * SpawnSysFactory.NightMod))
                         {
                             foreach (var spawn in spawnList)
                             {
@@ -91,7 +92,7 @@ namespace Server.Custom.SpawnSystem
                     {
                         List<TileEntity> refinedList = new List<TileEntity>();
 
-                        if (Utility.RandomDouble() < (SpawnSysDataBase.CreatureChance * SpawnSysFactory.NightMod))
+                        if (Utility.RandomDouble() < (CHANCE_CREATURE * SpawnSysFactory.NightMod))
                         {
                             foreach (var spawn in spawnList)
                             {

@@ -1,6 +1,9 @@
-using Server.Items;
 using System.Collections.Generic;
 using System.Linq;
+
+using Server.Items;
+
+using static Server.Custom.SpawnSystem.SpawnSysSettings;
 
 namespace Server.Custom.SpawnSystem
 {
@@ -39,7 +42,7 @@ namespace Server.Custom.SpawnSystem
 
                         if (prioritySpawn != null)
                         {
-                            var freq = SpawnSysDataBase.GetFreq(Utility.RandomDouble());
+                            var freq = GetFreq(Utility.RandomDouble());
 
                             if (prioritySpawn.TimedSpawn != "None")
                             {

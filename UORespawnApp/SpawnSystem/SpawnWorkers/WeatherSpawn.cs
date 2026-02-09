@@ -1,6 +1,8 @@
-using Server.Custom.SpawnSystem.Mobiles;
 using Server.Misc;
 using Server.Mobiles;
+using Server.Custom.SpawnSystem.Mobiles;
+
+using static Server.Custom.SpawnSystem.SpawnSysSettings;
 
 namespace Server.Custom.SpawnSystem
 {
@@ -18,14 +20,14 @@ namespace Server.Custom.SpawnSystem
                         {
                             if (front.ChanceOfPercipitation == 100 && front.ChanceOfExtremeTemperature >= 5)
                             {
-                                if ((map == Map.Trammel || map == Map.Felucca) && SpawnSysDataBase.EnableRiftSpawn && Utility.RandomDouble() < 0.1)
+                                if ((map == Map.Trammel || map == Map.Felucca) && ENABLE_RIFTSPAWN && Utility.RandomDouble() < 0.1)
                                 {
                                     return nameof(RiftMob);
                                 }
 
                                 if (front.Temperature > 10)
                                 {
-                                    if (Utility.RandomDouble() < (SpawnSysDataBase.WeatherChance * SpawnSysFactory.NightMod))
+                                    if (Utility.RandomDouble() < (CHANCE_WEATHER * SpawnSysFactory.NightMod))
                                     {
                                         return TileSpawn.TryTileSpawn(map, "rain_event", Frequency.Rare);
                                     }
@@ -33,7 +35,7 @@ namespace Server.Custom.SpawnSystem
 
                                 if (front.Temperature < -10)
                                 {
-                                    if (Utility.RandomDouble() < (SpawnSysDataBase.WeatherChance * SpawnSysFactory.NightMod))
+                                    if (Utility.RandomDouble() < (CHANCE_WEATHER * SpawnSysFactory.NightMod))
                                     {
                                         return TileSpawn.TryTileSpawn(map, "snow_event", Frequency.Rare);
                                     }
@@ -43,7 +45,7 @@ namespace Server.Custom.SpawnSystem
                             {
                                 if (front.Temperature > 10)
                                 {
-                                    if (Utility.RandomDouble() < (SpawnSysDataBase.WeatherChance * SpawnSysFactory.NightMod))
+                                    if (Utility.RandomDouble() < (CHANCE_WEATHER * SpawnSysFactory.NightMod))
                                     {
                                         if (Utility.RandomDouble() < 0.1)
                                         {
@@ -56,7 +58,7 @@ namespace Server.Custom.SpawnSystem
 
                                 if (front.Temperature < -10)
                                 {
-                                    if (Utility.RandomDouble() < (SpawnSysDataBase.WeatherChance * SpawnSysFactory.NightMod))
+                                    if (Utility.RandomDouble() < (CHANCE_WEATHER * SpawnSysFactory.NightMod))
                                     {
                                         return TileSpawn.TryTileSpawn(map, "snow_event", Utility.RandomList(Frequency.Common, Frequency.UnCommon));
                                     }

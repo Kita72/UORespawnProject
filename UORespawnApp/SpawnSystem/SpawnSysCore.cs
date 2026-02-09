@@ -1,14 +1,16 @@
 using System;
 using System.IO;
 using System.Linq;
-using Server.Mobiles;
 using System.Collections.Generic;
+
+using Server.Mobiles;
+
+using static Server.Custom.SpawnSystem.SpawnSysSettings;
 
 namespace Server.Custom.SpawnSystem
 {
     internal static class SpawnSysCore
     {
-        private static readonly string STAT_DIR = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data", "UOR_Stats");
         private static readonly string SAVE_DIR = Path.Combine(Core.BaseDirectory, "Saves", "SpawnSystem");
         private static readonly string TRACKED_SPAWNS_FILE = Path.Combine(SAVE_DIR, "TrackedSpawns.bin");
 
@@ -22,8 +24,6 @@ namespace Server.Custom.SpawnSystem
 
         private static readonly HashSet<Serial> _TrackedSpawns = new HashSet<Serial>();
 
-        private static readonly int spawn_MinQueued = SpawnSysSettings.MIN_QUE;
-
         private static List<Mobile> _SpawnedList;
 
         private static List<Mobile> _CleanUpList;
@@ -36,7 +36,8 @@ namespace Server.Custom.SpawnSystem
             {
                 _SpawnedList.Remove(m);
             }
-            else if (_CleanUpList.Contains(m))
+
+            if (_CleanUpList.Contains(m))
             {
                 _CleanUpList.Remove(m);
             }
@@ -92,7 +93,7 @@ namespace Server.Custom.SpawnSystem
 
         public static void Initialize()
         {
-            SpawnSysUtility.SendConsoleMsg(ConsoleColor.DarkYellow, $"Started => {DateTime.Now.ToShortTimeString()}");
+            SpawnSysUtility.SendConsoleMsg(ConsoleColor.DarkYellow, $"Started => {DateTime.Now:t}");
 
             LoadLogo();
 
@@ -241,21 +242,7 @@ namespace Server.Custom.SpawnSystem
 
             try
             {
-                if (!Directory.Exists(STAT_DIR))
-                {
-                    Directory.CreateDirectory(STAT_DIR);
-                }
-
-                foreach (var spawn in SpawnSysFactory.SpawnStats)
-                {
-                    string converted = $"{spawn.Item1.ToShortTimeString()}|{spawn.Item2.Name}|{spawn.Item3}|{spawn.Item4.X}|{spawn.Item4.Y}|{spawn.Item5.X}|{spawn.Item5.Y}";
-
-                    File.AppendAllText(Path.Combine(STAT_DIR, $"{DateTime.Now.Year}_{DateTime.Now.DayOfYear}.txt"), converted + Environment.NewLine);
-                }
-
-                SpawnSysFactory.SpawnStats.Clear();
-
-                SpawnSysUtility.CleanUpStatFiles(STAT_DIR);
+                SpawnSysFactory.SaveStats();
             }
             catch(Exception ex)
             {
@@ -330,16 +317,16 @@ namespace Server.Custom.SpawnSystem
         {
             try
             {
-                if (_CleanUpList.Count > (SpawnSysUtility.Max_Mobs * _SpawnQueue.Count) && isLast)
+                if (_CleanUpList.Count > (MAX_MOBS * _SpawnQueue.Count) && isLast)
                 {
                     RunSpawnCleanUp();
                 }
 
                 if (IsValidPlayer(pm))
                 {
-                    if (SpawnSysSettings.SCALE_SPAWN)
+                    if (SCALE_SPAWN)
                     {
-                        var players = pm.GetClientsInRange(SpawnSysSettings.MAX_RANGE);
+                        var players = pm.GetClientsInRange(MAX_RANGE);
 
                         if (players != null)
                         {
@@ -349,12 +336,12 @@ namespace Server.Custom.SpawnSystem
 
                             if (playerCount > 0)
                             {
-                                SpawnSysSettings.UpdateStats(0.1 * playerCount);
+                                UpdateStats(0.1 * playerCount);
                             }
                         }
                     }
 
-                    if (_SpawnQueue[pm].Count > spawn_MinQueued)
+                    if (_SpawnQueue[pm].Count > MIN_QUE)
                     {
                         var spawnInfo = DequeueSpawn(pm);
 
@@ -399,19 +386,25 @@ namespace Server.Custom.SpawnSystem
                                         }
                                     }
                                 }
+
+                                // Staff - Debug
+                                if (pm.IsStaff() && ENABLE_DEBUG)
+                                {
+                                    pm.SendMessage(62, $"{mob.Name} Spawned at {mob.Location}");
+                                }
                             }
                         }
                     }
 
                     if (isLast)
                     {
-                        GetSpawnCleanUp();
+                        UpdateSpawnCleanUp();
                     }
                 }
 
                 if (map.Width > location.X && map.Height > location.Y)
                 {
-                    _ = SpawnSysUtility.LoadSpawn(pm, map, location);
+                    SpawnSysUtility.LoadSpawn(pm, map, location);
                 }
             }
             catch (Exception ex)
@@ -420,7 +413,15 @@ namespace Server.Custom.SpawnSystem
             }
         }
 
-        private static void GetSpawnCleanUp()
+        internal static void AddSpawnToList(Mobile m)
+        {
+            if (_SpawnedList != null && !_SpawnedList.Contains(m))
+            {
+                _SpawnedList.Add(m);
+            }
+        }
+
+        private static void UpdateSpawnCleanUp()
         {
             foreach (var mobile in _SpawnedList)
             {
@@ -436,9 +437,15 @@ namespace Server.Custom.SpawnSystem
 
         private static bool IsTooFar(Mobile mobile)
         {
+            if (mobile.Deleted) return true;
+
             foreach (PlayerMobile pm in _SpawnQueue.Keys)
             {
-                if (IsValidPlayer(pm) && mobile.InRange(pm, (int)(SpawnSysUtility.Max_Range * 1.5)))
+                if (!IsValidPlayer(pm)) continue;
+
+                if (pm.Map != mobile.Map) continue;
+
+                if (!IsTooFar(pm, mobile.Location))
                 {
                     return false;
                 }
@@ -447,9 +454,9 @@ namespace Server.Custom.SpawnSystem
             return true;
         }
 
-        private static bool IsTooFar(PlayerMobile pm, Point3D location)
+        private static bool IsTooFar(PlayerMobile pm, Point3D loc)
         {
-            if (IsValidPlayer(pm) && pm.InRange(location, (int)(SpawnSysUtility.Max_Range * 1.5)))
+            if (pm.InRange(loc, (int)(MAX_RANGE * 1.5)))
             {
                 return false;
             }
@@ -457,7 +464,7 @@ namespace Server.Custom.SpawnSystem
             return true;
         }
 
-        private static void RunSpawnCleanUp()
+        internal static void RunSpawnCleanUp()
         {
             if (_CleanUpList.Count > 0)
             {
@@ -468,21 +475,10 @@ namespace Server.Custom.SpawnSystem
                         if (_SpawnedList.Contains(_CleanUpList[i]))
                         {
                             _SpawnedList.Remove(_CleanUpList[i]);
-                        }
 
-                        if (_CleanUpList[i] is BaseCreature bc && (bc.Controlled || bc.IsStabled))
-                        {
-                            lock (_lockObject)
-                            {
-                                _TrackedSpawns.Remove(bc.Serial);
-                            }
-                        }
-                        else
-                        { 
-                            if (_CleanUpList[i].Alive && _CleanUpList[i].Map != Map.Internal)
-                            {
-                                _CleanUpList[i].Delete();
-                            }
+                            RemoveTrackedSpawn(_CleanUpList[i].Serial);
+
+                            _CleanUpList[i].Delete();
                         }
                     }
                 }
@@ -498,12 +494,10 @@ namespace Server.Custom.SpawnSystem
 
         private static void ClearSpawnSystem()
         {
-            GetSpawnCleanUp();
+            UpdateSpawnCleanUp();
 
             RunSpawnCleanUp();
         }
-
-        #region Persistent Tracking Save/Load
 
         private static void SaveTrackedSpawns()
         {
@@ -563,23 +557,21 @@ namespace Server.Custom.SpawnSystem
 
                             if (mob != null && !mob.Deleted)
                             {
-                                _TrackedSpawns.Add(serial);
+                                SpawnSysUtility.SendConsoleMsg(ConsoleColor.Red, $"Deleted - ({mob.Name})");
+
+                                mob.Delete();
                             }
                         }
                     }
                 }
 
-                SpawnSysUtility.SendConsoleMsg(ConsoleColor.Green, $"Loaded {_TrackedSpawns.Count} tracked spawns.");
+                SpawnSysUtility.SendConsoleMsg(ConsoleColor.Green, $"Loaded {_TrackedSpawns.Count} Tracked Spawns...");
             }
             catch (Exception ex)
             {
                 SpawnSysUtility.SendConsoleMsg(ConsoleColor.DarkRed, $"Load Tracked Spawns Error: {ex.Message}");
             }
         }
-
-        #endregion
-
-        #region Public Command Support Methods
 
         public static int GetTrackedSpawnCount()
         {
@@ -589,10 +581,9 @@ namespace Server.Custom.SpawnSystem
             }
         }
 
-        public static (int ValidCount, int TamedCount, int DeletedCount) GetTrackedSpawnDetails()
+        public static (int ValidCount, int DeletedCount) GetTrackedSpawnDetails()
         {
             int validCount = 0;
-            int tamedCount = 0;
             int deletedCount = 0;
 
             lock (_lockObject)
@@ -603,14 +594,7 @@ namespace Server.Custom.SpawnSystem
 
                     if (mob != null && !mob.Deleted)
                     {
-                        if (mob is BaseCreature bc && (bc.Controlled || bc.IsStabled))
-                        {
-                            tamedCount++;
-                        }
-                        else
-                        {
-                            validCount++;
-                        }
+                        validCount++;
                     }
                     else
                     {
@@ -619,12 +603,24 @@ namespace Server.Custom.SpawnSystem
                 }
             }
 
-            return (validCount, tamedCount, deletedCount);
+            return (validCount, deletedCount);
+        }
+
+        public static void RemoveTrackedSpawn(Serial serial)
+        {
+            lock (_lockObject)
+            {
+                if (_TrackedSpawns.Contains(serial))
+                {
+                    _TrackedSpawns.Remove(serial);
+                }
+            }
         }
 
         public static int ClearAllTrackedSpawns()
         {
-            int deletedCount = 0;
+            int trackedCount = _TrackedSpawns.Count;
+
             List<Serial> toRemove = new List<Serial>();
 
             lock (_lockObject)
@@ -635,21 +631,10 @@ namespace Server.Custom.SpawnSystem
 
                     if (mob != null && !mob.Deleted)
                     {
-                        if (mob is BaseCreature bc && (bc.Controlled || bc.IsStabled))
-                        {
-                            toRemove.Add(serial);
-                        }
-                        else
-                        {
-                            mob.Delete();
-                            deletedCount++;
-                            toRemove.Add(serial);
-                        }
+                        mob.Delete();
                     }
-                    else
-                    {
-                        toRemove.Add(serial);
-                    }
+
+                    toRemove.Add(serial);
                 }
 
                 foreach (Serial serial in toRemove)
@@ -663,11 +648,9 @@ namespace Server.Custom.SpawnSystem
 
             SaveTrackedSpawns();
 
-            SpawnSysUtility.SendConsoleMsg(ConsoleColor.Yellow, $"Cleared {deletedCount} tracked spawns.");
+            SpawnSysUtility.SendConsoleMsg(ConsoleColor.Yellow, $"Cleared {trackedCount} tracked spawns.");
 
-            return deletedCount;
+            return trackedCount;
         }
-
-        #endregion
     }
 }

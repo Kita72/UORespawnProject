@@ -1,5 +1,8 @@
-using Server.Targeting;
 using System.Linq;
+
+using Server.Targeting;
+
+using static Server.Custom.SpawnSystem.SpawnSysSettings;
 
 namespace Server.Custom.SpawnSystem
 {
@@ -7,13 +10,13 @@ namespace Server.Custom.SpawnSystem
     {
         internal static string TryStaticSpawn(Map map, Point3D location)
         {
-            var objectPool = map.GetObjectsInRange(location, SpawnSysSettings.MIN_RANGE);
+            var objectPool = map.GetObjectsInRange(location, MIN_RANGE);
 
             try
             {
                 var objects = objectPool.ToList();
 
-                if (objects.Count > 0 && Utility.RandomDouble() < (SpawnSysDataBase.StaticChance * SpawnSysFactory.NightMod))
+                if (objects.Count > 0 && Utility.RandomDouble() < (CHANCE_STATIC * SpawnSysFactory.NightMod))
                 {
                     foreach (var obj in objects)
                     {
@@ -25,7 +28,7 @@ namespace Server.Custom.SpawnSystem
                                 {
                                     objectPool.Free();
 
-                                    return entity.GetRandomSpawn(SpawnSysDataBase.GetFreq(Utility.RandomDouble()));
+                                    return entity.GetRandomSpawn(GetFreq(Utility.RandomDouble()));
                                 }
                             }
                         }
