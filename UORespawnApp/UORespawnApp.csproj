@@ -121,28 +121,29 @@
     </ItemGroup>
 
     <ItemGroup>
-      <None Update="Data\Map0.bmp">
+      <None Update="Data\MAPS\Map0.bmp">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
-      <None Update="Data\Map1.bmp">
+      <None Update="Data\MAPS\Map1.bmp">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
-      <None Update="Data\Map2.bmp">
+      <None Update="Data\MAPS\Map2.bmp">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
-      <None Update="Data\Map3.bmp">
+      <None Update="Data\MAPS\Map3.bmp">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
-      <None Update="Data\Map4.bmp">
+      <None Update="Data\MAPS\Map4.bmp">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
-      <None Update="Data\Map5.bmp">
+      <None Update="Data\MAPS\Map5.bmp">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
     </ItemGroup>
 
     <ItemGroup>
       <Folder Include="DOCS\" />
+      <Folder Include="UORespawnSystem\Entities\BinaryModels\" />
     </ItemGroup>
 
 </Project>

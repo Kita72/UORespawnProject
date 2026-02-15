@@ -2,9 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
-using System.Runtime.Serialization.Formatters.Binary;
 
-using Server.Custom.UORespawnSystem.Entities.BinaryModels;
 using Server.Custom.UORespawnSystem.Entities;
 
 namespace Server.Custom.UORespawnSystem.SpawnUtility
@@ -52,7 +50,9 @@ namespace Server.Custom.UORespawnSystem.SpawnUtility
         }
 
         /// <summary>
-        /// Load tile spawn data from Binary format (Editor creates, Server loads)
+        /// Load tile spawn data using BinaryReader (matches App format)
+        /// Format: Version(int), VersionString, MapCount, then per map: MapId, MapName, TileCount,
+        ///         then per tile: Id, Name, MapId, WeatherSpawn(int), TimedSpawn(int), 6 spawn lists
         /// </summary>
         internal static void LoadTileSpawnData()
         {
@@ -65,67 +65,63 @@ namespace Server.Custom.UORespawnSystem.SpawnUtility
                     return;
                 }
 
-                BinaryFormatter formatter = new BinaryFormatter();
-                TileContainer container;
+                int totalTiles = 0;
+                int mapCount = 0;
 
-                using (FileStream stream = new FileStream(TileSpawnFile, FileMode.Open, FileAccess.Read))
+                using (BinaryReader reader = new BinaryReader(File.Open(TileSpawnFile, FileMode.Open, FileAccess.Read)))
                 {
-                    container = (TileContainer)formatter.Deserialize(stream);
-                }
+                    int fileVersion = reader.ReadInt32();
+                    string versionString = reader.ReadString();
 
-                // Version validation (optional)
-                if (string.IsNullOrWhiteSpace(container.Version))
-                {
-                    UORespawnUtility.SendConsoleMsg(ConsoleColor.Yellow, "WARNING: TileSpawn binary has no version info");
-                }
-
-                // Convert DTOs to Entities
-                foreach (MapTileData mapData in container.TileData)
-                {
-                    // Validate map ID
-                    if (mapData.MapId < 0 || mapData.MapId >= Map.Maps.Length)
+                    if (string.IsNullOrWhiteSpace(versionString))
                     {
-                        UORespawnUtility.SendConsoleMsg(ConsoleColor.Yellow,
-                            $"WARNING: Invalid map ID {mapData.MapId} in TileSpawn binary - Skipping");
-                        continue;
+                        UORespawnUtility.SendConsoleMsg(ConsoleColor.Yellow, "WARNING: TileSpawn binary has no version info");
                     }
 
-                    Map map = Map.Maps[mapData.MapId];
-                    if (map == null)
-                    {
-                        UORespawnUtility.SendConsoleMsg(ConsoleColor.Yellow,
-                            $"WARNING: Map ID {mapData.MapId} is null in TileSpawn binary - Skipping");
-                        continue;
-                    }
+                    mapCount = reader.ReadInt32();
 
-                    // Initialize list for this map
-                    if (!TileSpawns.ContainsKey(map))
+                    for (int m = 0; m < mapCount; m++)
                     {
-                        TileSpawns[map] = new List<TileEntity>();
-                    }
+                        int mapId = reader.ReadInt32();
+                        string mapName = reader.ReadString();
+                        int tileCount = reader.ReadInt32();
 
-                    // Convert each TileModel to TileEntity
-                    foreach (TileModel tileModel in mapData.TileSpawns)
-                    {
-                        if (string.IsNullOrWhiteSpace(tileModel.Name))
-                            continue;
-
-                        TileEntity entity = new TileEntity(
-                            tileModel.Name,
-                            tileModel.WeatherSpawn,
-                            tileModel.TimedSpawn
-                        )
+                        // Validate map ID
+                        if (mapId < 0 || mapId >= Map.Maps.Length)
                         {
-                            // Convert List<string> to ArrayList
-                            WaterSpawnList = new System.Collections.ArrayList(tileModel.WaterSpawns),
-                            WeatherSpawnList = new System.Collections.ArrayList(tileModel.WeatherSpawns),
-                            TimedSpawnList = new System.Collections.ArrayList(tileModel.TimedSpawns),
-                            CommonSpawnList = new System.Collections.ArrayList(tileModel.CommonSpawns),
-                            UnCommonSpawnList = new System.Collections.ArrayList(tileModel.UncommonSpawns),
-                            RareSpawnList = new System.Collections.ArrayList(tileModel.RareSpawns)
-                        };
+                            UORespawnUtility.SendConsoleMsg(ConsoleColor.Yellow,
+                                $"WARNING: Invalid map ID {mapId} in TileSpawn binary - Skipping {tileCount} tiles");
+                            // Skip tiles for this invalid map
+                            for (int t = 0; t < tileCount; t++)
+                                SkipTileEntity(reader);
+                            continue;
+                        }
 
-                        TileSpawns[map].Add(entity);
+                        Map map = Map.Maps[mapId];
+                        if (map == null)
+                        {
+                            UORespawnUtility.SendConsoleMsg(ConsoleColor.Yellow,
+                                $"WARNING: Map ID {mapId} is null in TileSpawn binary - Skipping");
+                            for (int t = 0; t < tileCount; t++)
+                                SkipTileEntity(reader);
+                            continue;
+                        }
+
+                        // Initialize list for this map
+                        if (!TileSpawns.ContainsKey(map))
+                        {
+                            TileSpawns[map] = new List<TileEntity>();
+                        }
+
+                        for (int t = 0; t < tileCount; t++)
+                        {
+                            TileEntity entity = ReadTileEntity(reader);
+                            if (entity != null && !string.IsNullOrWhiteSpace(entity.Name))
+                            {
+                                TileSpawns[map].Add(entity);
+                                totalTiles++;
+                            }
+                        }
                     }
                 }
 
@@ -138,9 +134,8 @@ namespace Server.Custom.UORespawnSystem.SpawnUtility
                     }
                 }
 
-                int totalTiles = TileSpawns.Values.Sum(list => list.Count);
                 UORespawnUtility.SendConsoleMsg(ConsoleColor.Green,
-                    $"Tile Spawn: Loaded {totalTiles} tile(s) across {container.TileData.Count} map(s)");
+                    $"Tile Spawn: Loaded {totalTiles} tile(s) across {mapCount} map(s)");
             }
             catch (Exception ex)
             {
@@ -149,8 +144,46 @@ namespace Server.Custom.UORespawnSystem.SpawnUtility
             }
         }
 
+        private static TileEntity ReadTileEntity(BinaryReader reader)
+        {
+            int id = reader.ReadInt32();
+            string name = reader.ReadString();
+            int mapId = reader.ReadInt32();
+            Enums.WeatherTypes weather = (Enums.WeatherTypes)reader.ReadInt32();
+            Enums.TimeNames time = (Enums.TimeNames)reader.ReadInt32();
+
+            TileEntity entity = new TileEntity(name, weather, time)
+            {
+                WaterSpawnList = new System.Collections.ArrayList(ReadStringList(reader)),
+                WeatherSpawnList = new System.Collections.ArrayList(ReadStringList(reader)),
+                TimedSpawnList = new System.Collections.ArrayList(ReadStringList(reader)),
+                CommonSpawnList = new System.Collections.ArrayList(ReadStringList(reader)),
+                UnCommonSpawnList = new System.Collections.ArrayList(ReadStringList(reader)),
+                RareSpawnList = new System.Collections.ArrayList(ReadStringList(reader))
+            };
+
+            return entity;
+        }
+
+        private static void SkipTileEntity(BinaryReader reader)
+        {
+            reader.ReadInt32(); // Id
+            reader.ReadString(); // Name
+            reader.ReadInt32(); // MapId
+            reader.ReadInt32(); // WeatherSpawn
+            reader.ReadInt32(); // TimedSpawn
+            SkipStringList(reader); // WaterSpawns
+            SkipStringList(reader); // WeatherSpawns
+            SkipStringList(reader); // TimedSpawns
+            SkipStringList(reader); // CommonSpawns
+            SkipStringList(reader); // UncommonSpawns
+            SkipStringList(reader); // RareSpawns
+        }
+
         /// <summary>
-        /// Load region spawn data from Binary format (Editor creates, Server loads)
+        /// Load region spawn data using BinaryReader (matches App format)
+        /// Format: Version(int), VersionString, MapCount, then per map: MapId, MapName, RegionCount,
+        ///         then per region: Id, Name, MapId, WeatherSpawn(int), TimedSpawn(int), 6 spawn lists
         /// </summary>
         internal static void LoadRegionSpawnData()
         {
@@ -163,89 +196,62 @@ namespace Server.Custom.UORespawnSystem.SpawnUtility
                     return;
                 }
 
-                BinaryFormatter formatter = new BinaryFormatter();
-                RegionContainer container;
+                int totalRegions = 0;
+                int mapCount = 0;
 
-                using (FileStream stream = new FileStream(RegionSpawnFile, FileMode.Open, FileAccess.Read))
+                using (BinaryReader reader = new BinaryReader(File.Open(RegionSpawnFile, FileMode.Open, FileAccess.Read)))
                 {
-                    container = (RegionContainer)formatter.Deserialize(stream);
-                }
+                    int fileVersion = reader.ReadInt32();
+                    string versionString = reader.ReadString();
 
-                // Version validation (optional)
-                if (string.IsNullOrWhiteSpace(container.Version))
-                {
-                    UORespawnUtility.SendConsoleMsg(ConsoleColor.Yellow, "WARNING: RegionSpawn binary has no version info");
-                }
-
-                // Convert DTOs to Entities
-                foreach (MapRegionData mapData in container.RegionData)
-                {
-                    // Validate map ID
-                    if (mapData.MapId < 0 || mapData.MapId >= Map.Maps.Length)
+                    if (string.IsNullOrWhiteSpace(versionString))
                     {
-                        UORespawnUtility.SendConsoleMsg(ConsoleColor.Yellow,
-                            $"WARNING: Invalid map ID {mapData.MapId} in RegionSpawn binary - Skipping");
-                        continue;
+                        UORespawnUtility.SendConsoleMsg(ConsoleColor.Yellow, "WARNING: RegionSpawn binary has no version info");
                     }
 
-                    Map map = Map.Maps[mapData.MapId];
-                    if (map == null)
+                    mapCount = reader.ReadInt32();
+
+                    for (int m = 0; m < mapCount; m++)
                     {
-                        UORespawnUtility.SendConsoleMsg(ConsoleColor.Yellow,
-                            $"WARNING: Map ID {mapData.MapId} is null in RegionSpawn binary - Skipping");
-                        continue;
-                    }
+                        int mapId = reader.ReadInt32();
+                        string mapName = reader.ReadString();
+                        int regionCount = reader.ReadInt32();
 
-                    // Initialize list for this map
-                    if (!RegionSpawns.ContainsKey(map))
-                    {
-                        RegionSpawns[map] = new List<RegionEntity>();
-                    }
-
-                    // Convert each RegionModel to RegionEntity
-                    foreach (RegionModel regionModel in mapData.RegionSpawns)
-                    {
-                        if (string.IsNullOrWhiteSpace(regionModel.Name))
-                            continue;
-
-                        // CRITICAL: Lookup Region by name on the map
-                        // map.Regions is a Dictionary<string, Region> where the key is the region name
-                        // Since the Editor saves region names from [GenRegionList], we can do a direct lookup
-
-                        // Direct dictionary lookup by region name (most efficient)
-                        if (!map.Regions.TryGetValue(regionModel.Name, out Region regionHandle))
-                        {
-                            // Fallback: Case-insensitive search if exact match fails
-                            regionHandle = map.Regions.Values.FirstOrDefault(r =>
-                                r != null &&
-                                !string.IsNullOrEmpty(r.Name) &&
-                                r.Name.Equals(regionModel.Name, StringComparison.OrdinalIgnoreCase));
-                        }
-
-                        if (regionHandle == null)
+                        // Validate map ID
+                        if (mapId < 0 || mapId >= Map.Maps.Length)
                         {
                             UORespawnUtility.SendConsoleMsg(ConsoleColor.Yellow,
-                                $"WARNING: Region '{regionModel.Name}' not found on {map.Name} - Skipping");
+                                $"WARNING: Invalid map ID {mapId} in RegionSpawn binary - Skipping {regionCount} regions");
+                            for (int r = 0; r < regionCount; r++)
+                                SkipRegionEntity(reader);
                             continue;
                         }
 
-                        RegionEntity entity = new RegionEntity(
-                            regionModel.Name,
-                            regionHandle,
-                            regionModel.WeatherSpawn,
-                            regionModel.TimedSpawn
-                        )
+                        Map map = Map.Maps[mapId];
+                        if (map == null)
                         {
-                            // Convert List<string> to ArrayList
-                            WaterSpawnList = new System.Collections.ArrayList(regionModel.WaterSpawns),
-                            WeatherSpawnList = new System.Collections.ArrayList(regionModel.WeatherSpawns),
-                            TimedSpawnList = new System.Collections.ArrayList(regionModel.TimedSpawns),
-                            CommonSpawnList = new System.Collections.ArrayList(regionModel.CommonSpawns),
-                            UnCommonSpawnList = new System.Collections.ArrayList(regionModel.UncommonSpawns),
-                            RareSpawnList = new System.Collections.ArrayList(regionModel.RareSpawns)
-                        };
+                            UORespawnUtility.SendConsoleMsg(ConsoleColor.Yellow,
+                                $"WARNING: Map ID {mapId} is null in RegionSpawn binary - Skipping");
+                            for (int r = 0; r < regionCount; r++)
+                                SkipRegionEntity(reader);
+                            continue;
+                        }
 
-                        RegionSpawns[map].Add(entity);
+                        // Initialize list for this map
+                        if (!RegionSpawns.ContainsKey(map))
+                        {
+                            RegionSpawns[map] = new List<RegionEntity>();
+                        }
+
+                        for (int r = 0; r < regionCount; r++)
+                        {
+                            RegionEntity entity = ReadRegionEntity(reader, map);
+                            if (entity != null)
+                            {
+                                RegionSpawns[map].Add(entity);
+                                totalRegions++;
+                            }
+                        }
                     }
                 }
 
@@ -258,9 +264,8 @@ namespace Server.Custom.UORespawnSystem.SpawnUtility
                     }
                 }
 
-                int totalRegions = RegionSpawns.Values.Sum(list => list.Count);
                 UORespawnUtility.SendConsoleMsg(ConsoleColor.Green,
-                    $"Region Spawn: Loaded {totalRegions} region(s) across {container.RegionData.Count} map(s)");
+                    $"Region Spawn: Loaded {totalRegions} region(s) across {mapCount} map(s)");
             }
             catch (Exception ex)
             {
@@ -269,8 +274,74 @@ namespace Server.Custom.UORespawnSystem.SpawnUtility
             }
         }
 
+        private static RegionEntity ReadRegionEntity(BinaryReader reader, Map map)
+        {
+            int id = reader.ReadInt32();
+            string name = reader.ReadString();
+            int mapId = reader.ReadInt32();
+            Enums.WeatherTypes weather = (Enums.WeatherTypes)reader.ReadInt32();
+            Enums.TimeNames time = (Enums.TimeNames)reader.ReadInt32();
+
+            List<string> waterSpawns = ReadStringList(reader);
+            List<string> weatherSpawns = ReadStringList(reader);
+            List<string> timedSpawns = ReadStringList(reader);
+            List<string> commonSpawns = ReadStringList(reader);
+            List<string> uncommonSpawns = ReadStringList(reader);
+            List<string> rareSpawns = ReadStringList(reader);
+
+            if (string.IsNullOrWhiteSpace(name))
+                return null;
+
+            // CRITICAL: Lookup Region by name on the map
+            Region regionHandle;
+            if (!map.Regions.TryGetValue(name, out regionHandle))
+            {
+                // Fallback: Case-insensitive search if exact match fails
+                regionHandle = map.Regions.Values.FirstOrDefault(r =>
+                    r != null &&
+                    !string.IsNullOrEmpty(r.Name) &&
+                    r.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (regionHandle == null)
+            {
+                UORespawnUtility.SendConsoleMsg(ConsoleColor.Yellow,
+                    $"WARNING: Region '{name}' not found on {map.Name} - Skipping");
+                return null;
+            }
+
+            RegionEntity entity = new RegionEntity(name, regionHandle, weather, time)
+            {
+                WaterSpawnList = new System.Collections.ArrayList(waterSpawns),
+                WeatherSpawnList = new System.Collections.ArrayList(weatherSpawns),
+                TimedSpawnList = new System.Collections.ArrayList(timedSpawns),
+                CommonSpawnList = new System.Collections.ArrayList(commonSpawns),
+                UnCommonSpawnList = new System.Collections.ArrayList(uncommonSpawns),
+                RareSpawnList = new System.Collections.ArrayList(rareSpawns)
+            };
+
+            return entity;
+        }
+
+        private static void SkipRegionEntity(BinaryReader reader)
+        {
+            reader.ReadInt32(); // Id
+            reader.ReadString(); // Name
+            reader.ReadInt32(); // MapId
+            reader.ReadInt32(); // WeatherSpawn
+            reader.ReadInt32(); // TimedSpawn
+            SkipStringList(reader); // WaterSpawns
+            SkipStringList(reader); // WeatherSpawns
+            SkipStringList(reader); // TimedSpawns
+            SkipStringList(reader); // CommonSpawns
+            SkipStringList(reader); // UncommonSpawns
+            SkipStringList(reader); // RareSpawns
+        }
+
         /// <summary>
-        /// Load box spawn data from Binary format (Editor creates, Server loads)
+        /// Load box spawn data using BinaryReader (matches App format)
+        /// Format: Version(int), VersionString, MapCount, then per map: MapId, MapName, BoxCount,
+        ///         then per box: Position, Priority, MapId, X, Y, Width, Height, WeatherSpawn(int), TimedSpawn(int), 6 spawn lists
         /// </summary>
         internal static void LoadBoxSpawnData()
         {
@@ -283,73 +354,62 @@ namespace Server.Custom.UORespawnSystem.SpawnUtility
                     return;
                 }
 
-                BinaryFormatter formatter = new BinaryFormatter();
-                BoxContainer container;
+                int totalBoxes = 0;
+                int mapCount = 0;
 
-                using (FileStream stream = new FileStream(BoxSpawnFile, FileMode.Open, FileAccess.Read))
+                using (BinaryReader reader = new BinaryReader(File.Open(BoxSpawnFile, FileMode.Open, FileAccess.Read)))
                 {
-                    container = (BoxContainer)formatter.Deserialize(stream);
-                }
+                    int fileVersion = reader.ReadInt32();
+                    string versionString = reader.ReadString();
 
-                // Version validation (optional)
-                if (string.IsNullOrWhiteSpace(container.Version))
-                {
-                    UORespawnUtility.SendConsoleMsg(ConsoleColor.Yellow, "WARNING: BoxSpawn binary has no version info");
-                }
-
-                // Convert DTOs to Entities
-                foreach (MapBoxData mapData in container.BoxData)
-                {
-                    // Validate map ID
-                    if (mapData.MapId < 0 || mapData.MapId >= Map.Maps.Length)
+                    if (string.IsNullOrWhiteSpace(versionString))
                     {
-                        UORespawnUtility.SendConsoleMsg(ConsoleColor.Yellow,
-                            $"WARNING: Invalid map ID {mapData.MapId} in BoxSpawn binary - Skipping");
-                        continue;
+                        UORespawnUtility.SendConsoleMsg(ConsoleColor.Yellow, "WARNING: BoxSpawn binary has no version info");
                     }
 
-                    Map map = Map.Maps[mapData.MapId];
-                    if (map == null)
-                    {
-                        UORespawnUtility.SendConsoleMsg(ConsoleColor.Yellow,
-                            $"WARNING: Map ID {mapData.MapId} is null in BoxSpawn binary - Skipping");
-                        continue;
-                    }
+                    mapCount = reader.ReadInt32();
 
-                    // Initialize list for this map
-                    if (!BoxSpawns.ContainsKey(map))
+                    for (int m = 0; m < mapCount; m++)
                     {
-                        BoxSpawns[map] = new List<BoxEntity>();
-                    }
+                        int mapId = reader.ReadInt32();
+                        string mapName = reader.ReadString();
+                        int boxCount = reader.ReadInt32();
 
-                    // Convert each BoxModel to BoxEntity
-                    foreach (BoxModel boxModel in mapData.BoxSpawns)
-                    {
-                        Rectangle2D spawnBox = new Rectangle2D(
-                            boxModel.X,
-                            boxModel.Y,
-                            boxModel.Width,
-                            boxModel.Height
-                        );
-
-                        BoxEntity entity = new BoxEntity(
-                            boxModel.Id,
-                            boxModel.SpawnPriority,
-                            spawnBox,
-                            boxModel.WeatherSpawn,
-                            boxModel.TimedSpawn
-                        )
+                        // Validate map ID
+                        if (mapId < 0 || mapId >= Map.Maps.Length)
                         {
-                            // Convert List<string> to ArrayList
-                            WaterSpawnList = new System.Collections.ArrayList(boxModel.WaterSpawns),
-                            WeatherSpawnList = new System.Collections.ArrayList(boxModel.WeatherSpawns),
-                            TimedSpawnList = new System.Collections.ArrayList(boxModel.TimedSpawns),
-                            CommonSpawnList = new System.Collections.ArrayList(boxModel.CommonSpawns),
-                            UnCommonSpawnList = new System.Collections.ArrayList(boxModel.UncommonSpawns),
-                            RareSpawnList = new System.Collections.ArrayList(boxModel.RareSpawns)
-                        };
+                            UORespawnUtility.SendConsoleMsg(ConsoleColor.Yellow,
+                                $"WARNING: Invalid map ID {mapId} in BoxSpawn binary - Skipping {boxCount} boxes");
+                            for (int b = 0; b < boxCount; b++)
+                                SkipBoxEntity(reader);
+                            continue;
+                        }
 
-                        BoxSpawns[map].Add(entity);
+                        Map map = Map.Maps[mapId];
+                        if (map == null)
+                        {
+                            UORespawnUtility.SendConsoleMsg(ConsoleColor.Yellow,
+                                $"WARNING: Map ID {mapId} is null in BoxSpawn binary - Skipping");
+                            for (int b = 0; b < boxCount; b++)
+                                SkipBoxEntity(reader);
+                            continue;
+                        }
+
+                        // Initialize list for this map
+                        if (!BoxSpawns.ContainsKey(map))
+                        {
+                            BoxSpawns[map] = new List<BoxEntity>();
+                        }
+
+                        for (int b = 0; b < boxCount; b++)
+                        {
+                            BoxEntity entity = ReadBoxEntity(reader);
+                            if (entity != null)
+                            {
+                                BoxSpawns[map].Add(entity);
+                                totalBoxes++;
+                            }
+                        }
                     }
                 }
 
@@ -362,14 +422,92 @@ namespace Server.Custom.UORespawnSystem.SpawnUtility
                     }
                 }
 
-                int totalBoxes = BoxSpawns.Values.Sum(list => list.Count);
                 UORespawnUtility.SendConsoleMsg(ConsoleColor.Green,
-                    $"Box Spawn: Loaded {totalBoxes} box(es) across {container.BoxData.Count} map(s)");
+                    $"Box Spawn: Loaded {totalBoxes} box(es) across {mapCount} map(s)");
             }
             catch (Exception ex)
             {
                 UORespawnUtility.SendConsoleMsg(ConsoleColor.Red,
                     $"ERROR: Failed to load BoxSpawn binary - {ex.Message}");
+            }
+        }
+
+        private static BoxEntity ReadBoxEntity(BinaryReader reader)
+        {
+            int position = reader.ReadInt32();
+            int priority = reader.ReadInt32();
+            int mapId = reader.ReadInt32();
+
+            // SpawnBox rect
+            int x = reader.ReadInt32();
+            int y = reader.ReadInt32();
+            int width = reader.ReadInt32();
+            int height = reader.ReadInt32();
+
+            Enums.WeatherTypes weather = (Enums.WeatherTypes)reader.ReadInt32();
+            Enums.TimeNames time = (Enums.TimeNames)reader.ReadInt32();
+
+            Rectangle2D spawnBox = new Rectangle2D(x, y, width, height);
+
+            BoxEntity entity = new BoxEntity(position, priority, spawnBox, weather, time)
+            {
+                WaterSpawnList = new System.Collections.ArrayList(ReadStringList(reader)),
+                WeatherSpawnList = new System.Collections.ArrayList(ReadStringList(reader)),
+                TimedSpawnList = new System.Collections.ArrayList(ReadStringList(reader)),
+                CommonSpawnList = new System.Collections.ArrayList(ReadStringList(reader)),
+                UnCommonSpawnList = new System.Collections.ArrayList(ReadStringList(reader)),
+                RareSpawnList = new System.Collections.ArrayList(ReadStringList(reader))
+            };
+
+            return entity;
+        }
+
+        private static void SkipBoxEntity(BinaryReader reader)
+        {
+            reader.ReadInt32(); // Position
+            reader.ReadInt32(); // Priority
+            reader.ReadInt32(); // MapId
+            reader.ReadInt32(); // X
+            reader.ReadInt32(); // Y
+            reader.ReadInt32(); // Width
+            reader.ReadInt32(); // Height
+            reader.ReadInt32(); // WeatherSpawn
+            reader.ReadInt32(); // TimedSpawn
+            SkipStringList(reader); // WaterSpawns
+            SkipStringList(reader); // WeatherSpawns
+            SkipStringList(reader); // TimedSpawns
+            SkipStringList(reader); // CommonSpawns
+            SkipStringList(reader); // UncommonSpawns
+            SkipStringList(reader); // RareSpawns
+        }
+
+        #endregion
+
+        #region Binary Reader Helper Methods
+
+        /// <summary>
+        /// Read a list of strings from binary (matches App format)
+        /// </summary>
+        private static List<string> ReadStringList(BinaryReader reader)
+        {
+            int count = reader.ReadInt32();
+            var list = new List<string>(count);
+            for (int i = 0; i < count; i++)
+            {
+                list.Add(reader.ReadString());
+            }
+            return list;
+        }
+
+        /// <summary>
+        /// Skip a string list when skipping invalid data
+        /// </summary>
+        private static void SkipStringList(BinaryReader reader)
+        {
+            int count = reader.ReadInt32();
+            for (int i = 0; i < count; i++)
+            {
+                reader.ReadString();
             }
         }
 

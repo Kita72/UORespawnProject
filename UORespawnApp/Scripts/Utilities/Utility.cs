@@ -1,5 +1,4 @@
-﻿using UORespawnApp.Scripts.DTO.Models;
-using UORespawnApp.Scripts.Entities;
+﻿using UORespawnApp.Scripts.Entities;
 using UORespawnApp.Scripts.Services;
 
 namespace UORespawnApp.Scripts.Utilities
@@ -67,37 +66,13 @@ namespace UORespawnApp.Scripts.Utilities
         }
 
         /// <summary>
-        /// Save box spawn data using binary serialization
-        /// Creates BoxContainer DTO and saves to binary file(s)
+        /// Save box spawn data using binary serialization (ServUO-style BinaryWriter)
         /// </summary>
         internal static void SaveSpawnData()
         {
             try
             {
-                var container = new BoxContainer
-                {
-                    Version = Version,
-                    BoxData = new List<MapBoxData>()
-                };
-
-                foreach (var mapEntry in BoxSpawns)
-                {
-                    if (mapEntry.Value.Count > 0)
-                    {
-                        var mapBoxData = new MapBoxData
-                        {
-                            MapId = mapEntry.Key,
-                            MapName = MapUtility.GetMapName(mapEntry.Key),
-                            BoxSpawns = new List<BoxModel>(mapEntry.Value.Select(e => e.ToBoxModel()))
-                        };
-                        container.BoxData.Add(mapBoxData);
-                    }
-                }
-
-                // Use BinarySerializationService to save box spawns
-                BinarySerializationService.SaveBoxSpawns(container);
-                var totalSpawns = container.BoxData.Sum(m => m.BoxSpawns?.Count ?? 0);
-                Logger.Info($"Saved box spawn data: {totalSpawns} total spawns across {BoxSpawns.Count} maps");
+                BinarySerializationService.SaveBoxSpawns();
             }
             catch (Exception ex)
             {
@@ -106,34 +81,16 @@ namespace UORespawnApp.Scripts.Utilities
         }
 
         /// <summary>
-        /// Load box spawn data using binary deserialization
+        /// Load box spawn data using binary deserialization (ServUO-style BinaryReader)
         /// </summary>
         internal static void LoadSpawnData()
         {
             try
             {
                 BoxSpawns.Clear();
+                InitializeBoxSpawns(); // Ensure maps 0-5 exist even if file is empty/missing
 
-                var container = BinarySerializationService.LoadBoxSpawns();
-                if (container != null && container.BoxData != null)
-                {
-                    foreach (var mapData in container.BoxData)
-                    {
-                        if (!BoxSpawns.ContainsKey(mapData.MapId))
-                        {
-                            BoxSpawns[mapData.MapId] = new List<BoxSpawnEntity>();
-                        }
-
-                        if (mapData.BoxSpawns != null)
-                        {
-                            foreach (var boxModel in mapData.BoxSpawns)
-                            {
-                                var entity = BoxSpawnEntity.FromBoxModel(boxModel, mapData.MapId);
-                                BoxSpawns[mapData.MapId].Add(entity);
-                            }
-                        }
-                    }
-                }
+                BinarySerializationService.LoadBoxSpawns();
             }
             catch (Exception ex)
             {
@@ -163,36 +120,13 @@ namespace UORespawnApp.Scripts.Utilities
         }
 
         /// <summary>
-        /// Save tile spawn data using binary serialization
+        /// Save tile spawn data using binary serialization (ServUO-style BinaryWriter)
         /// </summary>
         internal static void SaveTileSpawnData()
         {
             try
             {
-                var container = new TileContainer
-                {
-                    Version = Version,
-                    TileData = new List<MapTileData>()
-                };
-
-                foreach (var mapEntry in TileSpawns)
-                {
-                    if (mapEntry.Value.Count > 0)
-                    {
-                        var mapTileData = new MapTileData
-                        {
-                            MapId = mapEntry.Key,
-                            MapName = MapUtility.GetMapName(mapEntry.Key),
-                            TileSpawns = new List<TileModel>(mapEntry.Value.Select(e => e.ToTileModel()))
-                        };
-                        container.TileData.Add(mapTileData);
-                    }
-                }
-
-                // Use BinarySerializationService to save tile spawns
-                BinarySerializationService.SaveTileSpawns(container);
-                var totalTileSpawns = container.TileData.Sum(m => m.TileSpawns?.Count ?? 0);
-                Logger.Info($"Saved tile spawn data: {totalTileSpawns} total tile spawns across {TileSpawns.Count} maps");
+                BinarySerializationService.SaveTileSpawns();
             }
             catch (Exception ex)
             {
@@ -201,34 +135,16 @@ namespace UORespawnApp.Scripts.Utilities
         }
 
         /// <summary>
-        /// Load tile spawn data using binary deserialization
+        /// Load tile spawn data using binary deserialization (ServUO-style BinaryReader)
         /// </summary>
         internal static void LoadTileSpawnData()
         {
             try
             {
                 TileSpawns.Clear();
+                InitializeTileSpawns(); // Ensure maps 0-5 exist even if file is empty/missing
 
-                var container = BinarySerializationService.LoadTileSpawns();
-                if (container != null && container.TileData != null)
-                {
-                    foreach (var mapData in container.TileData)
-                    {
-                        if (!TileSpawns.ContainsKey(mapData.MapId))
-                        {
-                            TileSpawns[mapData.MapId] = new List<TileSpawnEntity>();
-                        }
-
-                        if (mapData.TileSpawns != null)
-                        {
-                            foreach (var tileModel in mapData.TileSpawns)
-                            {
-                                var entity = TileSpawnEntity.FromTileModel(tileModel, mapData.MapId);
-                                TileSpawns[mapData.MapId].Add(entity);
-                            }
-                        }
-                    }
-                }
+                BinarySerializationService.LoadTileSpawns();
             }
             catch (Exception ex)
             {
@@ -258,36 +174,13 @@ namespace UORespawnApp.Scripts.Utilities
         }
 
         /// <summary>
-        /// Save region spawn data using binary serialization
+        /// Save region spawn data using binary serialization (ServUO-style BinaryWriter)
         /// </summary>
         internal static void SaveRegionSpawnData()
         {
             try
             {
-                var container = new RegionContainer
-                {
-                    Version = Version,
-                    RegionData = new List<MapRegionData>()
-                };
-
-                foreach (var mapEntry in RegionSpawns)
-                {
-                    if (mapEntry.Value.Count > 0)
-                    {
-                        var mapRegionData = new MapRegionData
-                        {
-                            MapId = mapEntry.Key,
-                            MapName = MapUtility.GetMapName(mapEntry.Key),
-                            RegionSpawns = new List<RegionModel>(mapEntry.Value.Select(e => e.ToRegionModel()))
-                        };
-                        container.RegionData.Add(mapRegionData);
-                    }
-                }
-
-                // Use BinarySerializationService to save region spawns
-                BinarySerializationService.SaveRegionSpawns(container);
-                var totalRegionSpawns = container.RegionData.Sum(m => m.RegionSpawns?.Count ?? 0);
-                Logger.Info($"Saved region spawn data: {totalRegionSpawns} total region spawns across {RegionSpawns.Count} maps");
+                BinarySerializationService.SaveRegionSpawns();
             }
             catch (Exception ex)
             {
@@ -296,34 +189,16 @@ namespace UORespawnApp.Scripts.Utilities
         }
 
         /// <summary>
-        /// Load region spawn data using binary deserialization
+        /// Load region spawn data using binary deserialization (ServUO-style BinaryReader)
         /// </summary>
         internal static void LoadRegionSpawnData()
         {
             try
             {
                 RegionSpawns.Clear();
+                InitializeRegionSpawns(); // Ensure maps 0-5 exist even if file is empty/missing
 
-                var container = BinarySerializationService.LoadRegionSpawns();
-                if (container != null && container.RegionData != null)
-                {
-                    foreach (var mapData in container.RegionData)
-                    {
-                        if (!RegionSpawns.ContainsKey(mapData.MapId))
-                        {
-                            RegionSpawns[mapData.MapId] = new List<RegionSpawnEntity>();
-                        }
-
-                        if (mapData.RegionSpawns != null)
-                        {
-                            foreach (var regionModel in mapData.RegionSpawns)
-                            {
-                                var entity = RegionSpawnEntity.FromRegionModel(regionModel, mapData.MapId);
-                                RegionSpawns[mapData.MapId].Add(entity);
-                            }
-                        }
-                    }
-                }
+                BinarySerializationService.LoadRegionSpawns();
             }
             catch (Exception ex)
             {
@@ -336,39 +211,20 @@ namespace UORespawnApp.Scripts.Utilities
         #region Settings Data
 
         /// <summary>
-        /// Save settings to binary file (UOR_SpawnSettings.bin)
-        /// Maps Settings.cs Preferences properties to SettingsModel DTO
+        /// Save settings to binary file (UOR_SpawnSettings.bin) using ServUO-style BinaryWriter
+        /// Reads directly from Settings.cs properties
         /// </summary>
         /// <remarks>
         /// Two-tier settings model:
         /// - Preferences: UI immediate access (Preferences API)
-        /// - Binary file: Server-readable format (BinaryFormatter)
+        /// - Binary file: Server-readable format (BinaryWriter)
         /// Binary file is synced to server; server reads it (doesn't modify)
         /// </remarks>
         internal static void SaveSettings()
         {
             try
             {
-                var model = new SettingsModel
-                {
-                    Version = Version,
-                    MaxMobs = Settings.MaxMobs,
-                    MinRange = Settings.MinRange,
-                    MaxRange = Settings.MaxRange,
-                    MaxCrowd = Settings.MaxCrowd,
-                    ChanceWater = Settings.WaterChance,
-                    ChanceWeather = Settings.WeatherChance,
-                    ChanceTimed = Settings.TimedChance,
-                    ChanceCommon = Settings.CommonChance,
-                    ChanceUncommon = Settings.UnCommonChance,
-                    ChanceRare = Settings.RareChance,
-                    ScaleSpawn = Settings.IsScaleSpawn,
-                    EnableRiftSpawn = Settings.EnableRiftSpawn,
-                    EnableDebug = Settings.EnableDebugSpawn
-                };
-
-                BinarySerializationService.SaveSettings(model);
-                Logger.Info("Settings saved using binary serialization");
+                BinarySerializationService.SaveSettings();
             }
             catch (Exception ex)
             {
@@ -377,8 +233,8 @@ namespace UORespawnApp.Scripts.Utilities
         }
 
         /// <summary>
-        /// Load settings from binary file (UOR_SpawnSettings.bin)
-        /// Maps SettingsModel DTO properties to Settings.cs Preferences
+        /// Load settings from binary file (UOR_SpawnSettings.bin) using ServUO-style BinaryReader
+        /// Writes directly to Settings.cs Preferences
         /// If binary file doesn't exist, Settings use their default Preferences values
         /// </summary>
         /// <remarks>
@@ -390,24 +246,7 @@ namespace UORespawnApp.Scripts.Utilities
         {
             try
             {
-                var model = BinarySerializationService.LoadSettings();
-                if (model != null)
-                {
-                    Settings.MaxMobs = model.MaxMobs;
-                    Settings.MinRange = model.MinRange;
-                    Settings.MaxRange = model.MaxRange;
-                    Settings.MaxCrowd = model.MaxCrowd;
-                    Settings.WaterChance = model.ChanceWater;
-                    Settings.WeatherChance = model.ChanceWeather;
-                    Settings.TimedChance = model.ChanceTimed;
-                    Settings.CommonChance = model.ChanceCommon;
-                    Settings.UnCommonChance = model.ChanceUncommon;
-                    Settings.RareChance = model.ChanceRare;
-                    Settings.IsScaleSpawn = model.ScaleSpawn;
-                    Settings.EnableRiftSpawn = model.EnableRiftSpawn;
-                    Settings.EnableDebugSpawn = model.EnableDebug;
-                    Logger.Info("Settings loaded from binary file");
-                }
+                BinarySerializationService.LoadSettings();
             }
             catch (Exception ex)
             {

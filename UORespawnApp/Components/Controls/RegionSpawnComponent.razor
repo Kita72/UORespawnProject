@@ -992,5 +992,16 @@
     public void Dispose()
     {
         ViewService.OnViewChanged -= OnViewChanged;
+
+        // Auto-save settings when leaving the page (binary file for server)
+        try
+        {
+            Utility.SaveSettings();
+            Logger.Info("Auto-saved settings on page leave");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Error auto-saving settings", ex);
+        }
     }
 }

@@ -79,7 +79,7 @@ namespace UORespawnApp.Scripts.Services
                 // Step 5: Load XML Spawner List
                 await LoadXMLSpawnerListAsync();
 
-                // Step 6: Copy Map Files to wwwroot
+                // Step 6: Verify Map Files exist in Data/MAPS
                 await CopyMapFilesAsync();
 
                 // Step 7: Start DataWatcher (LAST - after all data is loaded)
@@ -111,6 +111,9 @@ namespace UORespawnApp.Scripts.Services
                     {
                         Utility.LoadSettings();
                         Logger.Info("Settings loaded from binary file (or defaults if file missing)");
+
+                        // Always save settings to ensure binary file exists (creates file if missing)
+                        Utility.SaveSettings();
                     }
                     catch (Exception ex)
                     {
@@ -258,33 +261,23 @@ namespace UORespawnApp.Scripts.Services
             {
                 await Task.Run(() =>
                 {
-                    var wwwrootPath = PathConstants.MapsPath;
-                    var dataPath = PathConstants.LegacyDataPath;
-
-                    if (Directory.Exists(dataPath))
+                    // Maps are now included in the build at Data/MAPS/ directly
+                    // Just ensure the folder exists for user-added custom maps
+                    var mapsPath = PathConstants.MapsPath;
+                    if (!Directory.Exists(mapsPath))
                     {
-                        int copiedCount = 0;
-                        foreach (var file in Directory.GetFiles(dataPath, "*.bmp"))
-                        {
-                            try
-                            {
-                                var dest = Path.Combine(wwwrootPath, Path.GetFileName(file));
-                                if (!File.Exists(dest))
-                                {
-                                    File.Copy(file, dest);
-                                    copiedCount++;
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                Logger.Warning($"Error copying map file {Path.GetFileName(file)}: {ex.Message}");
-                            }
-                        }
+                        Directory.CreateDirectory(mapsPath);
+                    }
 
-                        if (copiedCount > 0)
-                        {
-                            Logger.Info($"Copied {copiedCount} map files to wwwroot");
-                        }
+                    // Log available maps
+                    var mapFiles = Directory.GetFiles(mapsPath, "Map*.bmp");
+                    if (mapFiles.Length > 0)
+                    {
+                        Logger.Info($"Found {mapFiles.Length} map files in Data/MAPS");
+                    }
+                    else
+                    {
+                        Logger.Warning("No map files found in Data/MAPS - maps may not display correctly");
                     }
                 });
 
@@ -293,7 +286,7 @@ namespace UORespawnApp.Scripts.Services
             }
             catch (Exception ex)
             {
-                Logger.Error("Error copying map files", ex);
+                Logger.Error("Error checking map files", ex);
             }
         }
 

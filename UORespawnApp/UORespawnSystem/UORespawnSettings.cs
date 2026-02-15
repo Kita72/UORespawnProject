@@ -1,9 +1,7 @@
 using System;
 using System.IO;
-using System.Runtime.Serialization.Formatters.Binary;
 
 using Server.Custom.UORespawnSystem.Enums;
-using Server.Custom.UORespawnSystem.Entities.BinaryModels;
 using Server.Custom.UORespawnSystem.SpawnUtility;
 
 namespace Server.Custom.UORespawnSystem
@@ -78,7 +76,10 @@ namespace Server.Custom.UORespawnSystem
         }
 
         /// <summary>
-        /// Load settings from Binary format (Editor creates, Server loads)
+        /// Load settings from Binary format using BinaryReader (matches App format)
+        /// Format: Version(int), VersionString(string), MaxMobs, MinRange, MaxRange, MaxCrowd,
+        ///         WaterChance, WeatherChance, TimedChance, CommonChance, UncommonChance, RareChance,
+        ///         ScaleSpawn, RiftSpawn, Debug (all bools)
         /// </summary>
         private static void LoadSpawnSettingsData()
         {
@@ -87,41 +88,41 @@ namespace Server.Custom.UORespawnSystem
                 if (!File.Exists(SettingsBinaryFile))
                     return;
 
-                BinaryFormatter formatter = new BinaryFormatter();
-                SettingsModel settings;
-
-                using (FileStream stream = new FileStream(SettingsBinaryFile, FileMode.Open, FileAccess.Read))
+                using (BinaryReader reader = new BinaryReader(File.Open(SettingsBinaryFile, FileMode.Open, FileAccess.Read)))
                 {
-                    settings = (SettingsModel)formatter.Deserialize(stream);
+                    int fileVersion = reader.ReadInt32();
+                    string versionString = reader.ReadString();
+
+                    // Version validation (optional - just log warning)
+                    if (string.IsNullOrWhiteSpace(versionString))
+                    {
+                        UORespawnUtility.SendConsoleMsg(ConsoleColor.Yellow, "WARNING: Settings binary has no version info");
+                    }
+                    else if (versionString != Version)
+                    {
+                        UORespawnUtility.SendConsoleMsg(ConsoleColor.Yellow,
+                            $"WARNING: Settings version mismatch (File: {versionString}, Expected: {Version})");
+                    }
+
+                    // Basic spawn limits
+                    maxMobs = reader.ReadInt32();
+                    minRange = reader.ReadInt32();
+                    maxRange = reader.ReadInt32();
+                    maxCrowd = reader.ReadInt32();
+
+                    // Spawn chances (doubles)
+                    CHANCE_WATER = reader.ReadDouble();
+                    CHANCE_WEATHER = reader.ReadDouble();
+                    CHANCE_TIMED = reader.ReadDouble();
+                    CHANCE_COMMON = reader.ReadDouble();
+                    CHANCE_UNCOMMON = reader.ReadDouble();
+                    CHANCE_RARE = reader.ReadDouble();
+
+                    // Feature flags
+                    ENABLE_SCALE_SPAWN = reader.ReadBoolean();
+                    ENABLE_RIFT_SPAWN = reader.ReadBoolean();
+                    ENABLE_DEBUG = reader.ReadBoolean();
                 }
-
-                // Version validation (optional - just log warning)
-                if (string.IsNullOrWhiteSpace(settings.Version))
-                {
-                    UORespawnUtility.SendConsoleMsg(ConsoleColor.Yellow, "WARNING: Settings binary has no version info");
-                }
-                else if (settings.Version != Version)
-                {
-                    UORespawnUtility.SendConsoleMsg(ConsoleColor.Yellow,
-                        $"WARNING: Settings version mismatch (File: {settings.Version}, Expected: {Version})");
-                }
-
-                // Apply settings (only the ones marked "From File")
-                maxMobs = settings.MaxMobs;
-                minRange = settings.MinRange;
-                maxRange = settings.MaxRange;
-                maxCrowd = settings.MaxCrowd;
-
-                CHANCE_WATER = settings.ChanceWater;
-                CHANCE_WEATHER = settings.ChanceWeather;
-                CHANCE_TIMED = settings.ChanceTimed;
-                CHANCE_COMMON = settings.ChanceCommon;
-                CHANCE_UNCOMMON = settings.ChanceUncommon;
-                CHANCE_RARE = settings.ChanceRare;
-
-                ENABLE_SCALE_SPAWN = settings.ScaleSpawn;
-                ENABLE_RIFT_SPAWN = settings.EnableRiftSpawn;
-                ENABLE_DEBUG = settings.EnableDebug;
 
                 UORespawnUtility.SendConsoleMsg(ConsoleColor.Green, "Settings: Loaded successfully");
             }

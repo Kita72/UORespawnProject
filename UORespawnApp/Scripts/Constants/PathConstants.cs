@@ -49,27 +49,28 @@ namespace UORespawnApp.Scripts.Constants
         /// </summary>
         public const string MAPS_SUBFOLDER = "MAPS";
 
-        // ==================== BINARY FILE NAMES (.bin) ====================
+        // ==================== BINARY DATA FILE NAMES (.bin) ====================
         // Editor creates/saves these files, server reads them
-        
+        // Uses BinaryReader/BinaryWriter (ServUO-style) for .NET 10 compatibility
+
         /// <summary>
         /// Spawn settings binary file 
         /// Contains: chances, ranges, mob limits, debug flags
         /// </summary>
         public const string SETTINGS_FILENAME = "UOR_SpawnSettings.bin";
-        
+
         /// <summary>
         /// Box spawn binary file 
         /// Contains: rectangular spawn areas with creature lists
         /// </summary>
         public const string BOX_FILENAME = "UOR_BoxSpawn.bin";
-        
+
         /// <summary>
         /// Tile spawn binary file
         /// Contains: tile-type based spawns (grass, snow, etc.)
         /// </summary>
         public const string TILE_FILENAME = "UOR_TileSpawn.bin";
-        
+
         /// <summary>
         /// Region spawn binary file
         /// Contains: server region-based spawns (Britain, Despise, etc.)

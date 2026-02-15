@@ -6,6 +6,7 @@
 @inject IJSRuntime JS
 @inject ViewService ViewService
 @inject ToastService ToastService
+@implements IDisposable
 
 <div class="container-fluid p-3">
     <!-- Simplified Header -->
@@ -419,5 +420,19 @@
         }
 
         StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        // Auto-save settings when leaving the page (binary file for server)
+        try
+        {
+            Utility.SaveSettings();
+            Logger.Info("Auto-saved settings on page leave");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Error auto-saving settings", ex);
+        }
     }
 }

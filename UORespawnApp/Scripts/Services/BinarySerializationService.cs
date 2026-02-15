@@ -1,35 +1,41 @@
-using System.Runtime.Serialization.Formatters.Binary;
-
 using UORespawnApp.Scripts.Constants;
-using UORespawnApp.Scripts.DTO.Models;
+using UORespawnApp.Scripts.DTO.Enums;
+using UORespawnApp.Scripts.Entities;
 using UORespawnApp.Scripts.Utilities;
 
 namespace UORespawnApp.Scripts.Services
 {
     /// <summary>
     /// Service for binary serialization of UORespawn v2.0 data files
+    /// Uses BinaryReader/BinaryWriter (ServUO-style) for .NET 10 compatibility
     /// Generates files compatible with server-side UORespawnDataBase loader
     /// </summary>
     public static class BinarySerializationService
     {
-        #region Save Methods
+        // Current file format versions
+        private const int SETTINGS_VERSION = 1;
+        private const int BOX_SPAWN_VERSION = 1;
+        private const int TILE_SPAWN_VERSION = 1;
+        private const int REGION_SPAWN_VERSION = 1;
+
+        #region Settings Save/Load
 
         /// <summary>
-        /// Save SettingsModel to binary file(s)
+        /// Save settings to binary file using BinaryWriter
         /// </summary>
-        public static void SaveSettings(SettingsModel settings)
+        public static void SaveSettings()
         {
             try
             {
                 var localPath = PathConstants.GetLocalFilePath(PathConstants.SETTINGS_FILENAME);
-                SaveToBinaryFile(settings, localPath);
+                WriteSettings(localPath);
                 Logger.Info($"Settings saved to: {localPath}");
 
                 var serverPath = PathConstants.ServerDataPath;
                 if (serverPath != null)
                 {
                     var serverFilePath = PathConstants.GetServerFilePath(PathConstants.SETTINGS_FILENAME);
-                    SaveToBinaryFile(settings, serverFilePath);
+                    WriteSettings(serverFilePath);
                     Logger.Info($"Settings synced to server: {serverFilePath}");
                 }
             }
@@ -40,22 +46,106 @@ namespace UORespawnApp.Scripts.Services
             }
         }
 
+        private static void WriteSettings(string filePath)
+        {
+            using var writer = new BinaryWriter(File.Open(filePath, FileMode.Create));
+
+            writer.Write(SETTINGS_VERSION);
+            writer.Write(Utility.Version);
+
+            // Basic spawn limits
+            writer.Write(Settings.MaxMobs);
+            writer.Write(Settings.MinRange);
+            writer.Write(Settings.MaxRange);
+            writer.Write(Settings.MaxCrowd);
+
+            // Spawn chances (doubles)
+            writer.Write(Settings.WaterChance);
+            writer.Write(Settings.WeatherChance);
+            writer.Write(Settings.TimedChance);
+            writer.Write(Settings.CommonChance);
+            writer.Write(Settings.UnCommonChance);
+            writer.Write(Settings.RareChance);
+
+            // Feature flags
+            writer.Write(Settings.IsScaleSpawn);
+            writer.Write(Settings.EnableRiftSpawn);
+            writer.Write(Settings.EnableDebugSpawn);
+        }
+
         /// <summary>
-        /// Save BoxContainer to binary file(s)
+        /// Load settings from binary file using BinaryReader
         /// </summary>
-        public static void SaveBoxSpawns(BoxContainer container)
+        public static bool LoadSettings()
+        {
+            try
+            {
+                var localPath = PathConstants.GetLocalFilePath(PathConstants.SETTINGS_FILENAME);
+
+                if (!File.Exists(localPath))
+                {
+                    Logger.Warning($"Settings file not found: {localPath}");
+                    return false;
+                }
+
+                ReadSettings(localPath);
+                Logger.Info($"Settings loaded from: {localPath}");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error loading settings", ex);
+                return false;
+            }
+        }
+
+        private static void ReadSettings(string filePath)
+        {
+            using var reader = new BinaryReader(File.Open(filePath, FileMode.Open));
+
+            int version = reader.ReadInt32();
+            string fileVersion = reader.ReadString(); // App version string (for info)
+
+            // Basic spawn limits
+            Settings.MaxMobs = reader.ReadInt32();
+            Settings.MinRange = reader.ReadInt32();
+            Settings.MaxRange = reader.ReadInt32();
+            Settings.MaxCrowd = reader.ReadInt32();
+
+            // Spawn chances
+            Settings.WaterChance = reader.ReadDouble();
+            Settings.WeatherChance = reader.ReadDouble();
+            Settings.TimedChance = reader.ReadDouble();
+            Settings.CommonChance = reader.ReadDouble();
+            Settings.UnCommonChance = reader.ReadDouble();
+            Settings.RareChance = reader.ReadDouble();
+
+            // Feature flags
+            Settings.IsScaleSpawn = reader.ReadBoolean();
+            Settings.EnableRiftSpawn = reader.ReadBoolean();
+            Settings.EnableDebugSpawn = reader.ReadBoolean();
+        }
+
+        #endregion
+
+        #region Box Spawn Save/Load
+
+        /// <summary>
+        /// Save box spawns to binary file using BinaryWriter
+        /// </summary>
+        public static void SaveBoxSpawns()
         {
             try
             {
                 var localPath = PathConstants.GetLocalFilePath(PathConstants.BOX_FILENAME);
-                SaveToBinaryFile(container, localPath);
-                Logger.Info($"Box spawns saved to: {localPath} ({GetBoxSpawnCount(container)} boxes)");
+                int count = WriteBoxSpawns(localPath);
+                Logger.Info($"Box spawns saved to: {localPath} ({count} boxes)");
 
                 var serverPath = PathConstants.ServerDataPath;
                 if (serverPath != null)
                 {
                     var serverFilePath = PathConstants.GetServerFilePath(PathConstants.BOX_FILENAME);
-                    SaveToBinaryFile(container, serverFilePath);
+                    WriteBoxSpawns(serverFilePath);
                     Logger.Info($"Box spawns synced to server: {serverFilePath}");
                 }
             }
@@ -66,22 +156,170 @@ namespace UORespawnApp.Scripts.Services
             }
         }
 
+        private static int WriteBoxSpawns(string filePath)
+        {
+            using var writer = new BinaryWriter(File.Open(filePath, FileMode.Create));
+
+            writer.Write(BOX_SPAWN_VERSION);
+            writer.Write(Utility.Version);
+
+            // Count maps that have spawn data
+            var mapsWithData = Utility.BoxSpawns.Where(kvp => kvp.Value.Count > 0).ToList();
+            writer.Write(mapsWithData.Count);
+
+            int totalBoxes = 0;
+
+            foreach (var mapEntry in mapsWithData)
+            {
+                writer.Write(mapEntry.Key); // MapId
+                writer.Write(MapUtility.GetMapName(mapEntry.Key)); // MapName
+                writer.Write(mapEntry.Value.Count); // Number of boxes
+
+                foreach (var box in mapEntry.Value)
+                {
+                    WriteBoxSpawnEntity(writer, box);
+                    totalBoxes++;
+                }
+            }
+
+            return totalBoxes;
+        }
+
+        private static void WriteBoxSpawnEntity(BinaryWriter writer, BoxSpawnEntity box)
+        {
+            writer.Write(box.Position);
+            writer.Write(box.Priority);
+            writer.Write(box.MapId);
+
+            // SpawnBox rect
+            writer.Write((int)box.SpawnBox.X);
+            writer.Write((int)box.SpawnBox.Y);
+            writer.Write((int)box.SpawnBox.Width);
+            writer.Write((int)box.SpawnBox.Height);
+
+            // Enums as int
+            writer.Write((int)box.WeatherSpawn);
+            writer.Write((int)box.TimedSpawn);
+
+            // Spawn lists
+            WriteStringList(writer, box.WaterSpawns);
+            WriteStringList(writer, box.WeatherSpawns);
+            WriteStringList(writer, box.TimedSpawns);
+            WriteStringList(writer, box.CommonSpawns);
+            WriteStringList(writer, box.UncommonSpawns);
+            WriteStringList(writer, box.RareSpawns);
+        }
+
         /// <summary>
-        /// Save TileContainer to binary file(s)
+        /// Load box spawns from binary file using BinaryReader
         /// </summary>
-        public static void SaveTileSpawns(TileContainer container)
+        public static bool LoadBoxSpawns()
+        {
+            try
+            {
+                var localPath = PathConstants.GetLocalFilePath(PathConstants.BOX_FILENAME);
+
+                if (!File.Exists(localPath))
+                {
+                    Logger.Warning($"Box spawns file not found: {localPath}");
+                    return false;
+                }
+
+                int count = ReadBoxSpawns(localPath);
+                Logger.Info($"Box spawns loaded from: {localPath} ({count} boxes)");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error loading box spawns", ex);
+                return false;
+            }
+        }
+
+        private static int ReadBoxSpawns(string filePath)
+        {
+            using var reader = new BinaryReader(File.Open(filePath, FileMode.Open));
+
+            int version = reader.ReadInt32();
+            string fileVersion = reader.ReadString();
+
+            int mapCount = reader.ReadInt32();
+            int totalBoxes = 0;
+
+            for (int m = 0; m < mapCount; m++)
+            {
+                int mapId = reader.ReadInt32();
+                string mapName = reader.ReadString();
+                int boxCount = reader.ReadInt32();
+
+                // Ensure the map entry exists
+                if (!Utility.BoxSpawns.ContainsKey(mapId))
+                {
+                    Utility.BoxSpawns[mapId] = new List<BoxSpawnEntity>();
+                }
+
+                for (int b = 0; b < boxCount; b++)
+                {
+                    var box = ReadBoxSpawnEntity(reader, mapId);
+                    Utility.BoxSpawns[mapId].Add(box);
+                    totalBoxes++;
+                }
+            }
+
+            return totalBoxes;
+        }
+
+        private static BoxSpawnEntity ReadBoxSpawnEntity(BinaryReader reader, int mapId)
+        {
+            var box = new BoxSpawnEntity
+            {
+                Position = reader.ReadInt32(),
+                Priority = reader.ReadInt32(),
+                MapId = reader.ReadInt32()
+            };
+
+            // SpawnBox rect
+            int x = reader.ReadInt32();
+            int y = reader.ReadInt32();
+            int width = reader.ReadInt32();
+            int height = reader.ReadInt32();
+            box.SpawnBox = new Rect(x, y, width, height);
+
+            // Enums
+            box.WeatherSpawn = (WeatherTypes)reader.ReadInt32();
+            box.TimedSpawn = (TimeNames)reader.ReadInt32();
+
+            // Spawn lists
+            box.WaterSpawns = ReadStringList(reader);
+            box.WeatherSpawns = ReadStringList(reader);
+            box.TimedSpawns = ReadStringList(reader);
+            box.CommonSpawns = ReadStringList(reader);
+            box.UncommonSpawns = ReadStringList(reader);
+            box.RareSpawns = ReadStringList(reader);
+
+            return box;
+        }
+
+        #endregion
+
+        #region Tile Spawn Save/Load
+
+        /// <summary>
+        /// Save tile spawns to binary file using BinaryWriter
+        /// </summary>
+        public static void SaveTileSpawns()
         {
             try
             {
                 var localPath = PathConstants.GetLocalFilePath(PathConstants.TILE_FILENAME);
-                SaveToBinaryFile(container, localPath);
-                Logger.Info($"Tile spawns saved to: {localPath} ({GetTileSpawnCount(container)} tiles)");
+                int count = WriteTileSpawns(localPath);
+                Logger.Info($"Tile spawns saved to: {localPath} ({count} tiles)");
 
                 var serverPath = PathConstants.ServerDataPath;
                 if (serverPath != null)
                 {
                     var serverFilePath = PathConstants.GetServerFilePath(PathConstants.TILE_FILENAME);
-                    SaveToBinaryFile(container, serverFilePath);
+                    WriteTileSpawns(serverFilePath);
                     Logger.Info($"Tile spawns synced to server: {serverFilePath}");
                 }
             }
@@ -92,22 +330,149 @@ namespace UORespawnApp.Scripts.Services
             }
         }
 
+        private static int WriteTileSpawns(string filePath)
+        {
+            using var writer = new BinaryWriter(File.Open(filePath, FileMode.Create));
+
+            writer.Write(TILE_SPAWN_VERSION);
+            writer.Write(Utility.Version);
+
+            var mapsWithData = Utility.TileSpawns.Where(kvp => kvp.Value.Count > 0).ToList();
+            writer.Write(mapsWithData.Count);
+
+            int totalTiles = 0;
+
+            foreach (var mapEntry in mapsWithData)
+            {
+                writer.Write(mapEntry.Key);
+                writer.Write(MapUtility.GetMapName(mapEntry.Key));
+                writer.Write(mapEntry.Value.Count);
+
+                foreach (var tile in mapEntry.Value)
+                {
+                    WriteTileSpawnEntity(writer, tile);
+                    totalTiles++;
+                }
+            }
+
+            return totalTiles;
+        }
+
+        private static void WriteTileSpawnEntity(BinaryWriter writer, TileSpawnEntity tile)
+        {
+            writer.Write(tile.Id);
+            writer.Write(tile.Name ?? string.Empty);
+            writer.Write(tile.MapId);
+
+            writer.Write((int)tile.WeatherSpawn);
+            writer.Write((int)tile.TimedSpawn);
+
+            WriteStringList(writer, tile.WaterSpawns);
+            WriteStringList(writer, tile.WeatherSpawns);
+            WriteStringList(writer, tile.TimedSpawns);
+            WriteStringList(writer, tile.CommonSpawns);
+            WriteStringList(writer, tile.UncommonSpawns);
+            WriteStringList(writer, tile.RareSpawns);
+        }
+
         /// <summary>
-        /// Save RegionContainer to binary file(s)
+        /// Load tile spawns from binary file using BinaryReader
         /// </summary>
-        public static void SaveRegionSpawns(RegionContainer container)
+        public static bool LoadTileSpawns()
+        {
+            try
+            {
+                var localPath = PathConstants.GetLocalFilePath(PathConstants.TILE_FILENAME);
+
+                if (!File.Exists(localPath))
+                {
+                    Logger.Warning($"Tile spawns file not found: {localPath}");
+                    return false;
+                }
+
+                int count = ReadTileSpawns(localPath);
+                Logger.Info($"Tile spawns loaded from: {localPath} ({count} tiles)");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error loading tile spawns", ex);
+                return false;
+            }
+        }
+
+        private static int ReadTileSpawns(string filePath)
+        {
+            using var reader = new BinaryReader(File.Open(filePath, FileMode.Open));
+
+            int version = reader.ReadInt32();
+            string fileVersion = reader.ReadString();
+
+            int mapCount = reader.ReadInt32();
+            int totalTiles = 0;
+
+            for (int m = 0; m < mapCount; m++)
+            {
+                int mapId = reader.ReadInt32();
+                string mapName = reader.ReadString();
+                int tileCount = reader.ReadInt32();
+
+                if (!Utility.TileSpawns.ContainsKey(mapId))
+                {
+                    Utility.TileSpawns[mapId] = new List<TileSpawnEntity>();
+                }
+
+                for (int t = 0; t < tileCount; t++)
+                {
+                    var tile = ReadTileSpawnEntity(reader, mapId);
+                    Utility.TileSpawns[mapId].Add(tile);
+                    totalTiles++;
+                }
+            }
+
+            return totalTiles;
+        }
+
+        private static TileSpawnEntity ReadTileSpawnEntity(BinaryReader reader, int mapId)
+        {
+            var tile = new TileSpawnEntity
+            {
+                Id = reader.ReadInt32(),
+                Name = reader.ReadString(),
+                MapId = reader.ReadInt32(),
+                WeatherSpawn = (WeatherTypes)reader.ReadInt32(),
+                TimedSpawn = (TimeNames)reader.ReadInt32(),
+                WaterSpawns = ReadStringList(reader),
+                WeatherSpawns = ReadStringList(reader),
+                TimedSpawns = ReadStringList(reader),
+                CommonSpawns = ReadStringList(reader),
+                UncommonSpawns = ReadStringList(reader),
+                RareSpawns = ReadStringList(reader)
+            };
+
+            return tile;
+        }
+
+        #endregion
+
+        #region Region Spawn Save/Load
+
+        /// <summary>
+        /// Save region spawns to binary file using BinaryWriter
+        /// </summary>
+        public static void SaveRegionSpawns()
         {
             try
             {
                 var localPath = PathConstants.GetLocalFilePath(PathConstants.REGION_FILENAME);
-                SaveToBinaryFile(container, localPath);
-                Logger.Info($"Region spawns saved to: {localPath} ({GetRegionSpawnCount(container)} regions)");
+                int count = WriteRegionSpawns(localPath);
+                Logger.Info($"Region spawns saved to: {localPath} ({count} regions)");
 
                 var serverPath = PathConstants.ServerDataPath;
                 if (serverPath != null)
                 {
                     var serverFilePath = PathConstants.GetServerFilePath(PathConstants.REGION_FILENAME);
-                    SaveToBinaryFile(container, serverFilePath);
+                    WriteRegionSpawns(serverFilePath);
                     Logger.Info($"Region spawns synced to server: {serverFilePath}");
                 }
             }
@@ -118,111 +483,55 @@ namespace UORespawnApp.Scripts.Services
             }
         }
 
-        /// <summary>
-        /// Core binary serialization method
-        /// </summary>
-        private static void SaveToBinaryFile<T>(T data, string? filePath)
+        private static int WriteRegionSpawns(string filePath)
         {
-            if (data == null || filePath == null)
+            using var writer = new BinaryWriter(File.Open(filePath, FileMode.Create));
+
+            writer.Write(REGION_SPAWN_VERSION);
+            writer.Write(Utility.Version);
+
+            var mapsWithData = Utility.RegionSpawns.Where(kvp => kvp.Value.Count > 0).ToList();
+            writer.Write(mapsWithData.Count);
+
+            int totalRegions = 0;
+
+            foreach (var mapEntry in mapsWithData)
             {
-                Logger.Error($"Error saving : {data == null} || {filePath == null}");
+                writer.Write(mapEntry.Key);
+                writer.Write(MapUtility.GetMapName(mapEntry.Key));
+                writer.Write(mapEntry.Value.Count);
 
-                return;
-            }
-
-#pragma warning disable SYSLIB0011 // BinaryFormatter is obsolete
-            var formatter = new BinaryFormatter();
-            using var stream = new FileStream(filePath, FileMode.Create, FileAccess.Write);
-            formatter.Serialize(stream, data);
-#pragma warning restore SYSLIB0011
-        }
-
-        #endregion
-
-        #region Load Methods
-
-        /// <summary>
-        /// Load SettingsModel from binary file
-        /// </summary>
-        public static SettingsModel? LoadSettings()
-        {
-            try
-            {
-                var localPath = PathConstants.GetLocalFilePath(PathConstants.SETTINGS_FILENAME);
-
-                if (!File.Exists(localPath))
+                foreach (var region in mapEntry.Value)
                 {
-                    Logger.Warning($"Settings file not found: {localPath}");
-                    return null;
+                    WriteRegionSpawnEntity(writer, region);
+                    totalRegions++;
                 }
+            }
 
-                var settings = LoadFromBinaryFile<SettingsModel>(localPath);
-                Logger.Info($"Settings loaded from: {localPath}");
-                return settings;
-            }
-            catch (Exception ex)
-            {
-                Logger.Error("Error loading settings", ex);
-                return null;
-            }
+            return totalRegions;
         }
 
-        /// <summary>
-        /// Load BoxContainer from binary file
-        /// </summary>
-        public static BoxContainer? LoadBoxSpawns()
+        private static void WriteRegionSpawnEntity(BinaryWriter writer, RegionSpawnEntity region)
         {
-            try
-            {
-                var localPath = PathConstants.GetLocalFilePath(PathConstants.BOX_FILENAME);
+            writer.Write(region.Id);
+            writer.Write(region.Name ?? string.Empty);
+            writer.Write(region.MapId);
 
-                if (!File.Exists(localPath))
-                {
-                    Logger.Warning($"Box spawns file not found: {localPath}");
-                    return null;
-                }
+            writer.Write((int)region.WeatherSpawn);
+            writer.Write((int)region.TimedSpawn);
 
-                var container = LoadFromBinaryFile<BoxContainer>(localPath);
-                Logger.Info($"Box spawns loaded from: {localPath} ({GetBoxSpawnCount(container)} boxes)");
-                return container;
-            }
-            catch (Exception ex)
-            {
-                Logger.Error("Error loading box spawns", ex);
-                return null;
-            }
+            WriteStringList(writer, region.WaterSpawns);
+            WriteStringList(writer, region.WeatherSpawns);
+            WriteStringList(writer, region.TimedSpawns);
+            WriteStringList(writer, region.CommonSpawns);
+            WriteStringList(writer, region.UncommonSpawns);
+            WriteStringList(writer, region.RareSpawns);
         }
 
         /// <summary>
-        /// Load TileContainer from binary file
+        /// Load region spawns from binary file using BinaryReader
         /// </summary>
-        public static TileContainer? LoadTileSpawns()
-        {
-            try
-            {
-                var localPath = PathConstants.GetLocalFilePath(PathConstants.TILE_FILENAME);
-
-                if (!File.Exists(localPath))
-                {
-                    Logger.Warning($"Tile spawns file not found: {localPath}");
-                    return null;
-                }
-
-                var container = LoadFromBinaryFile<TileContainer>(localPath);
-                Logger.Info($"Tile spawns loaded from: {localPath} ({GetTileSpawnCount(container)} tiles)");
-                return container;
-            }
-            catch (Exception ex)
-            {
-                Logger.Error("Error loading tile spawns", ex);
-                return null;
-            }
-        }
-
-        /// <summary>
-        /// Load RegionContainer from binary file
-        /// </summary>
-        public static RegionContainer? LoadRegionSpawns()
+        public static bool LoadRegionSpawns()
         {
             try
             {
@@ -231,30 +540,70 @@ namespace UORespawnApp.Scripts.Services
                 if (!File.Exists(localPath))
                 {
                     Logger.Warning($"Region spawns file not found: {localPath}");
-                    return null;
+                    return false;
                 }
 
-                var container = LoadFromBinaryFile<RegionContainer>(localPath);
-                Logger.Info($"Region spawns loaded from: {localPath} ({GetRegionSpawnCount(container)} regions)");
-                return container;
+                int count = ReadRegionSpawns(localPath);
+                Logger.Info($"Region spawns loaded from: {localPath} ({count} regions)");
+                return true;
             }
             catch (Exception ex)
             {
                 Logger.Error("Error loading region spawns", ex);
-                return null;
+                return false;
             }
         }
 
-        /// <summary>
-        /// Core binary deserialization method
-        /// </summary>
-        private static T? LoadFromBinaryFile<T>(string filePath) where T : class
+        private static int ReadRegionSpawns(string filePath)
         {
-#pragma warning disable SYSLIB0011 // BinaryFormatter is obsolete
-            var formatter = new BinaryFormatter();
-            using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
-            return formatter.Deserialize(stream) as T;
-#pragma warning restore SYSLIB0011
+            using var reader = new BinaryReader(File.Open(filePath, FileMode.Open));
+
+            int version = reader.ReadInt32();
+            string fileVersion = reader.ReadString();
+
+            int mapCount = reader.ReadInt32();
+            int totalRegions = 0;
+
+            for (int m = 0; m < mapCount; m++)
+            {
+                int mapId = reader.ReadInt32();
+                string mapName = reader.ReadString();
+                int regionCount = reader.ReadInt32();
+
+                if (!Utility.RegionSpawns.ContainsKey(mapId))
+                {
+                    Utility.RegionSpawns[mapId] = new List<RegionSpawnEntity>();
+                }
+
+                for (int r = 0; r < regionCount; r++)
+                {
+                    var region = ReadRegionSpawnEntity(reader, mapId);
+                    Utility.RegionSpawns[mapId].Add(region);
+                    totalRegions++;
+                }
+            }
+
+            return totalRegions;
+        }
+
+        private static RegionSpawnEntity ReadRegionSpawnEntity(BinaryReader reader, int mapId)
+        {
+            var region = new RegionSpawnEntity
+            {
+                Id = reader.ReadInt32(),
+                Name = reader.ReadString(),
+                MapId = reader.ReadInt32(),
+                WeatherSpawn = (WeatherTypes)reader.ReadInt32(),
+                TimedSpawn = (TimeNames)reader.ReadInt32(),
+                WaterSpawns = ReadStringList(reader),
+                WeatherSpawns = ReadStringList(reader),
+                TimedSpawns = ReadStringList(reader),
+                CommonSpawns = ReadStringList(reader),
+                UncommonSpawns = ReadStringList(reader),
+                RareSpawns = ReadStringList(reader)
+            };
+
+            return region;
         }
 
         #endregion
@@ -262,36 +611,32 @@ namespace UORespawnApp.Scripts.Services
         #region Helper Methods
 
         /// <summary>
-        /// Get total box spawn count from container
+        /// Write a list of strings to binary
         /// </summary>
-        private static int GetBoxSpawnCount(BoxContainer? container)
+        private static void WriteStringList(BinaryWriter writer, List<string> list)
         {
-            if (container == null || container.BoxData == null)
-                return 0;
-
-            return container.BoxData.Sum(mapData => mapData.BoxSpawns?.Count ?? 0);
+            writer.Write(list?.Count ?? 0);
+            if (list != null)
+            {
+                foreach (var item in list)
+                {
+                    writer.Write(item ?? string.Empty);
+                }
+            }
         }
 
         /// <summary>
-        /// Get total tile spawn count from container
+        /// Read a list of strings from binary
         /// </summary>
-        private static int GetTileSpawnCount(TileContainer? container)
+        private static List<string> ReadStringList(BinaryReader reader)
         {
-            if (container == null || container.TileData == null)
-                return 0;
-
-            return container.TileData.Sum(mapData => mapData.TileSpawns?.Count ?? 0);
-        }
-
-        /// <summary>
-        /// Get total region spawn count from container
-        /// </summary>
-        private static int GetRegionSpawnCount(RegionContainer? container)
-        {
-            if (container == null || container.RegionData == null)
-                return 0;
-
-            return container.RegionData.Sum(mapData => mapData.RegionSpawns?.Count ?? 0);
+            int count = reader.ReadInt32();
+            var list = new List<string>(count);
+            for (int i = 0; i < count; i++)
+            {
+                list.Add(reader.ReadString());
+            }
+            return list;
         }
 
         /// <summary>
