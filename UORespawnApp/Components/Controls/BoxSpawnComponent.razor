@@ -1361,12 +1361,6 @@ private int? spawnSearchId = null;
         }
     }
     
-    private void SaveAfterTimedSpawnChange()
-    {
-        Utility.SaveSpawnData();
-        Logger.Info("Auto-saved after timed spawn change");
-    }
-
     private void SaveAfterTriggerChange(BoxSpawnEntity spawn)
     {
         Utility.SaveSpawnData();
@@ -1503,5 +1497,3 @@ private int? spawnSearchId = null;
         }
     }
 }
-
-

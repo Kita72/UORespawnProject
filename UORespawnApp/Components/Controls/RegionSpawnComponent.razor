@@ -511,11 +511,11 @@
         try
         {
             var regions = GetRegionsForCurrentMap();
-            Logger.Info($"🗺️ RenderRegions called for map {ViewService.CurrentMapId}: Found {regions.Count} regions");
+            Logger.Info($"RenderRegions called for map {ViewService.CurrentMapId}: Found {regions.Count} regions");
 
             if (regions.Count == 0)
             {
-                Logger.Warning($"⚠️ No regions found for map {ViewService.CurrentMapId}");
+                Logger.Warning($"No regions found for map {ViewService.CurrentMapId}");
                 return;
             }
 
@@ -534,7 +534,7 @@
             var selectedName = selectedRegion?.Name ?? "";
             var hoveredName = "";
 
-            Logger.Info($"📦 Serializing {screenRegions.Count} regions, selected='{selectedName}'");
+            Logger.Info($"Serializing {screenRegions.Count} regions, selected='{selectedName}'");
 
             var options = new JsonSerializerOptions 
             { 
@@ -545,13 +545,13 @@
             var selectedNameJson = JsonSerializer.Serialize(selectedName);
             var hoveredNameJson = JsonSerializer.Serialize(hoveredName);
 
-            Logger.Info($"📤 Calling JavaScript showRegions with JSON (length: {regionsJson.Length})");
+            Logger.Info($"Calling JavaScript showRegions with JSON (length: {regionsJson.Length})");
             await JS.InvokeVoidAsync("eval", $"window.mapModule.showRegions({regionsJson}, {selectedNameJson}, {hoveredNameJson})" );
-            Logger.Info("✅ RenderRegions completed successfully");
+            Logger.Info("RenderRegions completed successfully");
         }
         catch (Exception ex)
         {
-            Logger.Error("❌ Error rendering regions", ex);
+            Logger.Error("Error rendering regions", ex);
         }
     }
     
@@ -979,12 +979,12 @@
     {
         return currentFrequency switch
         {
-            Frequency.Water => "💧 Water",
-            Frequency.Weather => "⛈️ Weather",
-            Frequency.Timed => "🕐 Timed",
-            Frequency.Common => "👥 Common",
-            Frequency.UnCommon => "👤 Uncommon",
-            Frequency.Rare => "⭐ Rare",
+            Frequency.Water => "Water",
+            Frequency.Weather => "Weather",
+            Frequency.Timed => "Timed",
+            Frequency.Common => "Common",
+            Frequency.UnCommon => "Uncommon",
+            Frequency.Rare => "Rare",
             _ => "Spawns"
         };
     }
