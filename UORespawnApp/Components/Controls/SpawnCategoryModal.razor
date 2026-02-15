@@ -146,9 +146,12 @@
     {
         return CategoryName.ToLower() switch
         {
-            "common" => "bg-success",
-            "uncommon" => "bg-warning",
-            "rare" => "bg-danger",
+            "water" => "bg-primary",        // Blue for water
+            "weather" => "bg-secondary",    // Gray for weather
+            "timed" => "bg-info",           // Light blue/purple for timed
+            "common" => "bg-success",       // Green for common
+            "uncommon" => "bg-warning",     // Yellow/orange for uncommon
+            "rare" => "bg-danger",          // Red for rare
             _ => "bg-secondary"
         };
     }

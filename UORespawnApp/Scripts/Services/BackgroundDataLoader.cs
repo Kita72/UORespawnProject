@@ -1,3 +1,4 @@
+using UORespawnApp.Scripts.Constants;
 using UORespawnApp.Scripts.Utilities;
 
 namespace UORespawnApp.Scripts.Services
@@ -13,11 +14,10 @@ namespace UORespawnApp.Scripts.Services
 
         // Loading state flags
         public bool IsBestiaryLoaded { get; private set; }
-        public bool IsSpawnDataLoaded { get; private set; }
-        public bool IsWorldSpawnLoaded { get; private set; }
-        public bool IsStaticSpawnLoaded { get; private set; }
+        public bool IsBoxSpawnDataLoaded { get; private set; }
+        public bool IsTileSpawnDataLoaded { get; private set; }
+        public bool IsRegionSpawnDataLoaded { get; private set; }
         public bool IsXMLSpawnerListLoaded { get; private set; }
-        public bool IsStaticListLoaded { get; private set; }
         public bool IsMapFilesCopied { get; private set; }
         public bool IsDataWatcherStarted { get; private set; }
 
@@ -32,9 +32,9 @@ namespace UORespawnApp.Scripts.Services
 
         // Events for components to subscribe to
         public event EventHandler? BestiaryLoaded;
-        public event EventHandler? SpawnDataLoaded;
-        public event EventHandler? WorldSpawnLoaded;
-        public event EventHandler? StaticSpawnLoaded;
+        public event EventHandler? BoxSpawnDataLoaded;
+        public event EventHandler? TileSpawnDataLoaded;
+        public event EventHandler? RegionSpawnDataLoaded;
         public event EventHandler? AllDataLoaded;
 
         private DataWatcher? _dataWatcher;
@@ -60,29 +60,29 @@ namespace UORespawnApp.Scripts.Services
             try
             {
                 // Load data in logical order (some dependencies exist)
-                
-                // Step 1: Load Spawn Data (CSV files)
-                await LoadSpawnDataAsync();
-                
-                // Step 2: Load World Spawn List
-                await LoadWorldSpawnListAsync();
-                
-                // Step 3: Load Static Spawn List
-                await LoadStaticSpawnListAsync();
-                
-                // Step 4: Load Bestiary (creature list)
+
+                // Step 0: Load Settings (FIRST - other systems may depend on settings)
+                await LoadSettingsAsync();
+
+                // Step 1: Load Box Spawn Data (Binary)
+                await LoadBoxSpawnDataAsync();
+
+                // Step 2: Load Tile Spawn Data (Binary)
+                await LoadTileSpawnDataAsync();
+
+                // Step 3: Load Region Spawn Data (Binary)
+                await LoadRegionSpawnDataAsync();
+
+                // Step 4: Load Bestiary (creature list from server-generated text file)
                 await LoadBestiaryAsync();
-                
+
                 // Step 5: Load XML Spawner List
                 await LoadXMLSpawnerListAsync();
-                
-                // Step 6: Load Static Object List
-                await LoadStaticObjectListAsync();
-                
-                // Step 7: Copy Map Files to wwwroot
+
+                // Step 6: Copy Map Files to wwwroot
                 await CopyMapFilesAsync();
-                
-                // Step 8: Start DataWatcher (LAST - after all data is loaded)
+
+                // Step 7: Start DataWatcher (LAST - after all data is loaded)
                 await StartDataWatcherAsync();
 
                 _isComplete = true;
@@ -101,7 +101,32 @@ namespace UORespawnApp.Scripts.Services
             }
         }
 
-        private async Task LoadSpawnDataAsync()
+        private async Task LoadSettingsAsync()
+        {
+            try
+            {
+                await Task.Run(() =>
+                {
+                    try
+                    {
+                        Utility.LoadSettings();
+                        Logger.Info("Settings loaded from binary file (or defaults if file missing)");
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Error("LoadSettings failed - using Preferences defaults", ex);
+                    }
+                });
+
+                CompletedSteps++;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error loading settings", ex);
+            }
+        }
+
+        private async Task LoadBoxSpawnDataAsync()
         {
             try
             {
@@ -110,7 +135,7 @@ namespace UORespawnApp.Scripts.Services
                     try
                     {
                         Utility.LoadSpawnData();
-                        var totalSpawns = Utility.Spawns.Values.Sum(list => list.Count);
+                        var totalSpawns = Utility.BoxSpawns.Values.Sum(list => list.Count);
                         Logger.Info($"Loaded {totalSpawns} spawn boxes across all maps");
                     }
                     catch (Exception ex)
@@ -119,9 +144,9 @@ namespace UORespawnApp.Scripts.Services
                     }
                 });
 
-                IsSpawnDataLoaded = true;
+                IsBoxSpawnDataLoaded = true;
                 CompletedSteps++;
-                SpawnDataLoaded?.Invoke(this, EventArgs.Empty);
+                BoxSpawnDataLoaded?.Invoke(this, EventArgs.Empty);
             }
             catch (Exception ex)
             {
@@ -129,7 +154,7 @@ namespace UORespawnApp.Scripts.Services
             }
         }
 
-        private async Task LoadWorldSpawnListAsync()
+        private async Task LoadTileSpawnDataAsync()
         {
             try
             {
@@ -137,25 +162,27 @@ namespace UORespawnApp.Scripts.Services
                 {
                     try
                     {
-                        WorldSpawnUtility.LoadWorldSpawnListSync();
+                        Utility.LoadTileSpawnData();
+                        var totalTileSpawns = Utility.TileSpawns.Values.Sum(list => list.Count);
+                        Logger.Info($"Loaded {totalTileSpawns} tile spawn configurations across all maps");
                     }
                     catch (Exception ex)
                     {
-                        Logger.Error("LoadWorldSpawnList failed", ex);
+                        Logger.Error("LoadTileSpawnData failed", ex);
                     }
                 });
 
-                IsWorldSpawnLoaded = true;
+                IsTileSpawnDataLoaded = true;
                 CompletedSteps++;
-                WorldSpawnLoaded?.Invoke(this, EventArgs.Empty);
+                TileSpawnDataLoaded?.Invoke(this, EventArgs.Empty);
             }
             catch (Exception ex)
             {
-                Logger.Error("Error loading world spawn list", ex);
+                Logger.Error("Error loading tile spawn data", ex);
             }
         }
 
-        private async Task LoadStaticSpawnListAsync()
+        private async Task LoadRegionSpawnDataAsync()
         {
             try
             {
@@ -163,21 +190,23 @@ namespace UORespawnApp.Scripts.Services
                 {
                     try
                     {
-                        WorldSpawnUtility.LoadStaticSpawnListSync();
+                        Utility.LoadRegionSpawnData();
+                        var totalRegionSpawns = Utility.RegionSpawns.Values.Sum(list => list.Count);
+                        Logger.Info($"Loaded {totalRegionSpawns} region spawn configurations across all maps");
                     }
                     catch (Exception ex)
                     {
-                        Logger.Error("LoadStaticSpawnList failed", ex);
+                        Logger.Error("LoadRegionSpawnData failed", ex);
                     }
                 });
 
-                IsStaticSpawnLoaded = true;
+                IsRegionSpawnDataLoaded = true;
                 CompletedSteps++;
-                StaticSpawnLoaded?.Invoke(this, EventArgs.Empty);
+                RegionSpawnDataLoaded?.Invoke(this, EventArgs.Empty);
             }
             catch (Exception ex)
             {
-                Logger.Error("Error loading static spawn list", ex);
+                Logger.Error("Error loading region spawn data", ex);
             }
         }
 
@@ -185,12 +214,12 @@ namespace UORespawnApp.Scripts.Services
         {
             try
             {
-                await WorldSpawnUtility.LoadSpawnList();
+                await BestiarySpawnUtility.LoadSpawnList();
                 
                 IsBestiaryLoaded = true;
                 CompletedSteps++;
                 BestiaryLoaded?.Invoke(this, EventArgs.Empty);
-                Logger.Info($"Loaded {WorldSpawnUtility.SpawnList?.Count ?? 0} creatures in bestiary");
+                Logger.Info($"Loaded {BestiarySpawnUtility.BestiaryNameList?.Count ?? 0} creatures in bestiary");
             }
             catch (Exception ex)
             {
@@ -223,41 +252,15 @@ namespace UORespawnApp.Scripts.Services
             }
         }
 
-        private async Task LoadStaticObjectListAsync()
-        {
-            try
-            {
-                await Task.Run(() =>
-                {
-                    try
-                    {
-                        XMLSpawnUtility.LoadStaticList();
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.Error("LoadStaticList failed", ex);
-                    }
-                });
-
-                IsStaticListLoaded = true;
-                CompletedSteps++;
-            }
-            catch (Exception ex)
-            {
-                Logger.Error("Error loading static object list", ex);
-            }
-        }
-
         private async Task CopyMapFilesAsync()
         {
             try
             {
                 await Task.Run(() =>
                 {
-                    var wwwrootPath = Path.Combine(AppContext.BaseDirectory, "wwwroot", "maps");
-                    Directory.CreateDirectory(wwwrootPath);
-                    var dataPath = Path.Combine(AppContext.BaseDirectory, "Data");
-                    
+                    var wwwrootPath = PathConstants.MapsPath;
+                    var dataPath = PathConstants.LegacyDataPath;
+
                     if (Directory.Exists(dataPath))
                     {
                         int copiedCount = 0;
@@ -277,7 +280,7 @@ namespace UORespawnApp.Scripts.Services
                                 Logger.Warning($"Error copying map file {Path.GetFileName(file)}: {ex.Message}");
                             }
                         }
-                        
+
                         if (copiedCount > 0)
                         {
                             Logger.Info($"Copied {copiedCount} map files to wwwroot");
@@ -307,7 +310,7 @@ namespace UORespawnApp.Scripts.Services
                         {
                             Logger.Info("Server data files have been updated - reloading...");
                             // Trigger reload of affected data
-                            _ = BackgroundDataLoader.ReloadDataAsync();
+                            _ = ReloadDataAsync();
                         });
                         
                         Logger.Info("DataWatcher started successfully");

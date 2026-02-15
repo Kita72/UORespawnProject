@@ -1,0 +1,996 @@
+@using Microsoft.JSInterop
+@using Microsoft.Maui.Graphics
+@using System.Text.Json
+@using UORespawnApp.Scripts.Utilities
+@using UORespawnApp.Scripts.Entities
+@using UORespawnApp.Scripts.DTO.Enums
+@using UORespawnApp.Scripts.Services
+@inject IJSRuntime JS
+@inject ViewService ViewService
+@inject ToastService ToastService
+@implements IDisposable
+
+<div class="container-fluid p-3">
+    <div class="row">
+        <div class="col-lg-9">
+            <div class="alert alert-dark mb-2 d-flex justify-content-between align-items-center" style="width:800px;">
+                <div>
+                    <strong>@MapUtility.GetMapName(ViewService.CurrentMapId)</strong> | Size: @imageDim | Mouse: (@mouseWorldX, @mouseWorldY)
+                </div>
+                <button class="btn btn-sm @(zoomLevel == 2.0 ? "btn-primary" : "btn-outline-primary")" @onclick="ToggleZoom" title="Toggle Zoom (1x / 2x)">
+                    <span class="bi bi-zoom-@(zoomLevel == 2.0 ? "in" : "out")"></span> @(zoomLevel == 1.0 ? "1x" : "2x")
+                </button>
+            </div>
+            <div style="position:relative; overflow:hidden; width:800px; height:600px; background:#1a1a1a; border:1px solid #333;" 
+                 tabindex="0" 
+                 @onkeydown="OnKeyDown"
+                 @onkeyup="OnKeyUp"
+                 @onmouseenter="OnMapMouseEnter"
+                 @ref="mapContainerRef">
+                <img id="regionMapImg" src="@imageSrc" 
+                     style="position:absolute; left:0; top:0; image-rendering:pixelated; transform-origin: top left; transform: scale(@(zoomLevel.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)));"
+                     @onload="OnImageLoaded" />
+                <canvas id="regionMapCanvas" width="800" height="600"
+                        style="position:absolute; top:0; left:0; cursor:pointer;"
+                        @onmousedown="OnMouseDown"
+                        @onmousemove="OnMouseMove"
+                        @onmouseup="OnMouseUp"
+                        @onmouseleave="OnMouseLeave"
+                        @oncontextmenu:preventDefault />
+            </div>
+            <div class="card mt-2 shadow-sm" style="width:800px;">
+                <div class="card-body py-2">
+                    <small class="text-muted">
+                        <strong>Controls:</strong> Left-Click Region = Select | Right-Drag = Pan Map | Arrow Keys/WASD = Pan Map
+                    </small>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 right-column-container" style="padding-left:15px;">
+            <!-- Mini Map - Collapsible -->
+            <div class="card shadow-sm mb-3 map-card">
+                <div class="card-header text-center d-flex justify-content-between align-items-center">
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="ResetView" title="Reset View & Zoom" style="width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center;">
+                        <span class="bi bi-arrow-counterclockwise"></span>
+                    </button>
+                    <strong>Mini Map</strong>
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="ToggleMiniMap" title="@(showMiniMap ? "Collapse Mini Map" : "Expand Mini Map")" style="width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center;">
+                        <span class="bi @(showMiniMap ? "bi-list" : "bi-chevron-down")"></span>
+                    </button>
+                </div>
+                @if (showMiniMap)
+                {
+                    <div class="card-body p-2 minimap-body" @key="@("minimap-body")">
+                        <canvas id="regionMiniMapCanvas" width="250" height="188"
+                                style="cursor:pointer; border:1px solid #333; display:block; image-rendering:pixelated; width: 100%; height: auto;"
+                                @onclick="OnMiniMapClick" />
+                    </div>
+                }
+            </div>
+            
+            <!-- Region Spawn List - Flex to fill remaining space -->
+            <div class="card shadow-sm map-card spawn-list-container">
+                <div class="card-header text-center spawn-list-header">
+                    <strong>Regions</strong>
+                    <strong>@GetRegionCount()</strong>
+                </div>
+                <div class="card-body p-2 spawn-list-body">
+                    @{
+                        var regions = GetRegionsForCurrentMap();
+                    }
+                    @if (regions.Any())
+                    {
+                        @foreach (var region in regions.OrderBy(r => r.Name))
+                        {
+                            var entity = GetRegionEntity(region.Name);
+                            var isSelected = selectedRegion != null && selectedRegion.Name == region.Name;
+                            
+                            <div class="spawn-item @(isSelected ? "selected" : "")" @onclick="() => SelectRegion(region)">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <div class="flex-grow-1">
+                                        <strong title="@region.Name">@region.Name</strong>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        @if (entity != null && entity.GetTotalSpawnCount() > 0)
+                                        {
+                                            <span class="badge bg-warning text-dark" title="Total spawns: @entity.GetTotalSpawnCount()">@entity.GetTotalSpawnCount()</span>
+                                        }
+                                        @if (entity != null)
+                                        {
+                                            <button class="btn btn-warning btn-sm" @onclick="() => ClearRegionSpawns(entity)" @onclick:stopPropagation="true" title="Clear All Spawns">
+                                                <span class="bi bi-arrow-clockwise"></span>
+                                            </button>
+                                        }
+                                    </div>
+                                </div>
+                                
+                                @if (isSelected && entity != null)
+                                {
+                                    <div class="spawn-controls">
+                                        <!-- 6 Frequency Buttons in 2x3 Grid -->
+                                        <div class="row g-2 mb-2">
+                                            <div class="col-4">
+                                                <button class="btn btn-sm btn-primary w-100" style="border: 2px solid;" @onclick="() => OpenCategoryModal(entity, Frequency.Water)" @onclick:stopPropagation="true" title="Water (@((Settings.WaterChance * 100).ToString("0"))% chance)">
+                                                    <i class="bi bi-droplet-fill frequency-icon frequency-icon-water"></i>@entity.WaterSpawns.Count
+                                                </button>
+                                            </div>
+                                            <div class="col-4">
+                                                <button class="btn btn-sm btn-primary w-100" style="border: 2px solid;" @onclick="() => OpenCategoryModal(entity, Frequency.Weather)" @onclick:stopPropagation="true" title="Weather (@((Settings.WeatherChance * 100).ToString("0"))% chance)">
+                                                    <i class="bi bi-cloud-lightning-rain-fill frequency-icon frequency-icon-weather"></i>@entity.WeatherSpawns.Count
+                                                </button>
+                                            </div>
+                                            <div class="col-4">
+                                                <button class="btn btn-sm btn-primary w-100" style="border: 2px solid;" @onclick="() => OpenCategoryModal(entity, Frequency.Timed)" @onclick:stopPropagation="true" title="Timed (@((Settings.TimedChance * 100).ToString("0"))% chance)">
+                                                    <i class="bi bi-clock-fill frequency-icon frequency-icon-timed"></i>@entity.TimedSpawns.Count
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="row g-2 mb-2">
+                                            <div class="col-4">
+                                                <button class="btn btn-sm btn-secondary w-100" style="border: 2px solid white; color: white;" @onclick="() => OpenCategoryModal(entity, Frequency.Common)" @onclick:stopPropagation="true" title="Common (@((Settings.CommonChance * 100).ToString("0"))% chance)">
+                                                    <i class="bi bi-people-fill frequency-icon frequency-icon-common"></i>@entity.CommonSpawns.Count
+                                                </button>
+                                            </div>
+                                            <div class="col-4">
+                                                <button class="btn btn-sm btn-success w-100" style="border: 2px solid white; color: white;" @onclick="() => OpenCategoryModal(entity, Frequency.UnCommon)" @onclick:stopPropagation="true" title="Uncommon (@((Settings.UnCommonChance * 100).ToString("0"))% chance)">
+                                                    <i class="bi bi-person-fill frequency-icon frequency-icon-uncommon"></i>@entity.UncommonSpawns.Count
+                                                </button>
+                                            </div>
+                                            <div class="col-4">
+                                                <button class="btn btn-sm btn-danger w-100" style="border: 2px solid white; color: white;" @onclick="() => OpenCategoryModal(entity, Frequency.Rare)" @onclick:stopPropagation="true" title="Rare (@((Settings.RareChance * 100).ToString("0"))% chance)">
+                                                    <i class="bi bi-star-fill frequency-icon frequency-icon-rare"></i>@entity.RareSpawns.Count
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <!-- Trigger Dropdowns -->
+                                        <div class="row g-2 mb-1">
+                                            <div class="col-6">
+                                                <label class="form-label mb-1 small text-center d-block">Weather Trigger</label>
+                                                <select class="form-select form-select-sm" 
+                                                        @bind="entity.WeatherSpawn" 
+                                                        @bind:after="() => SaveCurrentRegion(entity)"
+                                                        @onclick:stopPropagation="true"
+                                                        disabled="@(entity.WeatherSpawns.Count == 0)">
+                                                    @if (entity.WeatherSpawns.Count == 0)
+                                                    {
+                                                        <option value="@WeatherTypes.None">None</option>
+                                                    }
+                                                    else
+                                                    {
+                                                        @foreach (var weather in Enum.GetValues<WeatherTypes>().Where(w => w != WeatherTypes.None))
+                                                        {
+                                                            <option value="@weather">@weather.ToString()</option>
+                                                        }
+                                                    }
+                                                </select>
+                                            </div>
+                                            <div class="col-6">
+                                                <label class="form-label mb-1 small text-center d-block">Timed Trigger</label>
+                                                <select class="form-select form-select-sm"
+                                                        @bind="entity.TimedSpawn" 
+                                                        @bind:after="() => SaveCurrentRegion(entity)"
+                                                        @onclick:stopPropagation="true"
+                                                        disabled="@(entity.TimedSpawns.Count == 0)">
+                                                    @if (entity.TimedSpawns.Count == 0)
+                                                    {
+                                                        <option value="@TimeNames.None">None</option>
+                                                    }
+                                                    else
+                                                    {
+                                                        @foreach (var time in Enum.GetValues<TimeNames>().Where(t => t != TimeNames.None))
+                                                        {
+                                                            <option value="@time">@time.ToString().Replace("_", " ")</option>
+                                                        }
+                                                    }
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <!-- Footer Message -->
+                                        @if (entity.WeatherSpawns.Count == 0 || entity.TimedSpawns.Count == 0)
+                                        {
+                                            <div class="row g-2 mb-2">
+                                                <div class="col-12">
+                                                    <small class="text-muted fst-italic">* Add Spawn to Open Triggers</small>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="text-center text-muted py-3">
+                            <small>No regions loaded for this map</small>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<SpawnCategoryModal IsVisible="@showModal"
+                    CategoryName="@GetFrequencyName()"
+                    SpawnTypeName="Spawns"
+                    SourceListName="Bestiary"
+                    CurrentSpawns="@currentCategorySpawns"
+                    SourceList="@(BestiarySpawnUtility.BestiaryNameList ?? new List<string>())"
+                    OnClose="@CloseModal"
+                    OnSave="@SaveModal" />
+
+@code {
+    private string imageSrc = "";
+    private string imageDim = "Loading...";
+    private double panX = 0;
+    private double panY = 0;
+    private int mouseWorldX = 0;
+    private int mouseWorldY = 0;
+    
+    private bool isPanning = false;
+    
+    private int imgWidth = 0;
+    private int imgHeight = 0;
+    
+    private ElementReference mapContainerRef;
+    
+    // Zoom level (1.0 = actual size, 2.0 = 2x zoomed in)
+    private double zoomLevel = 1.0;
+    
+    // Store last position AND zoom for each map (static so it persists across component instances)
+    private static Dictionary<int, (double panX, double panY, double zoom)> mapPositions = new();
+    
+    // Track which map we're currently viewing
+    private int currentMapTracked = 0;
+    
+    // Mini map collapse
+    private bool showMiniMap = true;
+    
+    // Region selection
+    private RegionInfo? selectedRegion = null;
+    
+    // Modal state
+    private bool showModal = false;
+    private RegionSpawnEntity? currentEntity = null;
+    private List<string> currentCategorySpawns = new();
+    private Frequency currentFrequency = Frequency.Common;
+    
+    protected override void OnInitialized()
+    {
+        imageSrc = Utility.GetMapImagePath();
+
+        if (string.IsNullOrEmpty(imageSrc))
+        {
+            // If no map image available, leave empty - GetMapImagePath logs the error
+            Logger.Warning("No map image available for current map");
+        }
+
+        if (Utility.SESSION != null)
+        {
+            currentMapTracked = Utility.SESSION.Current_Map;
+        }
+
+        ViewService.OnViewChanged += OnViewChanged;
+    }
+    
+    private void OnViewChanged()
+    {
+        // Save current position AND zoom for the OLD map (the one we're leaving)
+        if (imgWidth > 0)
+        {
+            mapPositions[currentMapTracked] = (panX, panY, zoomLevel);
+            Logger.Info($"Saved position and zoom for map {currentMapTracked}: ({panX:F0}, {panY:F0}) @ {zoomLevel}x");
+        }
+
+        // Update to track the NEW map
+        if (Utility.SESSION != null)
+        {
+            currentMapTracked = Utility.SESSION.Current_Map;
+            Logger.Info($"Switching to map: {currentMapTracked}");
+        }
+
+        // Restore position AND zoom for the NEW map IMMEDIATELY so rendering is correct from the start
+        if (mapPositions.TryGetValue(currentMapTracked, out var savedPos))
+        {
+            panX = savedPos.panX;
+            panY = savedPos.panY;
+            zoomLevel = savedPos.zoom;
+            Logger.Info($"Pre-loaded position and zoom for map {currentMapTracked}: ({panX:F0}, {panY:F0}) @ {zoomLevel}x");
+        }
+        else
+        {
+            panX = 0;
+            panY = 0;
+            zoomLevel = 1.0; // Default to 1x zoom for new maps
+            Logger.Info($"New map {currentMapTracked}, defaulting to (0, 0) @ 1x zoom");
+        }
+
+        imageSrc = Utility.GetMapImagePath();
+        selectedRegion = null;
+        mouseWorldX = 0;
+        mouseWorldY = 0;
+        imgWidth = 0;
+        imgHeight = 0;
+        imageDim = "Loading...";
+        InvokeAsync(StateHasChanged);
+    }
+    
+    private async Task OnImageLoaded()
+    {
+        await Task.Delay(100);
+        try
+        {
+            var result = await JS.InvokeAsync<string>("eval", @"
+                (function() {
+                    const img = document.getElementById('regionMapImg');
+                    if (img && img.naturalWidth > 0) {
+                        return img.naturalWidth + ',' + img.naturalHeight;
+                    }
+                    return '';
+                })()
+            ");
+            
+            if (!string.IsNullOrEmpty(result))
+            {
+                var parts = result.Split(',');
+                if (int.TryParse(parts[0], out int w) && int.TryParse(parts[1], out int h))
+                {
+                    imgWidth = w;
+                    imgHeight = h;
+                    imageDim = $"{w}x{h}";
+                    
+                    // Restore saved position AND zoom for THIS map
+                    if (mapPositions.TryGetValue(currentMapTracked, out var savedPos))
+                    {
+                        panX = savedPos.panX;
+                        panY = savedPos.panY;
+                        zoomLevel = savedPos.zoom;
+                        Logger.Info($"Restored position and zoom for map {currentMapTracked}: ({panX:F0}, {panY:F0}) @ {zoomLevel}x");
+                    }
+                    else
+                    {
+                        panX = 0;
+                        panY = 0;
+                        zoomLevel = 1.0;
+                        Logger.Info($"First visit to map {currentMapTracked}, starting at (0, 0) @ 1x");
+                    }
+
+                    // Initialize map module with custom canvas/img IDs
+                    await JS.InvokeVoidAsync("eval", $"window.mapModule.init({w}, {h}, 'regionMapCanvas', 'regionMapImg')");
+
+                    // Set zoom level BEFORE any coordinate calculations (BoxSpawn pattern)
+                    await JS.InvokeVoidAsync("eval", $"window.mapModule.setZoomLevel({zoomLevel.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)})");
+
+                    await InitializeMiniMap();
+
+                    // Apply pan position AFTER zoom is set (BoxSpawn pattern)
+                    await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
+
+                    await RenderRegions();
+                    
+                    StateHasChanged();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Image load error", ex);
+            imageDim = "Error loading image";
+        }
+    }
+    
+    private async Task InitializeMiniMap()
+    {
+        if (!showMiniMap) return;
+
+        try
+        {
+            await JS.InvokeVoidAsync("eval", $@"
+                (function() {{
+                    const miniCanvas = document.getElementById('regionMiniMapCanvas');
+                    const mainImg = document.getElementById('regionMapImg');
+                    if (!miniCanvas || !mainImg) return;
+
+                    const ctx = miniCanvas.getContext('2d');
+                    const canvasWidth = 250;
+                    const canvasHeight = 188;
+
+                    // Calculate aspect ratios
+                    const imageAspect = {imgWidth} / {imgHeight};
+                    const canvasAspect = canvasWidth / canvasHeight;
+
+                    let drawWidth, drawHeight, offsetX, offsetY;
+
+                    // Fit image to canvas while maintaining aspect ratio
+                    if (imageAspect > canvasAspect) {{
+                        // Image is wider - fit to width, letterbox top/bottom
+                        drawWidth = canvasWidth;
+                        drawHeight = canvasWidth / imageAspect;
+                        offsetX = 0;
+                        offsetY = (canvasHeight - drawHeight) / 2;
+                    }} else {{
+                        // Image is taller - fit to height, pillarbox left/right
+                        drawWidth = canvasHeight * imageAspect;
+                        drawHeight = canvasHeight;
+                        offsetX = (canvasWidth - drawWidth) / 2;
+                        offsetY = 0;
+                    }}
+
+                    // Store dimensions for click handling
+                    window.regionMiniMapDimensions = {{
+                        canvasWidth: canvasWidth,
+                        canvasHeight: canvasHeight,
+                        drawWidth: drawWidth,
+                        drawHeight: drawHeight,
+                        offsetX: offsetX,
+                        offsetY: offsetY,
+                        imageWidth: {imgWidth},
+                        imageHeight: {imgHeight}
+                    }};
+
+                    // Clear and draw with black background
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+                    // Draw the map centered and aspect-ratio corrected
+                    ctx.drawImage(mainImg, 0, 0, {imgWidth}, {imgHeight}, offsetX, offsetY, drawWidth, drawHeight);
+
+                    console.log(`📐 Mini-map: {imgWidth}x{imgHeight} -> ${{drawWidth.toFixed(1)}}x${{drawHeight.toFixed(1)}} at (${{offsetX.toFixed(1)}}, ${{offsetY.toFixed(1)}})`);
+                }})()
+            ");
+
+            await UpdateMiniMapViewport();
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Mini map init error", ex);
+        }
+    }
+    
+    private async Task UpdateMiniMapViewport()
+    {
+        if (!showMiniMap) return;
+
+        try
+        {
+            // Calculate viewport rectangle on mini-map
+            // Viewport size depends on current zoom level
+            double viewportWidthWorld = 800.0 / zoomLevel;
+            double viewportHeightWorld = 600.0 / zoomLevel;
+
+            // Current viewport top-left in world coordinates
+            double viewportWorldX = -panX / zoomLevel;
+            double viewportWorldY = -panY / zoomLevel;
+
+            await JS.InvokeVoidAsync("eval", $@"
+                (function() {{
+                    const miniCanvas = document.getElementById('regionMiniMapCanvas');
+                    const mainImg = document.getElementById('regionMapImg');
+                    if (!miniCanvas || !mainImg || !window.regionMiniMapDimensions) return;
+
+                    const ctx = miniCanvas.getContext('2d');
+                    const dims = window.regionMiniMapDimensions;
+
+                    // Clear canvas with black background
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(0, 0, dims.canvasWidth, dims.canvasHeight);
+
+                    // Redraw the map centered with aspect ratio
+                    ctx.drawImage(mainImg, 0, 0, dims.imageWidth, dims.imageHeight, 
+                                  dims.offsetX, dims.offsetY, dims.drawWidth, dims.drawHeight);
+
+                    // Calculate viewport position on mini-map
+                    const miniMapScaleX = dims.drawWidth / dims.imageWidth;
+                    const miniMapScaleY = dims.drawHeight / dims.imageHeight;
+
+                    const miniX = dims.offsetX + ({viewportWorldX} * miniMapScaleX);
+                    const miniY = dims.offsetY + ({viewportWorldY} * miniMapScaleY);
+                    const miniW = {viewportWidthWorld} * miniMapScaleX;
+                    const miniH = {viewportHeightWorld} * miniMapScaleY;
+
+                    // Draw viewport rectangle
+                    ctx.strokeStyle = '#00FF00';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(miniX, miniY, miniW, miniH);
+
+                    console.log(`🔍 Viewport: (${{miniX.toFixed(1)}}, ${{miniY.toFixed(1)}}) ${{miniW.toFixed(1)}}x${{miniH.toFixed(1)}}`);
+                }})()
+            ");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Update mini map viewport error", ex);
+        }
+    }
+    
+    private async Task RenderRegions()
+    {
+        try
+        {
+            var regions = GetRegionsForCurrentMap();
+            Logger.Info($"🗺️ RenderRegions called for map {ViewService.CurrentMapId}: Found {regions.Count} regions");
+
+            if (regions.Count == 0)
+            {
+                Logger.Warning($"⚠️ No regions found for map {ViewService.CurrentMapId}");
+                return;
+            }
+
+            var screenRegions = regions.Select(r => new
+            {
+                name = r.Name,
+                rectangles = r.Rectangles.Select(rect => new
+                {
+                    x = rect.X,
+                    y = rect.Y,
+                    width = rect.Width,
+                    height = rect.Height
+                }).ToList()
+            }).ToList();
+
+            var selectedName = selectedRegion?.Name ?? "";
+            var hoveredName = "";
+
+            Logger.Info($"📦 Serializing {screenRegions.Count} regions, selected='{selectedName}'");
+
+            var options = new JsonSerializerOptions 
+            { 
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                WriteIndented = false 
+            };
+            var regionsJson = JsonSerializer.Serialize(screenRegions, options);
+            var selectedNameJson = JsonSerializer.Serialize(selectedName);
+            var hoveredNameJson = JsonSerializer.Serialize(hoveredName);
+
+            Logger.Info($"📤 Calling JavaScript showRegions with JSON (length: {regionsJson.Length})");
+            await JS.InvokeVoidAsync("eval", $"window.mapModule.showRegions({regionsJson}, {selectedNameJson}, {hoveredNameJson})" );
+            Logger.Info("✅ RenderRegions completed successfully");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("❌ Error rendering regions", ex);
+        }
+    }
+    
+    // ===================== MAP CONTROLS =====================
+    
+    private async Task ToggleZoom()
+    {
+        // Calculate the current center of the viewport in world coordinates
+        // This is what we want to keep centered after zoom changes
+        double centerWorldX = (-panX / zoomLevel) + (800.0 / 2.0 / zoomLevel);
+        double centerWorldY = (-panY / zoomLevel) + (600.0 / 2.0 / zoomLevel);
+
+        Logger.Info($"Current center before zoom: world ({centerWorldX:F0}, {centerWorldY:F0}) at {zoomLevel}x");
+
+        // Toggle between 1x (actual size) and 2x (zoomed in)
+        double oldZoom = zoomLevel;
+        zoomLevel = zoomLevel == 2.0 ? 1.0 : 2.0;
+
+        // Recalculate pan to keep the same world position centered
+        // Formula: panX = -(centerWorldX * newZoom) + (viewport_width / 2)
+        panX = -(centerWorldX * zoomLevel) + 400; // 800/2
+        panY = -(centerWorldY * zoomLevel) + 300; // 600/2
+
+        Logger.Info($"New center after zoom: world ({centerWorldX:F0}, {centerWorldY:F0}) at {zoomLevel}x, pan=({panX:F0}, {panY:F0})");
+
+        // Update JavaScript zoom level immediately
+        await JS.InvokeVoidAsync("eval", $"window.mapModule.setZoomLevel({zoomLevel.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)})");
+
+        // Apply the new pan position
+        await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
+
+        // Save the new zoom level and position for current map
+        mapPositions[currentMapTracked] = (panX, panY, zoomLevel);
+
+        // Redraw regions to ensure they're correctly positioned
+        await RenderRegions();
+
+        // Update mini-map viewport with new zoom
+        await UpdateMiniMapViewport();
+
+        StateHasChanged();
+    }
+    
+    private async Task ResetView()
+    {
+        panX = 0;
+        panY = 0;
+        zoomLevel = 1.0;
+        await JS.InvokeVoidAsync("eval", $"window.mapModule.setZoomLevel(1.0)");
+        await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan(0, 0)");
+        await UpdateMiniMapViewport();
+        await RenderRegions();
+        StateHasChanged();
+    }
+    
+    private async Task ToggleMiniMap()
+    {
+        showMiniMap = !showMiniMap;
+        StateHasChanged();
+
+        // Redraw mini map when expanding
+        if (showMiniMap && imgWidth > 0 && imgHeight > 0)
+        {
+            await Task.Delay(50); // Small delay to ensure DOM is ready
+            await InitializeMiniMap();
+        }
+    }
+    
+    // ===================== MOUSE EVENTS =====================
+    
+    private async Task OnMouseDown(MouseEventArgs e)
+    {
+        if (e.Button == 0) // Left-click for region selection
+        {
+            var coords = await JS.InvokeAsync<int[]>("eval", $"window.mapModule.getWorldCoordinates({e.OffsetX}, {e.OffsetY})");
+            if (coords.Length == 2)
+            {
+                mouseWorldX = coords[0];
+                mouseWorldY = coords[1];
+
+                var clickedRegion = RegionDataUtility.FindRegionAt(ViewService.CurrentMapId, mouseWorldX, mouseWorldY);
+                if (clickedRegion != null)
+                {
+                    await SelectRegion(clickedRegion);
+                }
+            }
+        }
+        else if (e.Button == 2) // Right-click for panning
+        {
+            isPanning = true;
+            await JS.InvokeVoidAsync("eval", $"window.mapModule.startPanning({e.OffsetX}, {e.OffsetY})");
+        }
+    }
+    
+    private async Task OnMouseMove(MouseEventArgs e)
+    {
+        var coords = await JS.InvokeAsync<int[]>("eval", $"window.mapModule.getWorldCoordinates({e.OffsetX}, {e.OffsetY})");
+        if (coords.Length == 2)
+        {
+            mouseWorldX = coords[0];
+            mouseWorldY = coords[1];
+            StateHasChanged();
+        }
+        
+        if (isPanning)
+        {
+            await JS.InvokeVoidAsync("eval", $"window.mapModule.updatePanning({e.OffsetX}, {e.OffsetY})");
+            
+            // Get updated pan position
+            var panCoords = await JS.InvokeAsync<double[]>("eval", "window.mapModule.getPan()");
+            if (panCoords.Length == 2)
+            {
+                panX = panCoords[0];
+                panY = panCoords[1];
+            }
+            
+            await UpdateMiniMapViewport();
+        }
+    }
+    
+    private void OnMouseUp(MouseEventArgs e)
+    {
+        if (e.Button == 2)
+        {
+            isPanning = false;
+        }
+    }
+    
+    private void OnMouseLeave(MouseEventArgs e)
+    {
+        isPanning = false;
+    }
+    
+    private async Task OnMiniMapClick(MouseEventArgs e)
+    {
+        var clickX = e.OffsetX;
+        var clickY = e.OffsetY;
+        
+        var worldX = (clickX / 250.0) * imgWidth;
+        var worldY = (clickY / 188.0) * imgHeight;
+        
+        panX = -(worldX * zoomLevel) + 400;
+        panY = -(worldY * zoomLevel) + 300;
+        
+        await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
+        await UpdateMiniMapViewport();
+        await RenderRegions();
+        StateHasChanged();
+    }
+    
+    // ===================== KEYBOARD EVENTS =====================
+    
+    private void OnMapMouseEnter(MouseEventArgs e)
+    {
+        mapContainerRef.FocusAsync();
+    }
+    
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        // Check if it's a panning key (WASD or arrows)
+        var key = e.Key.ToLower();
+        if (key == "w" || key == "a" || key == "s" || key == "d" ||
+            key == "arrowup" || key == "arrowdown" || key == "arrowleft" || key == "arrowright")
+        {
+            // Add key to active set and start smooth animation
+            await JS.InvokeVoidAsync("eval", $"window.mapModule.addKey('{key}')");
+        }
+    }
+
+    private async Task OnKeyUp(KeyboardEventArgs e)
+    {
+        // Remove key from active set
+        var key = e.Key.ToLower();
+        await JS.InvokeVoidAsync("eval", $"window.mapModule.removeKey('{key}')");
+
+        // Sync pan position from JavaScript back to C#
+        try
+        {
+            var result = await JS.InvokeAsync<string>("eval", "JSON.stringify(window.mapModule.getPanPosition())");
+            if (!string.IsNullOrEmpty(result))
+            {
+                var pos = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, double>>(result);
+                if (pos != null)
+                {
+                    panX = pos["x"];
+                    panY = pos["y"];
+
+                    // Save the new position for the current map (preserve zoom)
+                    mapPositions[currentMapTracked] = (panX, panY, zoomLevel);
+
+                    await UpdateMiniMapViewport();
+                    StateHasChanged();
+                }
+            }
+        }
+        catch { }
+    }
+    
+    // ===================== REGION DATA =====================
+    
+    private List<RegionInfo> GetRegionsForCurrentMap()
+    {
+        return RegionDataUtility.GetRegionsForMap(ViewService.CurrentMapId);
+    }
+    
+    private int GetRegionCount()
+    {
+        return GetRegionsForCurrentMap().Count;
+    }
+    
+    private RegionSpawnEntity? GetRegionEntity(string regionName)
+    {
+        if (!Utility.RegionSpawns.TryGetValue(ViewService.CurrentMapId, out var list))
+            return null;
+        
+        return list.FirstOrDefault(r => r.Name.Equals(regionName, StringComparison.OrdinalIgnoreCase));
+    }
+    
+    private async Task SelectRegion(RegionInfo region)
+    {
+        selectedRegion = region;
+
+        if (!Utility.RegionSpawns.TryGetValue(ViewService.CurrentMapId, out var list))
+        {
+            list = new List<RegionSpawnEntity>();
+            Utility.RegionSpawns[ViewService.CurrentMapId] = list;
+        }
+
+        var existing = list.FirstOrDefault(r => r.Name.Equals(region.Name, StringComparison.OrdinalIgnoreCase));
+        if (existing != null)
+        {
+            currentEntity = existing;
+        }
+        else
+        {
+            var nextId = list.Count > 0 ? list.Max(x => x.Id) + 1 : 1;
+            currentEntity = new RegionSpawnEntity
+            {
+                Id = nextId,
+                Name = region.Name,
+                MapId = ViewService.CurrentMapId,
+                RegionBounds = region.Rectangles.ToList()
+            };
+            list.Add(currentEntity);
+        }
+
+        // Render regions to highlight selection, then jump to location
+        await RenderRegions();
+        await JumpToRegion(region);
+
+        // Trigger UI update to expand the region card
+        StateHasChanged();
+
+        // Wait for DOM update, then scroll to the card
+        await Task.Delay(150);
+        await ScrollToSelectedRegion();
+    }
+
+    private async Task JumpToRegion(RegionInfo region)
+    {
+        try
+        {
+            // Calculate the center of the first rectangle (main region area)
+            if (region.Rectangles.Count == 0) return;
+
+            var firstRect = region.Rectangles[0];
+            double centerX = firstRect.X + (firstRect.Width / 2.0);
+            double centerY = firstRect.Y + (firstRect.Height / 2.0);
+
+            // Center the viewport on this position
+            // Account for current zoom level and viewport size
+            double newPanX = -(centerX * zoomLevel) + 400; // Center horizontally (800/2)
+            double newPanY = -(centerY * zoomLevel) + 300; // Center vertically (600/2)
+
+            panX = newPanX;
+            panY = newPanY;
+
+            // Save the new position for the current map (preserve zoom)
+            mapPositions[currentMapTracked] = (panX, panY, zoomLevel);
+
+            await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
+            await UpdateMiniMapViewport();
+
+            Logger.Info($"Jumped to region '{region.Name}' at ({centerX:F0}, {centerY:F0})");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"Error jumping to region '{region.Name}'", ex);
+        }
+    }
+
+    private async Task ScrollToSelectedRegion()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("eval", @"
+                (function() {
+                    const selected = document.querySelector('.spawn-item.selected');
+                    if (selected) {
+                        selected.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                })()
+            ");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Scroll to region error", ex);
+        }
+    }
+
+    private async Task ClearRegionSpawns(RegionSpawnEntity entity)
+    {
+        // Clear all spawn lists but keep the region entity (regions are static server data)
+        entity.WaterSpawns.Clear();
+        entity.WeatherSpawns.Clear();
+        entity.TimedSpawns.Clear();
+        entity.CommonSpawns.Clear();
+        entity.UncommonSpawns.Clear();
+        entity.RareSpawns.Clear();
+
+        // Reset triggers
+        entity.WeatherSpawn = WeatherTypes.None;
+        entity.TimedSpawn = TimeNames.None;
+
+        // Auto-save region spawn data
+        Utility.SaveRegionSpawnData();
+        Logger.Info($"Cleared all spawns for region '{entity.Name}' and auto-saved");
+
+        // Update UI to reflect empty spawn counts
+        StateHasChanged();
+    }
+
+    // ===================== MODAL HANDLING =====================
+    
+    private void OpenCategoryModal(RegionSpawnEntity entity, Frequency frequency)
+    {
+        currentEntity = entity;
+        currentFrequency = frequency;
+        
+        currentCategorySpawns = frequency switch
+        {
+            Frequency.Water => new List<string>(entity.WaterSpawns),
+            Frequency.Weather => new List<string>(entity.WeatherSpawns),
+            Frequency.Timed => new List<string>(entity.TimedSpawns),
+            Frequency.Common => new List<string>(entity.CommonSpawns),
+            Frequency.UnCommon => new List<string>(entity.UncommonSpawns),
+            Frequency.Rare => new List<string>(entity.RareSpawns),
+            _ => new List<string>()
+        };
+        
+        showModal = true;
+        StateHasChanged();
+    }
+    
+    private void CloseModal()
+    {
+        showModal = false;
+        StateHasChanged();
+    }
+    
+    private void SaveModal()
+    {
+        if (currentEntity == null) return;
+        
+        var updatedList = new List<string>(currentCategorySpawns);
+        
+        switch (currentFrequency)
+        {
+            case Frequency.Water:
+                currentEntity.WaterSpawns = updatedList;
+                break;
+            case Frequency.Weather:
+                currentEntity.WeatherSpawns = updatedList;
+                if (updatedList.Count > 0 && currentEntity.WeatherSpawn == WeatherTypes.None)
+                {
+                    currentEntity.WeatherSpawn = WeatherTypes.Rain;
+                }
+                if (updatedList.Count == 0)
+                {
+                    currentEntity.WeatherSpawn = WeatherTypes.None;
+                }
+                break;
+            case Frequency.Timed:
+                currentEntity.TimedSpawns = updatedList;
+                if (updatedList.Count > 0 && currentEntity.TimedSpawn == TimeNames.None)
+                {
+                    currentEntity.TimedSpawn = TimeNames.Witching_Hour;
+                }
+                if (updatedList.Count == 0)
+                {
+                    currentEntity.TimedSpawn = TimeNames.None;
+                }
+                break;
+            case Frequency.Common:
+                currentEntity.CommonSpawns = updatedList;
+                break;
+            case Frequency.UnCommon:
+                currentEntity.UncommonSpawns = updatedList;
+                break;
+            case Frequency.Rare:
+                currentEntity.RareSpawns = updatedList;
+                break;
+        }
+        
+        SaveCurrentRegion(currentEntity);
+        CloseModal();
+        StateHasChanged();
+    }
+    
+    private void SaveCurrentRegion(RegionSpawnEntity entity)
+    {
+        try
+        {
+            Utility.SaveRegionSpawnData();
+            Logger.Info($"Auto-saved region spawn data for {entity.Name}");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Failed to save region spawn data", ex);
+            ToastService.ShowError("Failed to save region spawn data");
+        }
+    }
+    
+    private string GetFrequencyName()
+    {
+        return currentFrequency switch
+        {
+            Frequency.Water => "💧 Water",
+            Frequency.Weather => "⛈️ Weather",
+            Frequency.Timed => "🕐 Timed",
+            Frequency.Common => "👥 Common",
+            Frequency.UnCommon => "👤 Uncommon",
+            Frequency.Rare => "⭐ Rare",
+            _ => "Spawns"
+        };
+    }
+    
+    public void Dispose()
+    {
+        ViewService.OnViewChanged -= OnViewChanged;
+    }
+}

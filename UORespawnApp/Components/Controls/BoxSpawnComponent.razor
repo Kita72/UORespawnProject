@@ -1,0 +1,1496 @@
+@using Microsoft.JSInterop
+@using Microsoft.Maui.Graphics
+@using System.Text.Json
+@using UORespawnApp.Scripts.Utilities
+@using UORespawnApp.Scripts.Entities
+@using UORespawnApp.Scripts.DTO.Enums
+@using UORespawnApp.Scripts.Services
+@inject IJSRuntime JS
+@inject ViewService ViewService
+@inject ToastService ToastService
+@implements IDisposable
+
+<div class="container-fluid p-3">
+    <div class="row">
+        <div class="col-lg-9">
+            <div class="alert alert-dark mb-2 d-flex justify-content-between align-items-center" style="width:800px;">
+                <div>
+                    <strong>@MapUtility.GetMapName(ViewService.CurrentMapId)</strong> | Size: @imageDim | Mouse: (@mouseWorldX, @mouseWorldY)
+                </div>
+                <button class="btn btn-sm @(zoomLevel == 2.0 ? "btn-primary" : "btn-outline-primary")" @onclick="ToggleZoom" title="Toggle Zoom (1x / 2x)">
+                    <span class="bi bi-zoom-@(zoomLevel == 2.0 ? "in" : "out")"></span> @(zoomLevel == 1.0 ? "1x" : "2x")
+                </button>
+            </div>
+            <div style="position:relative; overflow:hidden; width:800px; height:600px; background:#1a1a1a; border:1px solid #333;" 
+                 tabindex="0" 
+                 @onkeydown="OnKeyDown"
+                 @onkeyup="OnKeyUp"
+                 @onmouseenter="OnMapMouseEnter"
+                 @ref="mapContainerRef">
+                <img id="mapImg" src="@imageSrc" 
+                     style="position:absolute; left:0; top:0; image-rendering:pixelated; transform-origin: top left; transform: scale(@(zoomLevel.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)));"
+                     @onload="OnImageLoaded" />
+                <canvas id="mapCanvas" width="800" height="600"
+                        style="position:absolute; top:0; left:0; cursor:crosshair;"
+                        @onmousedown="OnMouseDown"
+                        @onmousemove="OnMouseMove"
+                        @onmouseup="OnMouseUp"
+                        @onmouseleave="OnMouseLeave"
+                        @oncontextmenu:preventDefault />
+            </div>
+            <div class="card mt-2 shadow-sm" style="width:800px;">
+                <div class="card-body py-2">
+                    <small class="text-muted">
+                        <strong>Controls:</strong> Left-Drag = Draw Spawn Box | Right-Drag = Pan Map | Arrow Keys/WASD = Pan Map
+                    </small>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 right-column-container" style="padding-left:15px;">
+            <!-- Mini Map - Collapsible -->
+            <div class="card shadow-sm mb-3 map-card">
+                <div class="card-header text-center d-flex justify-content-between align-items-center">
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="ResetView" title="Reset View & Zoom" style="width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center;">
+                        <span class="bi bi-arrow-counterclockwise"></span>
+                    </button>
+                    <strong>Mini Map</strong>
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="ToggleMiniMap" title="@(showMiniMap ? "Collapse Mini Map" : "Expand Mini Map")" style="width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center;">
+                        <span class="bi @(showMiniMap ? "bi-list" : "bi-chevron-down")"></span>
+                    </button>
+                </div>
+                @if (showMiniMap)
+                {
+                    <div class="card-body p-2 minimap-body" @key="@("minimap-body")">
+                        <canvas id="miniMapCanvas" width="250" height="188"
+                                style="cursor:pointer; border:1px solid #333; display:block; image-rendering:pixelated; width: 100%; height: auto;"
+                                @onclick="OnMiniMapClick" />
+                        <div class="d-flex gap-2 mt-2">
+                            <button class="btn btn-sm w-50 @(showXMLSpawners ? "btn-success" : "btn-danger")" 
+                                    @onclick="ToggleXMLSpawners" title="Toggle XML Spawners">
+                                <span class="bi bi-gear-fill"></span> XML
+                            </button>
+                            <button class="btn btn-sm w-50 @(showServerSpawns ? "btn-success" : "btn-danger")" 
+                                    @onclick="ToggleServerSpawns" title="Toggle Server Spawns">
+                                <span class="bi bi-bullseye"></span> Spawns
+                            </button>
+                        </div>
+                    </div>
+                }
+            </div>
+            
+            <!-- Map Spawn List - Flex to fill remaining space -->
+            <div class="card shadow-sm map-card spawn-list-container">
+                <div class="card-header text-center spawn-list-header">
+                    <strong>Map Spawn</strong>
+                    <input type="number" 
+                           class="spawn-search-input" 
+                           value="@GetDisplayedSpawnId()" 
+                           @oninput="HandleSpawnIdInput"
+                           min="1" 
+                           max="@GetSpawnCount()" 
+                           placeholder="@(GetSpawnCount() == 0 ? "" : "ID")" 
+                           title="Jump to spawn ID" />
+                    <strong>/ @GetSpawnCount()</strong>
+                </div>
+                <div class="card-body p-2 spawn-list-body">
+                    @if (GetSpawnList().Any())
+                    {
+                        @foreach (var spawn in GetSpawnList())
+                        {
+                            <div class="spawn-item @(selected == spawn ? "selected" : "")" @onclick="() => SelectSpawn(spawn)">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <strong>ID: @spawn.Position</strong>
+                                            <span class="badge @GetPriorityBadgeClass(spawn.Priority)" title="Priority of Spawn Box Placed">P@(spawn.Priority)</span>
+                                            @if (spawn.GetTotalSpawnCount() > 0)
+                                            {
+                                                <span class="badge bg-warning text-dark" title="Total spawns across all categories">@spawn.GetTotalSpawnCount() Total Spawns</span>
+                                            }
+                                        </div>
+                                        @if (selected == spawn)
+                                        {
+                                            <small class="d-block text-muted mt-1">
+                                                X:@spawn.SpawnBox.X Y:@spawn.SpawnBox.Y (@spawn.SpawnBox.Width x @spawn.SpawnBox.Height)
+                                            </small>
+                                        }
+                                    </div>
+                                    <button class="btn btn-danger btn-sm" @onclick="() => DeleteSpawn(spawn)" @onclick:stopPropagation="true" title="Delete">
+                                        <span class="bi bi-trash"></span>
+                                    </button>
+                                </div>
+                                @if (selected == spawn)
+                                {
+                                    <div class="spawn-controls">
+                                        <!-- 6 Spawn Category Buttons - 2 rows of 3 -->
+                                        <div class="row g-2 mb-2">
+                                            <div class="col-4">
+                                                <button class="btn btn-sm btn-primary w-100" style="border: 2px solid;" @onclick="() => OpenCategoryModal(spawn, Frequency.Water)" @onclick:stopPropagation="true" title="Water (@((Settings.WaterChance * 100).ToString("0"))% chance)">
+                                                    <i class="bi bi-droplet-fill frequency-icon frequency-icon-water"></i>@spawn.WaterSpawns.Count
+                                                </button>
+                                            </div>
+                                            <div class="col-4">
+                                                <button class="btn btn-sm btn-primary w-100" style="border: 2px solid;" @onclick="() => OpenCategoryModal(spawn, Frequency.Weather)" @onclick:stopPropagation="true" title="Weather (@((Settings.WeatherChance * 100).ToString("0"))% chance)">
+                                                    <i class="bi bi-cloud-lightning-rain-fill frequency-icon frequency-icon-weather"></i>@spawn.WeatherSpawns.Count
+                                                </button>
+                                            </div>
+                                            <div class="col-4">
+                                                <button class="btn btn-sm btn-primary w-100" style="border: 2px solid;" @onclick="() => OpenCategoryModal(spawn, Frequency.Timed)" @onclick:stopPropagation="true" title="Timed (@((Settings.TimedChance * 100).ToString("0"))% chance)">
+                                                    <i class="bi bi-clock-fill frequency-icon frequency-icon-timed"></i>@spawn.TimedSpawns.Count
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="row g-2 mb-2">
+                                            <div class="col-4">
+                                                <button class="btn btn-sm btn-secondary w-100" style="border: 2px solid white; color: white;" @onclick="() => OpenCategoryModal(spawn, Frequency.Common)" @onclick:stopPropagation="true" title="Common (@((Settings.CommonChance * 100).ToString("0"))% chance)">
+                                                    <i class="bi bi-people-fill frequency-icon frequency-icon-common"></i>@spawn.CommonSpawns.Count
+                                                </button>
+                                            </div>
+                                            <div class="col-4">
+                                                <button class="btn btn-sm btn-success w-100" style="border: 2px solid white; color: white;" @onclick="() => OpenCategoryModal(spawn, Frequency.UnCommon)" @onclick:stopPropagation="true" title="Uncommon (@((Settings.UnCommonChance * 100).ToString("0"))% chance)">
+                                                    <i class="bi bi-person-fill frequency-icon frequency-icon-uncommon"></i>@spawn.UncommonSpawns.Count
+                                                </button>
+                                            </div>
+                                            <div class="col-4">
+                                                <button class="btn btn-sm btn-danger w-100" style="border: 2px solid white; color: white;" @onclick="() => OpenCategoryModal(spawn, Frequency.Rare)" @onclick:stopPropagation="true" title="Rare (@((Settings.RareChance * 100).ToString("0"))% chance)">
+                                                    <i class="bi bi-star-fill frequency-icon frequency-icon-rare"></i>@spawn.RareSpawns.Count
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <!-- Weather and Timed Dropdowns -->
+                                        <div class="row g-2 mb-1">
+                                            <div class="col-6">
+                                                <label class="form-label mb-1 small text-center d-block">Weather Trigger</label>
+                                                <select class="form-select form-select-sm" 
+                                                        @bind="spawn.WeatherSpawn" 
+                                                        @bind:after="() => SaveAfterTriggerChange(spawn)" 
+                                                        @onclick:stopPropagation="true"
+                                                        disabled="@(spawn.WeatherSpawns.Count == 0)">
+                                                    @if (spawn.WeatherSpawns.Count == 0)
+                                                    {
+                                                        <option value="@WeatherTypes.None">None</option>
+                                                    }
+                                                    else
+                                                    {
+                                                        @foreach (var weather in Enum.GetValues<WeatherTypes>().Where(w => w != WeatherTypes.None))
+                                                        {
+                                                            <option value="@weather">@weather.ToString()</option>
+                                                        }
+                                                    }
+                                                </select>
+                                            </div>
+                                            <div class="col-6">
+                                                <label class="form-label mb-1 small text-center d-block">Timed Trigger</label>
+                                                <select class="form-select form-select-sm" 
+                                                        @bind="spawn.TimedSpawn" 
+                                                        @bind:after="() => SaveAfterTriggerChange(spawn)" 
+                                                        @onclick:stopPropagation="true"
+                                                        disabled="@(spawn.TimedSpawns.Count == 0)">
+                                                    @if (spawn.TimedSpawns.Count == 0)
+                                                    {
+                                                        <option value="@TimeNames.None">None</option>
+                                                    }
+                                                    else
+                                                    {
+                                                        @foreach (var time in Enum.GetValues<TimeNames>().Where(t => t != TimeNames.None))
+                                                        {
+                                                            <option value="@time">@time.ToString().Replace("_", " ")</option>
+                                                        }
+                                                    }
+                                                </select>
+                                            </div>
+                                        </div>
+                                        @if (spawn.WeatherSpawns.Count == 0 || spawn.TimedSpawns.Count == 0)
+                                        {
+                                            <div class="row g-2 mb-2">
+                                                <div class="col-12">
+                                                    <small class="text-muted fst-italic">* Add Spawn to Open Triggers</small>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="alert alert-secondary mb-0">
+                            <small>No spawn boxes created. Draw a box on the map to create one.</small>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Spawn Category Modal -->
+<SpawnCategoryModal IsVisible="@showCategoryModal"
+                    CategoryName="@currentCategory"
+                    SpawnTypeName="Spawns"
+                    SourceListName="Bestiary"
+                    CurrentSpawns="@currentCategorySpawns"
+                    SourceList="@(BestiarySpawnUtility.BestiaryNameList ?? new List<string>())"
+                    OnClose="@CloseCategoryModal"
+                    OnSave="@SaveCategoryModal" />
+
+@code {
+private string imageSrc = "";
+private string imageDim = "Loading...";
+private double panX = 0;
+private double panY = 0;
+private int mouseWorldX = 0;
+private int mouseWorldY = 0;
+private BoxSpawnEntity? selected = null;
+    
+private bool isDrawing = false;
+private bool isPanning = false;
+    
+private int imgWidth = 0;
+private int imgHeight = 0;
+
+private ElementReference mapContainerRef;
+
+// Zoom level (1.0 = actual size, 2.0 = 2x zoomed in)
+private double zoomLevel = 1.0;
+
+// Store last position AND zoom for each map (static so it persists across component instances)
+private static Dictionary<int, (double panX, double panY, double zoom)> mapPositions = new();
+
+// Track which map we're currently viewing
+private int currentMapTracked = 0; // Map0
+    
+// Category modal state
+private bool showCategoryModal = false;
+private string currentCategory = "Common";
+private List<string> currentCategorySpawns = new();
+private BoxSpawnEntity? editingSpawn = null;
+private Frequency editingFrequency = Frequency.Common;
+
+// XML Spawner toggle (static to persist across map changes)
+private static bool showXMLSpawners = false;
+
+// Server Spawn toggle (static to persist across map changes)
+private static bool showServerSpawns = false;
+
+// Mini map collapse
+private bool showMiniMap = true;
+
+// Spawn search ID
+private int? spawnSearchId = null;
+    
+    protected override void OnInitialized()
+    {
+        imageSrc = Utility.GetMapImagePath();
+
+        // Fallback to default map if path is empty
+        if (string.IsNullOrEmpty(imageSrc))
+        {
+            // If no map image available, leave empty - GetMapImagePath logs the error
+            Logger.Warning("No map image available for current map");
+        }
+
+        // Track the initial map
+        if (Utility.SESSION != null)
+        {
+            currentMapTracked = Utility.SESSION.Current_Map;
+        }
+
+        ViewService.OnMapChanged += HandleMapChanged;
+    }
+    
+    private void HandleMapChanged()
+    {
+        // Save current position AND zoom for the OLD map (the one we're leaving)
+        if (imgWidth > 0)
+        {
+            mapPositions[currentMapTracked] = (panX, panY, zoomLevel);
+            Logger.Info($"Saved position and zoom for {currentMapTracked}: ({panX:F0}, {panY:F0}) @ {zoomLevel}x");
+        }
+        
+        // Update to track the NEW map
+        if (Utility.SESSION != null)
+        {
+            currentMapTracked = Utility.SESSION.Current_Map;
+            Logger.Info($"Switching to map: {currentMapTracked}");
+        }
+        
+        // Restore position AND zoom for the NEW map IMMEDIATELY so rendering is correct from the start
+        if (mapPositions.TryGetValue(currentMapTracked, out var savedPos))
+        {
+            panX = savedPos.panX;
+            panY = savedPos.panY;
+            zoomLevel = savedPos.zoom;
+            Logger.Info($"Pre-loaded position and zoom for {currentMapTracked}: ({panX:F0}, {panY:F0}) @ {zoomLevel}x");
+        }
+        else
+        {
+            panX = 0;
+            panY = 0;
+            zoomLevel = 1.0; // Default to 1x zoom for new maps
+            Logger.Info($"New map {currentMapTracked}, defaulting to (0, 0) @ 1x zoom");
+        }
+        
+        imageSrc = Utility.GetMapImagePath();
+        selected = null;
+        mouseWorldX = 0;
+        mouseWorldY = 0;
+        imgWidth = 0;
+        imgHeight = 0;
+        imageDim = "Loading...";
+        spawnSearchId = null; // Reset spawn search when changing maps
+        
+        // Note: JavaScript will apply these values in OnImageLoaded after map loads
+        
+        StateHasChanged();
+    }
+    
+    private async Task OnImageLoaded()
+    {
+        await Task.Delay(100);
+        try
+        {
+            var result = await JS.InvokeAsync<string>("eval", @"
+                (function() {
+                    const img = document.getElementById('mapImg');
+                    if (img && img.naturalWidth > 0) {
+                        return img.naturalWidth + ',' + img.naturalHeight;
+                    }
+                    return '';
+                })()
+            ");
+            
+            if (!string.IsNullOrEmpty(result))
+            {
+                var parts = result.Split(',');
+                if (int.TryParse(parts[0], out int w) && int.TryParse(parts[1], out int h))
+                {
+                    imgWidth = w;
+                    imgHeight = h;
+                    imageDim = $"{w}x{h}";
+                    
+                    // Restore saved position AND zoom for THIS map (currentMapTracked)
+                    if (mapPositions.TryGetValue(currentMapTracked, out var savedPos))
+                    {
+                        panX = savedPos.panX;
+                        panY = savedPos.panY;
+                        zoomLevel = savedPos.zoom;
+                        Logger.Info($"Restored position and zoom for {currentMapTracked}: ({panX:F0}, {panY:F0}) @ {zoomLevel}x");
+                    }
+                    else
+                    {
+                        panX = 0;
+                        panY = 0;
+                        zoomLevel = 1.0; // Default to 1x zoom
+                        Logger.Info($"First visit to {currentMapTracked}, starting at (0, 0) @ 1x");
+                    }
+                    
+                    await JS.InvokeVoidAsync("eval", $"window.mapModule.init({w}, {h})");
+                    
+                    // Set the zoom level in JavaScript BEFORE any coordinate calculations
+                    await JS.InvokeVoidAsync("eval", $"window.mapModule.setZoomLevel({zoomLevel.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)})");
+                    
+                    await SyncSettingsToJavaScript();
+                    await InitializeMiniMap();
+                    
+                    // Apply the restored (or reset) pan position
+                    await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
+                    
+                    await Redraw();
+                    
+                    // Re-apply XML spawners if toggle is ON
+                    if (showXMLSpawners)
+                    {
+                        var xmlSpawners = XMLSpawnUtility.GetSpawnersForMap(ViewService.CurrentMapId);
+                        if (xmlSpawners.Count > 0)
+                        {
+                            var options = new System.Text.Json.JsonSerializerOptions 
+                            { 
+                                PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+                                WriteIndented = false 
+                            };
+                            var json = System.Text.Json.JsonSerializer.Serialize(xmlSpawners, options);
+                            await JS.InvokeVoidAsync("eval", $"window.mapModule.showXMLSpawners({json})");
+                            Logger.Info($"Re-applied XML spawners for {ViewService.CurrentMapId}: {xmlSpawners.Count} spawners");
+                        }
+                        await InvokeAsync(StateHasChanged); // Force UI update for button state
+                    }
+                    
+                    // Re-apply server spawns if toggle is ON
+                    if (showServerSpawns && MapDisplayUtility.HasSpawnData)
+                    {
+                        var spawnData = MapDisplayUtility.GetSpawnDataForMap(ViewService.CurrentMapId);
+                        if (spawnData.Count > 0)
+                        {
+                            var options = new System.Text.Json.JsonSerializerOptions 
+                            { 
+                                PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+                                WriteIndented = false 
+                            };
+                            var json = System.Text.Json.JsonSerializer.Serialize(spawnData, options);
+                            await JS.InvokeVoidAsync("eval", $"window.mapModule.showServerSpawns({json})");
+                            Logger.Info($"Re-applied server spawns for {ViewService.CurrentMapId}: {spawnData.Count} spawn points");
+                        }
+                        await InvokeAsync(StateHasChanged); // Force UI update for button state
+                    }
+                    
+                    StateHasChanged();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Image load error", ex);
+            imageDim = "Error loading image";
+        }
+    }
+    
+    private async Task InitializeMiniMap()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("eval", $@"
+                (function() {{
+                    const miniCanvas = document.getElementById('miniMapCanvas');
+                    const mainImg = document.getElementById('mapImg');
+                    if (!miniCanvas || !mainImg) return;
+                    
+                    const ctx = miniCanvas.getContext('2d');
+                    const canvasWidth = 250;
+                    const canvasHeight = 188;
+                    
+                    // Calculate aspect ratios
+                    const imageAspect = {imgWidth} / {imgHeight};
+                    const canvasAspect = canvasWidth / canvasHeight;
+                    
+                    let drawWidth, drawHeight, offsetX, offsetY;
+                    
+                    // Fit image to canvas while maintaining aspect ratio
+                    if (imageAspect > canvasAspect) {{
+                        // Image is wider - fit to width, letterbox top/bottom
+                        drawWidth = canvasWidth;
+                        drawHeight = canvasWidth / imageAspect;
+                        offsetX = 0;
+                        offsetY = (canvasHeight - drawHeight) / 2;
+                    }} else {{
+                        // Image is taller - fit to height, pillarbox left/right
+                        drawWidth = canvasHeight * imageAspect;
+                        drawHeight = canvasHeight;
+                        offsetX = (canvasWidth - drawWidth) / 2;
+                        offsetY = 0;
+                    }}
+                    
+                    // Store dimensions for click handling
+                    window.miniMapDimensions = {{
+                        canvasWidth: canvasWidth,
+                        canvasHeight: canvasHeight,
+                        drawWidth: drawWidth,
+                        drawHeight: drawHeight,
+                        offsetX: offsetX,
+                        offsetY: offsetY,
+                        imageWidth: {imgWidth},
+                        imageHeight: {imgHeight}
+                    }};
+                    
+                    // Clear and draw with black background
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+                    
+                    // Draw the map centered and aspect-ratio corrected
+                    ctx.drawImage(mainImg, 0, 0, {imgWidth}, {imgHeight}, offsetX, offsetY, drawWidth, drawHeight);
+                    
+                    console.log(`?? Mini-map: {imgWidth}x{imgHeight} -> ${{drawWidth.toFixed(1)}}x${{drawHeight.toFixed(1)}} at (${{offsetX.toFixed(1)}}, ${{offsetY.toFixed(1)}})`);
+                }})()
+            ");
+            
+            await UpdateMiniMapViewport();
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Mini-map init error", ex);
+        }
+    }
+    
+    private async Task SyncSettingsToJavaScript()
+    {
+        try
+        {
+            // Get color as hex
+            var color = Settings.BoxColor;
+            var colorHex = $"#{(int)(color.Red * 255):X2}{(int)(color.Green * 255):X2}{(int)(color.Blue * 255):X2}";
+            
+            await JS.InvokeVoidAsync("eval", $@"
+                window.mapModule.updateSettings('{colorHex}', {Settings.BoxLineSize}, {Settings.BoxColorInc});
+            ");
+            
+            Logger.Info($"Settings synced to JavaScript: {colorHex}, {Settings.BoxLineSize}px, inc {Settings.BoxColorInc}");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Settings sync error", ex);
+        }
+    }
+    
+    private async Task UpdateMiniMapViewport()
+    {
+        try
+        {
+            // Calculate viewport rectangle on mini-map
+            // Mini-map shows full map in properly aspect-ratio'd size
+            
+            // Viewport size depends on current zoom level
+            // At 2x zoom: 800/2 = 400 world pixels wide, 600/2 = 300 world pixels tall
+            // At 1x zoom: 800/1 = 800 world pixels wide, 600/1 = 600 world pixels tall
+            double viewportWidthWorld = 800.0 / zoomLevel;
+            double viewportHeightWorld = 600.0 / zoomLevel;
+            
+            // Current viewport top-left in world coordinates
+            double viewportWorldX = -panX / zoomLevel;
+            double viewportWorldY = -panY / zoomLevel;
+            
+            await JS.InvokeVoidAsync("eval", $@"
+                (function() {{
+                    const miniCanvas = document.getElementById('miniMapCanvas');
+                    const mainImg = document.getElementById('mapImg');
+                    if (!miniCanvas || !mainImg || !window.miniMapDimensions) return;
+                    
+                    const ctx = miniCanvas.getContext('2d');
+                    const dims = window.miniMapDimensions;
+                    
+                    // Clear canvas with black background
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(0, 0, dims.canvasWidth, dims.canvasHeight);
+                    
+                    // Redraw the map centered
+                    ctx.drawImage(mainImg, 0, 0, dims.imageWidth, dims.imageHeight, 
+                                  dims.offsetX, dims.offsetY, dims.drawWidth, dims.drawHeight);
+                    
+                    // Calculate viewport position on mini-map
+                    const miniMapScaleX = dims.drawWidth / dims.imageWidth;
+                    const miniMapScaleY = dims.drawHeight / dims.imageHeight;
+                    
+                    const miniX = dims.offsetX + ({viewportWorldX} * miniMapScaleX);
+                    const miniY = dims.offsetY + ({viewportWorldY} * miniMapScaleY);
+                    const miniW = {viewportWidthWorld} * miniMapScaleX;
+                    const miniH = {viewportHeightWorld} * miniMapScaleY;
+                    
+                    // Draw viewport rectangle
+                    ctx.strokeStyle = '#00FF00';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(miniX, miniY, miniW, miniH);
+                    
+                    console.log(`?? Viewport: (${{miniX.toFixed(1)}}, ${{miniY.toFixed(1)}}) ${{miniW.toFixed(1)}}x${{miniH.toFixed(1)}}`);
+                }})()
+            ");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Mini-map update error", ex);
+        }
+    }
+    
+    private async Task OnMiniMapClick(MouseEventArgs e)
+    {
+        try
+        {
+            // Get minimap dimensions from JavaScript
+            var dimsJson = await JS.InvokeAsync<string>("eval", @"
+                (function() {
+                    const canvas = document.getElementById('miniMapCanvas');
+                    if (!canvas || !window.miniMapDimensions) return '';
+                    
+                    const dims = window.miniMapDimensions;
+                    return JSON.stringify({
+                        displayWidth: canvas.offsetWidth,
+                        displayHeight: canvas.offsetHeight,
+                        canvasWidth: dims.canvasWidth,
+                        canvasHeight: dims.canvasHeight,
+                        drawWidth: dims.drawWidth,
+                        drawHeight: dims.drawHeight,
+                        offsetX: dims.offsetX,
+                        offsetY: dims.offsetY,
+                        imageWidth: dims.imageWidth,
+                        imageHeight: dims.imageHeight
+                    });
+                })()
+            ");
+            
+            if (string.IsNullOrEmpty(dimsJson)) return;
+            
+            var dims = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, double>>(dimsJson);
+            if (dims == null) return;
+            
+            // Scale click from display coords to canvas coords
+            double scaleX = dims["canvasWidth"] / dims["displayWidth"];
+            double scaleY = dims["canvasHeight"] / dims["displayHeight"];
+            
+            double canvasClickX = e.OffsetX * scaleX;
+            double canvasClickY = e.OffsetY * scaleY;
+            
+            // Check if click is within the drawn map area (not in letterbox/pillarbox)
+            if (canvasClickX < dims["offsetX"] || canvasClickX > dims["offsetX"] + dims["drawWidth"] ||
+                canvasClickY < dims["offsetY"] || canvasClickY > dims["offsetY"] + dims["drawHeight"])
+            {
+                Logger.Info("Mini-map click outside map area");
+                return;
+            }
+            
+            // Convert canvas click to position within drawn map
+            double mapClickX = canvasClickX - dims["offsetX"];
+            double mapClickY = canvasClickY - dims["offsetY"];
+            
+            // Convert to world coordinates
+            double worldX = mapClickX * (dims["imageWidth"] / dims["drawWidth"]);
+            double worldY = mapClickY * (dims["imageHeight"] / dims["drawHeight"]);
+            
+            // Center the viewport on this world position
+            // Account for current zoom level and viewport size
+            double newPanX = -(worldX * zoomLevel) + 400; // Center horizontally (800/2)
+            double newPanY = -(worldY * zoomLevel) + 300; // Center vertically (600/2)
+            
+            panX = newPanX;
+            panY = newPanY;
+            
+            // Save the new position for the current map (preserve zoom)
+            mapPositions[currentMapTracked] = (panX, panY, zoomLevel);
+            
+            await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
+            await UpdateMiniMapViewport();
+            StateHasChanged();
+            
+            Logger.Info($"Mini-map click: canvas({canvasClickX:F0},{canvasClickY:F0}) -> world({worldX:F0},{worldY:F0})");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Mini-map click error", ex);
+        }
+    }
+    
+    private async Task OnMouseDown(MouseEventArgs e)
+    {
+        // Update mouse world coordinates
+        await UpdateMouseCoordinates(e.OffsetX, e.OffsetY);
+        
+        if (e.Button == 0) // Left - draw
+        {
+            isDrawing = true;
+            await JS.InvokeVoidAsync("eval", $"window.mapModule.startDrawing({e.OffsetX}, {e.OffsetY})");
+        }
+        else if (e.Button == 2) // Right - pan
+        {
+            isPanning = true;
+            await JS.InvokeVoidAsync("eval", $"window.mapModule.startPanning({e.OffsetX}, {e.OffsetY})");
+        }
+    }
+    
+    private async Task OnMouseMove(MouseEventArgs e)
+    {
+        // Update mouse coordinates on every move
+        await UpdateMouseCoordinates(e.OffsetX, e.OffsetY);
+        
+        if (isDrawing)
+        {
+            await JS.InvokeVoidAsync("eval", $"window.mapModule.updateDrawing({e.OffsetX}, {e.OffsetY})");
+        }
+        else if (isPanning)
+        {
+            await JS.InvokeVoidAsync("eval", $"window.mapModule.updatePanning({e.OffsetX}, {e.OffsetY})");
+        }
+    }
+    
+    private async Task UpdateMouseCoordinates(double screenX, double screenY)
+    {
+        try
+        {
+            var result = await JS.InvokeAsync<string>("eval", $"JSON.stringify(window.mapModule.screenToWorld({screenX}, {screenY}))");
+            if (!string.IsNullOrEmpty(result))
+            {
+                var coords = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, int>>(result);
+                if (coords != null)
+                {
+                    mouseWorldX = coords["x"];
+                    mouseWorldY = coords["y"];
+                    StateHasChanged();
+                }
+            }
+        }
+        catch { }
+    }
+    
+    private async Task OnMouseUp(MouseEventArgs e)
+    {
+        if (isDrawing && Utility.SESSION != null)
+        {
+            isDrawing = false;
+            var rect = await JS.InvokeAsync<RectData>("eval", "window.mapModule.finishDrawing()");
+
+            if (rect != null && rect.Width > 0 && rect.Height > 0)
+            {
+                // Safely get the current spawn list for this map
+                var currentSpawnList = GetSpawnList();
+
+                var spawn = new BoxSpawnEntity
+                {
+                    Position = currentSpawnList.Count + 1,
+                    MapId = Utility.SESSION.Current_Map,
+                    SpawnBox = new Rect(rect.X, rect.Y, rect.Width, rect.Height),
+                    WeatherSpawn = WeatherTypes.None,
+                    TimedSpawn = TimeNames.None,
+                    WaterSpawns = new(),
+                    WeatherSpawns = new(),
+                    TimedSpawns = new(),
+                    CommonSpawns = new(),
+                    UncommonSpawns = new(),
+                    RareSpawns = new()
+                };
+
+                Utility.AddBoxSpawn(Utility.SESSION.Current_Map, spawn);
+
+                // Calculate priority based on containment
+                CalculateSpawnPriority(spawn);
+
+                selected = spawn;
+                spawnSearchId = spawn.Position; // Sync the search ID to the newly created spawn
+
+                Logger.Info($"Spawn #{spawn.Position} created at ({spawn.SpawnBox.X},{spawn.SpawnBox.Y}) size {spawn.SpawnBox.Width}x{spawn.SpawnBox.Height} Priority:{spawn.Priority}");
+                
+                // Auto-save spawn data
+                Utility.SaveSpawnData();
+                Logger.Info("Auto-saved spawn data");
+                
+                // Force a complete redraw
+                await Redraw();
+                StateHasChanged();
+                
+                // Auto-scroll to the newly created spawn in the list
+                await Task.Delay(100); // Small delay to ensure DOM is updated
+                await ScrollToSelectedSpawn();
+            }
+            else
+            {
+                Logger.Info("Box too small or invalid");
+            }
+        }
+        else if (isPanning)
+        {
+            isPanning = false;
+            var pan = await JS.InvokeAsync<PanData>("eval", "window.mapModule.finishPanning()");
+            if (pan != null)
+            {
+                panX = pan.X;
+                panY = pan.Y;
+                
+                // Save the new position for the current map immediately (preserve zoom)
+                mapPositions[currentMapTracked] = (panX, panY, zoomLevel);
+                
+                await UpdateMiniMapViewport();
+                StateHasChanged();
+            }
+        }
+    }
+    
+    private void OnMouseLeave()
+    {
+        isDrawing = false;
+        isPanning = false;
+    }
+    
+    private async Task ResetView()
+    {
+        panX = 0;
+        panY = 0;
+        zoomLevel = 1.0; // Reset to default 1x zoom
+        
+        // Clear the saved position for the CURRENT map
+        mapPositions.Remove(currentMapTracked);
+        Logger.Info($"Reset position and zoom for {currentMapTracked} to (0, 0) @ 1x");
+        
+        await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
+        await UpdateMiniMapViewport();
+        StateHasChanged();
+    }
+    
+    private async Task ToggleZoom()
+    {
+        // Calculate the current center of the viewport in world coordinates
+        // This is what we want to keep centered after zoom changes
+        double centerWorldX = (-panX / zoomLevel) + (800.0 / 2.0 / zoomLevel);
+        double centerWorldY = (-panY / zoomLevel) + (600.0 / 2.0 / zoomLevel);
+        
+        Logger.Info($"Current center before zoom: world ({centerWorldX:F0}, {centerWorldY:F0}) at {zoomLevel}x");
+        
+        // Toggle between 1x (actual size) and 2x (zoomed in)
+        double oldZoom = zoomLevel;
+        zoomLevel = zoomLevel == 2.0 ? 1.0 : 2.0;
+        
+        // Recalculate pan to keep the same world position centered
+        // Formula: panX = -(centerWorldX * newZoom) + (viewport_width / 2)
+        panX = -(centerWorldX * zoomLevel) + 400; // 800/2
+        panY = -(centerWorldY * zoomLevel) + 300; // 600/2
+        
+        Logger.Info($"New center after zoom: world ({centerWorldX:F0}, {centerWorldY:F0}) at {zoomLevel}x, pan=({panX:F0}, {panY:F0})");
+        
+        // Update JavaScript zoom level immediately
+        await JS.InvokeVoidAsync("eval", $"window.mapModule.setZoomLevel({zoomLevel.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)})");
+        
+        // Apply the new pan position
+        await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
+        
+        // Save the new zoom level and position for current map
+        mapPositions[currentMapTracked] = (panX, panY, zoomLevel);
+        
+        // Redraw everything to ensure boxes are correctly positioned
+        await Redraw();
+        
+        // Update mini-map viewport with new zoom
+        await UpdateMiniMapViewport();
+        
+        StateHasChanged();
+    }
+    
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        // Check if it's a panning key (WASD or arrows)
+        var key = e.Key.ToLower();
+        if (key == "w" || key == "a" || key == "s" || key == "d" ||
+            key == "arrowup" || key == "arrowdown" || key == "arrowleft" || key == "arrowright")
+        {
+            // Add key to active set and start smooth animation
+            await JS.InvokeVoidAsync("eval", $"window.mapModule.addKey('{key}')");
+        }
+    }
+    
+    private async Task OnKeyUp(KeyboardEventArgs e)
+    {
+        // Remove key from active set
+        var key = e.Key.ToLower();
+        await JS.InvokeVoidAsync("eval", $"window.mapModule.removeKey('{key}')");
+        
+        // Sync pan position from JavaScript back to C#
+        try
+        {
+            var result = await JS.InvokeAsync<string>("eval", "JSON.stringify(window.mapModule.getPanPosition())");
+            if (!string.IsNullOrEmpty(result))
+            {
+                var pos = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, double>>(result);
+                if (pos != null)
+                {
+                    panX = pos["x"];
+                    panY = pos["y"];
+                    
+                    // Save the new position for the current map (preserve zoom)
+                    mapPositions[currentMapTracked] = (panX, panY, zoomLevel);
+                    
+                    await UpdateMiniMapViewport();
+                    StateHasChanged();
+                }
+            }
+        }
+        catch { }
+    }
+    
+    private async Task OnMapMouseEnter()
+    {
+        // Auto-focus the map container when mouse enters so keyboard controls work immediately
+        try
+        {
+            await JS.InvokeVoidAsync("eval", @"
+                (function() {
+                    const container = document.querySelector('[tabindex=""0""]');
+                    if (container) container.focus();
+                })()
+            ");
+        }
+        catch { }
+    }
+    
+    private async Task ToggleXMLSpawners()
+    {
+        showXMLSpawners = !showXMLSpawners;
+        
+        if (showXMLSpawners)
+        {
+            // Get XML spawners for current map
+            var xmlSpawners = XMLSpawnUtility.GetSpawnersForMap(ViewService.CurrentMapId);
+            Logger.Info($"Showing {xmlSpawners.Count} XML spawners for {ViewService.CurrentMapId}");
+            
+            // Convert to JSON and send to JavaScript
+            var options = new System.Text.Json.JsonSerializerOptions 
+            { 
+                PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+                WriteIndented = false 
+            };
+            var json = System.Text.Json.JsonSerializer.Serialize(xmlSpawners, options);
+            
+            await JS.InvokeVoidAsync("eval", $"window.mapModule.showXMLSpawners({json})");
+        }
+        else
+        {
+            Logger.Info("Hiding XML spawners");
+            await JS.InvokeVoidAsync("eval", "window.mapModule.hideXMLSpawners()");
+        }
+        
+        StateHasChanged();
+    }
+    
+    private int GetXMLSpawnerCount()
+    {
+        return XMLSpawnUtility.GetSpawnersForMap(ViewService.CurrentMapId).Count;
+    }
+    
+    private async Task ToggleServerSpawns()
+    {
+        showServerSpawns = !showServerSpawns;
+
+        if (showServerSpawns)
+        {
+            Logger.Info($"Toggling ON server spawn statistics for {ViewService.CurrentMapId}");
+
+            // Check if ServUO folder is configured
+            if (string.IsNullOrEmpty(Settings.ServUODataFolder))
+            {
+                Logger.Warning("❌ Server Data folder not configured!");
+                ToastService.ShowWarning("Server Data folder not configured! Go to Settings to set your ServUO Data folder path.");
+                showServerSpawns = false;
+                StateHasChanged();
+                return;
+            }
+
+            // Check if UOR_DATA/UOR_STATS folder exists
+            string statsFolderPath = Path.Combine(Settings.ServUODataFolder, "UOR_DATA", "UOR_STATS");
+            if (!Directory.Exists(statsFolderPath))
+            {
+                Logger.Warning($"❌ UOR_STATS folder not found at: {statsFolderPath}");
+                ToastService.ShowWarning($"UOR_STATS folder not found! Ensure UOR_DATA/UOR_STATS/ exists in your server data folder.");
+                showServerSpawns = false;
+                StateHasChanged();
+                return;
+            }
+
+            // Load spawn statistics from server if not already loaded
+            if (!MapDisplayUtility.HasSpawnData)
+            {
+                Logger.Info($"📂 Loading spawn statistics from: {statsFolderPath}");
+                ToastService.ShowInfo("Loading spawn statistics...");
+                MapDisplayUtility.InstantiateStatData();
+
+                if (!MapDisplayUtility.HasSpawnData)
+                {
+                    Logger.Warning("❌ No spawn statistics files found!");
+                    ToastService.ShowWarning("No spawn statistics files found! Play on your server to generate data, then run [PushRespawnStats].");
+                    showServerSpawns = false;
+                    StateHasChanged();
+                    return;
+                }
+
+                Logger.Info("✅ Loaded spawn statistics successfully!");
+                ToastService.ShowSuccess("Spawn statistics loaded successfully!");
+            }
+
+            // Get spawn data for current map
+            var spawnData = MapDisplayUtility.GetSpawnDataForMap(ViewService.CurrentMapId);
+            int totalCount = MapDisplayUtility.GetSpawnDataCount(ViewService.CurrentMapId);
+            Logger.Info($"📊 Found {totalCount} spawn events for {ViewService.CurrentMapId}");
+
+            if (spawnData.Count == 0)
+            {
+                Logger.Warning($"⚠️ No spawn data for {ViewService.CurrentMapId}");
+                ToastService.ShowWarning($"No spawn data available for {MapUtility.GetMapName(ViewService.CurrentMapId)}. Try a different map or play on this map to generate data.");
+                showServerSpawns = false;
+                StateHasChanged();
+                return;
+            }
+            
+            // Convert to JSON and send to JavaScript
+            var options = new System.Text.Json.JsonSerializerOptions 
+            { 
+                PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+                WriteIndented = false 
+            };
+            var json = System.Text.Json.JsonSerializer.Serialize(spawnData, options);
+            
+            await JS.InvokeVoidAsync("eval", $"window.mapModule.showServerSpawns({json})");
+            Logger.Info($"Displayed {spawnData.Count} spawn points on map");
+        }
+        else
+        {
+            Logger.Info("Hiding server spawn statistics");
+            await JS.InvokeVoidAsync("eval", "window.mapModule.hideServerSpawns()");
+        }
+        
+        StateHasChanged();
+    }
+    
+    private int GetServerSpawnCount()
+    {
+        if (!MapDisplayUtility.HasSpawnData)
+        {
+            return 0;
+        }
+        return MapDisplayUtility.GetSpawnDataCount(ViewService.CurrentMapId);
+    }
+    
+    private async Task ToggleMiniMap()
+    {
+        showMiniMap = !showMiniMap;
+        StateHasChanged();
+        
+        // Redraw mini map when expanding
+        if (showMiniMap && imgWidth > 0 && imgHeight > 0)
+        {
+            await Task.Delay(50); // Small delay to ensure DOM is ready
+            await InitializeMiniMap();
+        }
+    }
+    
+    private string GetSpawnListStyle()
+    {
+        // Calculate available height for spawn list
+        // Mini map expanded: ~320px (canvas 188px + buttons ~132px)
+        // Mini map collapsed: ~60px (just header)
+        // Page height minus header/padding: ~900px - 100px = 800px
+        // Spawn list should fill remaining space
+        
+        if (showMiniMap)
+        {
+            // Mini map takes ~340px (with card padding), spawn list gets the rest
+            // Max height to prevent page scroll: ~440px
+            return "max-height: 440px;";
+        }
+        else
+        {
+            // Mini map collapsed (~60px), spawn list gets much more space
+            // Max height: ~720px
+            return "max-height: 720px;";
+        }
+    }
+    
+    private async Task Redraw()
+    {
+        try
+        {
+            if (Utility.SESSION != null)
+            {
+                var spawns = Utility.BoxSpawns[Utility.SESSION.Current_Map];
+                Logger.Info($"Redrawing {spawns.Count} spawns for {Utility.SESSION.Current_Map}");
+                
+                // Serialize with proper options
+                var options = new JsonSerializerOptions 
+                { 
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                    WriteIndented = false 
+                };
+                var json = System.Text.Json.JsonSerializer.Serialize(spawns, options);
+                
+                await JS.InvokeVoidAsync("eval", $"window.mapModule.redraw({json})");
+                
+                Logger.Info("Redraw complete");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Redraw error", ex);
+        }
+    }
+
+    private List<BoxSpawnEntity> GetSpawnList()
+    {
+        if (Utility.SESSION == null) return new List<BoxSpawnEntity>();
+
+        // Safely get spawn list with null check for dictionary key
+        if (!Utility.BoxSpawns.TryGetValue(Utility.SESSION.Current_Map, out var spawnList))
+        {
+            return new List<BoxSpawnEntity>();
+        }
+        
+        // If search ID is set and valid, reorder list to start from that ID
+        if (spawnSearchId.HasValue && spawnSearchId.Value > 0)
+        {
+            var searchId = spawnSearchId.Value;
+            
+            // Split list: spawns from searchId onwards, then spawns before searchId (wrap around)
+            var fromId = spawnList.Where(s => s.Position >= searchId).OrderBy(s => s.Position);
+            var beforeId = spawnList.Where(s => s.Position < searchId).OrderBy(s => s.Position);
+            
+            return fromId.Concat(beforeId).ToList();
+        }
+        
+        // Default: return in Position order
+        return spawnList.OrderBy(s => s.Position).ToList();
+    }
+    
+    private int? GetDisplayedSpawnId()
+    {
+        // If no spawns exist, show 0
+        if (GetSpawnCount() == 0)
+        {
+            return 0;
+        }
+
+        // If user is typing (spawnSearchId has manual value different from selected), show that
+        // Otherwise show the selected spawn's Position, or null if nothing selected
+        if (spawnSearchId.HasValue)
+        {
+            return spawnSearchId;
+        }
+        return selected?.Position;
+    }
+
+    private async Task HandleSpawnIdInput(ChangeEventArgs e)
+    {
+        int maxCount = GetSpawnCount();
+
+        // If no spawns exist, ignore input and keep at 0
+        if (maxCount == 0)
+        {
+            spawnSearchId = null;
+            return;
+        }
+
+        // Parse the input value
+        if (int.TryParse(e.Value?.ToString(), out int value))
+        {
+            spawnSearchId = value;
+        }
+        else
+        {
+            spawnSearchId = null;
+        }
+
+        // Validate and auto-jump
+        if (spawnSearchId.HasValue)
+        {
+            // Clamp value to valid range
+            if (spawnSearchId.Value > maxCount)
+            {
+                spawnSearchId = maxCount;
+                Logger.Info($"Search ID clamped to max: {maxCount}");
+            }
+            else if (spawnSearchId.Value < 1)
+            {
+                spawnSearchId = 1;
+                Logger.Info("Search ID clamped to min: 1");
+            }
+
+            // Auto-jump to the spawn
+            if (Utility.SESSION != null)
+            {
+                var spawns = Utility.BoxSpawns[Utility.SESSION.Current_Map];
+                var targetSpawn = spawns.FirstOrDefault(s => s.Position == spawnSearchId.Value);
+
+                if (targetSpawn != null)
+                {
+                    selected = targetSpawn;
+                    await JumpToSpawn(targetSpawn);
+                    Logger.Info($"Quick search: jumped to Spawn #{targetSpawn.Position}");
+                }
+            }
+        }
+    }
+
+    private int GetSpawnCount()
+    {
+        return GetSpawnList().Count;
+    }
+    
+    private void CalculateSpawnPriority(BoxSpawnEntity spawn)
+    {
+        var spawns = GetSpawnList();
+        int maxPriority = 0;
+        
+        // Check containment by all other boxes
+        foreach (var otherSpawn in spawns)
+        {
+            if (otherSpawn == spawn) continue;
+            
+            // Check if spawn is completely contained within otherSpawn
+            if (IsCompletelyContained(spawn.SpawnBox, otherSpawn.SpawnBox))
+            {
+                // This box is inside another, so it should be parent priority + 1
+                maxPriority = Math.Max(maxPriority, otherSpawn.Priority + 1);
+            }
+            // Check if boxes intersect but not contained (share priority)
+            else if (BoxesIntersect(spawn.SpawnBox, otherSpawn.SpawnBox))
+            {
+                // Share the same priority level
+                maxPriority = Math.Max(maxPriority, otherSpawn.Priority);
+            }
+        }
+        
+        spawn.Priority = maxPriority;
+        Logger.Info($"Calculated Priority for Spawn #{spawn.Position}: {spawn.Priority}");
+    }
+    
+    private bool IsCompletelyContained(Rect inner, Rect outer)
+    {
+        return inner.Left >= outer.Left &&
+               inner.Right <= outer.Right &&
+               inner.Top >= outer.Top &&
+               inner.Bottom <= outer.Bottom &&
+               !(inner.Left == outer.Left && inner.Right == outer.Right && 
+                 inner.Top == outer.Top && inner.Bottom == outer.Bottom);
+    }
+    
+    private bool BoxesIntersect(Rect box1, Rect box2)
+    {
+        return !(box1.Right < box2.Left || box1.Left > box2.Right ||
+                 box1.Bottom < box2.Top || box1.Top > box2.Bottom);
+    }
+    
+    private string GetPriorityBadgeClass(int priority)
+    {
+        return priority switch
+        {
+            0 => "bg-secondary",
+            1 => "bg-primary",
+            2 => "bg-info",
+            3 => "bg-warning",
+            _ => "bg-danger"
+        };
+    }
+    
+    private async Task SelectSpawn(BoxSpawnEntity spawn)
+    {
+        selected = spawn;
+
+        // Sync the search ID to show the selected spawn's position
+        spawnSearchId = spawn.Position;
+
+        // Jump to spawn location on map
+        await JumpToSpawn(spawn);
+
+        StateHasChanged();
+    }
+    
+    private async Task JumpToSpawn(BoxSpawnEntity spawn)
+    {
+        // Calculate the center of the spawn box
+        double centerX = spawn.SpawnBox.X + (spawn.SpawnBox.Width / 2.0);
+        double centerY = spawn.SpawnBox.Y + (spawn.SpawnBox.Height / 2.0);
+        
+        
+        // Center the viewport on this position
+        // Account for current zoom level and viewport size
+        double newPanX = -(centerX * zoomLevel) + 400; // Center horizontally (800/2)
+        double newPanY = -(centerY * zoomLevel) + 300; // Center vertically (600/2)
+        
+        panX = newPanX;
+        panY = newPanY;
+        
+        // Save the new position for the current map (preserve zoom)
+        mapPositions[currentMapTracked] = (panX, panY, zoomLevel);
+        
+        await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
+        await UpdateMiniMapViewport();
+        
+        Logger.Info($"Jumped to Spawn #{spawn.Position} at ({centerX:F0}, {centerY:F0})");
+    }
+    
+    private async Task DeleteSpawn(BoxSpawnEntity spawn)
+    {
+        if (Utility.SESSION == null) return;
+        
+        var spawns = Utility.BoxSpawns[Utility.SESSION.Current_Map];
+        spawns.Remove(spawn);
+        
+        // Reindex positions (IDs)
+        for (int i = 0; i < spawns.Count; i++)
+        {
+            spawns[i].Position = i + 1;
+        }
+        
+        // Recalculate priorities for all remaining spawns
+        RecalculateAllPriorities();
+        
+        // Clear selection if deleted spawn was selected
+        if (selected == spawn)
+        {
+            selected = null;
+            spawnSearchId = null; // Clear the search ID too
+        }
+
+        // Auto-save spawn data
+        Utility.SaveSpawnData();
+        Logger.Info("Auto-saved after delete");
+        
+        await Redraw();
+        StateHasChanged();
+    }
+    
+    private void RecalculateAllPriorities()
+    {
+        var spawns = GetSpawnList();
+        
+        // Reset all priorities first
+        foreach (var spawn in spawns)
+        {
+            spawn.Priority = 0;
+        }
+        
+        // Recalculate each spawn's priority
+        foreach (var spawn in spawns)
+        {
+            CalculateSpawnPriority(spawn);
+        }
+    }
+    
+    // Public method to refresh settings when changed in Settings page
+    public async Task RefreshMapSettings()
+    {
+        await SyncSettingsToJavaScript();
+    }
+    
+    private async Task ScrollToSelectedSpawn()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("eval", @"
+                (function() {
+                    const selected = document.querySelector('.spawn-item.selected');
+                    if (selected) {
+                        selected.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                })()
+            ");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Scroll to spawn error", ex);
+        }
+    }
+    
+    private void SaveAfterTimedSpawnChange()
+    {
+        Utility.SaveSpawnData();
+        Logger.Info("Auto-saved after timed spawn change");
+    }
+
+    private void SaveAfterTriggerChange(BoxSpawnEntity spawn)
+    {
+        Utility.SaveSpawnData();
+        StateHasChanged();
+        Logger.Info($"Auto-saved after trigger change for Spawn #{spawn.Position}");
+    }
+    
+    private void OpenCategoryModal(BoxSpawnEntity spawn, Frequency frequency)
+    {
+        editingSpawn = spawn;
+        editingFrequency = frequency;
+
+        // IMPORTANT: Create a NEW copy of the list to avoid reference issues
+        var sourceList = frequency switch
+        {
+            Frequency.Water => spawn.WaterSpawns,
+            Frequency.Weather => spawn.WeatherSpawns,
+            Frequency.Timed => spawn.TimedSpawns,
+            Frequency.Common => spawn.CommonSpawns,
+            Frequency.UnCommon => spawn.UncommonSpawns,
+            Frequency.Rare => spawn.RareSpawns,
+            _ => new List<string>()
+        };
+
+        // Create a brand new list with copies of the strings
+        currentCategorySpawns = new List<string>(sourceList);
+
+        currentCategory = frequency.ToString();
+        showCategoryModal = true;
+        StateHasChanged();
+
+        Logger.Info($"Opened {frequency} modal for Spawn #{spawn.Position} with {currentCategorySpawns.Count} creatures");
+    }
+    
+    private void CloseCategoryModal()
+    {
+        showCategoryModal = false;
+        editingSpawn = null;
+        StateHasChanged();
+    }
+    
+    private void SaveCategoryModal()
+    {
+        if (editingSpawn != null)
+        {
+            // Clear the target list and copy from the modal list
+            var targetList = editingFrequency switch
+            {
+                Frequency.Water => editingSpawn.WaterSpawns,
+                Frequency.Weather => editingSpawn.WeatherSpawns,
+                Frequency.Timed => editingSpawn.TimedSpawns,
+                Frequency.Common => editingSpawn.CommonSpawns,
+                Frequency.UnCommon => editingSpawn.UncommonSpawns,
+                Frequency.Rare => editingSpawn.RareSpawns,
+                _ => null
+            };
+
+            if (targetList != null)
+            {
+                targetList.Clear();
+
+                // Only add non-empty names
+                foreach (var name in currentCategorySpawns)
+                {
+                    if (!string.IsNullOrWhiteSpace(name))
+                    {
+                        targetList.Add(name);
+                    }
+                    else
+                    {
+                        Logger.Warning($"Skipped empty creature name in {currentCategory} for Spawn #{editingSpawn.Position}");
+                    }
+                }
+
+                Logger.Info($"Saved {targetList.Count} {currentCategory} spawns for Spawn #{editingSpawn.Position}");
+
+                // Auto-set trigger logic
+                if (editingFrequency == Frequency.Weather)
+                {
+                    // If first weather spawn added (was 0, now > 0) and trigger is None, auto-set to Rain
+                    if (targetList.Count > 0 && editingSpawn.WeatherSpawn == WeatherTypes.None)
+                    {
+                        editingSpawn.WeatherSpawn = WeatherTypes.Rain; // First non-None enum
+                        Logger.Info($"Auto-set Weather Trigger to Rain for Spawn #{editingSpawn.Position}");
+                    }
+                    // If last weather spawn removed (now 0), auto-reset to None
+                    else if (targetList.Count == 0 && editingSpawn.WeatherSpawn != WeatherTypes.None)
+                    {
+                        editingSpawn.WeatherSpawn = WeatherTypes.None;
+                        Logger.Info($"Auto-reset Weather Trigger to None for Spawn #{editingSpawn.Position}");
+                    }
+                }
+                else if (editingFrequency == Frequency.Timed)
+                {
+                    // If first timed spawn added (was 0, now > 0) and trigger is None, auto-set to Witching_Hour
+                    if (targetList.Count > 0 && editingSpawn.TimedSpawn == TimeNames.None)
+                    {
+                        editingSpawn.TimedSpawn = TimeNames.Witching_Hour; // First non-None enum
+                        Logger.Info($"Auto-set Time Trigger to Witching_Hour for Spawn #{editingSpawn.Position}");
+                    }
+                    // If last timed spawn removed (now 0), auto-reset to None
+                    else if (targetList.Count == 0 && editingSpawn.TimedSpawn != TimeNames.None)
+                    {
+                        editingSpawn.TimedSpawn = TimeNames.None;
+                        Logger.Info($"Auto-reset Time Trigger to None for Spawn #{editingSpawn.Position}");
+                    }
+                }
+            }
+            else
+            {
+                Logger.Warning($"{currentCategory} spawn list not yet supported in legacy BoxSpawnEntity - upgrade to BoxSpawnEntity coming soon!");
+            }
+
+            // Save the data
+            Utility.SaveSpawnData();
+        }
+
+        StateHasChanged();
+    }
+    
+    public void Dispose()
+    {
+        ViewService.OnMapChanged -= HandleMapChanged;
+    }
+}
+
+

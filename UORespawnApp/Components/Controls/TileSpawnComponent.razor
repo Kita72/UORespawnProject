@@ -1,0 +1,423 @@
+@using Microsoft.JSInterop
+@using UORespawnApp.Scripts.Utilities
+@using UORespawnApp.Scripts.Entities
+@using UORespawnApp.Scripts.DTO.Enums
+@using UORespawnApp.Scripts.Services
+@inject IJSRuntime JS
+@inject ViewService ViewService
+@inject ToastService ToastService
+
+<div class="container-fluid p-3">
+    <!-- Simplified Header -->
+    <div class="alert alert-dark mb-3 text-center shadow-sm">
+        <h5 class="mb-1"><span class="bi bi-grid-3x3-gap me-2"></span>Tile Spawn</h5>
+        <small class="text-muted">Configure spawns based on ground tile types</small>
+    </div>
+
+    <div class="row">
+        <!-- Tile Selection -->
+        <div class="col-lg-3">
+            <div class="card map-card mb-3 tile-list-container">
+                <div class="card-header text-center">
+                    <strong>Tile Types</strong>
+                </div>
+                <div class="card-body p-2 tile-list-body">
+                    <div class="tile-list">
+                        @foreach (TileNames tile in Enum.GetValues<TileNames>())
+                        {
+                            var tileName = GetTileDisplayName(tile);
+                            var totalSpawns = GetTileEntityTotalSpawnCount(tile);
+                            <div class="tile-item @(selectedTile == tile ? "selected" : "")" 
+                                 @onclick="() => SelectTile(tile)">
+                                <span class="tile-name">@tileName</span>
+                                @if (totalSpawns > 0)
+                                {
+                                    <span class="badge bg-primary">@totalSpawns</span>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Spawn Configuration -->
+        <div class="col-lg-9">
+            @if (selectedTile != null)
+            {
+                <div class="card map-card mb-3">
+                    <div class="card-header text-center d-flex justify-content-between align-items-center">
+                        <div style="width: 40px;"></div>
+                        <strong>@GetTileDisplayName(selectedTile.Value)</strong>
+                        <button class="btn btn-warning btn-sm" @onclick="() => ClearTileSpawns()" title="Clear All Spawns for this Tile">
+                            <span class="bi bi-arrow-clockwise"></span>
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <!-- 6 Spawn Category Sections - Matching BoxSpawn Design -->
+                        <div class="freq-button-container">
+                        <div class="row g-3 mb-3">
+                            <!-- Water -->
+                            <div class="col-4">
+                                <button class="btn btn-primary w-100 freq-button" style="border: 2px solid;" 
+                                        @onclick="() => OpenModal(Frequency.Water)" 
+                                        title="Water (@((Settings.WaterChance * 100).ToString("0"))% chance)">
+                                    <i class="bi bi-droplet-fill frequency-icon frequency-icon-water" style="font-size: 1.8em;"></i>@currentEntity.WaterSpawns.Count
+                                </button>
+                            </div>
+
+                            <!-- Weather -->
+                            <div class="col-4">
+                                <button class="btn btn-primary w-100 freq-button" style="border: 2px solid;" 
+                                        @onclick="() => OpenModal(Frequency.Weather)" 
+                                        title="Weather (@((Settings.WeatherChance * 100).ToString("0"))% chance)">
+                                    <i class="bi bi-cloud-lightning-rain-fill frequency-icon frequency-icon-weather" style="font-size: 1.8em;"></i>@currentEntity.WeatherSpawns.Count
+                                </button>
+                            </div>
+
+                            <!-- Timed -->
+                            <div class="col-4">
+                                <button class="btn btn-primary w-100 freq-button" style="border: 2px solid;" 
+                                        @onclick="() => OpenModal(Frequency.Timed)" 
+                                        title="Timed (@((Settings.TimedChance * 100).ToString("0"))% chance)">
+                                    <i class="bi bi-clock-fill frequency-icon frequency-icon-timed" style="font-size: 1.8em;"></i>@currentEntity.TimedSpawns.Count
+                                </button>
+                            </div>
+
+                            </div>
+                            <div class="row g-3">
+                                <!-- Common -->
+                                <div class="col-4">
+                                    <button class="btn btn-secondary w-100 freq-button" style="border: 2px solid white; color: white;" 
+                                            @onclick="() => OpenModal(Frequency.Common)" 
+                                            title="Common (@((Settings.CommonChance * 100).ToString("0"))% chance)">
+                                        <i class="bi bi-people-fill frequency-icon frequency-icon-common" style="font-size: 1.8em;"></i>@currentEntity.CommonSpawns.Count
+                                    </button>
+                                </div>
+
+                            <!-- Uncommon -->
+                            <div class="col-4">
+                                <button class="btn btn-success w-100 freq-button" style="border: 2px solid white; color: white;" 
+                                        @onclick="() => OpenModal(Frequency.UnCommon)" 
+                                        title="Uncommon (@((Settings.UnCommonChance * 100).ToString("0"))% chance)">
+                                    <i class="bi bi-person-fill frequency-icon frequency-icon-uncommon" style="font-size: 1.8em;"></i>@currentEntity.UncommonSpawns.Count
+                                </button>
+                            </div>
+
+                            <!-- Rare -->
+                            <div class="col-4">
+                                <button class="btn btn-danger w-100 freq-button" style="border: 2px solid white; color: white;" 
+                                        @onclick="() => OpenModal(Frequency.Rare)" 
+                                        title="Rare (@((Settings.RareChance * 100).ToString("0"))% chance)">
+                                    <i class="bi bi-star-fill frequency-icon frequency-icon-rare" style="font-size: 1.8em;"></i>@currentEntity.RareSpawns.Count
+                                </button>
+                            </div>
+                        </div>
+                        </div>
+
+                        <!-- Trigger Dropdowns - Below Cards like BoxSpawn -->
+                        <div class="row g-2 mt-3">
+                            <div class="col-md-6">
+                                <label class="form-label mb-1 text-center d-block">Weather Trigger</label>
+                                <select class="form-select form-select-sm" 
+                                        @bind="currentEntity.WeatherSpawn" 
+                                        @bind:after="SaveCurrentTile"
+                                        disabled="@(currentEntity.WeatherSpawns.Count == 0)">
+                                    @if (currentEntity.WeatherSpawns.Count == 0)
+                                    {
+                                        <option value="@WeatherTypes.None">None</option>
+                                    }
+                                    else
+                                    {
+                                        @foreach (var weather in Enum.GetValues<WeatherTypes>().Where(w => w != WeatherTypes.None))
+                                        {
+                                            <option value="@weather">@weather.ToString()</option>
+                                        }
+                                    }
+                                </select>
+                                <small class="text-muted d-block text-center">Controls when WeatherSpawns list activates</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label mb-1 text-center d-block">Timed Trigger</label>
+                                <select class="form-select form-select-sm" 
+                                        @bind="currentEntity.TimedSpawn" 
+                                        @bind:after="SaveCurrentTile"
+                                        disabled="@(currentEntity.TimedSpawns.Count == 0)">
+                                    @if (currentEntity.TimedSpawns.Count == 0)
+                                    {
+                                        <option value="@TimeNames.None">None</option>
+                                    }
+                                    else
+                                    {
+                                        @foreach (var time in Enum.GetValues<TimeNames>().Where(t => t != TimeNames.None))
+                                        {
+                                            <option value="@time">@time.ToString().Replace("_", " ")</option>
+                                        }
+                                    }
+                                </select>
+                                <small class="text-muted d-block text-center">Controls when TimedSpawns list activates</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="card map-card">
+                    <div class="card-body text-center py-5">
+                        <span class="bi bi-grid-3x3-gap" style="font-size: 3rem; opacity: 0.3;"></span>
+                        <p class="text-muted mt-3">Select a tile type from the left to configure spawns</p>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Spawn Category Modal -->
+<SpawnCategoryModal IsVisible="@showModal"
+                    CategoryName="@currentFrequency.ToString()"
+                    SpawnTypeName="Spawns"
+                    SourceListName="Bestiary"
+                    CurrentSpawns="@currentCategorySpawns"
+                    SourceList="@(BestiarySpawnUtility.BestiaryNameList ?? new List<string>())"
+                    OnClose="@CloseModal"
+                    OnSave="@SaveModal" />
+
+@code {
+    private TileNames? selectedTile = null;
+    private TileSpawnEntity currentEntity = new();
+    private bool showModal = false;
+    private Frequency currentFrequency = Frequency.Common;
+    private List<string> currentCategorySpawns = new();
+
+    protected override void OnInitialized()
+    {
+        // Data is already loaded by BackgroundDataLoader
+        var totalTiles = Utility.TileSpawns.Values.Sum(list => list.Count);
+        Logger.Info($"TileSpawnComponent initialized - {totalTiles} tile configurations across all maps");
+
+        // Restore last selected tile from session, or auto-select first tile on initial visit
+        if (Utility.SESSION != null)
+        {
+            if (Utility.SESSION.HasVisitedTileSpawnPage && Utility.SESSION.LastSelectedTile.HasValue)
+            {
+                // Restore previous selection
+                selectedTile = Utility.SESSION.LastSelectedTile.Value;
+                SelectTile(selectedTile.Value);
+                Logger.Info($"Restored tile selection from session: {selectedTile}");
+            }
+            else
+            {
+                // First visit - auto-select first tile
+                var firstTile = Enum.GetValues<TileNames>().FirstOrDefault();
+                selectedTile = firstTile;
+                SelectTile(firstTile);
+                Utility.SESSION.LastSelectedTile = firstTile;
+                Logger.Info($"First visit - auto-selected first tile: {firstTile}");
+            }
+        }
+    }
+
+    private void SelectTile(TileNames tile)
+    {
+        selectedTile = tile;
+
+        // Save selection to session for persistence during runtime
+        if (Utility.SESSION != null)
+        {
+            Utility.SESSION.LastSelectedTile = tile;
+        }
+
+        // Find or create TileSpawnEntity for this tile on current map
+        if (Utility.SESSION != null)
+        {
+            var currentMapId = Utility.SESSION.Current_Map;
+
+            if (!Utility.TileSpawns.TryGetValue(currentMapId, out var tileList))
+            {
+                tileList = new List<TileSpawnEntity>();
+                Utility.TileSpawns[currentMapId] = tileList;
+            }
+
+            var existing = tileList.FirstOrDefault(t => t.Name == tile.ToString());
+
+            if (existing != null)
+            {
+                currentEntity = existing;
+            }
+            else
+            {
+                // Create new entity for this tile
+                var nextId = tileList.Count > 0 ? tileList.Max(t => t.Id) + 1 : 1;
+                currentEntity = new TileSpawnEntity
+                {
+                    Id = nextId,
+                    Name = tile.ToString(),
+                    MapId = currentMapId
+                };
+                tileList.Add(currentEntity);
+                Logger.Info($"Created new TileSpawnEntity for {tile} on map {currentMapId}");
+            }
+        }
+
+        StateHasChanged();
+    }
+
+    private string GetTileDisplayName(TileNames tile)
+    {
+        return tile.ToString().Replace('_', ' ').ToTitleCase();
+    }
+
+    private int GetTileEntityTotalSpawnCount(TileNames tile)
+    {
+        if (Utility.SESSION == null) return 0;
+
+        var currentMapId = Utility.SESSION.Current_Map;
+
+        if (!Utility.TileSpawns.TryGetValue(currentMapId, out var tileList))
+            return 0;
+
+        var entity = tileList.FirstOrDefault(t => t.Name == tile.ToString());
+        return entity?.GetTotalSpawnCount() ?? 0;
+    }
+
+    private void OpenModal(Frequency freq)
+    {
+        if (selectedTile == null) return;
+
+        currentFrequency = freq;
+
+        // Load current spawns for this category from currentEntity
+        currentCategorySpawns = freq switch
+        {
+            Frequency.Water => new List<string>(currentEntity.WaterSpawns),
+            Frequency.Weather => new List<string>(currentEntity.WeatherSpawns),
+            Frequency.Timed => new List<string>(currentEntity.TimedSpawns),
+            Frequency.Common => new List<string>(currentEntity.CommonSpawns),
+            Frequency.UnCommon => new List<string>(currentEntity.UncommonSpawns),
+            Frequency.Rare => new List<string>(currentEntity.RareSpawns),
+            _ => new List<string>()
+        };
+
+        showModal = true;
+        StateHasChanged();
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+        currentCategorySpawns.Clear();
+        StateHasChanged();
+    }
+
+    private void SaveModal()
+    {
+        if (selectedTile == null) return;
+
+        // Get the target list from currentEntity
+        var targetList = currentFrequency switch
+        {
+            Frequency.Water => currentEntity.WaterSpawns,
+            Frequency.Weather => currentEntity.WeatherSpawns,
+            Frequency.Timed => currentEntity.TimedSpawns,
+            Frequency.Common => currentEntity.CommonSpawns,
+            Frequency.UnCommon => currentEntity.UncommonSpawns,
+            Frequency.Rare => currentEntity.RareSpawns,
+            _ => null
+        };
+
+        if (targetList != null)
+        {
+            targetList.Clear();
+
+            // Only add non-empty names
+            foreach (var name in currentCategorySpawns)
+            {
+                if (!string.IsNullOrWhiteSpace(name))
+                {
+                    targetList.Add(name);
+                }
+            }
+
+            Logger.Info($"Saved {targetList.Count} {currentFrequency} spawns for {selectedTile}");
+
+            // Auto-set trigger logic (matching BoxSpawnComponent behavior)
+            if (currentFrequency == Frequency.Weather)
+            {
+                if (targetList.Count > 0 && currentEntity.WeatherSpawn == WeatherTypes.None)
+                {
+                    currentEntity.WeatherSpawn = WeatherTypes.Rain;
+                    Logger.Info($"Auto-set Weather Trigger to Rain for {selectedTile}");
+                }
+                else if (targetList.Count == 0 && currentEntity.WeatherSpawn != WeatherTypes.None)
+                {
+                    currentEntity.WeatherSpawn = WeatherTypes.None;
+                    Logger.Info($"Auto-reset Weather Trigger to None for {selectedTile}");
+                }
+            }
+            else if (currentFrequency == Frequency.Timed)
+            {
+                if (targetList.Count > 0 && currentEntity.TimedSpawn == TimeNames.None)
+                {
+                    currentEntity.TimedSpawn = TimeNames.Witching_Hour;
+                    Logger.Info($"Auto-set Time Trigger to Witching_Hour for {selectedTile}");
+                }
+                else if (targetList.Count == 0 && currentEntity.TimedSpawn != TimeNames.None)
+                {
+                    currentEntity.TimedSpawn = TimeNames.None;
+                    Logger.Info($"Auto-reset Time Trigger to None for {selectedTile}");
+                }
+            }
+        }
+
+        // Save to binary file
+        SaveCurrentTile();
+
+        StateHasChanged();
+    }
+
+    private void SaveCurrentTile()
+    {
+        try
+        {
+            Utility.SaveTileSpawnData();
+            Logger.Info("Auto-saved tile spawn data");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Error saving tile spawn data", ex);
+            ToastService.ShowError($"Failed to save tile spawn data: {ex.Message}");
+        }
+    }
+
+    private void ClearTileSpawns()
+    {
+        if (currentEntity == null) return;
+
+        // Clear all spawn lists
+        currentEntity.WaterSpawns.Clear();
+        currentEntity.WeatherSpawns.Clear();
+        currentEntity.TimedSpawns.Clear();
+        currentEntity.CommonSpawns.Clear();
+        currentEntity.UncommonSpawns.Clear();
+        currentEntity.RareSpawns.Clear();
+
+        // Reset triggers to None
+        currentEntity.WeatherSpawn = WeatherTypes.None;
+        currentEntity.TimedSpawn = TimeNames.None;
+
+        // Save changes
+        SaveCurrentTile();
+
+        // Show success message
+        if (selectedTile != null)
+        {
+            ToastService.ShowSuccess($"Cleared all spawns for {GetTileDisplayName(selectedTile.Value)}");
+
+            Logger.Info($"Cleared all spawns for tile: {selectedTile}");
+        }
+
+        StateHasChanged();
+    }
+}

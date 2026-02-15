@@ -1,0 +1,127 @@
+/* Tile List Container - Flex layout with height constraints */
+.tile-list-container {
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 180px); /* Dynamic height based on viewport */
+    min-height: 400px; /* Prevent over-shrinking */
+    overflow: hidden;
+}
+
+/* Tile List Body - Scrollable at ~90% of original height (540px vs 600px) */
+.tile-list-body {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    max-height: 540px; /* Reduced from 600px to ~90% */
+}
+
+/* Tile List Styling */
+.tile-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+/* Tile Item - Matching spawn-item from BoxSpawn with proper badge positioning */
+.tile-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between; /* Pushes badge to far right */
+    padding: 8px 10px;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background-color: #ffffff;
+    user-select: none;
+}
+
+.tile-item:hover {
+    background-color: #f8f9fa;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+    border-color: #c0c0c0;
+}
+
+/* Selected Tile Item - Strong visual feedback */
+.tile-item.selected {
+    background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+    font-weight: 600;
+}
+
+.tile-name {
+    flex-grow: 1;
+    margin-right: 8px;
+}
+
+.tile-item .badge {
+    margin-left: auto; /* Forces badge to far right */
+    flex-shrink: 0;
+}
+
+/* Frequency Button Container - Window pane effect with margins on all sides */
+.freq-button-container {
+    padding: 15px; /* Equal margins on all 4 sides */
+    max-height: 400px; /* Constrain to not exceed left list height */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* Frequency Buttons - Doubled height for better visibility */
+.freq-button {
+    aspect-ratio: 1 / 1; /* Makes button perfectly square */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.0rem;
+    font-weight: 600;
+    padding: 0; /* Remove default padding to let aspect-ratio control size */
+    min-height: 120px; /* Doubled from 60px */
+    max-height: 170px; /* Doubled from 85px */
+}
+
+.freq-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.freq-button:active {
+    transform: translateY(0);
+}
+
+/* Dark Theme Support */
+body.dark-theme .tile-item {
+    background-color: #252525;
+    border-color: #3a3a3a;
+    color: #e0e0e0;
+}
+
+body.dark-theme .tile-item:hover {
+    background-color: #2d2d2d;
+    border-color: #4a4a4a;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+body.dark-theme .tile-item.selected {
+    background: linear-gradient(135deg, #667eea20 0%, #764ba220 100%);
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+/* Light Theme Support */
+body.light-theme .tile-item {
+    background-color: #ffffff;
+    border-color: #dee2e6;
+}
+
+body.light-theme .tile-item:hover {
+    background-color: #f8f9fa;
+    border-color: #c0c0c0;
+}
+
+body.light-theme .tile-item.selected {
+    background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+    border-color: #667eea;
+}

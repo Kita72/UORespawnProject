@@ -1,3 +1,4 @@
+@using UORespawnApp.Scripts.Utilities
 @inject ViewService ViewService
 @inject IJSRuntime JS
 
@@ -34,38 +35,31 @@
         <div class="nav-item px-3 mb-2">
             <label class="map-label small mb-1">Current Map:</label>
             <select class="form-select form-select-sm" 
-                @bind:get="ViewService.CurrentMap" 
-                @bind:set="(GameMap value) => ViewService.SetMap(value)">
-            <option value="@GameMap.Map0">Felucca</option>
-            <option value="@GameMap.Map1">Trammel</option>
-            <option value="@GameMap.Map2">Ilshenar</option>
-            <option value="@GameMap.Map3">Malas</option>
-            <option value="@GameMap.Map4">Tokuno</option>
-            <option value="@GameMap.Map5">Ter Mur</option>
+                @bind:get="ViewService.CurrentMapId" 
+                @bind:set="(int value) => ViewService.SetMap(value)">
+                @foreach (var mapId in GetAvailableMaps())
+                {
+                    <option value="@mapId">@MapUtility.GetMapName(mapId)</option>
+                }
             </select>
         </div>
         
         <div class="nav-item px-3">
-            <button class="nav-link btn btn-link @GetActiveClass("mapview")" @onclick="ShowMapView">
-                <span class="bi bi-map-fill-nav-menu" aria-hidden="true"></span> Map Spawn
+            <button class="nav-link btn btn-link @GetActiveClass("boxspawn")" @onclick="ShowBoxSpawn">
+                <span class="bi bi-map-fill-nav-menu" aria-hidden="true"></span> Box Spawn
             </button>
         </div>
         <div class="nav-item px-3">
-            <button class="nav-link btn btn-link @GetActiveClass("weather")" @onclick="ShowWeather">
-                <span class="bi bi-cloud-sun-fill-nav-menu" aria-hidden="true"></span> Weather Spawn
+            <button class="nav-link btn btn-link @GetActiveClass("regionspawn")" @onclick="ShowRegionSpawn">
+                <span class="bi bi-pin-map-fill-nav-menu" aria-hidden="true"></span> Region Spawn
             </button>
         </div>
         <div class="nav-item px-3">
-            <button class="nav-link btn btn-link @GetActiveClass("worldspawn")" @onclick="ShowWorldSpawn">
-                <span class="bi bi-globe-nav-menu" aria-hidden="true"></span> World Spawn
+            <button class="nav-link btn btn-link @GetActiveClass("tilespawn")" @onclick="ShowWorldSpawn">
+                <span class="bi bi-globe-nav-menu" aria-hidden="true"></span> Tile Spawn
             </button>
         </div>
-        <div class="nav-item px-3">
-            <button class="nav-link btn btn-link @GetActiveClass("staticspawn")" @onclick="ShowStaticSpawn">
-                <span class="bi bi-geo-alt-fill-nav-menu" aria-hidden="true"></span> Static Spawn
-            </button>
-        </div>
-        
+
         <hr style="border-color: rgba(255,255,255,0.2); margin: 10px 15px;" />
         
         <div class="nav-item px-3">
@@ -110,12 +104,24 @@
     }
 
     private void ShowHome() => ViewService.SetView("home");
-    private void ShowMapView() => ViewService.SetView("mapview");
-    private void ShowWeather() => ViewService.SetView("weather");
-    private void ShowWorldSpawn() => ViewService.SetView("worldspawn");
-    private void ShowStaticSpawn() => ViewService.SetView("staticspawn");
+    private void ShowBoxSpawn() => ViewService.SetView("boxspawn");
+    private void ShowRegionSpawn() => ViewService.SetView("regionspawn");
+    private void ShowWorldSpawn() => ViewService.SetView("tilespawn");
     private void ShowSettings() => ViewService.SetView("settings");
     private void ShowInstructions() => ViewService.SetView("instructions");
 
-    private string GetActiveClass(string view) => ViewService.CurrentView == view ? "active" : "";
+    private string GetActiveClass(string view)
+    {
+        // Support both old and new route names
+        if (view == "boxspawn" && ViewService.CurrentView == "mapview") return "active";
+        if (view == "tilespawn" && ViewService.CurrentView == "worldspawn") return "active";
+        return ViewService.CurrentView == view ? "active" : "";
+    }
+
+    private List<int> GetAvailableMaps()
+    {
+        // For now, return standard maps 0-5
+        // Could be extended to use MapUtility.GetAvailableMaps() for dynamic discovery
+        return new List<int> { 0, 1, 2, 3, 4, 5 };
+    }
 }

@@ -1,9 +1,11 @@
+using UORespawnApp.Scripts.Utilities;
+
 namespace UORespawnApp
 {
     public class ViewService
     {
         public string CurrentView { get; set; } = "home";
-        public GameMap CurrentMap { get; set; } = GameMap.Map0;
+        public int CurrentMapId { get; set; } = 0; // Default to Map0 (Felucca)
 
         public event Action? OnViewChanged;
         public event Action? OnMapChanged;
@@ -14,13 +16,13 @@ namespace UORespawnApp
             OnViewChanged?.Invoke();
         }
 
-        public void SetMap(GameMap map)
+        public void SetMap(int mapId)
         {
-            if (CurrentMap != map)
+            if (CurrentMapId != mapId)
             {
-                CurrentMap = map;
+                CurrentMapId = mapId;
 
-                Utility.SESSION?.SetMap(map);
+                Utility.SESSION?.SetMap(mapId);
 
                 OnMapChanged?.Invoke();
             }

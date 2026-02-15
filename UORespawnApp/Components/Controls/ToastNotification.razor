@@ -1,0 +1,52 @@
+@using UORespawnApp.Scripts.Services
+@implements IDisposable
+@inject ToastService ToastService
+
+<div class="toast-container">
+    @foreach (var toast in ToastService.Messages)
+    {
+        <div class="toast-item alert alert-@GetAlertClass(toast.Type) alert-dismissible fade show" role="alert">
+            <div class="d-flex align-items-start">
+                <span class="bi @GetIcon(toast.Type) me-2"></span>
+                <div class="flex-grow-1">@toast.Message</div>
+                <button type="button" class="btn-close" @onclick="() => ToastService.RemoveToast(toast.Id)" aria-label="Close"></button>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        ToastService.OnToastChanged += StateHasChanged;
+    }
+
+    private string GetAlertClass(ToastType type)
+    {
+        return type switch
+        {
+            ToastType.Info => "primary",
+            ToastType.Success => "success",
+            ToastType.Warning => "warning",
+            ToastType.Error => "danger",
+            _ => "secondary"
+        };
+    }
+
+    private string GetIcon(ToastType type)
+    {
+        return type switch
+        {
+            ToastType.Info => "bi-info-circle-fill",
+            ToastType.Success => "bi-check-circle-fill",
+            ToastType.Warning => "bi-exclamation-triangle-fill",
+            ToastType.Error => "bi-x-circle-fill",
+            _ => "bi-chat-fill"
+        };
+    }
+
+    public void Dispose()
+    {
+        ToastService.OnToastChanged -= StateHasChanged;
+    }
+}

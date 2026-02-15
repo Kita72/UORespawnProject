@@ -2,7 +2,7 @@
 {
     internal class XMLSpawnPoint
     {
-        public GameMap Map { get; set; } = GameMap.Map0;
+        public int Map { get; set; }
         public int X { get; set; }
         public int Y { get; set; }
         public int Width { get; set; }

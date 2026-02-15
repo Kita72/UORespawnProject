@@ -6,8 +6,6 @@ namespace UORespawnApp
     {
         internal static readonly string SpawnersFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", "Raw", "UOR_SpawnerList.txt");
 
-        internal static readonly string StaticFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", "Raw", "UOR_StaticList.txt");
-
         internal static List<XMLSpawnPoint> Spawns { get; private set; } = [];
 
         internal static void LoadSpawnerList()
@@ -37,7 +35,7 @@ namespace UORespawnApp
 
                         if (parts.Length < 4) continue;
 
-                        if (TryGetMap(parts[0], out GameMap map))
+                        if (TryGetMap(parts[0], out int mapId))
                         {
                             int x = int.Parse(parts[1]);
                             int y = int.Parse(parts[2]);
@@ -49,20 +47,20 @@ namespace UORespawnApp
 
                             Spawns.Add(new XMLSpawnPoint
                             {
-                                Map = map,
+                                Map = mapId,
                                 X = adjustedX,
                                 Y = adjustedY,
                                 Width = range,
                                 Height = range
                             });
+                        }
                     }
-                }
 
-                Logger.Info($"Loaded {Spawns.Count} XML spawner points");
-            }
-            catch (Exception ex)
-            {
-                Logger.Error("Error loading XML spawner list", ex);
+                    Logger.Info($"Loaded {Spawns.Count} XML spawner points");
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error("Error loading XML spawner list", ex);
                 }
             }
             else
@@ -71,69 +69,43 @@ namespace UORespawnApp
             }
         }
 
-        internal static void LoadStaticList()
-        {
-            string fileLoc = StaticFile;
-
-            if (Directory.Exists(Settings.ServUODataFolder))
-            {
-                var serverFile = Path.Combine(Settings.ServUODataFolder, "UOR_StaticList.txt");
-                if (File.Exists(serverFile))
-                {
-                    fileLoc = serverFile;
-                }
-            }
-
-            if (File.Exists(fileLoc))
-            {
-                try
-                {
-                    WorldSpawnUtility.SetStaticList([.. File.ReadAllLines(fileLoc)]);
-            }
-            catch (Exception ex)
-            {
-                Logger.Error("Error loading XML static list", ex);
-                }
-            }
-        }
-
-        private static bool TryGetMap(string name, out GameMap map)
+        private static bool TryGetMap(string name, out int mapId)
         {
             switch (name.ToLower())
             {
                 case "felucca":
-                    map = GameMap.Map0;
+                    mapId = 0;
                     return true;
 
                 case "trammel":
-                    map = GameMap.Map1;
+                    mapId = 1;
                     return true;
 
                 case "ilshenar":
-                    map = GameMap.Map2;
+                    mapId = 2;
                     return true;
 
                 case "malas":
-                    map = GameMap.Map3;
+                    mapId = 3;
                     return true;
 
                 case "tokuno":
-                    map = GameMap.Map4;
+                    mapId = 4;
                     return true;
 
                 case "termur":
                 case "ter mur":
-                    map = GameMap.Map5;
+                    mapId = 5;
                     return true;
             }
 
-            map = GameMap.Map0;
+            mapId = 0;
             return false;
         }
 
-        internal static List<XMLSpawnPoint> GetSpawnersForMap(GameMap map)
+        internal static List<XMLSpawnPoint> GetSpawnersForMap(int mapId)
         {
-            return [.. Spawns.Where(s => s.Map == map)];
+            return [.. Spawns.Where(s => s.Map == mapId)];
         }
     }
 }

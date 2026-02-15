@@ -1,0 +1,63 @@
+/* ========================================
+   UORespawn Icon Styles
+   Custom Bootstrap Icon styling for spawn frequencies
+   ======================================== */
+
+/* Base icon styling for all frequency icons */
+.frequency-icon {
+    font-size: 1.3em;
+    line-height: 1;
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 4px;
+}
+
+/* Frequency Icon Colors */
+.frequency-icon-water {
+    color: #0dcaf0; /* Bootstrap info color - cyan/blue */
+}
+
+.frequency-icon-weather {
+    color: #ffc107; /* Bootstrap warning color - yellow/gold */
+}
+
+.frequency-icon-timed {
+    color: #6c757d; /* Bootstrap secondary color - gray */
+}
+
+.frequency-icon-common {
+    color: #6c757d; /* Bootstrap secondary color - gray */
+}
+
+.frequency-icon-uncommon {
+    color: #198754; /* Bootstrap success color - green */
+}
+
+.frequency-icon-rare {
+    color: #dc3545; /* Bootstrap danger color - red */
+}
+
+/* Button-specific overrides to ensure icons show correctly on colored backgrounds */
+.btn-primary .frequency-icon-water,
+.btn-primary .frequency-icon-weather,
+.btn-primary .frequency-icon-timed {
+    color: white;
+}
+
+.btn-secondary .frequency-icon-common {
+    color: white;
+}
+
+.btn-success .frequency-icon-uncommon {
+    color: white;
+}
+
+.btn-danger .frequency-icon-rare {
+    color: white;
+}
+
+/* Hover effect for frequency icons */
+.btn:hover .frequency-icon {
+    transform: scale(1.15);
+    transition: transform 0.2s ease;
+}

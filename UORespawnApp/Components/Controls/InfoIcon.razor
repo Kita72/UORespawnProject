@@ -1,0 +1,18 @@
+@* Info Icon with Tooltip *@
+<span class="info-icon-wrapper" @onmouseenter="ShowTooltip" @onmouseleave="HideTooltip">
+    <span class="bi bi-info-circle text-primary" style="cursor: help;"></span>
+    @if (showTooltip)
+    {
+        <div class="info-tooltip">
+            @Text
+        </div>
+    }
+</span>
+
+@code {
+    [Parameter] public string Text { get; set; } = "";
+    private bool showTooltip = false;
+
+    private void ShowTooltip() => showTooltip = true;
+    private void HideTooltip() => showTooltip = false;
+}

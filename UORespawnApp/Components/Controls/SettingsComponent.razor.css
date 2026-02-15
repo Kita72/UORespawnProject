@@ -1,3 +1,21 @@
+/* Card styling with center alignment */
+.card {
+    margin: 0 auto;
+}
+
+.card-body {
+    padding: 1.5rem;
+}
+
+/* Form inputs centered */
+.form-control.text-center {
+    text-align: center;
+}
+
+.form-select.text-center {
+    text-align: center;
+}
+
 .color-preview {
     width: 80px;
     height: 38px;
@@ -98,6 +116,20 @@ body.dark-theme .form-check-label {
     color: #c0c0c0;
 }
 
+/* Button minimum widths for consistency */
+.btn {
+    transition: all 0.2s ease;
+}
+
+/* Badge styling */
+.badge {
+    font-weight: 500;
+}
+
+/* Alert centering */
+.alert {
+    text-align: center;
+}
 body.dark-theme .form-control,
 body.dark-theme .form-select {
     background-color: #2a2a2a;

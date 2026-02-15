@@ -1,4 +1,5 @@
-﻿using UORespawnApp.Scripts.Utilities;
+﻿using UORespawnApp.Scripts.Constants;
+using UORespawnApp.Scripts.Utilities;
 
 namespace UORespawnApp
 {
@@ -6,8 +7,8 @@ namespace UORespawnApp
     {
         private readonly FileSystemWatcher? _watcher;
         private readonly Action? _onDataChanged;
-        private DateTime _lastReloadTime = DateTime.MinValue;
-        private const int DEBOUNCE_MILLISECONDS = 500;
+        private CancellationTokenSource? _delayTokenSource;
+        private const int DELAY_MILLISECONDS = 1000;
         
         public static bool IsSupported => OperatingSystem.IsWindows() || OperatingSystem.IsMacOS();
         public bool IsActive => _watcher != null;
@@ -65,56 +66,58 @@ namespace UORespawnApp
 
         private async void OnChanged(object sender, FileSystemEventArgs e)
         {
-            // Debounce - prevent multiple rapid fire events
-            var now = DateTime.Now;
-            if ((now - _lastReloadTime).TotalMilliseconds < DEBOUNCE_MILLISECONDS)
+            // Cancel any existing delay if file changes again
+            _delayTokenSource?.Cancel();
+            _delayTokenSource = new CancellationTokenSource();
+
+            try
             {
-                return;
-            }
-            _lastReloadTime = now;
-            
-            // Wait a bit to ensure file is fully written
-            await Task.Delay(DEBOUNCE_MILLISECONDS).ConfigureAwait(false);
-            
-            if (!string.IsNullOrEmpty(e.Name))
-            {
+                // Wait 1 second - resets if another change happens during this time
+                // This buffers for server file generation to complete
+                await Task.Delay(DELAY_MILLISECONDS, _delayTokenSource.Token).ConfigureAwait(false);
+
+                if (string.IsNullOrEmpty(e.Name))
+                {
+                    return;
+                }
+
+                // Skip stats files (live session data, not for editor)
+                if (PathConstants.IsStatsFile(e.Name))
+                {
+                    return;
+                }
+
                 Logger.Info($"File changed: {e.Name}");
-                
-                try
+
+                // Process relevant file types
+                if (PathConstants.IsBestiaryFile(e.Name) || PathConstants.IsSpawnerListFile(e.Name))
                 {
-                    if (IsBestiaryFile(e.Name))
-                    {
-                        await ReloadBestiary().ConfigureAwait(false);
-                    }
-                    else if (IsStaticListFile(e.Name))
-                    {
-                        await ReloadStaticList().ConfigureAwait(false);
-                    }
+                    await ReloadBestiary().ConfigureAwait(false);
                 }
-                catch (Exception ex)
+                else if (PathConstants.IsRegionListFile(e.Name))
                 {
-                    Logger.Error("Error processing file change", ex);
+                    await ReloadRegionList().ConfigureAwait(false);
                 }
+
+                _onDataChanged?.Invoke();
             }
-        }
-
-        private static bool IsBestiaryFile(string fileName)
-        {
-            return fileName.Contains("UOR_SpawnerList", StringComparison.OrdinalIgnoreCase) ||
-                   fileName.Contains("Bestiary", StringComparison.OrdinalIgnoreCase);
-        }
-
-        private static bool IsStaticListFile(string fileName)
-        {
-            return fileName.Contains("UOR_StaticList", StringComparison.OrdinalIgnoreCase);
+            catch (TaskCanceledException)
+            {
+                // Another change happened, this delay was cancelled - this is expected
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error processing file change", ex);
+            }
         }
 
         private async Task ReloadBestiary()
         {
             try
             {
-                await WorldSpawnUtility.LoadSpawnList();
-                _onDataChanged?.Invoke();
+                // Clear existing list to force reload with server-generated data
+                BestiarySpawnUtility.ClearSpawnList();
+                await BestiarySpawnUtility.LoadSpawnList();
                 Logger.Info("Bestiary reloaded from server");
             }
             catch (Exception ex)
@@ -123,22 +126,26 @@ namespace UORespawnApp
             }
         }
 
-        private async Task ReloadStaticList()
+        private async Task ReloadRegionList()
         {
             try
             {
-                await WorldSpawnUtility.LoadStaticList();
-                _onDataChanged?.Invoke();
-                Logger.Info("Static list reloaded from server");
+                // Clear existing region data to force reload with server-generated data
+                RegionDataUtility.ClearRegionData();
+                await RegionDataUtility.EnsureLoadedAsync();
+                Logger.Info("Region list reloaded from server");
             }
             catch (Exception ex)
             {
-                Logger.Error("Error reloading static list", ex);
+                Logger.Error("Error reloading region list", ex);
             }
         }
 
         public void Dispose()
         {
+            _delayTokenSource?.Cancel();
+            _delayTokenSource?.Dispose();
+
             if (_watcher != null)
             {
                 _watcher.Changed -= OnChanged;

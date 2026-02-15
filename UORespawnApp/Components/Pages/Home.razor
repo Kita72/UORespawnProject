@@ -11,21 +11,17 @@
     <div style="position: fixed; top: 0; left: 250px; right: 0; bottom: 0; background-image: url('splash.png'); background-size: cover; background-position: center; background-repeat: no-repeat; z-index: 0;">
     </div>
 }
-else if (ViewService.CurrentView == "mapview")
+else if (ViewService.CurrentView == "boxspawn" || ViewService.CurrentView == "mapview") // Support both for backward compatibility
 {
-    <MapComponent @key="ViewService.CurrentMap.ToString()" />
+    <BoxSpawnComponent @key="ViewService.CurrentMapId.ToString()" />
 }
-else if (ViewService.CurrentView == "weather")
+else if (ViewService.CurrentView == "tilespawn" || ViewService.CurrentView == "worldspawn") // Support both old/new
 {
-    <WeatherComponent />
+    <TileSpawnComponent @key="ViewService.CurrentMapId.ToString()" />
 }
-else if (ViewService.CurrentView == "worldspawn")
+else if (ViewService.CurrentView == "regionspawn")
 {
-    <WorldSpawnComponent />
-}
-else if (ViewService.CurrentView == "staticspawn")
-{
-    <StaticSpawnComponent />
+    <RegionSpawnComponent @key="ViewService.CurrentMapId.ToString()" />
 }
 else if (ViewService.CurrentView == "settings")
 {
@@ -46,7 +42,7 @@ else if (ViewService.CurrentView == "instructions")
         // Just log the component initialization
         try
         {
-            var totalSpawns = Utility.Spawns.Values.Sum(list => list.Count);
+            var totalSpawns = Utility.BoxSpawns.Values.Sum(list => list.Count);
             Logger.Info($"Home component initialized - {totalSpawns} total spawn boxes loaded");
         }
         catch (Exception ex)

@@ -73,13 +73,13 @@
     <ItemGroup>
       <MauiAsset Remove="Resources\Raw\growl.wav" />
       <MauiAsset Remove="Resources\Raw\UOR_SpawnerList.txt" />
-      <MauiAsset Remove="Resources\Raw\UOR_StaticList.txt" />
+		<MauiAsset Remove="Resources\Raw\UOR_RegionList.txt" />
     </ItemGroup>
 
     <ItemGroup>
       <None Remove="Resources\Raw\growl.wav" />
       <None Remove="Resources\Raw\UOR_SpawnerList.txt" />
-      <None Remove="Resources\Raw\UOR_StaticList.txt" />
+		<None Remove="Resources\Raw\UOR_RegionList.txt" />
     </ItemGroup>
 
     <ItemGroup>
@@ -93,9 +93,9 @@
       <Content Include="Resources\Raw\UOR_SpawnerList.txt">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </Content>
-      <Content Include="Resources\Raw\UOR_StaticList.txt">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </Content>
+		<Content Include="Resources\Raw\UOR_RegionList.txt">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
     </ItemGroup>
 
     <ItemGroup>
@@ -106,15 +106,15 @@
 
     <!-- Exclude Server-Side SpawnSystem folder from compilation but include for distribution -->
     <ItemGroup>
-        <Compile Remove="SpawnSystem\**" />
-        <EmbeddedResource Remove="SpawnSystem\**" />
-        <MauiCss Remove="SpawnSystem\**" />
-        <MauiXaml Remove="SpawnSystem\**" />
+        <Compile Remove="UORespawnSystem\**" />
+        <EmbeddedResource Remove="UORespawnSystem\**" />
+        <MauiCss Remove="UORespawnSystem\**" />
+        <MauiXaml Remove="UORespawnSystem\**" />
     </ItemGroup>
 
     <!-- Include SpawnSystem folder in published output for export functionality -->
     <ItemGroup>
-      <None Include="SpawnSystem\**\*.*" CopyToPublishDirectory="PreserveNewest" />
+      <None Include="UORespawnSystem\**\*.*" CopyToPublishDirectory="PreserveNewest" />
     </ItemGroup>
     <ItemGroup>
       <MauiImage Remove="Resources\Images\splash.png" />
@@ -139,6 +139,10 @@
       <None Update="Data\Map5.bmp">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="DOCS\" />
     </ItemGroup>
 
 </Project>

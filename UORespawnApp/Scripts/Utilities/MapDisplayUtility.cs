@@ -4,7 +4,7 @@ namespace UORespawnApp
 {
     internal static class MapDisplayUtility
     {
-        private static readonly List<(string ShortTime, string PlayerName, GameMap PlayerMap, Microsoft.Maui.Graphics.Point PlayerLocation, Microsoft.Maui.Graphics.Point SpawnLocation)> SpawnStats = [];
+        private static readonly List<(string ShortTime, string PlayerName, int PlayerMap, Microsoft.Maui.Graphics.Point PlayerLocation, Microsoft.Maui.Graphics.Point SpawnLocation)> SpawnStats = [];
 
         private static readonly Dictionary<string, Color> playerColorCache = [];
 
@@ -12,10 +12,10 @@ namespace UORespawnApp
 
         internal static bool HasSpawnData => SpawnStats.Count > 0;
 
-        internal static List<SpawnStatData> GetSpawnDataForMap(GameMap map)
+        internal static List<SpawnStatData> GetSpawnDataForMap(int mapId)
         {
             var result = new List<SpawnStatData>();
-            var filteredData = SpawnStats.Where(item => item.PlayerMap == map).ToList();
+            var filteredData = SpawnStats.Where(item => item.PlayerMap == mapId).ToList();
             
             foreach (var data in filteredData)
             {
@@ -46,14 +46,14 @@ namespace UORespawnApp
             return result;
         }
 
-        internal static int GetSpawnDataCount(GameMap map)
+        internal static int GetSpawnDataCount(int mapId)
         {
-            return SpawnStats.Count(item => item.PlayerMap == map);
+            return SpawnStats.Count(item => item.PlayerMap == mapId);
         }
 
         internal static void InstantiateStatData()
         {
-            string statsFolderPath = Path.Combine(Settings.ServUODataFolder, "UOR_Stats");
+            string statsFolderPath = Path.Combine(Settings.ServUODataFolder, "UOR_DATA", "UOR_STATS");
 
             Logger.Info($"Looking for spawn stats in: {statsFolderPath}");
 
@@ -94,15 +94,15 @@ namespace UORespawnApp
                                     string playerName = parts[1].Trim();     // "Maliki"
                                     string mapString = parts[2].Trim();      // "Trammel"
 
-                                    // Convert map name to GameMap enum
-                                    GameMap map = ConvertMapNameToEnum(mapString);
+                                    // Convert map name to int mapId
+                                    int mapId = MapUtility.ParseMapName(mapString);
 
                                     int playerX = int.Parse(parts[3].Trim());
                                     int playerY = int.Parse(parts[4].Trim());
                                     int spawnX = int.Parse(parts[5].Trim());
                                     int spawnY = int.Parse(parts[6].Trim());
 
-                                    SpawnStats.Add((shortTime, playerName, map, 
+                                    SpawnStats.Add((shortTime, playerName, mapId,
                                         new Microsoft.Maui.Graphics.Point(playerX, playerY), 
                                         new Microsoft.Maui.Graphics.Point(spawnX, spawnY)));
 
@@ -135,28 +135,6 @@ namespace UORespawnApp
             {
                 Logger.Warning($"UOR_Stats folder not found at: {statsFolderPath}");
             }
-        }
-
-        private static GameMap ConvertMapNameToEnum(string mapName)
-        {
-            // Handle both full names and enum names
-            return mapName.ToLower() switch
-            {
-                "felucca" or "map0" => GameMap.Map0,
-                "trammel" or "map1" => GameMap.Map1,
-                "ilshenar" or "map2" => GameMap.Map2,
-                "malas" or "map3" => GameMap.Map3,
-                "tokuno" or "map4" => GameMap.Map4,
-                "termur" or "ter mur" or "map5" => GameMap.Map5,
-                _ => throw new ArgumentException($"Unknown map name: {mapName}")
-            };
-        }
-
-        internal static void ClearSpawnData()
-        {
-            SpawnStats.Clear();
-            playerColorCache.Clear();
-            Logger.Info("Cleared spawn statistics data");
         }
     }
 

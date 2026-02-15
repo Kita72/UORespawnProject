@@ -1,5 +1,33 @@
 namespace UORespawnApp
 {
+    /// <summary>
+    /// Settings class manages UORespawn configuration using a two-tier persistence model:
+    /// 
+    /// 1. PREFERENCES (Microsoft.Maui.Storage.Preferences):
+    ///    - All settings stored as key/value pairs
+    ///    - Immediate persistence on every property set
+    ///    - Used for editor-specific settings (UI appearance, server folder path, custom bestiary)
+    /// 
+    /// 2. BINARY SERIALIZATION (UOR_SpawnSettings.bin):
+    ///    - Spawn-related settings saved to binary file via Utility.SaveSettings()
+    ///    - Syncs to server folder when configured
+    ///    - Loaded on app startup by BackgroundDataLoader.LoadSettingsAsync()
+    /// 
+    /// PROPERTIES IN BINARY (.bin file):
+    ///    MaxMobs, MinRange, MaxRange, MaxCrowd,
+    ///    WaterChance, WeatherChance, TimedChance,
+    ///    CommonChance, UnCommonChance, RareChance,
+    ///    IsScaleSpawn, EnableRiftSpawn, EnableDebugSpawn
+    /// 
+    /// PROPERTIES PREFERENCES-ONLY (NOT in binary):
+    ///    ServUODataFolder (editor config),
+    ///    BoxColor, BoxColorInc, BoxLineSize (UI appearance),
+    ///    Bestiary (editor custom creature list)
+    /// 
+    /// SAVE TRIGGERS:
+    ///    - SettingsComponent.Dispose() (page navigation)
+    ///    - ResetToDefaults() (explicit save after reset)
+    /// </summary>
     internal static class Settings
     {
         // Cache for frequently accessed settings to avoid repeated Preferences.Get() calls
@@ -73,10 +101,10 @@ namespace UORespawnApp
             }
         }
 
-        public static double CreatureChance
+        public static double TimedChance
         {
-            get => Preferences.Get("CreatureChance", 0.1);
-            set => Preferences.Set("CreatureChance", value);
+            get => Preferences.Get("TimedChance", 0.1);
+            set => Preferences.Set("TimedChance", value);
         }
 
         public static double CommonChance
@@ -103,6 +131,7 @@ namespace UORespawnApp
             {
                 var list = new System.Collections.Specialized.StringCollection();
                 var value = Preferences.Get("Bestiary", "");
+
                 if (!string.IsNullOrEmpty(value))
                 {
                     list.AddRange(value.Split(','));
@@ -124,10 +153,10 @@ namespace UORespawnApp
             set => Preferences.Set("EnableDebugSpawn", value);
         }
 
-        public static int MaxMob
+        public static int MaxMobs
         {
-            get => Preferences.Get("MaxMob", 15);
-            set => Preferences.Set("MaxMob", value);
+            get => Preferences.Get("MaxMobs", 15);
+            set => Preferences.Set("MaxMobs", value);
         }
 
         public static int MinRange
@@ -158,12 +187,6 @@ namespace UORespawnApp
         {
             get => Preferences.Get("WeatherChance", 0.1);
             set => Preferences.Set("WeatherChance", value);
-        }
-
-        public static double StaticChance
-        {
-            get => Preferences.Get("StaticChance", 0.1);
-            set => Preferences.Set("StaticChance", value);
         }
 
         public static bool IsScaleSpawn

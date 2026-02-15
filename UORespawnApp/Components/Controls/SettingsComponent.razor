@@ -2,249 +2,228 @@
     <div class="row justify-content-center">
         <div class="col-lg-8">
 
-            <!-- ServUO Data Folder -->
+            <!-- ServUO Server Integration -->
             <div class="card map-card mb-3">
                 <div class="card-header text-center">
-                    <strong class="text-primary">Server Integration</strong>
+                    <span class="text-primary" style="font-size: 1.25rem;">ServUO Server Integration</span>
+                    <InfoIcon Text="Link your ServUO server folder. App validates structure, auto-creates Scripts/Custom/UORespawn, and syncs files automatically." />
                 </div>
-                <div class="card-body">
+                <div class="card-body text-center">
                     @if (!DataWatcher.IsSupported)
                     {
                         <div class="alert alert-warning mb-3">
                             <span class="bi bi-exclamation-triangle"></span>
-                            <strong>Server Integration Not Supported</strong>
-                            <p class="mb-0 mt-2 small">
-                                Automatic file synchronization is only available on Windows and macOS.
-                                On this platform, you'll need to manually export data files to your server.
-                            </p>
+                            <strong>Not Supported on This Platform</strong>
                         </div>
                     }
 
-                    <!-- Export Server Scripts Button -->
-                    <div class="mb-4">
-                        <h6 class="text-center mb-3">Server-Side Scripts</h6>
-                        <button class="btn btn-success btn-lg w-100" @onclick="ExportServerScripts" disabled="@isExporting">
-                            @if (isExporting)
-                            {
-                                <span class="spinner-border spinner-border-sm me-2"></span>
-                                <text>Exporting...</text>
-                            }
-                            else
-                            {
-                                <span class="bi bi-download me-2"></span>
-                                <text>Download Server Scripts (SpawnSystem)</text>
-                            }
-                        </button>
-                        <small class="text-muted d-block mt-2 text-center">
-                            Downloads a ZIP containing all server-side scripts for ServUO
-                        </small>
-                        @if (!string.IsNullOrEmpty(exportMessage))
-                        {
-                            <div class="alert @(exportSuccess ? "alert-success" : "alert-danger") mt-3">
-                                @exportMessage
-                            </div>
-                        }
-                    </div>
+                    @{
+                        var isConfigured = ServerSetupUtility.IsServerConfigured(Settings.ServUODataFolder);
+                    }
 
-                    <hr class="my-4" />
-
-                    <div class="mb-3">
-                        <label class="form-label">ServUO Data Folder Path</label>
-                        <div class="input-group">
-                            <input type="text"
-                                   class="form-control"
-                                   @bind="Settings.ServUODataFolder"
-                                   placeholder="@(DataWatcher.IsSupported ? "e.g., C:\\ServUO\\Data\\" : "Not available on this platform")"
-                                   disabled="@(!DataWatcher.IsSupported)" />
-                            <button class="btn btn-outline-primary"
-                                    @onclick="BrowseFolder"
-                                    disabled="@(!DataWatcher.IsSupported)">
-                                <span class="bi bi-folder2-open"></span> Browse
-                            </button>
-                        </div>
-                        <small class="text-muted">
-                            @if (DataWatcher.IsSupported)
-                            {
-                                <text>When set, spawn data will automatically sync to this folder</text>
-                            }
-                            else
-                            {
-                                <text>Server integration requires Windows or macOS</text>
-                            }
-                        </small>
-                    </div>
-
-                    @if (DataWatcher.IsSupported)
+                    @if (isConfigured)
                     {
-                        @if (!string.IsNullOrEmpty(Settings.ServUODataFolder))
-                        {
-                            <div class="alert alert-success mb-3">
-                                <span class="bi bi-check-circle"></span> Server folder configured: <strong>@Settings.ServUODataFolder</strong>
-                                <br />
-                                <small>Files will automatically sync when changes are made</small>
-                            </div>
+                        <div class="mb-3">
+                            <span class="badge bg-success" style="font-size: 1rem; padding: 10px 20px;">
+                                <span class="bi bi-check-circle me-2"></span>
+                                Active
+                            </span>
+                        </div>
+                        <p class="text-muted mb-3"><small>@Settings.ServUODataFolder</small></p>
+                    }
+                    else
+                    {
+                        <p class="text-muted mb-3">Select your main ServUO folder to begin</p>
+                    }
 
-                            <!-- Import from Server Button -->
-                            <div class="mb-0">
-                                <button class="btn btn-primary w-100" @onclick="ImportFromServer" disabled="@isImporting">
-                                    @if (isImporting)
-                                    {
-                                        <span class="spinner-border spinner-border-sm me-2"></span>
-                                        <text>Importing...</text>
-                                    }
-                                    else
-                                    {
-                                        <span class="bi bi-cloud-download me-2"></span>
-                                        <text>Import Spawn Files from Server</text>
-                                    }
-                                </button>
-                                <small class="text-muted d-block mt-2 text-center">
-                                    Imports UOR_Spawn.csv, UOR_WorldSpawn.csv, UOR_StaticSpawn.csv, UOR_SpawnSettings.csv
-                                </small>
-                                @if (!string.IsNullOrEmpty(importMessage))
-                                {
-                                    <div class="alert @(importSuccess ? "alert-success" : "alert-danger") mt-3 mb-0" style="white-space: pre-line;">
-                                        @importMessage
-                                    </div>
-                                }
-                            </div>
-                        }
-                        else
-                        {
-                            <div class="alert alert-warning mb-0">
-                                <span class="bi bi-exclamation-triangle"></span> No server folder set - files will only save locally
-                            </div>
-                        }
+                    <!-- Link/Change Folder Button -->
+                    <div class="mb-3">
+                        <button class="btn @(isConfigured ? "btn-outline-danger" : "btn-primary btn-lg")" 
+                                style="min-width: 200px;"
+                                @onclick="BrowseServUOFolder"
+                                disabled="@(!DataWatcher.IsSupported)">
+                            <span class="bi @(isConfigured ? "bi-x-circle" : "bi-link-45deg")"></span> 
+                            @(isConfigured ? "Unlink Server" : "Link Server")
+                        </button>
+                    </div>
+
+                    <!-- Validation/Setup Messages -->
+                    @if (!string.IsNullOrEmpty(serverSetupMessage))
+                    {
+                        <div class="alert @(serverSetupSuccess ? "alert-success" : "alert-danger")">
+                            @serverSetupMessage
+                        </div>
                     }
                 </div>
             </div>
 
+            <!-- Legacy Import (v1.0 to v2.0) -->
+            @if (LegacyImportUtility.IsLegacyImportAvailable())
+            {
+                <div class="card map-card mb-3" style="border: 2px solid #0dcaf0;">
+                    <div class="card-header text-center" style="background: linear-gradient(135deg, #0dcaf0 0%, #0d6efd 100%); color: white;">
+                        <strong>🔄 Legacy Import (v1.0 → v2.0)</strong>
+                        <InfoIcon Text="Migrate CSV files from UORespawn v1.0 (3 frequencies) to v2.0 format (6 frequencies). Only available for fresh installs." />
+                    </div>
+                    <div class="card-body text-center">
+                        <!-- Box Spawn Import -->
+                        <div class="mb-3">
+                            <h6 class="mb-2">Box Spawn</h6>
+                            <button class="btn btn-info" style="min-width: 200px;" @onclick="BrowseLegacyBoxSpawnFile" disabled="@isImportingLegacy">
+                                @if (isImportingLegacy && currentImportType == "box")
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                    <text>Importing...</text>
+                                }
+                                else
+                                {
+                                    <span class="bi bi-file-earmark-arrow-up me-2"></span>
+                                    <text>Import CSV</text>
+                                }
+                            </button>
+                            @if (!string.IsNullOrEmpty(selectedLegacyBoxFile))
+                            {
+                                <small class="text-muted d-block mt-1">@Path.GetFileName(selectedLegacyBoxFile)</small>
+                            }
+                        </div>
+
+                        <hr class="my-3" />
+
+                        <!-- Tile Spawn Import -->
+                        <div class="mb-3">
+                            <h6 class="mb-2">Tile Spawn</h6>
+                            <button class="btn btn-info" style="min-width: 200px;" @onclick="BrowseLegacyTileSpawnFile" disabled="@isImportingLegacy">
+                                @if (isImportingLegacy && currentImportType == "tile")
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                    <text>Importing...</text>
+                                }
+                                else
+                                {
+                                    <span class="bi bi-file-earmark-arrow-up me-2"></span>
+                                    <text>Import CSV</text>
+                                }
+                            </button>
+                            @if (!string.IsNullOrEmpty(selectedLegacyTileFile))
+                            {
+                                <small class="text-muted d-block mt-1">@Path.GetFileName(selectedLegacyTileFile)</small>
+                            }
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(legacyImportMessage))
+                        {
+                            <div class="alert @(legacyImportSuccess ? "alert-success" : "alert-danger") mt-3 mb-0" style="white-space: pre-line;">
+                                @legacyImportMessage
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+
             <!-- Spawn Settings -->
             <div class="card map-card mb-3">
                 <div class="card-header text-center">
-                    <strong class="text-primary">Spawn Settings</strong>
+                    <span class="text-primary" style="font-size: 1.25rem;">Spawn Settings</span>
+                    <InfoIcon Text="Configure spawn ranges, crowd limits, frequency chances, and special features for your server." />
                 </div>
                 <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
+                    <div class="row justify-content-center">
+                        <div class="col-md-6 mb-3 text-center">
                             <label class="form-label">Min Range</label>
-                            <input type="number" class="form-control" @bind="Settings.MinRange" min="0" />
+                            <input type="number" class="form-control text-center" @bind="Settings.MinRange" min="0" />
                         </div>
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-6 mb-3 text-center">
                             <label class="form-label">Max Range</label>
-                            <input type="number" class="form-control" @bind="Settings.MaxRange" min="0" />
+                            <input type="number" class="form-control text-center" @bind="Settings.MaxRange" min="0" />
                         </div>
                     </div>
-                    
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Max Crowd</label>
-                            <input type="number" class="form-control" @bind="Settings.MaxCrowd" min="0" />
-                            <small class="text-muted">Maximum spawns allowed within Min Range</small>
+
+                    <div class="row justify-content-center">
+                        <div class="col-md-6 mb-3 text-center">
+                            <label class="form-label">
+                                Max Crowd
+                                <InfoIcon Text="Maximum spawns within Min Range" />
+                            </label>
+                            <input type="number" class="form-control text-center" @bind="Settings.MaxCrowd" min="0" />
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Max Mob</label>
-                            <input type="number" class="form-control" @bind="Settings.MaxMob" min="0" />
-                            <small class="text-muted">Maximum spawns allowed within Max Range</small>
+                        <div class="col-md-6 mb-3 text-center">
+                            <label class="form-label">
+                                Max Mobs
+                                <InfoIcon Text="Maximum spawns within Max Range" />
+                            </label>
+                            <input type="number" class="form-control text-center" @bind="Settings.MaxMobs" min="0" />
                         </div>
                     </div>
-                    
+
                     <hr class="my-4" />
-                    
-                    <h6 class="mb-3 text-center">Spawn Chances</h6>
-                    
-                    <div class="row">
-                        <div class="col-md-3 mb-3">
-                            <label class="form-label">Creature</label>
-                            <select class="form-select" @bind="Settings.CreatureChance">
-                                @for (double i = 0.1; i <= 1.0; i += 0.1)
-                                {
-                                    <option value="@i">@i.ToString("0.0")</option>
-                                }
-                            </select>
-                        </div>
-                        <div class="col-md-3 mb-3">
+
+                    <h6 class="mb-3 text-center">
+                        <span class="text-primary" style="font-size: 1.25rem; font-weight: normal;">Spawn Chances</span>
+                        <InfoIcon Text="Probability values: 0.0 (0%) to 1.0 (100%). Controls spawn frequency for each rarity tier." />
+                    </h6>
+
+                    <div class="row justify-content-center">
+                        <div class="col-md-4 mb-3 text-center">
                             <label class="form-label">Common</label>
-                            <select class="form-select" @bind="Settings.CommonChance">
-                                @for (double i = 0.1; i <= 1.0; i += 0.1)
-                                {
-                                    <option value="@i">@i.ToString("0.0")</option>
-                                }
-                            </select>
+                            <input type="number" class="form-control text-center" @bind="Settings.CommonChance" min="0" max="1" step="0.1" />
                         </div>
-                        <div class="col-md-3 mb-3">
+                        <div class="col-md-4 mb-3 text-center">
                             <label class="form-label">Uncommon</label>
-                            <select class="form-select" @bind="Settings.UnCommonChance">
-                                @for (double i = 0.1; i <= 1.0; i += 0.1)
-                                {
-                                    <option value="@i">@i.ToString("0.0")</option>
-                                }
-                            </select>
+                            <input type="number" class="form-control text-center" @bind="Settings.UnCommonChance" min="0" max="1" step="0.1" />
                         </div>
-                        <div class="col-md-3 mb-3">
+                        <div class="col-md-4 mb-3 text-center">
                             <label class="form-label">Rare</label>
-                            <select class="form-select" @bind="Settings.RareChance">
-                                @for (double i = 0.1; i <= 1.0; i += 0.1)
-                                {
-                                    <option value="@i">@i.ToString("0.0")</option>
-                                }
-                            </select>
+                            <input type="number" class="form-control text-center" @bind="Settings.RareChance" min="0" max="1" step="0.1" />
                         </div>
                     </div>
-                    
-                    <div class="row">
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label">Water Chance</label>
-                            <select class="form-select" @bind="Settings.WaterChance">
-                                @for (double i = 0.1; i <= 1.0; i += 0.1)
-                                {
-                                    <option value="@i">@i.ToString("0.0")</option>
-                                }
-                            </select>
+
+                    <div class="row justify-content-center">
+                        <div class="col-md-4 mb-3 text-center">
+                            <label class="form-label">Water</label>
+                            <input type="number" class="form-control text-center" @bind="Settings.WaterChance" min="0" max="1" step="0.1" />
                         </div>
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label">Weather Chance</label>
-                            <select class="form-select" @bind="Settings.WeatherChance">
-                                @for (double i = 0.1; i <= 1.0; i += 0.1)
-                                {
-                                    <option value="@i">@i.ToString("0.0")</option>
-                                }
-                            </select>
+                        <div class="col-md-4 mb-3 text-center">
+                            <label class="form-label">Weather</label>
+                            <input type="number" class="form-control text-center" @bind="Settings.WeatherChance" min="0" max="1" step="0.1" />
                         </div>
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label">Static Chance</label>
-                            <select class="form-select" @bind="Settings.StaticChance">
-                                @for (double i = 0.1; i <= 1.0; i += 0.1)
-                                {
-                                    <option value="@i">@i.ToString("0.0")</option>
-                                }
-                            </select>
+                        <div class="col-md-4 mb-3 text-center">
+                            <label class="form-label">Timed</label>
+                            <input type="number" class="form-control text-center" @bind="Settings.TimedChance" min="0" max="1" step="0.1" />
                         </div>
                     </div>
-                    
+
                     <hr class="my-4" />
-                    
-                    <h6 class="mb-3 text-center">Options</h6>
-                    
-                    <div class="form-check form-switch mb-2">
-                        <input class="form-check-input" type="checkbox" @bind="Settings.IsScaleSpawn" id="scaleSpawn">
-                        <label class="form-check-label" for="scaleSpawn">
-                            Enable Scale Spawn (Spawn increases vs Players)
-                        </label>
-                    </div>
-                    
-                    <div class="form-check form-switch mb-2">
-                        <input class="form-check-input" type="checkbox" @bind="Settings.EnableRiftSpawn" id="riftSpawn">
-                        <label class="form-check-label" for="riftSpawn">
-                            Enable Rift Spawn (Trammel to Felucca)
-                        </label>
-                    </div>
-                    
-                    <div class="form-check form-switch mb-3">
-                        <input class="form-check-input" type="checkbox" @bind="Settings.EnableDebugSpawn" id="debugSpawn">
-                        <label class="form-check-label" for="debugSpawn">
-                            Enable Debug Spawn (Placeholders)
-                        </label>
+
+                    <h6 class="mb-3 text-center"><span class="text-primary" style="font-size: 1.25rem; font-weight: normal;">Special Features</span></h6>
+
+                    <div class="row justify-content-center">
+                        <div class="col-md-4 text-center">
+                            <div class="form-check form-switch d-inline-block text-start mb-3">
+                                <input class="form-check-input" type="checkbox" @bind="Settings.IsScaleSpawn" id="scaleSpawn">
+                                <label class="form-check-label" for="scaleSpawn">
+                                    Scale Spawn
+                                    <InfoIcon Text="Spawn increases based on player count" />
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <div class="form-check form-switch d-inline-block text-start mb-3">
+                                <input class="form-check-input" type="checkbox" @bind="Settings.EnableRiftSpawn" id="riftSpawn">
+                                <label class="form-check-label" for="riftSpawn">
+                                    Rift Spawn
+                                    <InfoIcon Text="Trammel to Felucca portal spawns" />
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <div class="form-check form-switch d-inline-block text-start mb-3">
+                                <input class="form-check-input" type="checkbox" @bind="Settings.EnableDebugSpawn" id="debugSpawn">
+                                <label class="form-check-label" for="debugSpawn">
+                                    Debug Spawn
+                                    <InfoIcon Text="Visual placeholders for testing" />
+                                </label>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -252,22 +231,24 @@
             <!-- Tool Settings -->
             <div class="card map-card mb-3">
                 <div class="card-header text-center">
-                    <strong class="text-primary">Spawn Box Appearance</strong>
+                    <span class="text-primary" style="font-size: 1.25rem;">Spawn Box Appearance</span>
+                    <InfoIcon Text="Customize how spawn boxes appear on the map. Priority levels automatically adjust color brightness." />
                 </div>
                 <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-8 mb-3">
+                    <div class="row justify-content-center mb-3">
+                        <div class="col-12 text-center">
                             <label class="form-label">Box Color</label>
-                            <div class="d-flex gap-2 align-items-center">
+                            <div class="d-flex gap-2 align-items-center justify-content-center">
                                 <input type="color" class="form-control form-control-color" @bind="boxColorHex" style="width: 60px; height: 38px;" />
-                                <input type="text" class="form-control" @bind="boxColorHex" placeholder="#FF0000" />
+                                <input type="text" class="form-control text-center" @bind="boxColorHex" placeholder="#FF0000" style="max-width: 150px;" />
                                 <div class="color-preview" style="background-color: @boxColorHex;"></div>
                             </div>
-                            <small class="text-muted">Color used for spawn box borders on the map</small>
                         </div>
-                        <div class="col-md-4 mb-3">
+                    </div>
+                    <div class="row justify-content-center">
+                        <div class="col-md-6 mb-3 text-center" style="padding-right: 8px;">
                             <label class="form-label">Line Thickness</label>
-                            <select class="form-select" @bind="Settings.BoxLineSize">
+                            <select class="form-select text-center" @bind="Settings.BoxLineSize">
                                 <option value="1">1 px</option>
                                 <option value="2">2 px</option>
                                 <option value="3">3 px</option>
@@ -275,68 +256,132 @@
                                 <option value="5">5 px</option>
                             </select>
                         </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Priority Color Increment</label>
-                        <select class="form-select" @bind="Settings.BoxColorInc">
-                            <option value="0.1">0.1 (Subtle)</option>
-                            <option value="0.2">0.2</option>
-                            <option value="0.3">0.3 (Default)</option>
-                            <option value="0.4">0.4</option>
-                            <option value="0.5">0.5 (Obvious)</option>
-                        </select>
-                        <small class="text-muted">How much brighter each priority level appears</small>
+                        <div class="col-md-6 mb-3 text-center" style="padding-left: 8px;">
+                            <label class="form-label">
+                                Priority Brightness
+                                <InfoIcon Text="How much brighter each priority level appears" />
+                            </label>
+                            <select class="form-select text-center" @bind="Settings.BoxColorInc">
+                                <option value="0.1">Subtle</option>
+                                <option value="0.2">Moderate</option>
+                                <option value="0.3">Default</option>
+                                <option value="0.4">Strong</option>
+                                <option value="0.5">Maximum</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Map Replacement -->
+            <!-- Map Management -->
             <div class="card map-card mb-3">
                 <div class="card-header text-center">
-                    <strong class="text-primary">Custom Maps</strong>
+                    <span class="text-primary" style="font-size: 1.25rem;">Map Management</span>
+                    <InfoIcon Text="Manage map images. Original maps (0-5) require exact dimensions. Custom maps (6+) support 800x800 to 10000x10000." />
                 </div>
                 <div class="card-body">
-                    <div class="mb-3">
-                        <label class="form-label">Replace Map Image</label>
-                        <div class="input-group">
-                            <select class="form-select" @bind="selectedMapToReplace" @bind:after="CheckForBackup">
-                                <option value="">Select a map...</option>
-                                <option value="Map0">Map0 - Felucca (7168x4096)</option>
-                                <option value="Map1">Map1 - Trammel (7168x4096)</option>
-                                <option value="Map2">Map2 - Ilshenar (2304x1600)</option>
-                                <option value="Map3">Map3 - Malas (2560x2048)</option>
-                                <option value="Map4">Map4 - Tokuno (1448x1448)</option>
-                                <option value="Map5">Map5 - Ter Mur (1280x4096)</option>
+                    <!-- Map Status Summary - Split Pill Badge -->
+                    <div class="text-center mb-4">
+                        <div class="d-inline-flex align-items-center" style="font-size: 1.1rem; border-radius: 50px; overflow: hidden; box-shadow: 0 3px 6px rgba(0,0,0,0.15);">
+                            <span class="badge bg-success" style="padding: 12px 24px; border-radius: 0; margin: 0;">
+                                <span class="bi bi-map me-2"></span>
+                                @{
+                                    var availableMaps = GetAvailableMaps();
+                                    var originalCount = availableMaps.Count(id => id < FirstCustomMapId);
+                                    var customCount = availableMaps.Count(id => id >= FirstCustomMapId);
+                                }
+                                @originalCount Original
+                            </span>
+                            <span class="badge bg-danger" style="padding: 12px 24px; border-radius: 0; margin: 0;">
+                                <span class="bi bi-plus-circle me-2"></span>
+                                @customCount Custom
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Replace Existing Map -->
+                    <div class="mb-4 text-center">
+                        <div class="d-flex gap-2 justify-content-center mb-2">
+                            <select class="form-select" style="max-width: 300px;" @bind="selectedMapToReplace" @bind:after="CheckForBackup">
+                                <option value="">Replace Map...</option>
+                                @foreach (var mapId in GetAvailableMaps())
+                                {
+                                    var mapName = $"Map{mapId}";
+                                    var friendlyName = MapUtility.GetMapName(mapId);
+                                    var dims = GetMapDimensions(mapName);
+
+                                    <option value="@mapName">
+                                        @mapName - @friendlyName (@dims.width x @dims.height)
+                                    </option>
+                                }
                             </select>
-                            <button class="btn btn-outline-primary" @onclick="BrowseMapImage" disabled="@string.IsNullOrEmpty(selectedMapToReplace)">
-                                <span class="bi bi-file-earmark-image"></span> Browse BMP
+                            <button class="btn btn-outline-primary" @onclick="BrowseMapImageReplace" disabled="@string.IsNullOrEmpty(selectedMapToReplace)">
+                                <span class="bi bi-file-earmark-image"></span> Browse
                             </button>
                         </div>
-                        <small class="text-muted">Upload a custom map image (must be .bmp format with correct dimensions)</small>
+
+                        @if (hasMapBackup && !string.IsNullOrEmpty(selectedMapToReplace))
+                        {
+                            <button class="btn btn-outline-warning btn-sm" @onclick="RestoreMapBackup">
+                                <span class="bi bi-arrow-counterclockwise"></span> Restore Original
+                            </button>
+                        }
                     </div>
-                    
-                    @if (hasMapBackup && !string.IsNullOrEmpty(selectedMapToReplace))
+
+                    <hr class="my-4" />
+
+                    <!-- Add Custom Map -->
+                    <div class="mt-4 text-center">
+                        @{
+                            var nextCustomMap = GetNextCustomMapNumber();
+                        }
+                        @if (nextCustomMap == -1)
+                        {
+                            <div class="alert alert-warning mb-0" style="max-width: 370px; margin: 0 auto;">
+                                <span class="bi bi-exclamation-triangle"></span> Requires all original maps (0-5) first
+                            </div>
+                        }
+                        else
+                        {
+                            <button class="btn btn-primary" style="width: 370px;" @onclick="BrowseMapImageAdd">
+                                <span class="bi bi-plus-lg"></span> Add Map@(nextCustomMap)
+                            </button>
+                        }
+                    </div>
+
+                    <!-- Delete Custom Map -->
+                    @{
+                        var highestCustom = GetHighestCustomMapNumber();
+                    }
+                    @if (highestCustom >= FirstCustomMapId)
                     {
-                        <div class="mb-3">
-                            <button class="btn btn-outline-warning btn-sm w-100" @onclick="RestoreMapBackup">
-                                <span class="bi bi-arrow-counterclockwise"></span> Restore Original @selectedMapToReplace
+                        <div class="mb-3 text-center">
+                            <label class="form-label fw-bold">Delete Custom Map</label>
+                            <button class="btn btn-danger" style="min-width: 200px;" @onclick="() => DeleteCustomMap(highestCustom)">
+                                <span class="bi bi-trash"></span> Delete Map@(highestCustom)
                             </button>
                         </div>
                     }
-                    
+
+                    <!-- Status Messages -->
                     @if (!string.IsNullOrEmpty(mapUploadMessage))
                     {
-                        <div class="alert @(mapUploadSuccess ? "alert-success" : "alert-danger")">
+                        <div class="alert @(mapUploadSuccess ? "alert-success" : "alert-danger") mt-3 mb-0 text-center">
                             @mapUploadMessage
                         </div>
                     }
                 </div>
             </div>
-            
+
             <!-- Bestiary -->
             <div class="card map-card mb-3">
                 <div class="card-header text-center">
-                    <strong class="text-primary">Bestiary (@GetSpawnCount() Creatures)</strong>
+                    <span class="text-primary" style="font-size: 1.25rem;">Bestiary (@GetSpawnCount() Creatures)</span>
+                    @if (IsCustomBestiary())
+                    {
+                        <span class="badge bg-info ms-2" style="vertical-align: middle;">Custom</span>
+                    }
+                    <InfoIcon Text="Manage the list of creatures available for spawning. Add custom creatures or reset to default ServUO bestiary." />
                 </div>
                 <div class="card-body">
                     <div class="input-group mb-2">
@@ -345,14 +390,14 @@
                             <span class="bi bi-plus-lg"></span> Add
                         </button>
                     </div>
-                    
+
                     <div class="input-group mb-3">
                         <input type="text" class="form-control" placeholder="Search creatures..." @bind="searchText" @bind:event="oninput" />
                         <button class="btn btn-outline-secondary" @onclick="ClearSearch">
                             <span class="bi bi-x-lg"></span>
                         </button>
                     </div>
-                    
+
                     <div class="bestiary-list">
                         @if (!BackgroundLoader.IsBestiaryLoaded)
                         {
@@ -389,19 +434,27 @@
                             </div>
                         }
                     </div>
-                    
-                    <div class="mt-3 d-flex justify-content-between align-items-center">
-                        <p class="text-muted mb-0">
-                            <strong>Total Creatures:</strong> @GetSpawnCount()
-                            @if (IsCustomBestiary())
-                            {
-                                <span class="badge bg-info ms-2">Custom</span>
-                            }
-                        </p>
-                        <button class="btn btn-outline-warning btn-sm" @onclick="ResetBestiary" disabled="@(!IsCustomBestiary())">
-                            <span class="bi bi-arrow-counterclockwise"></span> Reset to Default
-                        </button>
+
+                    <div class="mt-3 text-center">
+                        @if (IsCustomBestiary())
+                        {
+                            <button class="btn btn-outline-warning btn-sm" @onclick="ResetBestiary">
+                                <span class="bi bi-arrow-counterclockwise"></span> Reset
+                            </button>
+                        }
                     </div>
+                </div>
+            </div>
+
+            <!-- Reset to Defaults Button -->
+            <div class="card map-card mb-3" style="border: 2px solid #dc3545;">
+                <div class="card-header text-center bg-danger text-white">
+                    <strong>⚠️ Reset Settings</strong>
+                </div>
+                <div class="card-body text-center">
+                    <button class="btn btn-danger btn-lg" style="min-width: 200px;" @onclick="ResetToDefaults">
+                        <span class="bi bi-arrow-counterclockwise me-2"></span>Reset to Defaults
+                    </button>
                 </div>
             </div>
         </div>
@@ -410,7 +463,11 @@
 
 @inject NavigationManager Navigation
 @inject BackgroundDataLoader BackgroundLoader
+@inject ToastService ToastService
 @using System.IO.Compression
+@using UORespawnApp.Scripts.Constants
+@using UORespawnApp.Scripts.Utilities
+@using UORespawnApp.Components.Controls
 @implements IDisposable
 
 @code {
@@ -425,10 +482,16 @@ private string boxColorHex = "#8B0000";
 private bool isExporting = false;
 private string exportMessage = "";
 private bool exportSuccess = false;
-private bool isImporting = false;
-private string importMessage = "";
-private bool importSuccess = false;
-    
+private bool isImportingLegacy = false;
+private string legacyImportMessage = "";
+private bool legacyImportSuccess = false;
+private string selectedLegacyBoxFile = "";
+private string selectedLegacyTileFile = "";
+private string serverSetupMessage = "";
+private bool serverSetupSuccess = false;
+private string currentImportType = "";
+private bool isAddingCustomMap = false; // Flag to distinguish between replace and add modes
+
     protected override async Task OnInitializedAsync()
     {
         // Subscribe to bestiary loaded event
@@ -455,11 +518,11 @@ private bool importSuccess = false;
     {
         // Unsubscribe from events
         BackgroundLoader.BestiaryLoaded -= OnBestiaryLoaded;
-        
-        // Auto-save settings when leaving the page
+
+        // Auto-save settings when leaving the page (using binary serialization)
         try
         {
-            Utility.SaveChanceData();
+            Utility.SaveSettings();
             Logger.Info("Auto-saved settings on page leave");
         }
         catch (Exception ex)
@@ -470,24 +533,24 @@ private bool importSuccess = false;
     
     private List<string> GetFilteredSpawns()
     {
-        if (WorldSpawnUtility.SpawnList == null)
+        if (BestiarySpawnUtility.BestiaryNameList == null)
         {
             return new List<string>();
         }
         
         if (string.IsNullOrEmpty(searchText))
         {
-            return WorldSpawnUtility.SpawnList;
+            return BestiarySpawnUtility.BestiaryNameList;
         }
         
-        return WorldSpawnUtility.SpawnList
+        return BestiarySpawnUtility.BestiaryNameList
             .Where(s => s.Contains(searchText, StringComparison.OrdinalIgnoreCase))
             .ToList();
     }
     
     private int GetSpawnCount()
     {
-        return WorldSpawnUtility.SpawnList?.Count ?? 0;
+        return BestiarySpawnUtility.BestiaryNameList?.Count ?? 0;
     }
     
     private void SelectSpawn(string spawn)
@@ -502,15 +565,15 @@ private bool importSuccess = false;
     
     private bool IsCustomBestiary()
     {
-        return File.Exists(WorldSpawnUtility.CustomBestiaryFile);
+        return File.Exists(BestiarySpawnUtility.CustomBestiaryFile);
     }
     
     private async Task AddCreature()
     {
         if (!string.IsNullOrWhiteSpace(newCreatureName))
         {
-            WorldSpawnUtility.AddCreatureToBestiary(newCreatureName);
-            await WorldSpawnUtility.SaveCustomBestiary();
+            BestiarySpawnUtility.AddCreatureToBestiary(newCreatureName);
+            await BestiarySpawnUtility.SaveCustomBestiary();
             newCreatureName = "";
             StateHasChanged();
         }
@@ -518,8 +581,8 @@ private bool importSuccess = false;
     
     private async Task RemoveCreature(string creature)
     {
-        WorldSpawnUtility.RemoveCreatureFromBestiary(creature);
-        await WorldSpawnUtility.SaveCustomBestiary();
+        BestiarySpawnUtility.RemoveCreatureFromBestiary(creature);
+        await BestiarySpawnUtility.SaveCustomBestiary();
         
         if (selectedSpawn == creature)
         {
@@ -531,7 +594,7 @@ private bool importSuccess = false;
     
     private async Task ResetBestiary()
     {
-        var success = await WorldSpawnUtility.ResetToDefaultBestiary();
+        var success = await BestiarySpawnUtility.ResetToDefaultBestiary();
         if (success)
         {
             selectedSpawn = null;
@@ -585,7 +648,103 @@ Logger.Info("Folder picker not available on this platform. Please enter path man
             Logger.Error("Error browsing folder", ex);
         }
     }
-    
+
+    private async Task BrowseServUOFolder()
+    {
+        try
+        {
+#if WINDOWS
+            // Use Windows folder picker
+            var folderPicker = new Windows.Storage.Pickers.FolderPicker();
+
+            // Get the current window handle
+            var window = (Application.Current?.Windows[0]?.Handler?.PlatformView as Microsoft.UI.Xaml.Window);
+            if (window != null)
+            {
+                var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(window);
+                WinRT.Interop.InitializeWithWindow.Initialize(folderPicker, hwnd);
+            }
+
+            folderPicker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.ComputerFolder;
+            folderPicker.FileTypeFilter.Add("*");
+
+            var folder = await folderPicker.PickSingleFolderAsync();
+            if (folder != null)
+            {
+                // Validate the ServUO folder structure
+                var validation = ServerSetupUtility.ValidateServUOFolder(folder.Path);
+
+                if (validation.IsValid)
+                {
+                    // Auto-setup server scripts folder
+                    var (success, message) = ServerSetupUtility.SetupServerScripts(validation.ScriptsFolderPath);
+
+                    if (success)
+                    {
+                        // Save the Data folder path
+                        Settings.ServUODataFolder = validation.DataFolderPath;
+
+                        serverSetupMessage = $"✓ Setup complete! {message}";
+                        serverSetupSuccess = true;
+
+                        Logger.Info($"ServUO server linked successfully: {folder.Path}");
+                        Logger.Info($"Data folder: {validation.DataFolderPath}");
+                        Logger.Info($"Scripts folder: {validation.ScriptsFolderPath}");
+                    }
+                    else
+                    {
+                        serverSetupMessage = $"✗ {message}";
+                        serverSetupSuccess = false;
+                    }
+                }
+                else
+                {
+                    // Validation failed - show detailed error
+                    var errorDetails = new List<string>();
+                    if (!validation.HasServUOExe) errorDetails.Add("Missing ServUO.exe");
+                    if (!validation.HasDataFolder) errorDetails.Add("Missing Data folder");
+                    if (!validation.HasScriptsFolder) errorDetails.Add("Missing Scripts folder");
+
+                    serverSetupMessage = $"✗ Invalid ServUO folder: {string.Join(", ", errorDetails)}";
+                    serverSetupSuccess = false;
+
+                    Logger.Warning($"ServUO folder validation failed: {folder.Path} - {string.Join(", ", errorDetails)}");
+                }
+
+                StateHasChanged();
+            }
+#else
+            // Platform not supported - show a helpful message
+            serverSetupMessage = "✗ Automatic folder picker not available on this platform. Server integration is currently only supported on Windows.";
+            serverSetupSuccess = false;
+            Logger.Info("Folder picker not available on this platform - only Windows is currently supported");
+            await Task.CompletedTask;
+#endif
+        }
+        catch (Exception ex)
+        {
+            serverSetupMessage = $"✗ Error: {ex.Message}";
+            serverSetupSuccess = false;
+            Logger.Error("Error browsing ServUO folder", ex);
+            StateHasChanged();
+        }
+    }
+
+    // ==================== MAP BROWSE/UPLOAD METHODS ====================
+
+    private async Task BrowseMapImageReplace()
+    {
+        isAddingCustomMap = false;
+        await BrowseMapImage();
+    }
+
+    private async Task BrowseMapImageAdd()
+    {
+        isAddingCustomMap = true;
+        selectedMapToReplace = $"Map{GetNextCustomMapNumber()}";
+        await BrowseMapImage();
+    }
+
     private async Task BrowseMapImage()
     {
         try
@@ -620,11 +779,17 @@ Logger.Info("Folder picker not available on this platform. Please enter path man
     {
         try
         {
-            Logger.Info($"Processing map upload: {file.FileName}");
-            
-            // Get expected dimensions for selected map
-            var (expectedWidth, expectedHeight) = GetMapDimensions(selectedMapToReplace);
-            
+            Logger.Info($"Processing map upload: {file.FileName} (Mode: {(isAddingCustomMap ? "Add" : "Replace")})");
+
+            // Extract map ID from selectedMapToReplace (e.g., "Map6" -> 6)
+            if (!int.TryParse(selectedMapToReplace.Substring(3), out int mapId))
+            {
+                mapUploadMessage = "Error: Invalid map selection";
+                mapUploadSuccess = false;
+                StateHasChanged();
+                return;
+            }
+
             // STEP 1: VALIDATE FILE EXTENSION
             if (!file.FileName.EndsWith(".bmp", StringComparison.OrdinalIgnoreCase))
             {
@@ -634,10 +799,10 @@ Logger.Info("Folder picker not available on this platform. Please enter path man
                 StateHasChanged();
                 return;
             }
-            
+
             // STEP 2: VALIDATE BMP FILE FORMAT
             using var stream = await file.OpenReadAsync();
-            
+
             // Check file size (must be at least 54 bytes for BMP header)
             if (stream.Length < 54)
             {
@@ -647,11 +812,11 @@ Logger.Info("Folder picker not available on this platform. Please enter path man
                 StateHasChanged();
                 return;
             }
-            
+
             // Read BMP header (54 bytes)
             byte[] header = new byte[54];
             await stream.ReadAsync(header, 0, 54);
-            
+
             // STEP 3: VALIDATE BMP SIGNATURE (first 2 bytes must be "BM" = 0x42 0x4D)
             if (header[0] != 0x42 || header[1] != 0x4D)
             {
@@ -661,24 +826,24 @@ Logger.Info("Folder picker not available on this platform. Please enter path man
                 StateHasChanged();
                 return;
             }
-            
-            // STEP 4: READ AND VALIDATE DIMENSIONS
+
+            // STEP 4: READ DIMENSIONS
             // BMP header format: Width at offset 18-21, Height at offset 22-25 (little-endian)
             int actualWidth = BitConverter.ToInt32(header, 18);
             int actualHeight = BitConverter.ToInt32(header, 22);
-            
+
             // Handle negative height (top-down BMP)
             actualHeight = Math.Abs(actualHeight);
-            
-            Logger.Info($"BMP dimensions: {actualWidth}x{actualHeight} (expected: {expectedWidth}x{expectedHeight})");
-            
-            // STEP 5: VALIDATE DIMENSIONS MATCH
-            if (actualWidth != expectedWidth || actualHeight != expectedHeight)
+
+            Logger.Info($"BMP dimensions: {actualWidth}x{actualHeight} for Map{mapId}");
+
+            // STEP 5: VALIDATE DIMENSIONS USING NEW VALIDATION METHOD
+            var (isValid, errorMessage) = ValidateMapDimensions(mapId, actualWidth, actualHeight);
+            if (!isValid)
             {
-                mapUploadMessage = $"Error: Image dimensions {actualWidth}x{actualHeight} " +
-                                  $"do not match required {expectedWidth}x{expectedHeight} for {selectedMapToReplace}";
+                mapUploadMessage = $"Error: {errorMessage}";
                 mapUploadSuccess = false;
-                Logger.Warning("Dimension mismatch");
+                Logger.Warning($"Dimension validation failed: {errorMessage}");
                 StateHasChanged();
                 return;
             }
@@ -690,10 +855,10 @@ Logger.Info("Folder picker not available on this platform. Please enter path man
                 Logger.Warning($"BMP has {bitDepth}-bit color depth (recommended: 24-bit or 32-bit)");
             }
             
-            // STEP 7: PREPARE DESTINATION PATH
-            var destinationPath = Path.Combine(FileSystem.AppDataDirectory, "..", "..", "wwwroot", "maps", $"{selectedMapToReplace}.bmp");
+            // STEP 7: PREPARE DESTINATION PATH (Data/maps/)
+            var destinationPath = Path.Combine(PathConstants.MapsPath, $"{selectedMapToReplace}.bmp");
             var destinationDir = Path.GetDirectoryName(destinationPath);
-            
+
             if (!string.IsNullOrEmpty(destinationDir) && !Directory.Exists(destinationDir))
             {
                 Directory.CreateDirectory(destinationDir);
@@ -714,13 +879,18 @@ Logger.Info("Folder picker not available on this platform. Please enter path man
             await stream.CopyToAsync(destStream);
             
             // STEP 10: SUCCESS MESSAGE
-            mapUploadMessage = $"{selectedMapToReplace} successfully replaced! " +
+            string action = isAddingCustomMap ? "added" : "replaced";
+            mapUploadMessage = $"{selectedMapToReplace} successfully {action}! " +
                               $"({actualWidth}x{actualHeight}, {bitDepth}-bit)" +
                               (File.Exists(backupPath) ? " - Original backed up" : "");
             mapUploadSuccess = true;
-            
-            Logger.Info($"Map uploaded successfully to: {destinationPath}");
+
+            Logger.Info($"Map {action} successfully: {destinationPath}");
             Logger.Info($"File size: {new FileInfo(destinationPath).Length / 1024 / 1024:F2} MB");
+
+            // Reset state
+            isAddingCustomMap = false;
+            selectedMapToReplace = "";
         }
         catch (Exception ex)
         {
@@ -734,16 +904,41 @@ Logger.Info("Folder picker not available on this platform. Please enter path man
     
     private (int width, int height) GetMapDimensions(string mapName)
     {
-        return mapName switch
+        // Extract map ID from "MapX" string
+        if (mapName.StartsWith("Map") && int.TryParse(mapName.Substring(3), out int mapId))
         {
-            "Map0" => (7168, 4096),
-            "Map1" => (7168, 4096),
-            "Map2" => (2304, 1600),
-            "Map3" => (2560, 2048),
-            "Map4" => (1448, 1448),
-            "Map5" => (1280, 4096),
-            _ => (7168, 4096)
-        };
+            // Original 6 maps have fixed dimensions
+            if (mapId < FirstCustomMapId && OriginalMapDimensions.TryGetValue(mapId, out var dims))
+            {
+                return dims;
+            }
+
+            // Custom maps: Check if file exists and read dimensions
+            var mapPath = Path.Combine(PathConstants.MapsPath, $"{mapName}.bmp");
+            if (File.Exists(mapPath))
+            {
+                try
+                {
+                    using var stream = File.OpenRead(mapPath);
+                    byte[] header = new byte[54];
+                    stream.Read(header, 0, 54);
+
+                    int width = BitConverter.ToInt32(header, 18);
+                    int height = Math.Abs(BitConverter.ToInt32(header, 22));
+                    return (width, height);
+                }
+                catch
+                {
+                    // Fall through to default
+                }
+            }
+
+            // Default for custom maps (will be validated on upload)
+            return (MinCustomMapSize, MinCustomMapSize);
+        }
+
+        // Default fallback
+        return (7168, 4096);
     }
     
     private void CheckForBackup()
@@ -753,14 +948,14 @@ Logger.Info("Folder picker not available on this platform. Please enter path man
             hasMapBackup = false;
             return;
         }
-        
+
         try
         {
-            var mapPath = Path.Combine(FileSystem.AppDataDirectory, "..", "..", "wwwroot", "maps", $"{selectedMapToReplace}.bmp");
+            var mapPath = Path.Combine(PathConstants.MapsPath, $"{selectedMapToReplace}.bmp");
             var backupPath = $"{mapPath}.backup";
             hasMapBackup = File.Exists(backupPath);
-            
-            
+
+
             if (hasMapBackup)
             {
                 Logger.Info($"Backup found for {selectedMapToReplace}");
@@ -771,7 +966,7 @@ Logger.Info("Folder picker not available on this platform. Please enter path man
             Logger.Error("Error checking for backup", ex);
             hasMapBackup = false;
         }
-        
+
         StateHasChanged();
     }
     
@@ -784,9 +979,9 @@ Logger.Info("Folder picker not available on this platform. Please enter path man
         
         try
         {
-            var mapPath = Path.Combine(FileSystem.AppDataDirectory, "..", "..", "wwwroot", "maps", $"{selectedMapToReplace}.bmp");
+            var mapPath = Path.Combine(PathConstants.MapsPath, $"{selectedMapToReplace}.bmp");
             var backupPath = $"{mapPath}.backup";
-            
+
             if (!File.Exists(backupPath))
             {
                 mapUploadMessage = $"No backup found for {selectedMapToReplace}";
@@ -794,14 +989,14 @@ Logger.Info("Folder picker not available on this platform. Please enter path man
                 StateHasChanged();
                 return;
             }
-            
+
             // Copy backup over current map
             File.Copy(backupPath, mapPath, true);
-            
-            
+
+
             mapUploadMessage = $"{selectedMapToReplace} restored from backup successfully!";
             mapUploadSuccess = true;
-            
+
             Logger.Info($"Restored {selectedMapToReplace} from backup");
         }
         catch (Exception ex)
@@ -810,44 +1005,338 @@ Logger.Info("Folder picker not available on this platform. Please enter path man
             mapUploadSuccess = false;
             Logger.Error("Restore backup failed", ex);
         }
-        
+
         StateHasChanged();
     }
-    
-    private async Task ImportFromServer()
+
+    private async Task DeleteCustomMap(int mapId)
     {
-        isImporting = true;
-        importMessage = "";
-        StateHasChanged();
-        
-        await Task.Delay(100); // Brief delay to show UI update
-        
         try
         {
-            var (success, message, filesImported) = ServerImportUtility.ImportFromServer();
-            
-            importSuccess = success;
-            importMessage = message;
-            
-            // If import was successful, show restart message
-            if (success && filesImported > 0)
+            // Validate deletion is allowed
+            var (canDelete, reason) = CanDeleteMap(mapId);
+            if (!canDelete)
             {
-                importMessage += "\n\n** Please restart the application to load the imported files. **";
-                Logger.Info("Import complete - restart required to load data");
+                mapUploadMessage = $"Cannot delete Map{mapId}: {reason}";
+                mapUploadSuccess = false;
+                StateHasChanged();
+                return;
+            }
+
+            var mapPath = Path.Combine(PathConstants.MapsPath, $"Map{mapId}.bmp");
+            var backupPath = $"{mapPath}.backup";
+
+            if (!File.Exists(mapPath))
+            {
+                mapUploadMessage = $"Map{mapId} not found";
+                mapUploadSuccess = false;
+                StateHasChanged();
+                return;
+            }
+
+            // Delete map file
+            File.Delete(mapPath);
+            Logger.Info($"Deleted Map{mapId}");
+
+            // Also delete backup if it exists
+            if (File.Exists(backupPath))
+            {
+                File.Delete(backupPath);
+                Logger.Info($"Deleted Map{mapId} backup");
+            }
+
+            mapUploadMessage = $"Map{mapId} deleted successfully!";
+            mapUploadSuccess = true;
+            selectedMapToReplace = "";
+            hasMapBackup = false;
+        }
+        catch (Exception ex)
+        {
+            mapUploadMessage = $"Error deleting Map{mapId}: {ex.Message}";
+            mapUploadSuccess = false;
+            Logger.Error($"Delete Map{mapId} failed", ex);
+        }
+
+        StateHasChanged();
+        await Task.CompletedTask;
+    }
+
+    // ==================== MAP MANAGEMENT HELPER METHODS ====================
+
+    // Original 6 map dimensions (REQUIRED - cannot be deleted, must match on replacement)
+    private static readonly Dictionary<int, (int width, int height)> OriginalMapDimensions = new()
+    {
+        { 0, (7168, 4096) },  // Felucca
+        { 1, (7168, 4096) },  // Trammel
+        { 2, (2304, 1600) },  // Ilshenar
+        { 3, (2560, 2048) },  // Malas
+        { 4, (1448, 1448) },  // Tokuno
+        { 5, (1280, 4096) }   // Ter Mur
+    };
+
+    // Custom map constraints (Map6+)
+    private const int MinCustomMapSize = 800;
+    private const int MaxCustomMapSize = 10000;
+    private const int FirstCustomMapId = 6;
+
+    /// <summary>
+    /// Get list of currently available map files in Data/maps/
+    /// </summary>
+    private List<int> GetAvailableMaps()
+    {
+        try
+        {
+            var mapsPath = PathConstants.MapsPath;
+            if (!Directory.Exists(mapsPath))
+                return new List<int>();
+
+            var mapFiles = Directory.GetFiles(mapsPath, "Map*.bmp");
+            return mapFiles
+                .Select(f => Path.GetFileNameWithoutExtension(f))
+                .Where(n => n.StartsWith("Map") && int.TryParse(n.Substring(3), out _))
+                .Select(n => int.Parse(n.Substring(3)))
+                .OrderBy(id => id)
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Error getting available maps", ex);
+            return new List<int>();
+        }
+    }
+
+    /// <summary>
+    /// Get the next custom map number that can be added (must be sequential)
+    /// Returns -1 if original 6 maps are not all present
+    /// </summary>
+    private int GetNextCustomMapNumber()
+    {
+        var availableMaps = GetAvailableMaps();
+
+        // Check if all original 6 maps exist
+        for (int i = 0; i < FirstCustomMapId; i++)
+        {
+            if (!availableMaps.Contains(i))
+            {
+                return -1; // Cannot add custom maps until original 6 are present
+            }
+        }
+
+        // Find the next sequential number after the highest existing map
+        int highestMap = availableMaps.Max();
+        return highestMap + 1;
+    }
+
+    /// <summary>
+    /// Get the highest custom map number (for sequential deletion)
+    /// Returns -1 if no custom maps exist
+    /// </summary>
+    private int GetHighestCustomMapNumber()
+    {
+        var availableMaps = GetAvailableMaps();
+        var customMaps = availableMaps.Where(id => id >= FirstCustomMapId).ToList();
+        return customMaps.Any() ? customMaps.Max() : -1;
+    }
+
+    /// <summary>
+    /// Validate map dimensions based on map ID
+    /// </summary>
+    private (bool isValid, string errorMessage) ValidateMapDimensions(int mapId, int width, int height)
+    {
+        // Original 6 maps must match exact dimensions
+        if (mapId < FirstCustomMapId)
+        {
+            if (OriginalMapDimensions.TryGetValue(mapId, out var expectedDims))
+            {
+                if (width != expectedDims.width || height != expectedDims.height)
+                {
+                    return (false, $"Map{mapId} must be exactly {expectedDims.width}x{expectedDims.height}");
+                }
+            }
+        }
+        // Custom maps (Map6+) must be within range
+        else
+        {
+            if (width < MinCustomMapSize || height < MinCustomMapSize)
+            {
+                return (false, $"Custom maps must be at least {MinCustomMapSize}x{MinCustomMapSize}");
+            }
+            if (width > MaxCustomMapSize || height > MaxCustomMapSize)
+            {
+                return (false, $"Custom maps cannot exceed {MaxCustomMapSize}x{MaxCustomMapSize}");
+            }
+        }
+
+        return (true, string.Empty);
+    }
+
+    /// <summary>
+    /// Check if a specific map ID can be deleted
+    /// </summary>
+    private (bool canDelete, string reason) CanDeleteMap(int mapId)
+    {
+        // Cannot delete original 6 maps
+        if (mapId < FirstCustomMapId)
+        {
+            return (false, "Original maps (Map0-Map5) cannot be deleted - required for server");
+        }
+
+        // Must delete highest custom map first (sequential)
+        int highestCustom = GetHighestCustomMapNumber();
+        if (highestCustom == -1)
+        {
+            return (false, "No custom maps to delete");
+        }
+
+        if (mapId != highestCustom)
+        {
+            return (false, $"Must delete Map{highestCustom} first (highest custom map)");
+        }
+
+        return (true, string.Empty);
+    }
+
+    // ==================== LEGACY IMPORT METHODS ====================
+
+    private async Task BrowseLegacyBoxSpawnFile()
+    {
+        try
+        {
+            var result = await FilePicker.PickAsync(new PickOptions
+            {
+                PickerTitle = "Select Legacy Box Spawn CSV",
+                FileTypes = new FilePickerFileType(new Dictionary<DevicePlatform, IEnumerable<string>>
+                {
+                    { DevicePlatform.WinUI, new[] { ".csv" } },
+                    { DevicePlatform.macOS, new[] { "csv" } },
+                    { DevicePlatform.MacCatalyst, new[] { "csv" } }
+                })
+            });
+
+            if (result != null)
+            {
+                selectedLegacyBoxFile = result.FullPath;
+                await ImportLegacyBoxSpawns(result.FullPath);
             }
         }
         catch (Exception ex)
         {
-            importSuccess = false;
-            importMessage = $"Import failed: {ex.Message}";
-            Logger.Error("Import exception", ex);
-        }
-        finally
-        {
-            isImporting = false;
+            legacyImportSuccess = false;
+            legacyImportMessage = $"File picker error: {ex.Message}";
+            Logger.Error("Legacy box spawn file picker error", ex);
             StateHasChanged();
         }
     }
+
+    private async Task BrowseLegacyTileSpawnFile()
+    {
+        try
+        {
+            var result = await FilePicker.PickAsync(new PickOptions
+            {
+                PickerTitle = "Select Legacy Tile Spawn CSV",
+                FileTypes = new FilePickerFileType(new Dictionary<DevicePlatform, IEnumerable<string>>
+                {
+                    { DevicePlatform.WinUI, new[] { ".csv" } },
+                    { DevicePlatform.macOS, new[] { "csv" } },
+                    { DevicePlatform.MacCatalyst, new[] { "csv" } }
+                })
+            });
+
+            if (result != null)
+            {
+                selectedLegacyTileFile = result.FullPath;
+                await ImportLegacyTileSpawns(result.FullPath);
+            }
+        }
+        catch (Exception ex)
+        {
+            legacyImportSuccess = false;
+            legacyImportMessage = $"File picker error: {ex.Message}";
+            Logger.Error("Legacy tile spawn file picker error", ex);
+            StateHasChanged();
+        }
+    }
+
+    private async Task ImportLegacyBoxSpawns(string filePath)
+    {
+        isImportingLegacy = true;
+        currentImportType = "box";
+        legacyImportMessage = "";
+        StateHasChanged();
+
+        await Task.Delay(100); // Brief delay to show UI update
+
+        try
+        {
+            var (success, message, importedCount) = LegacyImportUtility.ImportLegacyBoxSpawns(filePath);
+
+            legacyImportSuccess = success;
+            legacyImportMessage = message;
+
+            if (success && importedCount > 0)
+            {
+                Logger.Info($"Successfully imported {importedCount} legacy box spawns");
+
+                // Refresh the UI to hide the import section (data is no longer empty)
+                await Task.Delay(2000);
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            legacyImportSuccess = false;
+            legacyImportMessage = $"Import failed: {ex.Message}";
+            Logger.Error("Legacy box spawn import exception", ex);
+        }
+        finally
+        {
+            isImportingLegacy = false;
+            currentImportType = "";
+            StateHasChanged();
+        }
+    }
+
+    private async Task ImportLegacyTileSpawns(string filePath)
+    {
+        isImportingLegacy = true;
+        currentImportType = "tile";
+        legacyImportMessage = "";
+        StateHasChanged();
+
+        await Task.Delay(100); // Brief delay to show UI update
+
+        try
+        {
+            var (success, message, importedCount) = LegacyImportUtility.ImportLegacyTileSpawns(filePath);
+
+            legacyImportSuccess = success;
+            legacyImportMessage = message;
+
+            if (success && importedCount > 0)
+            {
+                Logger.Info($"Successfully imported {importedCount} legacy tile spawns");
+
+                // Refresh the UI to hide the import section (data is no longer empty)
+                await Task.Delay(2000);
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            legacyImportSuccess = false;
+            legacyImportMessage = $"Import failed: {ex.Message}";
+            Logger.Error("Legacy tile spawn import exception", ex);
+        }
+        finally
+        {
+            isImportingLegacy = false;
+            currentImportType = "";
+            StateHasChanged();
+        }
+    }
+
+    // ==================== END LEGACY IMPORT METHODS ====================
 
     private async Task ExportServerScripts()
     {
@@ -859,7 +1348,7 @@ Logger.Info("Folder picker not available on this platform. Please enter path man
         {
             Logger.Info("Starting server scripts export...");
             
-            // Get SpawnSystem folder path - try multiple locations
+            // Get UORespawnSystem folder path - try multiple locations
             string? spawnSystemPath = null;
             var baseDir = AppDomain.CurrentDomain.BaseDirectory;
             
@@ -868,11 +1357,11 @@ Logger.Info("Folder picker not available on this platform. Please enter path man
             // Try relative paths from base directory
             var possiblePaths = new[]
             {
-                Path.Combine(baseDir, "SpawnSystem"),                                    // Published location
-                Path.Combine(baseDir, "..", "SpawnSystem"),                              // Alternative 1
-                Path.Combine(baseDir, "..", "..", "SpawnSystem"),                        // Alternative 2
-                Path.Combine(baseDir, "..", "..", "..", "..", "SpawnSystem"),           // Development
-                Path.Combine(baseDir, "..", "..", "..", "..", "..", "SpawnSystem")      // Deep development
+                Path.Combine(baseDir, "UORespawnSystem"),                                    // Published location
+                Path.Combine(baseDir, "..", "UORespawnSystem"),                              // Alternative 1
+                Path.Combine(baseDir, "..", "..", "UORespawnSystem"),                        // Alternative 2
+                Path.Combine(baseDir, "..", "..", "..", "..", "UORespawnSystem"),           // Development
+                Path.Combine(baseDir, "..", "..", "..", "..", "..", "UORespawnSystem")      // Deep development
             };
             
             foreach (var testPath in possiblePaths)
@@ -890,11 +1379,11 @@ Logger.Info("Folder picker not available on this platform. Please enter path man
             
             if (string.IsNullOrEmpty(spawnSystemPath))
             {
-                exportMessage = "Error: SpawnSystem folder not found.\n\n" +
-                               "The SpawnSystem folder should be in the application directory.\n" +
+                exportMessage = "Error: UORespawnSystem folder not found.\n\n" +
+                               "The UORespawnSystem folder should be in the application directory.\n" +
                                "Please download the source code from GitHub to access server scripts.";
                 exportSuccess = false;
-                Logger.Warning($"SpawnSystem not found. Searched paths: {string.Join(", ", possiblePaths.Select(Path.GetFullPath))}");
+                Logger.Warning($"UORespawnSystem not found. Searched paths: {string.Join(", ", possiblePaths.Select(Path.GetFullPath))}");
                 return;
             }
             
@@ -927,7 +1416,7 @@ Logger.Info("Folder picker not available on this platform. Please enter path man
             File.Copy(tempPath, downloadsPath, true);
             
             
-            exportMessage = $"? Server scripts exported to Downloads folder:\n{downloadsPath}";
+            exportMessage = $"Server scripts exported to Downloads folder:\n{downloadsPath}";
             exportSuccess = true;
             Logger.Info($"File saved to: {downloadsPath}");
             
@@ -963,7 +1452,7 @@ Logger.Info("Folder picker not available on this platform. Please enter path man
             });
             
             
-            exportMessage = "? Server scripts ready to share!";
+            exportMessage = "Server scripts ready to share!";
             exportSuccess = true;
             Logger.Info("Share request sent");
 #endif
@@ -979,5 +1468,44 @@ Logger.Info("Folder picker not available on this platform. Please enter path man
             isExporting = false;
             StateHasChanged();
         }
+    }
+
+    private void ResetToDefaults()
+    {
+        // Reset all spawn settings to default values (matching Settings.cs defaults)
+        Settings.MaxMobs = 15;
+        Settings.MinRange = 10;
+        Settings.MaxRange = 50;
+        Settings.MaxCrowd = 1;
+
+        Settings.CommonChance = 1.0;
+        Settings.UnCommonChance = 0.5;
+        Settings.RareChance = 0.1;
+
+        Settings.WaterChance = 0.5;
+        Settings.WeatherChance = 0.1;
+        Settings.TimedChance = 0.1;
+
+        Settings.IsScaleSpawn = false;
+        Settings.EnableRiftSpawn = false;
+        Settings.EnableDebugSpawn = false;
+
+        // Update box color hex to match reset color
+        var color = Settings.BoxColor;
+        boxColorHex = $"#{(int)(color.Red * 255):X2}{(int)(color.Green * 255):X2}{(int)(color.Blue * 255):X2}";
+
+        // Save to binary file immediately
+        try
+        {
+            Utility.SaveSettings();
+            Logger.Info("Settings reset to defaults and saved to binary");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Error saving settings after reset", ex);
+        }
+
+        ToastService.ShowSuccess("Settings reset to defaults successfully!");
+        StateHasChanged();
     }
 }

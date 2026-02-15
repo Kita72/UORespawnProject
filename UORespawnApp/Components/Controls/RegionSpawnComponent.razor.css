@@ -1,0 +1,229 @@
+/* Right Column Flexbox Container */
+.right-column-container {
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 80px);
+    min-height: 600px;
+}
+
+/* Spawn List Container - Flex to Fill Space */
+.spawn-list-container {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 200px;
+    overflow: hidden;
+}
+
+/* Spawn List Body - Scrollable */
+.spawn-list-body {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* Spawn List Header */
+.spawn-list-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+/* Map Card Styling */
+.map-card {
+    border: 1px solid #dee2e6;
+    transition: all 0.2s ease;
+}
+
+.map-card .card-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+    padding: 0.75rem;
+    font-weight: 600;
+}
+
+body.dark-theme .map-card {
+    background-color: #1a1a1a;
+    border-color: #3a3a3a;
+}
+
+body.dark-theme .map-card .card-header {
+    background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+    border-bottom-color: rgba(255, 255, 255, 0.05);
+}
+
+body.dark-theme .map-card .card-body {
+    background-color: #1a1a1a;
+    color: #e0e0e0;
+}
+
+body.light-theme .map-card {
+    background-color: #ffffff;
+    border-color: #dee2e6;
+}
+
+body.light-theme .map-card .card-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+body.light-theme .map-card .card-body {
+    background-color: #ffffff;
+}
+
+/* Mini Map Header Button Styling - Remove borders and backgrounds */
+.card-header .btn {
+    border: none !important;
+    background: none !important;
+    box-shadow: none !important;
+    padding: 0;
+    margin: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.card-header .btn:hover {
+    opacity: 0.8;
+    transform: scale(1.1);
+    background: none !important;
+    border: none !important;
+}
+
+.card-header .btn:active {
+    transform: scale(0.95);
+}
+
+/* Mini Map Button Icons - Using SVG backgrounds */
+.card-header .btn .bi {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    vertical-align: middle;
+}
+
+.bi-arrow-counterclockwise {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='white' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M8 3a5 5 0 1 1-4.546 2.914.5.5 0 0 0-.908-.417A6 6 0 1 0 8 2v1z'/%3E%3Cpath d='M8 4.466V.534a.25.25 0 0 0-.41-.192L5.23 2.308a.25.25 0 0 0 0 .384l2.36 1.966A.25.25 0 0 0 8 4.466z'/%3E%3C/svg%3E");
+}
+
+.bi-list {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='white' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5z'/%3E%3C/svg%3E");
+}
+
+.bi-chevron-down {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='white' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
+}
+
+.bi-trash {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='white' viewBox='0 0 16 16'%3E%3Cpath d='M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z'/%3E%3Cpath fill-rule='evenodd' d='M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z'/%3E%3C/svg%3E");
+}
+
+/* Spawn Item Styling */
+.spawn-item {
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background-color: #ffffff;
+    user-select: none;
+}
+
+.spawn-item:hover {
+    background-color: #f8f9fa;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+    border-color: #c0c0c0;
+}
+
+.spawn-item.selected {
+    background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+    padding: 10px;
+}
+
+body.dark-theme .spawn-item {
+    background-color: #252525;
+    border-color: #3a3a3a;
+    color: #e0e0e0;
+}
+
+body.dark-theme .spawn-item:hover {
+    background-color: #2d2d2d;
+    border-color: #4a4a4a;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+body.dark-theme .spawn-item.selected {
+    background: linear-gradient(135deg, #667eea20 0%, #764ba220 100%);
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+body.dark-theme .spawn-item .text-muted {
+    color: #999 !important;
+}
+
+/* Spawn Controls Inside Selected Item */
+.spawn-controls {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(0,0,0,0.1);
+}
+
+body.dark-theme .spawn-controls {
+    border-top-color: rgba(255,255,255,0.1);
+}
+
+/* Global Button Styling - Remove ugly focus borders */
+.btn:focus,
+.btn:active,
+.btn:active:focus,
+.btn.active:focus,
+button:focus,
+button:active,
+button:active:focus {
+    outline: none !important;
+    box-shadow: none !important;
+    border-color: inherit !important;
+}
+
+/* Control Buttons */
+.card-body .spawn-controls .btn {
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+}
+
+.card-body .spawn-controls .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.card-body .spawn-controls .btn:active {
+    transform: translateY(0);
+}
+
+/* Region Name Truncation - Truncate to ~15 chars, expand when selected */
+.spawn-item .flex-grow-1 strong {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 150px; /* Roughly 15 characters */
+    transition: max-width 0.3s ease;
+}
+
+.spawn-item.selected .flex-grow-1 strong {
+    max-width: none; /* Expand to show full name when selected */
+    white-space: normal;
+    word-wrap: break-word;
+}

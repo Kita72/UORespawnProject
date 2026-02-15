@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using UORespawnApp.Scripts.Services;
 using UORespawnApp.Scripts.Utilities;
+using UORespawnApp.Scripts.Constants;
 
 namespace UORespawnApp
 {
@@ -18,10 +19,13 @@ namespace UORespawnApp
 
             builder.Services.AddMauiBlazorWebView();
             builder.Services.AddSingleton<ViewService>();
-            
+
+            // Register ToastService for UI notifications
+            builder.Services.AddSingleton<ToastService>();
+
             // Register BackgroundDataLoader as a singleton service
             builder.Services.AddSingleton<BackgroundDataLoader>();
-            
+
             // Register UpdateChecker as a singleton service
             builder.Services.AddSingleton<UpdateChecker>();
 
@@ -29,39 +33,17 @@ namespace UORespawnApp
             {
                 // MINIMAL STARTUP - Only critical initialization, no data loading!
                 Logger.Info($"UORespawn v{Utility.Version} - Starting minimal initialization...");
-                
-                // Step 1: Ensure Data folder exists
-                var localDataFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data");
-                if (!Directory.Exists(localDataFolder))
-                {
-                    Directory.CreateDirectory(localDataFolder);
-                    Logger.Info("Created Data folder");
-                }
-                
-                // Step 2: Create empty CSV files if they don't exist
-                var requiredFiles = new[]
-                {
-                    Path.Combine(localDataFolder, "UOR_Spawn.csv"),
-                    Path.Combine(localDataFolder, "UOR_WorldSpawn.csv"),
-                    Path.Combine(localDataFolder, "UOR_StaticSpawn.csv"),
-                    Path.Combine(localDataFolder, "UOR_SpawnSettings.csv")
-                };
-                
-                foreach (var file in requiredFiles)
-                {
-                    if (!File.Exists(file))
-                    {
-                        File.Create(file).Dispose();
-                        Logger.Info($"Created empty CSV file: {Path.GetFileName(file)}");
-                    }
-                }
-                
-                // Step 3: Initialize session and empty spawn dictionary
+
+                // Step 1: Ensure Data/UOR_DATA folder exists (centralized via PathConstants)
+                var localDataFolder = PathConstants.LocalDataPath;
+                Logger.Info($"Local data folder ready: {localDataFolder}");
+
+                // Step 2: Initialize session and empty spawn dictionaries
                 Utility.StartSession(new Session());
                 Utility.InitializeSpawnDictionary();
-                
+
                 Logger.Info("Minimal initialization complete - UI ready to launch");
-                Logger.Info("Data loading will continue in background after UI renders");
+                Logger.Info("Settings and spawn data will load in background after UI renders");
             }
             catch (Exception ex)
             {
