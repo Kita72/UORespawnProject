@@ -128,6 +128,13 @@
     font-weight: 600;
 }
 
+/* Dark solid header - overrides gradient */
+.map-card .card-header.dark-header {
+    background: #212529 !important;
+    border-bottom: 1px solid #3a3a3a !important;
+    font-weight: normal;
+}
+
 .minimap-body {
     background: #000;
 }

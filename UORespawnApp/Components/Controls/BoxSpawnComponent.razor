@@ -15,11 +15,14 @@
         <div class="col-lg-9">
             <div class="alert alert-dark mb-2 d-flex justify-content-between align-items-center" style="width:800px;">
                 <div>
-                    <strong>@MapUtility.GetMapName(ViewService.CurrentMapId)</strong> | Size: @imageDim | Mouse: (@mouseWorldX, @mouseWorldY)
+                    <span class="bi bi-bounding-box me-1" style="color: goldenrod;"></span><strong style="color: goldenrod;">Box Spawn</strong> | @MapUtility.GetMapName(ViewService.CurrentMapId) | Size: @imageDim | Mouse: (@mouseWorldX, @mouseWorldY)
                 </div>
-                <button class="btn btn-sm @(zoomLevel == 2.0 ? "btn-primary" : "btn-outline-primary")" @onclick="ToggleZoom" title="Toggle Zoom (1x / 2x)">
-                    <span class="bi bi-zoom-@(zoomLevel == 2.0 ? "in" : "out")"></span> @(zoomLevel == 1.0 ? "1x" : "2x")
-                </button>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-light text-dark" title="Total spawns across all boxes">@GetTotalBoxSpawnCount() Spawns</span>
+                    <button class="btn btn-sm @(zoomLevel == 2.0 ? "btn-primary" : "btn-outline-primary")" @onclick="ToggleZoom" title="Toggle Zoom (1x / 2x)">
+                        <span class="bi bi-zoom-@(zoomLevel == 2.0 ? "in" : "out")"></span> @(zoomLevel == 1.0 ? "1x" : "2x")
+                    </button>
+                </div>
             </div>
             <div style="position:relative; overflow:hidden; width:800px; height:600px; background:#1a1a1a; border:1px solid #333;" 
                  tabindex="0" 
@@ -49,11 +52,11 @@
         <div class="col-lg-3 right-column-container" style="padding-left:15px;">
             <!-- Mini Map - Collapsible -->
             <div class="card shadow-sm mb-3 map-card">
-                <div class="card-header text-center d-flex justify-content-between align-items-center">
+                <div class="card-header dark-header text-center d-flex justify-content-between align-items-center">
                     <button class="btn btn-sm btn-outline-secondary" @onclick="ResetView" title="Reset View & Zoom" style="width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center;">
                         <span class="bi bi-arrow-counterclockwise"></span>
                     </button>
-                    <strong>Mini Map</strong>
+                    <span style="color: goldenrod;"><span class="bi bi-map me-1"></span>Mini Map</span>
                     <button class="btn btn-sm btn-outline-secondary" @onclick="ToggleMiniMap" title="@(showMiniMap ? "Collapse Mini Map" : "Expand Mini Map")" style="width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center;">
                         <span class="bi @(showMiniMap ? "bi-list" : "bi-chevron-down")"></span>
                     </button>
@@ -80,8 +83,8 @@
             
             <!-- Map Spawn List - Flex to fill remaining space -->
             <div class="card shadow-sm map-card spawn-list-container">
-                <div class="card-header text-center spawn-list-header">
-                    <strong>Map Spawn</strong>
+                <div class="card-header dark-header text-center spawn-list-header">
+                    <span style="color: goldenrod;"><span class="bi bi-list-ul me-1"></span>Map Spawn</span>
                     <input type="number" 
                            class="spawn-search-input" 
                            value="@GetDisplayedSpawnId()" 
@@ -90,7 +93,7 @@
                            max="@GetSpawnCount()" 
                            placeholder="@(GetSpawnCount() == 0 ? "" : "ID")" 
                            title="Jump to spawn ID" />
-                    <strong>/ @GetSpawnCount()</strong>
+                    <span style="color: goldenrod;">/ @GetSpawnCount()</span>
                 </div>
                 <div class="card-body p-2 spawn-list-body">
                     @if (GetSpawnList().Any())
@@ -1197,34 +1200,14 @@ private int? spawnSearchId = null;
     
     private void CalculateSpawnPriority(BoxSpawnEntity spawn)
     {
-        var spawns = GetSpawnList();
-        int maxPriority = 0;
-        
-        // Check containment by all other boxes
-        foreach (var otherSpawn in spawns)
-        {
-            if (otherSpawn == spawn) continue;
-            
-            // Check if spawn is completely contained within otherSpawn
-            if (IsCompletelyContained(spawn.SpawnBox, otherSpawn.SpawnBox))
-            {
-                // This box is inside another, so it should be parent priority + 1
-                maxPriority = Math.Max(maxPriority, otherSpawn.Priority + 1);
-            }
-            // Check if boxes intersect but not contained (share priority)
-            else if (BoxesIntersect(spawn.SpawnBox, otherSpawn.SpawnBox))
-            {
-                // Share the same priority level
-                maxPriority = Math.Max(maxPriority, otherSpawn.Priority);
-            }
-        }
-        
-        spawn.Priority = maxPriority;
-        Logger.Info($"Calculated Priority for Spawn #{spawn.Position}: {spawn.Priority}");
+        // This method is now deprecated - use RecalculateAllPriorities instead
+        // Keeping for backwards compatibility but it just triggers a full recalc
+        RecalculateAllPriorities();
     }
-    
+
     private bool IsCompletelyContained(Rect inner, Rect outer)
     {
+        // Check if inner is completely inside outer (not equal)
         return inner.Left >= outer.Left &&
                inner.Right <= outer.Right &&
                inner.Top >= outer.Top &&
@@ -1232,11 +1215,26 @@ private int? spawnSearchId = null;
                !(inner.Left == outer.Left && inner.Right == outer.Right && 
                  inner.Top == outer.Top && inner.Bottom == outer.Bottom);
     }
-    
+
     private bool BoxesIntersect(Rect box1, Rect box2)
     {
         return !(box1.Right < box2.Left || box1.Left > box2.Right ||
                  box1.Bottom < box2.Top || box1.Top > box2.Bottom);
+    }
+
+    private double GetIntersectionArea(Rect box1, Rect box2)
+    {
+        // Calculate the intersection area between two boxes
+        double left = Math.Max(box1.Left, box2.Left);
+        double right = Math.Min(box1.Right, box2.Right);
+        double top = Math.Max(box1.Top, box2.Top);
+        double bottom = Math.Min(box1.Bottom, box2.Bottom);
+
+        if (left < right && top < bottom)
+        {
+            return (right - left) * (bottom - top);
+        }
+        return 0;
     }
     
     private string GetPriorityBadgeClass(int priority)
@@ -1322,17 +1320,79 @@ private int? spawnSearchId = null;
     private void RecalculateAllPriorities()
     {
         var spawns = GetSpawnList();
-        
+        if (spawns.Count == 0) return;
+
         // Reset all priorities first
         foreach (var spawn in spawns)
         {
             spawn.Priority = 0;
         }
-        
-        // Recalculate each spawn's priority
+
+        // Build containment relationships
+        // For each box, find all boxes that completely contain it
+        var containedBy = new Dictionary<BoxSpawnEntity, List<BoxSpawnEntity>>();
         foreach (var spawn in spawns)
         {
-            CalculateSpawnPriority(spawn);
+            containedBy[spawn] = new List<BoxSpawnEntity>();
+
+            foreach (var other in spawns)
+            {
+                if (other == spawn) continue;
+
+                // Check if 'spawn' is completely contained by 'other'
+                if (IsCompletelyContained(spawn.SpawnBox, other.SpawnBox))
+                {
+                    containedBy[spawn].Add(other);
+                }
+            }
+        }
+
+        // Calculate priority based on containment depth
+        // Priority = number of boxes that contain this box
+        foreach (var spawn in spawns)
+        {
+            spawn.Priority = containedBy[spawn].Count;
+        }
+
+        // Handle partial overlaps: if a box doesn't have a clear containment relationship
+        // but overlaps with other boxes, inherit priority from the box with most shared area
+        foreach (var spawn in spawns)
+        {
+            // Only check boxes with priority 0 that might be overlapping others
+            if (spawn.Priority > 0) continue;
+
+            double maxSharedArea = 0;
+            int inheritedPriority = 0;
+
+            foreach (var other in spawns)
+            {
+                if (other == spawn) continue;
+                if (!BoxesIntersect(spawn.SpawnBox, other.SpawnBox)) continue;
+
+                // Skip if this is a containment relationship (already handled)
+                if (IsCompletelyContained(spawn.SpawnBox, other.SpawnBox)) continue;
+                if (IsCompletelyContained(other.SpawnBox, spawn.SpawnBox)) continue;
+
+                // Calculate shared area for partial overlaps
+                double sharedArea = GetIntersectionArea(spawn.SpawnBox, other.SpawnBox);
+                if (sharedArea > maxSharedArea)
+                {
+                    maxSharedArea = sharedArea;
+                    inheritedPriority = other.Priority;
+                }
+            }
+
+            // If we found a significant overlap, inherit that priority
+            if (maxSharedArea > 0)
+            {
+                spawn.Priority = inheritedPriority;
+            }
+        }
+
+        // Log the results
+        foreach (var spawn in spawns)
+        {
+            Logger.Info($"Spawn #{spawn.Position} Priority: {spawn.Priority}");
         }
     }
     
@@ -1481,6 +1541,18 @@ private int? spawnSearchId = null;
         StateHasChanged();
     }
     
+    private int GetTotalBoxSpawnCount()
+    {
+        if (Utility.SESSION == null) return 0;
+
+        if (!Utility.BoxSpawns.TryGetValue(Utility.SESSION.Current_Map, out var spawnList))
+        {
+            return 0;
+        }
+
+        return spawnList.Sum(s => s.GetTotalSpawnCount());
+    }
+
     public void Dispose()
     {
         ViewService.OnMapChanged -= HandleMapChanged;

@@ -82,42 +82,57 @@ panAnimationId: null,
     setZoomLevel: function(zoomLevel) {
         console.log(`? Zoom level changed from ${this.scale}x to ${zoomLevel}x`);
         this.scale = zoomLevel;
-        
+
         // Redraw everything at new scale
         this.redrawAll();
     },
-    
-    // Calculate color based on priority (brightness adjustment)
+
+    // Calculate color based on priority using hue rotation for distinct visual levels
+    // Supports up to 25 priority levels with clearly distinguishable colors
     getColorForPriority: function(priority) {
+        // Priority 0 uses the user's configured base color
         if (priority === 0) {
             return this.boxColor;
         }
-        
-        // Parse hex color
-        const hex = this.boxColor.replace('#', '');
-        let r = parseInt(hex.substr(0, 2), 16);
-        let g = parseInt(hex.substr(2, 2), 16);
-        let b = parseInt(hex.substr(4, 2), 16);
-        
-        // Calculate brightness increase (multiply by 255 for more visible effect)
-        const brightnessInc = priority * this.boxColorInc * 255;
-        
-        // Add brightness to each channel and clamp to 255
-        r = Math.min(255, Math.round(r + brightnessInc));
-        g = Math.min(255, Math.round(g + brightnessInc));
-        b = Math.min(255, Math.round(b + brightnessInc));
-        
-        // Convert back to hex
-        const rHex = r.toString(16).padStart(2, '0');
-        const gHex = g.toString(16).padStart(2, '0');
-        const bHex = b.toString(16).padStart(2, '0');
-        
-        const resultColor = `#${rHex}${gHex}${bHex}`;
-        console.log(`Priority ${priority}: ${this.boxColor} -> ${resultColor} (inc: ${brightnessInc})`);
-        
+
+        // Define 24 distinct colors for priorities 1-24
+        // Colors chosen to be visually distinct from each other AND from default red
+        const priorityColors = [
+            '#FF8C00', // 1 - Dark Orange (distinct from red base)
+            '#FFD700', // 2 - Gold
+            '#FFFF00', // 3 - Yellow
+            '#ADFF2F', // 4 - Green Yellow
+            '#7FFF00', // 5 - Chartreuse
+            '#00FF00', // 6 - Lime
+            '#00FA9A', // 7 - Medium Spring Green
+            '#00FFFF', // 8 - Cyan
+            '#00BFFF', // 9 - Deep Sky Blue
+            '#1E90FF', // 10 - Dodger Blue
+            '#0000FF', // 11 - Blue
+            '#8A2BE2', // 12 - Blue Violet
+            '#9400D3', // 13 - Dark Violet
+            '#FF00FF', // 14 - Magenta
+            '#FF1493', // 15 - Deep Pink
+            '#FF69B4', // 16 - Hot Pink
+            '#DC143C', // 17 - Crimson
+            '#FF4500', // 18 - Orange Red
+            '#FFA500', // 19 - Orange
+            '#98FB98', // 20 - Pale Green
+            '#87CEEB', // 21 - Sky Blue
+            '#DDA0DD', // 22 - Plum
+            '#F0E68C', // 23 - Khaki
+            '#FFFFFF'  // 24 - White (maximum priority)
+        ];
+
+        // Priority 1 uses index 0, Priority 2 uses index 1, etc.
+        const colorIndex = Math.min(priority - 1, priorityColors.length - 1);
+        const resultColor = priorityColors[Math.max(0, colorIndex)];
+
+        console.log(`Priority ${priority}: Using color ${resultColor}`);
+
         return resultColor;
     },
-    
+
     // Convert screen pixel to world (map) pixel - accounting for 2x scale
     screenToWorld: function(screenX, screenY) {
         const worldX = Math.round((screenX - this.panX) / this.scale);
@@ -420,10 +435,10 @@ panAnimationId: null,
                 
                 const screenW = bottomRight.x - topLeft.x;
                 const screenH = bottomRight.y - topLeft.y;
-                
-                // Get priority (default 0 if not set)
-                const priority = spawn.spawnPriority || 0;
-                
+
+                // Get priority (default 0 if not set) - uses camelCase from C# serialization
+                const priority = spawn.priority || 0;
+
                 // Draw box with priority-based color
                 this.ctx.strokeStyle = this.getColorForPriority(priority);
                 this.ctx.lineWidth = this.boxLineSize;

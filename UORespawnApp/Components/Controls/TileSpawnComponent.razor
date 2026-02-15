@@ -10,17 +10,19 @@
 
 <div class="container-fluid p-3">
     <!-- Simplified Header -->
-    <div class="alert alert-dark mb-3 text-center shadow-sm">
-        <h5 class="mb-1"><span class="bi bi-grid-3x3-gap me-2"></span>Tile Spawn</h5>
-        <small class="text-muted">Configure spawns based on ground tile types</small>
+    <div class="alert alert-dark mb-3 d-flex justify-content-between align-items-center shadow-sm">
+        <span class="bi bi-info-circle" style="color: #6c757d; cursor: help;" title="Configure spawns based on ground tile types"></span>
+        <h5 class="mb-0"><span class="bi bi-grid-3x3-gap me-2" style="color: goldenrod;"></span><span style="color: goldenrod;">Tile Spawn</span></h5>
+        <span style="width: 16px;"></span>
     </div>
 
     <div class="row">
         <!-- Tile Selection -->
         <div class="col-lg-3">
             <div class="card map-card mb-3 tile-list-container">
-                <div class="card-header text-center">
-                    <strong>Tile Types</strong>
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <strong style="color: goldenrod;">Tile Types</strong>
+                    <span class="badge bg-light text-dark" title="Total spawns across all tile types">@GetTotalAllTileSpawnCount() Spawns</span>
                 </div>
                 <div class="card-body p-2 tile-list-body">
                     <div class="tile-list">
@@ -50,9 +52,16 @@
                     <div class="card-header text-center d-flex justify-content-between align-items-center">
                         <div style="width: 40px;"></div>
                         <strong>@GetTileDisplayName(selectedTile.Value)</strong>
-                        <button class="btn btn-warning btn-sm" @onclick="() => ClearTileSpawns()" title="Clear All Spawns for this Tile">
-                            <span class="bi bi-arrow-clockwise"></span>
-                        </button>
+                        @if (currentEntity.GetTotalSpawnCount() > 0)
+                        {
+                            <button class="btn btn-warning" style="padding: 2px 6px; font-size: 0.7rem;" @onclick="() => ClearTileSpawns()" title="Clear All Spawns for this Tile">
+                                <span class="bi bi-arrow-clockwise"></span>
+                            </button>
+                        }
+                        else
+                        {
+                            <div style="width: 40px;"></div>
+                        }
                     </div>
                     <div class="card-body">
                         <!-- 6 Spawn Category Sections - Matching BoxSpawn Design -->
@@ -119,7 +128,10 @@
                         <!-- Trigger Dropdowns - Below Cards like BoxSpawn -->
                         <div class="row g-2 mt-3">
                             <div class="col-md-6">
-                                <label class="form-label mb-1 text-center d-block">Weather Trigger</label>
+                                <label class="form-label mb-1 text-center d-block">
+                                    Weather Trigger
+                                    <span class="bi bi-info-circle ms-1" style="color: #6c757d; cursor: help;" title="Activates when weather has spawn"></span>
+                                </label>
                                 <select class="form-select form-select-sm" 
                                         @bind="currentEntity.WeatherSpawn" 
                                         @bind:after="SaveCurrentTile"
@@ -136,10 +148,12 @@
                                         }
                                     }
                                 </select>
-                                <small class="text-muted d-block text-center">Controls when WeatherSpawns list activates</small>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label mb-1 text-center d-block">Timed Trigger</label>
+                                <label class="form-label mb-1 text-center d-block">
+                                    Timed Trigger
+                                    <span class="bi bi-info-circle ms-1" style="color: #6c757d; cursor: help;" title="Activates when timed has spawn"></span>
+                                </label>
                                 <select class="form-select form-select-sm" 
                                         @bind="currentEntity.TimedSpawn" 
                                         @bind:after="SaveCurrentTile"
@@ -156,7 +170,6 @@
                                         }
                                     }
                                 </select>
-                                <small class="text-muted d-block text-center">Controls when TimedSpawns list activates</small>
                             </div>
                         </div>
                     </div>
@@ -420,6 +433,18 @@
         }
 
         StateHasChanged();
+    }
+
+    private int GetTotalAllTileSpawnCount()
+    {
+        if (Utility.SESSION == null) return 0;
+
+        if (!Utility.TileSpawns.TryGetValue(Utility.SESSION.Current_Map, out var tileList))
+        {
+            return 0;
+        }
+
+        return tileList.Sum(t => t.GetTotalSpawnCount());
     }
 
     public void Dispose()

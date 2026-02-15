@@ -7,26 +7,36 @@ namespace UORespawnApp
     /// <summary>
     /// Utility for importing legacy UORespawn v1.0 CSV data to v2.0 format
     /// Converts old SpawnEntity format (3 frequencies) to new format (6 frequencies)
-    /// Only available for fresh installs (empty Box and Tile spawn data)
+    /// Import is available per spawn type (Box or Tile can be imported independently)
     /// </summary>
     public static class LegacyImportUtility
     {
         /// <summary>
-        /// Check if legacy import is available (both Box and Tile spawns must be empty)
+        /// Check if legacy import section should be shown (at least one spawn type is empty)
         /// </summary>
         public static bool IsLegacyImportAvailable()
         {
-            // Check if Box spawns are empty
-            bool boxSpawnsEmpty = Utility.BoxSpawns == null || 
-                                  Utility.BoxSpawns.Count == 0 ||
-                                  Utility.BoxSpawns.All(kvp => kvp.Value.Count == 0);
+            return IsBoxImportAvailable() || IsTileImportAvailable();
+        }
 
-            // Check if Tile spawns are empty
-            bool tileSpawnsEmpty = Utility.TileSpawns == null || 
-                                   Utility.TileSpawns.Count == 0 ||
-                                   Utility.TileSpawns.All(kvp => kvp.Value.Count == 0);
+        /// <summary>
+        /// Check if Box spawn import is available (Box spawns must be empty)
+        /// </summary>
+        public static bool IsBoxImportAvailable()
+        {
+            return Utility.BoxSpawns == null || 
+                   Utility.BoxSpawns.Count == 0 ||
+                   Utility.BoxSpawns.All(kvp => kvp.Value.Count == 0);
+        }
 
-            return boxSpawnsEmpty && tileSpawnsEmpty;
+        /// <summary>
+        /// Check if Tile spawn import is available (Tile spawns must be empty)
+        /// </summary>
+        public static bool IsTileImportAvailable()
+        {
+            return Utility.TileSpawns == null || 
+                   Utility.TileSpawns.Count == 0 ||
+                   Utility.TileSpawns.All(kvp => kvp.Value.Count == 0);
         }
 
         /// <summary>

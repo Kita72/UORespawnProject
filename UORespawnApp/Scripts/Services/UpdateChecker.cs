@@ -12,7 +12,7 @@ namespace UORespawnApp.Scripts.Services
     {
         private static readonly HttpClient _httpClient = new();
         private const string GITHUB_API_URL = "https://api.github.com/repos/Kita72/UORespawnProject/releases/latest";
-        private const string CURRENT_VERSION = "2.0.0.1";
+        private const string CURRENT_VERSION = Utility.Version;
         
         // Cached JsonSerializerOptions for deserialization (reused across all calls)
         private static readonly JsonSerializerOptions _jsonOptions = new() 
@@ -100,12 +100,12 @@ namespace UORespawnApp.Scripts.Services
             catch (HttpRequestException ex)
             {
                 Logger.Warning($"Network error checking for updates: {ex.Message}");
-                return UpdateChecker.CreateNoUpdateInfo("Network error - check internet connection");
+                return CreateNoUpdateInfo("Network error - check internet connection");
             }
             catch (Exception ex)
             {
                 Logger.Error("Error checking for updates", ex);
-                return UpdateChecker.CreateNoUpdateInfo($"Error: {ex.Message}");
+                return CreateNoUpdateInfo($"Error: {ex.Message}");
             }
         }
         

@@ -30,6 +30,41 @@
     gap: 6px;
 }
 
+/* Spawn Search Input */
+.spawn-search-input {
+    width: 50px;
+    padding: 2px 6px;
+    border: 1px solid #6c757d;
+    border-radius: 3px;
+    text-align: center;
+    font-size: 0.9rem;
+    font-weight: bold;
+    background: rgba(255, 255, 255, 0.1);
+    color: inherit;
+}
+
+.spawn-search-input:focus {
+    outline: none;
+    border-color: #0d6efd;
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.spawn-search-input::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+    font-weight: normal;
+}
+
+/* Hide number input spinners */
+.spawn-search-input::-webkit-inner-spin-button,
+.spawn-search-input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.spawn-search-input[type=number] {
+    -moz-appearance: textfield;
+}
+
 /* Map Card Styling */
 .map-card {
     border: 1px solid #dee2e6;
@@ -42,6 +77,13 @@
     border-bottom: 2px solid rgba(255, 255, 255, 0.1);
     padding: 0.75rem;
     font-weight: 600;
+}
+
+/* Dark solid header - overrides gradient */
+.map-card .card-header.dark-header {
+    background: #212529 !important;
+    border-bottom: 1px solid #3a3a3a !important;
+    font-weight: normal;
 }
 
 body.dark-theme .map-card {

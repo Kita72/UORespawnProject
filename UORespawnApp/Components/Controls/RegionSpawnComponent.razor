@@ -15,11 +15,14 @@
         <div class="col-lg-9">
             <div class="alert alert-dark mb-2 d-flex justify-content-between align-items-center" style="width:800px;">
                 <div>
-                    <strong>@MapUtility.GetMapName(ViewService.CurrentMapId)</strong> | Size: @imageDim | Mouse: (@mouseWorldX, @mouseWorldY)
+                    <span class="bi bi-map me-1" style="color: goldenrod;"></span><strong style="color: goldenrod;">Region Spawn</strong> | @MapUtility.GetMapName(ViewService.CurrentMapId) | Size: @imageDim | Mouse: (@mouseWorldX, @mouseWorldY)
                 </div>
-                <button class="btn btn-sm @(zoomLevel == 2.0 ? "btn-primary" : "btn-outline-primary")" @onclick="ToggleZoom" title="Toggle Zoom (1x / 2x)">
-                    <span class="bi bi-zoom-@(zoomLevel == 2.0 ? "in" : "out")"></span> @(zoomLevel == 1.0 ? "1x" : "2x")
-                </button>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-light text-dark" title="Total spawns across all regions">@GetTotalRegionSpawnCount() Spawns</span>
+                    <button class="btn btn-sm @(zoomLevel == 2.0 ? "btn-primary" : "btn-outline-primary")" @onclick="ToggleZoom" title="Toggle Zoom (1x / 2x)">
+                        <span class="bi bi-zoom-@(zoomLevel == 2.0 ? "in" : "out")"></span> @(zoomLevel == 1.0 ? "1x" : "2x")
+                    </button>
+                </div>
             </div>
             <div style="position:relative; overflow:hidden; width:800px; height:600px; background:#1a1a1a; border:1px solid #333;" 
                  tabindex="0" 
@@ -49,11 +52,11 @@
         <div class="col-lg-3 right-column-container" style="padding-left:15px;">
             <!-- Mini Map - Collapsible -->
             <div class="card shadow-sm mb-3 map-card">
-                <div class="card-header text-center d-flex justify-content-between align-items-center">
+                <div class="card-header dark-header text-center d-flex justify-content-between align-items-center">
                     <button class="btn btn-sm btn-outline-secondary" @onclick="ResetView" title="Reset View & Zoom" style="width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center;">
                         <span class="bi bi-arrow-counterclockwise"></span>
                     </button>
-                    <strong>Mini Map</strong>
+                    <span style="color: goldenrod;"><span class="bi bi-map me-1"></span>Mini Map</span>
                     <button class="btn btn-sm btn-outline-secondary" @onclick="ToggleMiniMap" title="@(showMiniMap ? "Collapse Mini Map" : "Expand Mini Map")" style="width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center;">
                         <span class="bi @(showMiniMap ? "bi-list" : "bi-chevron-down")"></span>
                     </button>
@@ -64,15 +67,33 @@
                         <canvas id="regionMiniMapCanvas" width="250" height="188"
                                 style="cursor:pointer; border:1px solid #333; display:block; image-rendering:pixelated; width: 100%; height: auto;"
                                 @onclick="OnMiniMapClick" />
+                        <div class="d-flex gap-2 mt-2">
+                            <button class="btn btn-sm w-50 @(showXMLSpawners ? "btn-success" : "btn-danger")" 
+                                    @onclick="ToggleXMLSpawners" title="Toggle XML Spawners">
+                                <span class="bi bi-gear-fill"></span> XML
+                            </button>
+                            <button class="btn btn-sm w-50 @(showServerSpawns ? "btn-success" : "btn-danger")" 
+                                    @onclick="ToggleServerSpawns" title="Toggle Server Spawns">
+                                <span class="bi bi-bullseye"></span> Spawns
+                            </button>
+                        </div>
                     </div>
                 }
             </div>
             
             <!-- Region Spawn List - Flex to fill remaining space -->
             <div class="card shadow-sm map-card spawn-list-container">
-                <div class="card-header text-center spawn-list-header">
-                    <strong>Regions</strong>
-                    <strong>@GetRegionCount()</strong>
+                <div class="card-header dark-header text-center spawn-list-header">
+                    <span style="color: goldenrod;"><span class="bi bi-geo-alt me-1"></span>Regions</span>
+                    <input type="number" 
+                           class="spawn-search-input" 
+                           value="@GetDisplayedRegionIndex()" 
+                           @oninput="HandleRegionIndexInput"
+                           min="1" 
+                           max="@GetRegionCount()" 
+                           placeholder="@(GetRegionCount() == 0 ? "" : "#")" 
+                           title="Jump to region by list position" />
+                    <span style="color: goldenrod;">/ @GetRegionCount()</span>
                 </div>
                 <div class="card-body p-2 spawn-list-body">
                     @{
@@ -94,10 +115,7 @@
                                         @if (entity != null && entity.GetTotalSpawnCount() > 0)
                                         {
                                             <span class="badge bg-warning text-dark" title="Total spawns: @entity.GetTotalSpawnCount()">@entity.GetTotalSpawnCount()</span>
-                                        }
-                                        @if (entity != null)
-                                        {
-                                            <button class="btn btn-warning btn-sm" @onclick="() => ClearRegionSpawns(entity)" @onclick:stopPropagation="true" title="Clear All Spawns">
+                                            <button class="btn btn-warning" style="padding: 2px 6px; font-size: 0.7rem;" @onclick="() => ClearRegionSpawns(entity)" @onclick:stopPropagation="true" title="Clear All Spawns">
                                                 <span class="bi bi-arrow-clockwise"></span>
                                             </button>
                                         }
@@ -248,9 +266,18 @@
     
     // Mini map collapse
     private bool showMiniMap = true;
-    
+
+    // XML Spawner toggle (static to persist across map changes - shared with BoxSpawn)
+    private static bool showXMLSpawners = false;
+
+    // Server Spawn toggle (static to persist across map changes - shared with BoxSpawn)
+    private static bool showServerSpawns = false;
+
     // Region selection
     private RegionInfo? selectedRegion = null;
+
+    // Region search index (1-based position in sorted list)
+    private int? regionSearchIndex = null;
     
     // Modal state
     private bool showModal = false;
@@ -761,7 +788,79 @@
     {
         return GetRegionsForCurrentMap().Count;
     }
-    
+
+    private int? GetDisplayedRegionIndex()
+    {
+        // If no regions exist, show 0
+        if (GetRegionCount() == 0)
+        {
+            return 0;
+        }
+
+        // If user is typing (regionSearchIndex has manual value), show that
+        // Otherwise show the selected region's position in sorted list, or null
+        if (regionSearchIndex.HasValue)
+        {
+            return regionSearchIndex;
+        }
+
+        if (selectedRegion != null)
+        {
+            var regions = GetRegionsForCurrentMap().OrderBy(r => r.Name).ToList();
+            var index = regions.FindIndex(r => r.Name == selectedRegion.Name);
+            return index >= 0 ? index + 1 : null; // 1-based
+        }
+
+        return null;
+    }
+
+    private async Task HandleRegionIndexInput(ChangeEventArgs e)
+    {
+        int maxCount = GetRegionCount();
+
+        // If no regions exist, ignore input and keep at 0
+        if (maxCount == 0)
+        {
+            regionSearchIndex = null;
+            return;
+        }
+
+        // Parse the input value
+        if (int.TryParse(e.Value?.ToString(), out int value))
+        {
+            regionSearchIndex = value;
+        }
+        else
+        {
+            regionSearchIndex = null;
+        }
+
+        // Validate and auto-jump
+        if (regionSearchIndex.HasValue)
+        {
+            // Clamp value to valid range
+            if (regionSearchIndex.Value > maxCount)
+            {
+                regionSearchIndex = maxCount;
+                Logger.Info($"Region search index clamped to max: {maxCount}");
+            }
+            else if (regionSearchIndex.Value < 1)
+            {
+                regionSearchIndex = 1;
+                Logger.Info("Region search index clamped to min: 1");
+            }
+
+            // Auto-jump to the region at this index (1-based)
+            var regions = GetRegionsForCurrentMap().OrderBy(r => r.Name).ToList();
+            if (regionSearchIndex.Value >= 1 && regionSearchIndex.Value <= regions.Count)
+            {
+                var targetRegion = regions[regionSearchIndex.Value - 1]; // Convert to 0-based
+                await SelectRegion(targetRegion);
+                Logger.Info($"Quick search: jumped to region #{regionSearchIndex.Value} '{targetRegion.Name}'");
+            }
+        }
+    }
+
     private RegionSpawnEntity? GetRegionEntity(string regionName)
     {
         if (!Utility.RegionSpawns.TryGetValue(ViewService.CurrentMapId, out var list))
@@ -989,6 +1088,136 @@
         };
     }
     
+    private int GetTotalRegionSpawnCount()
+    {
+        int total = 0;
+        var regions = GetRegionsForCurrentMap();
+        foreach (var region in regions)
+        {
+            var entity = GetRegionEntity(region.Name);
+            if (entity != null)
+            {
+                total += entity.GetTotalSpawnCount();
+            }
+        }
+        return total;
+    }
+
+    private async Task ToggleXMLSpawners()
+    {
+        showXMLSpawners = !showXMLSpawners;
+
+        if (showXMLSpawners)
+        {
+            Logger.Info($"Toggling ON XML spawners for {ViewService.CurrentMapId}");
+            var xmlSpawners = XMLSpawnUtility.GetSpawnersForMap(ViewService.CurrentMapId);
+            if (xmlSpawners.Count > 0)
+            {
+                var options = new System.Text.Json.JsonSerializerOptions 
+                { 
+                    PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+                    WriteIndented = false 
+                };
+                var json = System.Text.Json.JsonSerializer.Serialize(xmlSpawners, options);
+                await JS.InvokeVoidAsync("eval", $"window.mapModule.showXMLSpawners({json})");
+                Logger.Info($"Displayed {xmlSpawners.Count} XML spawners on map");
+            }
+            else
+            {
+                Logger.Info("No XML spawners found for this map");
+                ToastService.ShowWarning($"No XML spawners found for {MapUtility.GetMapName(ViewService.CurrentMapId)}. Import XML Spawner data first.");
+                showXMLSpawners = false;
+            }
+        }
+        else
+        {
+            Logger.Info("Hiding XML spawners");
+            await JS.InvokeVoidAsync("eval", "window.mapModule.hideXMLSpawners()");
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task ToggleServerSpawns()
+    {
+        showServerSpawns = !showServerSpawns;
+
+        if (showServerSpawns)
+        {
+            Logger.Info($"Toggling ON server spawn statistics for {ViewService.CurrentMapId}");
+
+            // Check if ServUO folder is configured
+            if (string.IsNullOrEmpty(Settings.ServUODataFolder))
+            {
+                Logger.Warning("Server Data folder not configured!");
+                ToastService.ShowWarning("Server Data folder not configured! Go to Settings to set your ServUO Data folder path.");
+                showServerSpawns = false;
+                StateHasChanged();
+                return;
+            }
+
+            // Check if UOR_DATA/UOR_STATS folder exists
+            string statsFolderPath = Path.Combine(Settings.ServUODataFolder, "UOR_DATA", "UOR_STATS");
+            if (!Directory.Exists(statsFolderPath))
+            {
+                Logger.Warning($"UOR_STATS folder not found at: {statsFolderPath}");
+                ToastService.ShowWarning($"UOR_STATS folder not found! Ensure UOR_DATA/UOR_STATS/ exists in your server data folder.");
+                showServerSpawns = false;
+                StateHasChanged();
+                return;
+            }
+
+            // Load spawn statistics from server if not already loaded
+            if (!MapDisplayUtility.HasSpawnData)
+            {
+                Logger.Info("Loading spawn statistics...");
+                ToastService.ShowInfo("Loading spawn statistics...");
+                MapDisplayUtility.InstantiateStatData();
+
+                if (!MapDisplayUtility.HasSpawnData)
+                {
+                    Logger.Warning("No spawn statistics files found!");
+                    ToastService.ShowWarning("No spawn statistics files found! Play on your server to generate data, then run [PushRespawnStats].");
+                    showServerSpawns = false;
+                    StateHasChanged();
+                    return;
+                }
+
+                Logger.Info("Loaded spawn statistics successfully!");
+                ToastService.ShowSuccess("Spawn statistics loaded successfully!");
+            }
+
+            // Get spawn data for current map
+            var spawnData = MapDisplayUtility.GetSpawnDataForMap(ViewService.CurrentMapId);
+            if (spawnData.Count == 0)
+            {
+                Logger.Warning($"No spawn data available for {ViewService.CurrentMapId}");
+                ToastService.ShowWarning($"No spawn data available for {MapUtility.GetMapName(ViewService.CurrentMapId)}. Try a different map or play on this map to generate data.");
+                showServerSpawns = false;
+                StateHasChanged();
+                return;
+            }
+
+            // Convert to JSON and send to JavaScript
+            var options = new System.Text.Json.JsonSerializerOptions 
+            { 
+                PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+                WriteIndented = false 
+            };
+            var json = System.Text.Json.JsonSerializer.Serialize(spawnData, options);
+
+            await JS.InvokeVoidAsync("eval", $"window.mapModule.showServerSpawns({json})");
+            Logger.Info($"Displayed {spawnData.Count} spawn points on map");
+        }
+        else
+        {
+            Logger.Info("Hiding server spawn statistics");
+            await JS.InvokeVoidAsync("eval", "window.mapModule.hideServerSpawns()");
+        }
+
+        StateHasChanged();
+    }
+
     public void Dispose()
     {
         ViewService.OnViewChanged -= OnViewChanged;

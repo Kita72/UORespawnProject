@@ -2,6 +2,11 @@
     <div class="row justify-content-center">
         <div class="col-lg-8">
 
+            <!-- Page Header -->
+            <div class="alert alert-dark mb-3 text-center shadow-sm">
+                <h5 class="mb-0"><span class="bi bi-gear-fill me-2" style="color: goldenrod;"></span><span style="color: goldenrod;">Settings</span></h5>
+            </div>
+
             <!-- ServUO Server Integration -->
             <div class="card map-card mb-3">
                 <div class="card-header text-center">
@@ -24,7 +29,7 @@
                     @if (isConfigured)
                     {
                         <div class="mb-3">
-                            <span class="badge bg-success" style="font-size: 1rem; padding: 10px 20px;">
+                            <span class="badge bg-success d-inline-block text-center" style="font-size: 1rem; padding: 10px 20px; min-width: 200px;">
                                 <span class="bi bi-check-circle me-2"></span>
                                 Active
                             </span>
@@ -68,6 +73,70 @@
                         </div>
                     }
 
+                    <!-- For Remote Servers Section -->
+                    <div class="mt-4 pt-3 border-top">
+                        <div class="d-flex align-items-center justify-content-center gap-2 mb-2" style="cursor: pointer;" @onclick="ToggleRemoteServerSection">
+                            <span class="bi bi-cloud-upload text-info"></span>
+                            <strong class="text-info">For Remote Servers</strong>
+                            <span class="bi @(showRemoteServerSection ? "bi-chevron-up" : "bi-chevron-down") text-info small"></span>
+                        </div>
+
+                        @if (showRemoteServerSection)
+                        {
+                            <div class="card bg-dark text-light mb-3" style="max-width: 500px; margin: 0 auto;">
+                                <div class="card-body">
+                                    <p class="small mb-3">
+                                        <span class="bi bi-info-circle me-1"></span>
+                                        Running a server on a remote machine? Export scripts and data files, 
+                                        then manually transfer them to your server. See <strong>Instructions</strong> for full workflow.
+                                    </p>
+
+                                    <!-- Export Server Scripts -->
+                                    <div class="mb-3">
+                                        <button class="btn btn-info w-100" @onclick="ExportServerScripts" disabled="@isExporting">
+                                            @if (isExporting)
+                                            {
+                                                <span class="spinner-border spinner-border-sm me-2"></span>
+                                                <text>Exporting...</text>
+                                            }
+                                            else
+                                            {
+                                                <span class="bi bi-file-earmark-zip me-2"></span>
+                                                <text>Export Server Scripts (.zip)</text>
+                                            }
+                                        </button>
+                                        <small class="text-muted d-block mt-1">Scripts go to: <code>Scripts/Custom/UORespawn/</code></small>
+                                    </div>
+
+                                    <!-- Export Spawn Data -->
+                                    <div class="mb-3">
+                                        <button class="btn btn-primary w-100" @onclick="ExportSpawnData" disabled="@isExportingData">
+                                            @if (isExportingData)
+                                            {
+                                                <span class="spinner-border spinner-border-sm me-2"></span>
+                                                <text>Exporting...</text>
+                                            }
+                                            else
+                                            {
+                                                <span class="bi bi-database-down me-2"></span>
+                                                <text>Export Spawn Data (.zip)</text>
+                                            }
+                                        </button>
+                                        <small class="text-muted d-block mt-1">Data files go to: <code>Data/UOR_DATA/</code></small>
+                                    </div>
+
+                                    <!-- Export Messages -->
+                                    @if (!string.IsNullOrEmpty(exportMessage))
+                                    {
+                                        <div class="alert @(exportSuccess ? "alert-success" : "alert-danger") small mb-0">
+                                            @exportMessage
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+
                     <!-- Validation/Setup Messages -->
                     @if (!string.IsNullOrEmpty(serverSetupMessage))
                     {
@@ -84,52 +153,72 @@
                 <div class="card map-card mb-3" style="border: 2px solid #0dcaf0;">
                     <div class="card-header text-center" style="background: linear-gradient(135deg, #0dcaf0 0%, #0d6efd 100%); color: white;">
                             <strong>Legacy Import (v1.0 → v2.0)</strong>
-                        <InfoIcon Text="Migrate CSV files from UORespawn v1.0 (3 frequencies) to v2.0 format (6 frequencies). Only available for fresh installs." />
+                        <InfoIcon Text="Migrate CSV files from UORespawn v1.0 (3 frequencies) to v2.0 format (6 frequencies). Available per spawn type when empty." />
                     </div>
                     <div class="card-body text-center">
                         <!-- Box Spawn Import -->
-                        <div class="mb-3">
-                            <h6 class="mb-2">Box Spawn</h6>
-                            <button class="btn btn-info" style="min-width: 200px;" @onclick="BrowseLegacyBoxSpawnFile" disabled="@isImportingLegacy">
-                                @if (isImportingLegacy && currentImportType == "box")
+                        @if (LegacyImportUtility.IsBoxImportAvailable())
+                        {
+                            <div class="mb-3">
+                                <h6 class="mb-2">Box Spawn</h6>
+                                <button class="btn btn-info" style="min-width: 200px;" @onclick="BrowseLegacyBoxSpawnFile" disabled="@isImportingLegacy">
+                                    @if (isImportingLegacy && currentImportType == "box")
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2"></span>
+                                        <text>Importing...</text>
+                                    }
+                                    else
+                                    {
+                                        <span class="bi bi-file-earmark-arrow-up me-2"></span>
+                                        <text>Import CSV</text>
+                                    }
+                                </button>
+                                @if (!string.IsNullOrEmpty(selectedLegacyBoxFile))
                                 {
-                                    <span class="spinner-border spinner-border-sm me-2"></span>
-                                    <text>Importing...</text>
+                                    <small class="text-muted d-block mt-1">@Path.GetFileName(selectedLegacyBoxFile)</small>
                                 }
-                                else
-                                {
-                                    <span class="bi bi-file-earmark-arrow-up me-2"></span>
-                                    <text>Import CSV</text>
-                                }
-                            </button>
-                            @if (!string.IsNullOrEmpty(selectedLegacyBoxFile))
-                            {
-                                <small class="text-muted d-block mt-1">@Path.GetFileName(selectedLegacyBoxFile)</small>
-                            }
-                        </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="mb-3">
+                                <h6 class="mb-2 text-muted">Box Spawn</h6>
+                                <span class="badge bg-success"><span class="bi bi-check-circle me-1"></span>Already has data</span>
+                            </div>
+                        }
 
                         <hr class="my-3" />
 
                         <!-- Tile Spawn Import -->
-                        <div class="mb-3">
-                            <h6 class="mb-2">Tile Spawn</h6>
-                            <button class="btn btn-info" style="min-width: 200px;" @onclick="BrowseLegacyTileSpawnFile" disabled="@isImportingLegacy">
-                                @if (isImportingLegacy && currentImportType == "tile")
+                        @if (LegacyImportUtility.IsTileImportAvailable())
+                        {
+                            <div class="mb-3">
+                                <h6 class="mb-2">Tile Spawn</h6>
+                                <button class="btn btn-info" style="min-width: 200px;" @onclick="BrowseLegacyTileSpawnFile" disabled="@isImportingLegacy">
+                                    @if (isImportingLegacy && currentImportType == "tile")
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2"></span>
+                                        <text>Importing...</text>
+                                    }
+                                    else
+                                    {
+                                        <span class="bi bi-file-earmark-arrow-up me-2"></span>
+                                        <text>Import CSV</text>
+                                    }
+                                </button>
+                                @if (!string.IsNullOrEmpty(selectedLegacyTileFile))
                                 {
-                                    <span class="spinner-border spinner-border-sm me-2"></span>
-                                    <text>Importing...</text>
+                                    <small class="text-muted d-block mt-1">@Path.GetFileName(selectedLegacyTileFile)</small>
                                 }
-                                else
-                                {
-                                    <span class="bi bi-file-earmark-arrow-up me-2"></span>
-                                    <text>Import CSV</text>
-                                }
-                            </button>
-                            @if (!string.IsNullOrEmpty(selectedLegacyTileFile))
-                            {
-                                <small class="text-muted d-block mt-1">@Path.GetFileName(selectedLegacyTileFile)</small>
-                            }
-                        </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="mb-3">
+                                <h6 class="mb-2 text-muted">Tile Spawn</h6>
+                                <span class="badge bg-success"><span class="bi bi-check-circle me-1"></span>Already has data</span>
+                            </div>
+                        }
 
                         @if (!string.IsNullOrEmpty(legacyImportMessage))
                         {
@@ -253,23 +342,20 @@
             <div class="card map-card mb-3">
                 <div class="card-header text-center">
                     <span class="text-primary" style="font-size: 1.25rem;">Spawn Box Appearance</span>
-                    <InfoIcon Text="Customize how spawn boxes appear on the map. Priority levels automatically adjust color brightness." />
+                    <InfoIcon Text="Customize how spawn boxes appear on the map. Each priority level (0-24) has a distinct color for easy identification." />
                 </div>
                 <div class="card-body">
-                    <div class="row justify-content-center mb-3">
-                        <div class="col-12 text-center">
-                            <label class="form-label">Box Color</label>
+                    <div class="row justify-content-center">
+                        <div class="col-12 text-center mb-3">
+                            <label class="form-label">Base Box Color (Priority 0)</label>
                             <div class="d-flex gap-2 align-items-center justify-content-center">
                                 <input type="color" class="form-control form-control-color" @bind="boxColorHex" style="width: 60px; height: 38px;" />
-                                <input type="text" class="form-control text-center" @bind="boxColorHex" placeholder="#FF0000" style="max-width: 150px;" />
-                                <div class="color-preview" style="background-color: @boxColorHex;"></div>
+                                <input type="text" class="form-control text-center" @bind="boxColorHex" placeholder="#FF0000" style="max-width: 120px;" />
                             </div>
                         </div>
-                    </div>
-                    <div class="row justify-content-center">
-                        <div class="col-md-6 mb-3 text-center" style="padding-right: 8px;">
+                        <div class="col-12 text-center mb-3">
                             <label class="form-label">Line Thickness</label>
-                            <select class="form-select text-center" @bind="Settings.BoxLineSize">
+                            <select class="form-select text-center" style="max-width: 150px; margin: 0 auto;" @bind="Settings.BoxLineSize">
                                 <option value="1">1 px</option>
                                 <option value="2">2 px</option>
                                 <option value="3">3 px</option>
@@ -277,18 +363,11 @@
                                 <option value="5">5 px</option>
                             </select>
                         </div>
-                        <div class="col-md-6 mb-3 text-center" style="padding-left: 8px;">
-                            <label class="form-label">
-                                Priority Brightness
-                                <InfoIcon Text="How much brighter each priority level appears" />
-                            </label>
-                            <select class="form-select text-center" @bind="Settings.BoxColorInc">
-                                <option value="0.1">Subtle</option>
-                                <option value="0.2">Moderate</option>
-                                <option value="0.3">Default</option>
-                                <option value="0.4">Strong</option>
-                                <option value="0.5">Maximum</option>
-                            </select>
+                        <div class="col-12 text-center">
+                            <span class="text-muted small">
+                                Priority Colors
+                                <InfoIcon Text="Priority levels 1-24 use distinct colors (red → orange → yellow → green → cyan → blue → violet → pink) for visual clarity when boxes overlap." />
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -303,8 +382,8 @@
                 <div class="card-body">
                     <!-- Map Status Summary - Split Pill Badge -->
                     <div class="text-center mb-4">
-                        <div class="d-inline-flex align-items-center" style="font-size: 1.1rem; border-radius: 50px; overflow: hidden; box-shadow: 0 3px 6px rgba(0,0,0,0.15);">
-                            <span class="badge bg-success" style="padding: 12px 24px; border-radius: 0; margin: 0;">
+                        <div class="d-inline-flex align-items-center" style="font-size: 1.1rem; border-radius: 50px; overflow: hidden; box-shadow: 0 3px 6px rgba(0,0,0,0.15); min-width: 300px;">
+                            <span class="badge bg-success" style="padding: 12px 24px; border-radius: 0; margin: 0; flex: 1;">
                                 <span class="bi bi-map me-2"></span>
                                 @{
                                     var availableMaps = GetAvailableMaps();
@@ -313,7 +392,7 @@
                                 }
                                 @originalCount Original
                             </span>
-                            <span class="badge bg-danger" style="padding: 12px 24px; border-radius: 0; margin: 0;">
+                            <span class="badge bg-danger" style="padding: 12px 24px; border-radius: 0; margin: 0; flex: 1;">
                                 <span class="bi bi-plus-circle me-2"></span>
                                 @customCount Custom
                             </span>
@@ -322,9 +401,9 @@
 
                     <!-- Replace Existing Map -->
                     <div class="mb-4 text-center">
-                        <div class="d-flex gap-2 justify-content-center mb-2">
-                            <select class="form-select" style="max-width: 300px;" @bind="selectedMapToReplace" @bind:after="CheckForBackup">
-                                <option value="">Replace Map...</option>
+                        <div class="d-flex justify-content-center mb-2">
+                            <select class="form-select" style="width: 300px;" @bind="selectedMapToReplace" @bind:after="OnMapSelectionChanged">
+                                <option value="">Select map to replace...</option>
                                 @foreach (var mapId in GetAvailableMaps())
                                 {
                                     var mapName = $"Map{mapId}";
@@ -336,9 +415,7 @@
                                     </option>
                                 }
                             </select>
-                            <button class="btn btn-outline-primary" @onclick="BrowseMapImageReplace" disabled="@string.IsNullOrEmpty(selectedMapToReplace)">
-                                <span class="bi bi-file-earmark-image"></span> Browse
-                            </button>
+                            <span class="bi bi-info-circle ms-2 align-self-center" style="color: #6c757d; cursor: help;" title="Select a map to replace with your custom image"></span>
                         </div>
 
                         @if (hasMapBackup && !string.IsNullOrEmpty(selectedMapToReplace))
@@ -358,13 +435,13 @@
                         }
                         @if (nextCustomMap == -1)
                         {
-                            <div class="alert alert-warning mb-0" style="max-width: 370px; margin: 0 auto;">
+                            <div class="alert alert-warning mb-0" style="width: 300px; margin: 0 auto;">
                                 <span class="bi bi-exclamation-triangle"></span> Requires all original maps (0-5) first
                             </div>
                         }
                         else
                         {
-                            <button class="btn btn-primary" style="width: 370px;" @onclick="BrowseMapImageAdd">
+                            <button class="btn btn-primary" style="width: 300px;" @onclick="BrowseMapImageAdd">
                                 <span class="bi bi-plus-lg"></span> Add Map@(nextCustomMap)
                             </button>
                         }
@@ -467,17 +544,97 @@
                 </div>
             </div>
 
-            <!-- Reset to Defaults Button -->
+            <!-- Reset Section -->
             <div class="card map-card mb-3" style="border: 2px solid #dc3545;">
                 <div class="card-header text-center bg-danger text-white">
-                        <strong>Reset Settings</strong>
+                        <strong>Reset Options</strong>
                 </div>
                 <div class="card-body text-center">
-                    <button class="btn btn-danger btn-lg" style="min-width: 200px;" @onclick="ResetToDefaults">
-                        <span class="bi bi-arrow-counterclockwise me-2"></span>Reset to Defaults
-                    </button>
+                    <!-- Reset Settings Only -->
+                    <div class="mb-4">
+                        <h6 class="text-warning mb-3">
+                            Reset Spawn Settings
+                            <InfoIcon Text="Resets spawn chances, ranges, and options to defaults. Does not delete spawn data." />
+                        </h6>
+                        <button class="btn btn-warning" style="min-width: 200px;" @onclick="ResetToDefaults">
+                            <span class="bi bi-arrow-counterclockwise me-2"></span>Reset Settings
+                        </button>
+                    </div>
+
+                    <hr class="my-3" />
+
+                    <!-- Complete Tool Reset -->
+                    <div>
+                        <h6 class="text-danger mb-3">
+                            Complete Tool Reset
+                            <InfoIcon Text="Deletes ALL data files and resets tool to fresh install state." />
+                        </h6>
+                        <button class="btn btn-danger" style="min-width: 200px;" @onclick="ShowCompleteResetConfirmation">
+                            <span class="bi bi-trash me-2"></span>Complete Reset
+                        </button>
+                    </div>
                 </div>
             </div>
+
+            <!-- Complete Reset Confirmation Modal -->
+            @if (showCompleteResetModal)
+            {
+                <div class="modal fade show d-block" style="background: rgba(0,0,0,0.7);" tabindex="-1">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content bg-dark text-light">
+                            <div class="modal-header border-danger">
+                                <h5 class="modal-title text-danger">
+                                    <span class="bi bi-exclamation-triangle me-2"></span>Complete Tool Reset
+                                </h5>
+                                <button type="button" class="btn-close btn-close-white" @onclick="HideCompleteResetModal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p><strong>This will permanently delete:</strong></p>
+                                <ul>
+                                    <li>All Box Spawn data</li>
+                                    <li>All Region Spawn data</li>
+                                    <li>All Tile Spawn data</li>
+                                    <li>Spawn settings</li>
+                                    <li>Custom bestiary (if any)</li>
+                                </ul>
+
+                                @if (ServerSetupUtility.IsServerConfigured(Settings.ServUODataFolder))
+                                {
+                                    <div class="form-check mb-3">
+                                        <input class="form-check-input" type="checkbox" id="cleanServerCheck" @bind="cleanServerOnReset">
+                                        <label class="form-check-label" for="cleanServerCheck">
+                                            Also clean linked ServUO folder
+                                        </label>
+                                    </div>
+
+                                    @if (cleanServerOnReset)
+                                    {
+                                        <div class="alert alert-danger">
+                                            <span class="bi bi-exclamation-octagon me-2"></span>
+                                            <strong>Server Cleanup Warning:</strong>
+                                            <p class="mb-0 mt-2 small">
+                                                This will delete the <code>UORespawnSystem</code> scripts folder and <code>UOR_DATA</code> folder from your server.
+                                            </p>
+                                            <p class="mb-0 mt-2 small">
+                                                <strong class="text-warning">IMPORTANT:</strong> Before proceeding, ensure no UORespawn mobiles are spawned in the world! 
+                                                Use <code>[ClearRespawn</code> in-game first. Removing scripts while mobiles exist will cause server load errors.
+                                            </p>
+                                        </div>
+                                    }
+                                }
+
+                                <p class="text-danger mt-3"><strong>This action cannot be undone!</strong></p>
+                            </div>
+                            <div class="modal-footer border-secondary">
+                                <button type="button" class="btn btn-secondary" @onclick="HideCompleteResetModal">Cancel</button>
+                                <button type="button" class="btn btn-danger" @onclick="ExecuteCompleteReset">
+                                    <span class="bi bi-trash me-2"></span>Delete Everything
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
         </div>
     </div>
 </div>
@@ -503,6 +660,8 @@ private string boxColorHex = "#8B0000";
 private bool isExporting = false;
 private string exportMessage = "";
 private bool exportSuccess = false;
+private bool isExportingData = false;
+private bool showRemoteServerSection = false;
 private bool isImportingLegacy = false;
 private string legacyImportMessage = "";
 private bool legacyImportSuccess = false;
@@ -512,6 +671,8 @@ private string serverSetupMessage = "";
 private bool serverSetupSuccess = false;
 private string currentImportType = "";
 private bool isAddingCustomMap = false; // Flag to distinguish between replace and add modes
+private bool showCompleteResetModal = false;
+private bool cleanServerOnReset = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -1036,6 +1197,18 @@ Logger.Info("Folder picker not available on this platform. Please enter path man
 
         StateHasChanged();
     }
+
+    private async Task OnMapSelectionChanged()
+    {
+        // First check for backup
+        CheckForBackup();
+
+        // If a map was selected (not the placeholder), auto-open file browser
+        if (!string.IsNullOrEmpty(selectedMapToReplace))
+        {
+            await BrowseMapImageReplace();
+        }
+    }
     
     private async Task RestoreMapBackup()
     {
@@ -1537,6 +1710,119 @@ Logger.Info("Folder picker not available on this platform. Please enter path man
         }
     }
 
+    private void ToggleRemoteServerSection()
+    {
+        showRemoteServerSection = !showRemoteServerSection;
+    }
+
+    private async Task ExportSpawnData()
+    {
+        isExportingData = true;
+        exportMessage = "";
+        StateHasChanged();
+
+        try
+        {
+            // Get the app's data folder where spawn files are stored
+            var dataPath = PathConstants.LocalDataPath;
+
+            if (!Directory.Exists(dataPath))
+            {
+                exportMessage = "Error: Data folder not found. No spawn data to export.";
+                exportSuccess = false;
+                return;
+            }
+
+            // Check if there are any .bin files to export
+            var binFiles = Directory.GetFiles(dataPath, "UOR_*.bin");
+            if (binFiles.Length == 0)
+            {
+                exportMessage = "Error: No spawn data files found.\n\n" +
+                               "Create some spawns first, then export.";
+                exportSuccess = false;
+                return;
+            }
+
+            // Create temp ZIP file
+            var tempPath = Path.Combine(Path.GetTempPath(), "UORespawn_SpawnData.zip");
+
+            // Delete existing temp file
+            if (File.Exists(tempPath))
+            {
+                File.Delete(tempPath);
+            }
+
+            Logger.Info($"Creating spawn data ZIP at: {tempPath}");
+
+            // Create ZIP with only the UOR_*.bin files
+            using (var zipArchive = System.IO.Compression.ZipFile.Open(tempPath, System.IO.Compression.ZipArchiveMode.Create))
+            {
+                foreach (var file in binFiles)
+                {
+                    var fileName = Path.GetFileName(file);
+                    zipArchive.CreateEntryFromFile(file, fileName);
+                    Logger.Info($"Added to ZIP: {fileName}");
+                }
+            }
+
+            var zipInfo = new FileInfo(tempPath);
+            Logger.Info($"Spawn data ZIP created successfully ({zipInfo.Length / 1024:N0} KB)");
+
+            // Copy to Downloads folder
+#if WINDOWS
+            var downloadsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", "UORespawn_SpawnData.zip");
+            File.Copy(tempPath, downloadsPath, true);
+
+            exportMessage = $"Spawn data exported to Downloads folder:\n{downloadsPath}\n\n" +
+                           $"Copy contents to your server's Data/UOR_DATA/ folder.";
+            exportSuccess = true;
+            Logger.Info($"Spawn data saved to: {downloadsPath}");
+
+            // Open Downloads folder
+            try
+            {
+                System.Diagnostics.Process.Start("explorer.exe", Path.GetDirectoryName(downloadsPath) ?? "");
+            }
+            catch { }
+#elif MACCATALYST
+            var downloadsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", "UORespawn_SpawnData.zip");
+            File.Copy(tempPath, downloadsPath, true);
+
+            exportMessage = $"Spawn data exported to Downloads folder:\n{downloadsPath}\n\n" +
+                           $"Copy contents to your server's Data/UOR_DATA/ folder.";
+            exportSuccess = true;
+            Logger.Info($"Spawn data saved to: {downloadsPath}");
+
+            try
+            {
+                System.Diagnostics.Process.Start("open", Path.GetDirectoryName(downloadsPath) ?? "");
+            }
+            catch { }
+#else
+            await Share.Default.RequestAsync(new ShareFileRequest
+            {
+                Title = "UORespawn Spawn Data",
+                File = new ShareFile(tempPath)
+            });
+
+            exportMessage = "Spawn data ready to share!\n\nCopy contents to your server's Data/UOR_DATA/ folder.";
+            exportSuccess = true;
+            Logger.Info("Share request sent for spawn data");
+#endif
+        }
+        catch (Exception ex)
+        {
+            exportMessage = $"Error exporting spawn data: {ex.Message}";
+            exportSuccess = false;
+            Logger.Error("Spawn data export error", ex);
+        }
+        finally
+        {
+            isExportingData = false;
+            StateHasChanged();
+        }
+    }
+
     private void ResetToDefaults()
     {
         // Reset all spawn settings to default values (matching Settings.cs defaults)
@@ -1574,5 +1860,107 @@ Logger.Info("Folder picker not available on this platform. Please enter path man
 
         ToastService.ShowSuccess("Settings reset to defaults successfully!");
         StateHasChanged();
+    }
+
+    private void ShowCompleteResetConfirmation()
+    {
+        cleanServerOnReset = false;
+        showCompleteResetModal = true;
+        StateHasChanged();
+    }
+
+    private void HideCompleteResetModal()
+    {
+        showCompleteResetModal = false;
+        cleanServerOnReset = false;
+        StateHasChanged();
+    }
+
+    private async Task ExecuteCompleteReset()
+    {
+        try
+        {
+            Logger.Info("Starting complete tool reset...");
+
+            // 1. Delete local UOR_DATA folder contents
+            var localDataPath = PathConstants.LocalDataPath;
+            if (Directory.Exists(localDataPath))
+            {
+                var files = Directory.GetFiles(localDataPath, "UOR_*.bin");
+                foreach (var file in files)
+                {
+                    try
+                    {
+                        File.Delete(file);
+                        Logger.Info($"Deleted: {Path.GetFileName(file)}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Warning($"Could not delete {file}: {ex.Message}");
+                    }
+                }
+            }
+
+            // 2. Clean server if requested and linked
+            if (cleanServerOnReset && ServerSetupUtility.IsServerConfigured(Settings.ServUODataFolder))
+            {
+                Logger.Info("Cleaning linked ServUO folder...");
+
+                // Delete UORespawnSystem scripts folder
+                var scriptsPath = Path.Combine(Settings.ServUODataFolder, "Scripts", "Custom", "UORespawnSystem");
+                if (Directory.Exists(scriptsPath))
+                {
+                    try
+                    {
+                        Directory.Delete(scriptsPath, true);
+                        Logger.Info($"Deleted server scripts folder: {scriptsPath}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Warning($"Could not delete scripts folder: {ex.Message}");
+                    }
+                }
+
+                // Delete UOR_DATA folder on server
+                var serverDataPath = Path.Combine(Settings.ServUODataFolder, "Data", "UOR_DATA");
+                if (Directory.Exists(serverDataPath))
+                {
+                    try
+                    {
+                        Directory.Delete(serverDataPath, true);
+                        Logger.Info($"Deleted server data folder: {serverDataPath}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Warning($"Could not delete server data folder: {ex.Message}");
+                    }
+                }
+
+                // Clear the server link
+                Settings.ServUODataFolder = "";
+            }
+
+            // 3. Clear in-memory spawn data
+            Utility.BoxSpawns.Clear();
+            Utility.TileSpawns.Clear();
+            Utility.RegionSpawns.Clear();
+            Utility.InitializeSpawnDictionary();
+
+            // 4. Reset settings to defaults
+            ResetToDefaults();
+
+            // 5. Reset bestiary to default
+            await BestiarySpawnUtility.ResetToDefaultBestiary();
+
+            Logger.Info("Complete tool reset finished successfully");
+            HideCompleteResetModal();
+            ToastService.ShowSuccess("Complete reset finished! Tool is now in fresh install state.");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Error during complete reset", ex);
+            ToastService.ShowError($"Reset error: {ex.Message}");
+            HideCompleteResetModal();
+        }
     }
 }

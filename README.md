@@ -1,4 +1,4 @@
-﻿# UORespawn Editor
+# UORespawn Editor
 
 <p align="center">
   <img src="UORespawnApp/Resources/AppIcon/appicon.svg" alt="UORespawn Logo" width="200"/>
@@ -23,7 +23,7 @@
 
 UORespawn is a modern .NET MAUI application that provides a comprehensive visual interface for creating and managing spawn systems in Ultima Online ServUO servers. It offers three complementary spawn methods to populate your world with creatures and NPCs.
 
-**Version:** 2.0.0.1  
+**Version:** 2.0  
 **Platform:** Windows, macOS  
 **Framework:** .NET 10 MAUI with Blazor  
 **License:** MIT
@@ -32,78 +32,69 @@ UORespawn is a modern .NET MAUI application that provides a comprehensive visual
 
 ## ✨ Features
 
-### 🗺️ **Map Spawn Editor**
+### 🗺️ Map Spawn Editor
 - Visual map-based spawn box creation
 - Draw spawn areas with left-click and drag
 - Pan the map with right-click and drag
 - Mini-map with click-to-navigate
 - Priority-based spawn layering
-- Timed spawn support (day/night cycles)
-- XML spawner location overlay
+- Six frequency tiers (Common, Uncommon, Rare, Water, Weather, Timed)
+- XML spawner location overlay (circles showing HomeRange)
 - Server spawn heatmap visualization
 
-### 🌍 **World Spawn System**
+### 🏰 Region Spawn System
+- Spawn creatures by named server regions
+- Configure spawns for regions like "Britain", "Dungeon Despise", etc.
+- Automatic region boundary detection
+- Per-region creature assignments
+- Simplifies large area spawn management
+
+### 🌍 World Spawn System
 - Tile-based automatic spawning
 - Configure spawns for terrain types (grass, forest, water, desert, etc.)
 - Separate animal and creature spawns
-- Three frequency tiers: Common, Uncommon, Rare
+- Six frequency tiers for precise control
 - Applies globally to all maps
 
-### 🏛️ **Static Spawn System**
-- Spawn creatures near world objects
-- Configure spawns for thousands of static items
-- Search functionality for easy static selection
-- Themed spawns (graveyards, forges, altars, etc.)
+### ⚙️ Server Integration
+- **Binary Serialization** - Fast, efficient .bin file format
+- **Auto-Sync** - Files automatically sync to ServUO Data folder
+- **Professional Admin GUI** - In-game control panel with `[SpawnAdmin`
+- **Intelligent Recycling** - Up to 60% mob reuse for optimal performance
+- **Real-time Metrics** - Monitor spawn performance with `[SpawnMetrics`
 
-### ⚙️ **Advanced Settings**
-- Customizable spawn parameters (range, max mobs, crowd control)
-- Adjustable spawn chances for all frequency tiers
-- Spawn box appearance customization
-- Custom map image support (with backup/restore)
-- Bestiary management with special NPCs
-
-### 🔄 **Server Integration**
-- Auto-sync with ServUO Data folder (Windows/macOS)
-- File watcher for real-time updates
-- Manual export option for all platforms
-- Supports all standard UO maps (Felucca, Trammel, Ilshenar, Malas, Tokuno, Ter Mur)
-
-### 👥 **Special NPCs**
-- **TownNPC** - Random NPCs for ambient town life
-- **WorldNPC** - Random travelers for roads
-- **AmbushNPC** - Player-triggered brigand ambushes
-- **Effect NPCs** - Tile-reactive damage/healing effects (Fire, Poison, Electric, Healing, etc.)
+### 🎨 Additional Features
+- Dark/Light theme support
+- Custom map image replacement
+- Bestiary management (600+ creatures)
+- Special NPCs (TownNPC, AmbushNPC, Effect NPCs)
+- Cross-platform (Windows and macOS)
 
 ---
 
 ## 📥 Download
 
-**Latest Release:** [v2.0.0.1](https://github.com/Kita72/UORespawnProject/releases/latest)
-
+### Latest Release
 Download the latest version from the [Releases](https://github.com/Kita72/UORespawnProject/releases) page.
 
-### Requirements
-- **OS:** Windows 10/11 (64-bit) or macOS 12+
-- **.NET:** .NET 10 Runtime (included in installer)
-- **Disk Space:** ~50 MB
-- **Optional:** ServUO server for auto-sync
+### Platform Support
+- **Windows 10/11** - x64
+- **macOS** - Apple Silicon & Intel
 
 ---
 
 ## 🚀 Installation
 
 ### Windows
-
-1. Download the latest release `.zip` file
-2. Extract to any folder (e.g., `C:\UORespawn\`)
+1. Download the Windows release (.zip)
+2. Extract to your preferred location
 3. Run `UORespawnApp.exe`
 4. (Optional) Configure your ServUO Data folder in Settings for auto-sync
 
 ### macOS
-
-1. Download the latest release `.dmg` file
-2. Mount the DMG and drag UORespawn to Applications
-3. Run UORespawn from Applications
+1. Download the macOS release (.app)
+2. Move to Applications folder
+3. Run the application
 4. (Optional) Configure your ServUO Data folder in Settings for auto-sync
 
 ### First Run
@@ -122,8 +113,8 @@ Download the latest version from the [Releases](https://github.com/Kita72/UOResp
 1. **Select a Map** - Use the dropdown in the left navigation
 2. **Choose a Spawn Type:**
    - **Map Spawn** - Draw boxes directly on the map
+   - **Region Spawn** - Assign creatures to named regions
    - **World Spawn** - Configure tile-based automatic spawns
-   - **Static Spawn** - Set spawns near world objects
 3. **Add Creatures** - Select from the bestiary
 4. **Configure Settings** - Adjust spawn parameters
 5. **Auto-Sync** - Files automatically save to your ServUO folder
@@ -132,8 +123,9 @@ Download the latest version from the [Releases](https://github.com/Kita72/UOResp
 
 - **Left-Drag:** Draw spawn box
 - **Right-Drag:** Pan the map
+- **Mouse Wheel:** Zoom in/out
 - **Mini-Map Click:** Jump to location
-- **Reset Button:** Return to origin
+- **WASD/Arrow Keys:** Pan the map
 
 ### Special NPCs
 
@@ -141,12 +133,12 @@ Add these predefined NPCs from the bestiary:
 - `TownNPC`, `WorldNPC`, `AmbushNPC`
 - Effect NPCs: `FireEffectNPC`, `PoisonEffectNPC`, `GlowEffectNPC`, etc.
 
-### Files Generated
+### Binary Files Generated
 
-- `UOR_Spawn.csv` - Map spawn boxes
-- `UOR_WorldSpawn.csv` - World tile spawns
-- `UOR_StaticSpawn.csv` - Static object spawns
-- `UOR_SpawnSettings.csv` - Configuration
+- `UOR_SpawnSettings.bin` - System configuration
+- `UOR_BoxSpawn.bin` - Map spawn boxes
+- `UOR_TileSpawn.bin` - World tile spawns
+- `UOR_RegionSpawn.bin` - Named region spawns
 
 ---
 
@@ -193,26 +185,23 @@ dotnet publish -f net10.0-maccatalyst -c Release
 ## 📁 Project Structure
 
 ```
-UORespawn/
+UORespawnProject/
 ├── UORespawnApp/              # Main MAUI application
 │   ├── Components/            # Blazor components
 │   │   ├── Layout/           # Navigation and layout
-│   │   ├── Pages/            # Page components
-│   │   ├── MapComponent.razor
-│   │   ├── WorldSpawnComponent.razor
-│   │   ├── StaticSpawnComponent.razor
-│   │   ├── SettingsComponent.razor
-│   │   └── InstructionsComponent.razor
-│   ├── Scripts/              # Utility scripts
-│   ├── wwwroot/              # Static web assets
-│   │   ├── maps/            # Map images
-│   │   ├── js/              # JavaScript interop
-│   │   └── css/             # Styles
-│   ├── Data/                 # Spawn data files
+│   │   └── Controls/         # Reusable components
+│   │       ├── MapComponent.razor
+│   │       ├── BoxSpawnComponent.razor
+│   │       ├── RegionSpawnComponent.razor
+│   │       ├── WorldSpawnComponent.razor
+│   │       ├── SettingsComponent.razor
+│   │       └── InstructionsComponent.razor
+│   ├── Scripts/              # C# utility scripts
+│   ├── UORespawnSystem/      # Server-side scripts for ServUO
+│   ├── wwwroot/              # Web assets (JS, CSS)
 │   └── Resources/            # App resources
 ├── README.md
 ├── LICENSE
-├── .gitignore
 └── UORespawnProject.sln
 ```
 
