@@ -2,25 +2,35 @@
 
 namespace UORespawnApp
 {
+    /// <summary>
+    /// Main application class for UORespawn Editor.
+    /// Handles application lifecycle, window creation, and background data loading initialization.
+    /// </summary>
     public partial class App : Application
     {
         private readonly BackgroundDataLoader _backgroundLoader;
-        
+
+        /// <summary>
+        /// Initializes the application with dependency-injected services.
+        /// </summary>
+        /// <param name="backgroundLoader">Service for loading application data in the background</param>
         public App(BackgroundDataLoader backgroundLoader)
         {
             InitializeComponent();
-            
+
             _backgroundLoader = backgroundLoader;
-            
-            // Start background data loading after constructor completes
-            // This allows the UI to render first
+
             Dispatcher.Dispatch(async () =>
             {
-                await Task.Delay(100); // Brief delay to ensure UI is rendered
+                await Task.Delay(100);
                 await _backgroundLoader.LoadAllDataAsync();
             });
         }
 
+        /// <summary>
+        /// Creates and configures the main application window.
+        /// Sets up window dimensions, maximizes on Windows, and registers cleanup handlers.
+        /// </summary>
         protected override Window CreateWindow(IActivationState? activationState)
         {
             var window = new Window(new MainPage()) 
@@ -29,13 +39,11 @@ namespace UORespawnApp
                 Width = 1400,
                 Height = 900
             };
-            
-            // Maximize on startup (Windows only)
+
 #if WINDOWS
             window.MaximumWidth = double.PositiveInfinity;
             window.MaximumHeight = double.PositiveInfinity;
-            
-            // Set to maximized state
+
             window.Created += (s, e) =>
             {
                 var platformWindow = window.Handler?.PlatformView as Microsoft.UI.Xaml.Window;
@@ -44,28 +52,22 @@ namespace UORespawnApp
                     var appWindow = Microsoft.UI.Windowing.AppWindow.GetFromWindowId(
                         Microsoft.UI.Win32Interop.GetWindowIdFromWindow(
                             WinRT.Interop.WindowNative.GetWindowHandle(platformWindow)));
-                    
+
                     if (appWindow != null)
                     {
                         var presenter = appWindow.Presenter as Microsoft.UI.Windowing.OverlappedPresenter;
-
                         presenter?.Maximize();
                     }
                 }
             };
 #endif
-            
-            // Clean up BackgroundDataLoader when window is destroyed
+
             window.Destroying += (s, e) =>
             {
                 _backgroundLoader?.Dispose();
             };
-            
+
             return window;
         }
     }
 }
-
-
-
-

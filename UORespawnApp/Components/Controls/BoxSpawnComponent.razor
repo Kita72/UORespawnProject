@@ -501,7 +501,7 @@ private int? spawnSearchId = null;
                     // Draw the map centered and aspect-ratio corrected
                     ctx.drawImage(mainImg, 0, 0, {imgWidth}, {imgHeight}, offsetX, offsetY, drawWidth, drawHeight);
                     
-                    console.log(`?? Mini-map: {imgWidth}x{imgHeight} -> ${{drawWidth.toFixed(1)}}x${{drawHeight.toFixed(1)}} at (${{offsetX.toFixed(1)}}, ${{offsetY.toFixed(1)}})`);
+                    console.log(`Mini-map: {imgWidth}x{imgHeight} -> ${{drawWidth.toFixed(1)}}x${{drawHeight.toFixed(1)}} at (${{offsetX.toFixed(1)}}, ${{offsetY.toFixed(1)}})`);
                 }})()
             ");
             
@@ -581,7 +581,7 @@ private int? spawnSearchId = null;
                     ctx.lineWidth = 2;
                     ctx.strokeRect(miniX, miniY, miniW, miniH);
                     
-                    console.log(`?? Viewport: (${{miniX.toFixed(1)}}, ${{miniY.toFixed(1)}}) ${{miniW.toFixed(1)}}x${{miniH.toFixed(1)}}`);
+                    console.log(`Viewport: (${{miniX.toFixed(1)}}, ${{miniY.toFixed(1)}}) ${{miniW.toFixed(1)}}x${{miniH.toFixed(1)}}`);
                 }})()
             ");
         }
@@ -951,8 +951,8 @@ private int? spawnSearchId = null;
             // Check if ServUO folder is configured
             if (string.IsNullOrEmpty(Settings.ServUODataFolder))
             {
-                Logger.Warning("❌ Server Data folder not configured!");
-                ToastService.ShowWarning("Server Data folder not configured! Go to Settings to set your ServUO Data folder path.");
+                Logger.Warning("Server Data folder not configured!");
+                    ToastService.ShowWarning("Server Data folder not configured! Go to Settings to set your ServUO Data folder path.");
                 showServerSpawns = false;
                 StateHasChanged();
                 return;
@@ -962,8 +962,8 @@ private int? spawnSearchId = null;
             string statsFolderPath = Path.Combine(Settings.ServUODataFolder, "UOR_DATA", "UOR_STATS");
             if (!Directory.Exists(statsFolderPath))
             {
-                Logger.Warning($"❌ UOR_STATS folder not found at: {statsFolderPath}");
-                ToastService.ShowWarning($"UOR_STATS folder not found! Ensure UOR_DATA/UOR_STATS/ exists in your server data folder.");
+                Logger.Warning($"UOR_STATS folder not found at: {statsFolderPath}");
+                    ToastService.ShowWarning($"UOR_STATS folder not found! Ensure UOR_DATA/UOR_STATS/ exists in your server data folder.");
                 showServerSpawns = false;
                 StateHasChanged();
                 return;
@@ -972,31 +972,31 @@ private int? spawnSearchId = null;
             // Load spawn statistics from server if not already loaded
             if (!MapDisplayUtility.HasSpawnData)
             {
-                Logger.Info($"📂 Loading spawn statistics from: {statsFolderPath}");
-                ToastService.ShowInfo("Loading spawn statistics...");
-                MapDisplayUtility.InstantiateStatData();
+                Logger.Info($"Loading spawn statistics from: {statsFolderPath}");
+                    ToastService.ShowInfo("Loading spawn statistics...");
+                    MapDisplayUtility.InstantiateStatData();
 
                 if (!MapDisplayUtility.HasSpawnData)
                 {
-                    Logger.Warning("❌ No spawn statistics files found!");
+                    Logger.Warning("No spawn statistics files found!");
                     ToastService.ShowWarning("No spawn statistics files found! Play on your server to generate data, then run [PushRespawnStats].");
                     showServerSpawns = false;
                     StateHasChanged();
                     return;
                 }
 
-                Logger.Info("✅ Loaded spawn statistics successfully!");
+                Logger.Info("Loaded spawn statistics successfully!");
                 ToastService.ShowSuccess("Spawn statistics loaded successfully!");
             }
 
             // Get spawn data for current map
             var spawnData = MapDisplayUtility.GetSpawnDataForMap(ViewService.CurrentMapId);
             int totalCount = MapDisplayUtility.GetSpawnDataCount(ViewService.CurrentMapId);
-            Logger.Info($"📊 Found {totalCount} spawn events for {ViewService.CurrentMapId}");
+            Logger.Info($"Found {totalCount} spawn events for {ViewService.CurrentMapId}");
 
             if (spawnData.Count == 0)
             {
-                Logger.Warning($"⚠️ No spawn data for {ViewService.CurrentMapId}");
+                Logger.Warning($"No spawn data for {ViewService.CurrentMapId}");
                 ToastService.ShowWarning($"No spawn data available for {MapUtility.GetMapName(ViewService.CurrentMapId)}. Try a different map or play on this map to generate data.");
                 showServerSpawns = false;
                 StateHasChanged();

@@ -438,7 +438,7 @@
                     // Draw the map centered and aspect-ratio corrected
                     ctx.drawImage(mainImg, 0, 0, {imgWidth}, {imgHeight}, offsetX, offsetY, drawWidth, drawHeight);
 
-                    console.log(`📐 Mini-map: {imgWidth}x{imgHeight} -> ${{drawWidth.toFixed(1)}}x${{drawHeight.toFixed(1)}} at (${{offsetX.toFixed(1)}}, ${{offsetY.toFixed(1)}})`);
+                    console.log(`Mini-map: {imgWidth}x{imgHeight} -> ${{drawWidth.toFixed(1)}}x${{drawHeight.toFixed(1)}} at (${{offsetX.toFixed(1)}}, ${{offsetY.toFixed(1)}})`);
                 }})()
             ");
 
@@ -496,7 +496,7 @@
                     ctx.lineWidth = 2;
                     ctx.strokeRect(miniX, miniY, miniW, miniH);
 
-                    console.log(`🔍 Viewport: (${{miniX.toFixed(1)}}, ${{miniY.toFixed(1)}}) ${{miniW.toFixed(1)}}x${{miniH.toFixed(1)}}`);
+                    console.log(`Viewport: (${{miniX.toFixed(1)}}, ${{miniY.toFixed(1)}}) ${{miniW.toFixed(1)}}x${{miniH.toFixed(1)}}`);
                 }})()
             ");
         }
