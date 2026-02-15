@@ -10,7 +10,7 @@ namespace UORespawnApp.Scripts.Utilities
     /// </summary>
     public static class Utility
     {
-        internal const string Version = "2.0.0.1";
+        internal const string Version = "2.0.0.2";
 
         /// <summary>
         /// Current session (map, view state, etc.)

@@ -100,7 +100,7 @@ namespace UORespawnApp.Scripts.Utilities
         /// </summary>
         /// <param name="scriptsFolderPath">Path to ServUO Scripts folder</param>
         /// <returns>Success status and message</returns>
-        public static (bool success, string message) SetupServerScripts(string scriptsFolderPath)
+        public static (bool success, string message) SetupServerScripts(string? scriptsFolderPath)
         {
             try
             {
@@ -189,6 +189,71 @@ namespace UORespawnApp.Scripts.Utilities
             }
             catch
             {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Unlink server integration - clears settings only, preserves installed scripts
+        /// </summary>
+        /// <param name="dataFolderPath">Current Data folder path from Settings</param>
+        /// <returns>Success status and message</returns>
+        public static (bool success, string message) UnlinkServer(string? dataFolderPath)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(dataFolderPath))
+                {
+                    return (true, "Server was not linked");
+                }
+
+                Logger.Info($"Server unlinked (scripts preserved): {dataFolderPath}");
+                return (true, "Server unlinked (scripts preserved on server)");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error unlinking server", ex);
+                return (false, $"Error unlinking: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Delete existing UORespawn/UORespawnSystem installation before fresh install
+        /// </summary>
+        /// <param name="scriptsFolderPath">Path to ServUO Scripts folder</param>
+        /// <returns>True if cleanup was successful or no cleanup needed</returns>
+        public static bool CleanupExistingInstallation(string? scriptsFolderPath)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(scriptsFolderPath))
+                    return true;
+
+                var customFolderPath = Path.Combine(scriptsFolderPath, "Custom");
+                if (!Directory.Exists(customFolderPath))
+                    return true;
+
+                // Check for and delete old UORespawn folder
+                var uorRespawnPath = Path.Combine(customFolderPath, "UORespawn");
+                if (Directory.Exists(uorRespawnPath))
+                {
+                    Directory.Delete(uorRespawnPath, true);
+                    Logger.Info($"Cleaned up existing UORespawn folder: {uorRespawnPath}");
+                }
+
+                // Check for and delete old UORespawnSystem folder (legacy name)
+                var uorRespawnSystemPath = Path.Combine(customFolderPath, "UORespawnSystem");
+                if (Directory.Exists(uorRespawnSystemPath))
+                {
+                    Directory.Delete(uorRespawnSystemPath, true);
+                    Logger.Info($"Cleaned up existing UORespawnSystem folder: {uorRespawnSystemPath}");
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error cleaning up existing installation", ex);
                 return false;
             }
         }

@@ -41,13 +41,17 @@ namespace UORespawnApp
                             int y = int.Parse(parts[2]);
                             int range = int.Parse(parts[3]);
 
-                            // Adjust X/Y to top-left corner (from center point)
+                            // Store center coordinates and radius for circle visualization
+                            // Also keep legacy X/Y adjusted to top-left for backward compatibility
                             int adjustedX = x - (range / 2);
                             int adjustedY = y - (range / 2);
 
                             Spawns.Add(new XMLSpawnPoint
                             {
                                 Map = mapId,
+                                CenterX = x,
+                                CenterY = y,
+                                Radius = range,
                                 X = adjustedX,
                                 Y = adjustedY,
                                 Width = range,

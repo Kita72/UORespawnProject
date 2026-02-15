@@ -142,7 +142,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="DOCS\" />
       <Folder Include="UORespawnSystem\Entities\BinaryModels\" />
     </ItemGroup>
 

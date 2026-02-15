@@ -21,7 +21,7 @@ public class ToastService
     /// <summary>
     /// Show an informational toast (blue)
     /// </summary>
-    public void ShowInfo(string message, int durationMs = 5000)
+    public void ShowInfo(string message, int durationMs = 3000)
     {
         AddToast(message, ToastType.Info, durationMs);
     }
@@ -29,7 +29,7 @@ public class ToastService
     /// <summary>
     /// Show a success toast (green)
     /// </summary>
-    public void ShowSuccess(string message, int durationMs = 5000)
+    public void ShowSuccess(string message, int durationMs = 3000)
     {
         AddToast(message, ToastType.Success, durationMs);
     }
@@ -37,7 +37,7 @@ public class ToastService
     /// <summary>
     /// Show a warning toast (yellow)
     /// </summary>
-    public void ShowWarning(string message, int durationMs = 7000)
+    public void ShowWarning(string message, int durationMs = 3000)
     {
         AddToast(message, ToastType.Warning, durationMs);
     }
@@ -45,7 +45,7 @@ public class ToastService
     /// <summary>
     /// Show an error toast (red)
     /// </summary>
-    public void ShowError(string message, int durationMs = 10000)
+    public void ShowError(string message, int durationMs = 5000)
     {
         AddToast(message, ToastType.Error, durationMs);
     }

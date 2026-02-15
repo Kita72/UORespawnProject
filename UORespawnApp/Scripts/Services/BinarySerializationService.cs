@@ -28,21 +28,28 @@ namespace UORespawnApp.Scripts.Services
             try
             {
                 var localPath = PathConstants.GetLocalFilePath(PathConstants.SETTINGS_FILENAME);
+
                 WriteSettings(localPath);
+
                 Logger.Info($"Settings saved to: {localPath}");
 
                 var serverPath = PathConstants.ServerDataPath;
+
                 if (serverPath != null)
                 {
                     var serverFilePath = PathConstants.GetServerFilePath(PathConstants.SETTINGS_FILENAME);
-                    WriteSettings(serverFilePath);
-                    Logger.Info($"Settings synced to server: {serverFilePath}");
+
+                    if (serverFilePath != null)
+                    {
+                        WriteSettings(serverFilePath);
+
+                        Logger.Info($"Settings synced to server: {serverFilePath}");
+                    }
                 }
             }
             catch (Exception ex)
             {
                 Logger.Error("Error saving settings", ex);
-                throw;
             }
         }
 
@@ -85,16 +92,20 @@ namespace UORespawnApp.Scripts.Services
                 if (!File.Exists(localPath))
                 {
                     Logger.Warning($"Settings file not found: {localPath}");
+
                     return false;
                 }
 
                 ReadSettings(localPath);
+
                 Logger.Info($"Settings loaded from: {localPath}");
+
                 return true;
             }
             catch (Exception ex)
             {
                 Logger.Error("Error loading settings", ex);
+
                 return false;
             }
         }
@@ -138,21 +149,28 @@ namespace UORespawnApp.Scripts.Services
             try
             {
                 var localPath = PathConstants.GetLocalFilePath(PathConstants.BOX_FILENAME);
+
                 int count = WriteBoxSpawns(localPath);
+
                 Logger.Info($"Box spawns saved to: {localPath} ({count} boxes)");
 
                 var serverPath = PathConstants.ServerDataPath;
+
                 if (serverPath != null)
                 {
                     var serverFilePath = PathConstants.GetServerFilePath(PathConstants.BOX_FILENAME);
-                    WriteBoxSpawns(serverFilePath);
-                    Logger.Info($"Box spawns synced to server: {serverFilePath}");
+
+                    if (serverFilePath != null)
+                    {
+                        WriteBoxSpawns(serverFilePath);
+
+                        Logger.Info($"Box spawns synced to server: {serverFilePath}");
+                    }
                 }
             }
             catch (Exception ex)
             {
                 Logger.Error("Error saving box spawns", ex);
-                throw;
             }
         }
 
@@ -222,16 +240,20 @@ namespace UORespawnApp.Scripts.Services
                 if (!File.Exists(localPath))
                 {
                     Logger.Warning($"Box spawns file not found: {localPath}");
+
                     return false;
                 }
 
                 int count = ReadBoxSpawns(localPath);
+
                 Logger.Info($"Box spawns loaded from: {localPath} ({count} boxes)");
+
                 return true;
             }
             catch (Exception ex)
             {
                 Logger.Error("Error loading box spawns", ex);
+
                 return false;
             }
         }
@@ -253,15 +275,17 @@ namespace UORespawnApp.Scripts.Services
                 int boxCount = reader.ReadInt32();
 
                 // Ensure the map entry exists
-                if (!Utility.BoxSpawns.ContainsKey(mapId))
+                if (!Utility.BoxSpawns.TryGetValue(mapId, out List<BoxSpawnEntity>? value))
                 {
-                    Utility.BoxSpawns[mapId] = new List<BoxSpawnEntity>();
+                    value = [];
+
+                    Utility.BoxSpawns[mapId] = value;
                 }
 
                 for (int b = 0; b < boxCount; b++)
                 {
-                    var box = ReadBoxSpawnEntity(reader, mapId);
-                    Utility.BoxSpawns[mapId].Add(box);
+                    var box = ReadBoxSpawnEntity(reader);
+                    value.Add(box);
                     totalBoxes++;
                 }
             }
@@ -269,7 +293,7 @@ namespace UORespawnApp.Scripts.Services
             return totalBoxes;
         }
 
-        private static BoxSpawnEntity ReadBoxSpawnEntity(BinaryReader reader, int mapId)
+        private static BoxSpawnEntity ReadBoxSpawnEntity(BinaryReader reader)
         {
             var box = new BoxSpawnEntity
             {
@@ -283,6 +307,7 @@ namespace UORespawnApp.Scripts.Services
             int y = reader.ReadInt32();
             int width = reader.ReadInt32();
             int height = reader.ReadInt32();
+
             box.SpawnBox = new Rect(x, y, width, height);
 
             // Enums
@@ -312,21 +337,28 @@ namespace UORespawnApp.Scripts.Services
             try
             {
                 var localPath = PathConstants.GetLocalFilePath(PathConstants.TILE_FILENAME);
+
                 int count = WriteTileSpawns(localPath);
+
                 Logger.Info($"Tile spawns saved to: {localPath} ({count} tiles)");
 
                 var serverPath = PathConstants.ServerDataPath;
+
                 if (serverPath != null)
                 {
                     var serverFilePath = PathConstants.GetServerFilePath(PathConstants.TILE_FILENAME);
-                    WriteTileSpawns(serverFilePath);
-                    Logger.Info($"Tile spawns synced to server: {serverFilePath}");
+
+                    if(serverFilePath != null)
+                    {
+                        WriteTileSpawns(serverFilePath);
+
+                        Logger.Info($"Tile spawns synced to server: {serverFilePath}");
+                    }
                 }
             }
             catch (Exception ex)
             {
                 Logger.Error("Error saving tile spawns", ex);
-                throw;
             }
         }
 
@@ -387,16 +419,20 @@ namespace UORespawnApp.Scripts.Services
                 if (!File.Exists(localPath))
                 {
                     Logger.Warning($"Tile spawns file not found: {localPath}");
+
                     return false;
                 }
 
                 int count = ReadTileSpawns(localPath);
+
                 Logger.Info($"Tile spawns loaded from: {localPath} ({count} tiles)");
+
                 return true;
             }
             catch (Exception ex)
             {
                 Logger.Error("Error loading tile spawns", ex);
+
                 return false;
             }
         }
@@ -417,15 +453,17 @@ namespace UORespawnApp.Scripts.Services
                 string mapName = reader.ReadString();
                 int tileCount = reader.ReadInt32();
 
-                if (!Utility.TileSpawns.ContainsKey(mapId))
+                if (!Utility.TileSpawns.TryGetValue(mapId, out List<TileSpawnEntity>? value))
                 {
-                    Utility.TileSpawns[mapId] = new List<TileSpawnEntity>();
+                    value = [];
+
+                    Utility.TileSpawns[mapId] = value;
                 }
 
                 for (int t = 0; t < tileCount; t++)
                 {
-                    var tile = ReadTileSpawnEntity(reader, mapId);
-                    Utility.TileSpawns[mapId].Add(tile);
+                    var tile = ReadTileSpawnEntity(reader);
+                    value.Add(tile);
                     totalTiles++;
                 }
             }
@@ -433,7 +471,7 @@ namespace UORespawnApp.Scripts.Services
             return totalTiles;
         }
 
-        private static TileSpawnEntity ReadTileSpawnEntity(BinaryReader reader, int mapId)
+        private static TileSpawnEntity ReadTileSpawnEntity(BinaryReader reader)
         {
             var tile = new TileSpawnEntity
             {
@@ -465,21 +503,28 @@ namespace UORespawnApp.Scripts.Services
             try
             {
                 var localPath = PathConstants.GetLocalFilePath(PathConstants.REGION_FILENAME);
+
                 int count = WriteRegionSpawns(localPath);
+
                 Logger.Info($"Region spawns saved to: {localPath} ({count} regions)");
 
                 var serverPath = PathConstants.ServerDataPath;
+
                 if (serverPath != null)
                 {
                     var serverFilePath = PathConstants.GetServerFilePath(PathConstants.REGION_FILENAME);
-                    WriteRegionSpawns(serverFilePath);
-                    Logger.Info($"Region spawns synced to server: {serverFilePath}");
+
+                    if (serverFilePath != null)
+                    {
+                        WriteRegionSpawns(serverFilePath);
+
+                        Logger.Info($"Region spawns synced to server: {serverFilePath}");
+                    }
                 }
             }
             catch (Exception ex)
             {
                 Logger.Error("Error saving region spawns", ex);
-                throw;
             }
         }
 
@@ -540,16 +585,20 @@ namespace UORespawnApp.Scripts.Services
                 if (!File.Exists(localPath))
                 {
                     Logger.Warning($"Region spawns file not found: {localPath}");
+
                     return false;
                 }
 
                 int count = ReadRegionSpawns(localPath);
+
                 Logger.Info($"Region spawns loaded from: {localPath} ({count} regions)");
+
                 return true;
             }
             catch (Exception ex)
             {
                 Logger.Error("Error loading region spawns", ex);
+
                 return false;
             }
         }
@@ -570,15 +619,17 @@ namespace UORespawnApp.Scripts.Services
                 string mapName = reader.ReadString();
                 int regionCount = reader.ReadInt32();
 
-                if (!Utility.RegionSpawns.ContainsKey(mapId))
+                if (!Utility.RegionSpawns.TryGetValue(mapId, out List<RegionSpawnEntity>? value))
                 {
-                    Utility.RegionSpawns[mapId] = new List<RegionSpawnEntity>();
+                    value = [];
+
+                    Utility.RegionSpawns[mapId] = value;
                 }
 
                 for (int r = 0; r < regionCount; r++)
                 {
-                    var region = ReadRegionSpawnEntity(reader, mapId);
-                    Utility.RegionSpawns[mapId].Add(region);
+                    var region = ReadRegionSpawnEntity(reader);
+                    value.Add(region);
                     totalRegions++;
                 }
             }
@@ -586,7 +637,7 @@ namespace UORespawnApp.Scripts.Services
             return totalRegions;
         }
 
-        private static RegionSpawnEntity ReadRegionSpawnEntity(BinaryReader reader, int mapId)
+        private static RegionSpawnEntity ReadRegionSpawnEntity(BinaryReader reader)
         {
             var region = new RegionSpawnEntity
             {
@@ -616,6 +667,7 @@ namespace UORespawnApp.Scripts.Services
         private static void WriteStringList(BinaryWriter writer, List<string> list)
         {
             writer.Write(list?.Count ?? 0);
+
             if (list != null)
             {
                 foreach (var item in list)
@@ -631,37 +683,14 @@ namespace UORespawnApp.Scripts.Services
         private static List<string> ReadStringList(BinaryReader reader)
         {
             int count = reader.ReadInt32();
+
             var list = new List<string>(count);
+
             for (int i = 0; i < count; i++)
             {
                 list.Add(reader.ReadString());
             }
             return list;
-        }
-
-        /// <summary>
-        /// Check if binary files exist
-        /// </summary>
-        public static bool BinaryFilesExist()
-        {
-            return File.Exists(PathConstants.GetLocalFilePath(PathConstants.SETTINGS_FILENAME)) ||
-                   File.Exists(PathConstants.GetLocalFilePath(PathConstants.BOX_FILENAME)) ||
-                   File.Exists(PathConstants.GetLocalFilePath(PathConstants.TILE_FILENAME)) ||
-                   File.Exists(PathConstants.GetLocalFilePath(PathConstants.REGION_FILENAME));
-        }
-
-        /// <summary>
-        /// Get info about existing binary files
-        /// </summary>
-        public static Dictionary<string, bool> GetFileStatus()
-        {
-            return new Dictionary<string, bool>
-            {
-                ["Settings"] = File.Exists(PathConstants.GetLocalFilePath(PathConstants.SETTINGS_FILENAME)),
-                ["BoxSpawns"] = File.Exists(PathConstants.GetLocalFilePath(PathConstants.BOX_FILENAME)),
-                ["TileSpawns"] = File.Exists(PathConstants.GetLocalFilePath(PathConstants.TILE_FILENAME)),
-                ["RegionSpawns"] = File.Exists(PathConstants.GetLocalFilePath(PathConstants.REGION_FILENAME))
-            };
         }
 
         #endregion

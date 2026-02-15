@@ -339,42 +339,40 @@ panAnimationId: null,
             });
         }
 
-        // Draw XML spawners (green, underneath user spawns)
+        // Draw XML spawners (green circles, underneath user spawns)
         if (this.xmlSpawners && Array.isArray(this.xmlSpawners)) {
             this.xmlSpawners.forEach((spawner) => {
                 if (!spawner) return;
 
-                const x = spawner.x || 0;
-                const y = spawner.y || 0;
-                const w = spawner.width || 0;
-                const h = spawner.height || 0;
+                // Use center coordinates and radius for circle visualization
+                const centerX = spawner.centerX || spawner.x || 0;
+                const centerY = spawner.centerY || spawner.y || 0;
+                const radius = spawner.radius || spawner.width || 10;
 
-                // Convert world to screen
-                const topLeft = this.worldToScreen(x, y);
-                const bottomRight = this.worldToScreen(x + w, y + h);
+                // Convert center point to screen coordinates
+                const screenCenter = this.worldToScreen(centerX, centerY);
 
-                const screenW = bottomRight.x - topLeft.x;
-                const screenH = bottomRight.y - topLeft.y;
+                // Scale the radius to screen size
+                const screenRadius = radius * this.scale;
 
-                // Draw XML spawner box (green, semi-transparent)
+                // Draw XML spawner circle (green, semi-transparent)
                 this.ctx.strokeStyle = '#00FF00';
                 this.ctx.lineWidth = 1;
                 this.ctx.globalAlpha = 0.4;
-                this.ctx.strokeRect(topLeft.x, topLeft.y, screenW, screenH);
+                this.ctx.beginPath();
+                this.ctx.arc(screenCenter.x, screenCenter.y, screenRadius, 0, 2 * Math.PI);
+                this.ctx.stroke();
 
                 // Draw "X" marker in center
-                const centerX = topLeft.x + screenW / 2;
-                const centerY = topLeft.y + screenH / 2;
                 const markerSize = 3;
-
                 this.ctx.strokeStyle = '#00FF00';
                 this.ctx.lineWidth = 2;
                 this.ctx.globalAlpha = 0.6;
                 this.ctx.beginPath();
-                this.ctx.moveTo(centerX - markerSize, centerY - markerSize);
-                this.ctx.lineTo(centerX + markerSize, centerY + markerSize);
-                this.ctx.moveTo(centerX + markerSize, centerY - markerSize);
-                this.ctx.lineTo(centerX - markerSize, centerY + markerSize);
+                this.ctx.moveTo(screenCenter.x - markerSize, screenCenter.y - markerSize);
+                this.ctx.lineTo(screenCenter.x + markerSize, screenCenter.y + markerSize);
+                this.ctx.moveTo(screenCenter.x + markerSize, screenCenter.y - markerSize);
+                this.ctx.lineTo(screenCenter.x - markerSize, screenCenter.y + markerSize);
                 this.ctx.stroke();
                 this.ctx.globalAlpha = 1.0;
             });

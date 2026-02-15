@@ -3,7 +3,7 @@
 @inject ToastService ToastService
 
 <div class="toast-container">
-    @foreach (var toast in ToastService.Messages)
+    @foreach (var toast in ToastService.Messages.ToList())
     {
         <div class="toast-item alert alert-@GetAlertClass(toast.Type) alert-dismissible fade show" role="alert">
             <div class="d-flex align-items-start">
@@ -18,7 +18,13 @@
 @code {
     protected override void OnInitialized()
     {
-        ToastService.OnToastChanged += StateHasChanged;
+        ToastService.OnToastChanged += OnToastChanged;
+    }
+
+    private void OnToastChanged()
+    {
+        // Use InvokeAsync to ensure UI updates work from background threads
+        InvokeAsync(StateHasChanged);
     }
 
     private string GetAlertClass(ToastType type)
@@ -47,6 +53,6 @@
 
     public void Dispose()
     {
-        ToastService.OnToastChanged -= StateHasChanged;
+        ToastService.OnToastChanged -= OnToastChanged;
     }
 }
