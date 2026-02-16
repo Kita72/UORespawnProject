@@ -32,6 +32,7 @@ namespace UORespawnApp
             builder.Services.AddSingleton<BackgroundDataLoader>();
             builder.Services.AddSingleton<UpdateChecker>();
             builder.Services.AddSingleton<SpawnPackService>();
+            builder.Services.AddSingleton<WebViewService>();
 
             try
             {

@@ -19,6 +19,16 @@ namespace UORespawnApp
         public int CurrentMapId { get; set; } = 0;
 
         /// <summary>
+        /// Whether XML spawners overlay is currently visible (shared across Box/Region spawn pages)
+        /// </summary>
+        public bool ShowXMLSpawners { get; set; } = false;
+
+        /// <summary>
+        /// Whether server spawn statistics overlay is currently visible (shared across Box/Region spawn pages)
+        /// </summary>
+        public bool ShowServerSpawns { get; set; } = false;
+
+        /// <summary>
         /// Event raised when the current view changes
         /// </summary>
         public event Action? OnViewChanged;
@@ -27,6 +37,16 @@ namespace UORespawnApp
         /// Event raised when the current map selection changes
         /// </summary>
         public event Action? OnMapChanged;
+
+        /// <summary>
+        /// Event raised when XML spawners visibility changes
+        /// </summary>
+        public event Action? OnXMLSpawnersChanged;
+
+        /// <summary>
+        /// Event raised when server spawns visibility changes
+        /// </summary>
+        public event Action? OnServerSpawnsChanged;
 
         /// <summary>
         /// Navigate to a different view
@@ -52,6 +72,24 @@ namespace UORespawnApp
 
                 OnMapChanged?.Invoke();
             }
+        }
+
+        /// <summary>
+        /// Toggle XML spawners visibility
+        /// </summary>
+        public void ToggleXMLSpawners()
+        {
+            ShowXMLSpawners = !ShowXMLSpawners;
+            OnXMLSpawnersChanged?.Invoke();
+        }
+
+        /// <summary>
+        /// Toggle server spawns visibility
+        /// </summary>
+        public void ToggleServerSpawns()
+        {
+            ShowServerSpawns = !ShowServerSpawns;
+            OnServerSpawnsChanged?.Invoke();
         }
     }
 }

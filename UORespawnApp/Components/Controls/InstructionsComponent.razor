@@ -34,16 +34,17 @@
                                 <li><a href="#map-editor" class="text-decoration-none">2. Map Spawn Editor</a></li>
                                 <li><a href="#region-spawn" class="text-decoration-none">3. Region Spawn System</a></li>
                                 <li><a href="#world-spawn" class="text-decoration-none">4. World Spawn System</a></li>
-                                <li><a href="#settings" class="text-decoration-none">5. Settings & Configuration</a></li>
+                                <li><a href="#spawn-packs" class="text-decoration-none">5. Spawn Packs</a></li>
+                                <li><a href="#settings" class="text-decoration-none">6. Settings & Configuration</a></li>
                             </ul>
                         </div>
                         <div class="col-md-6">
                             <ul class="list-unstyled mb-0">
-                                <li><a href="#maps" class="text-decoration-none">6. Maps</a></li>
-                                <li><a href="#server-integration" class="text-decoration-none">7. Server Integration</a></li>
-                                <li><a href="#admin-gui" class="text-decoration-none">8. Admin GUI & Commands</a></li>
-                                <li><a href="#tips" class="text-decoration-none">9. Tips & Best Practices</a></li>
-                                <li><a href="#support" class="text-decoration-none">10. Support & Resources</a></li>
+                                <li><a href="#maps" class="text-decoration-none">7. Maps</a></li>
+                                <li><a href="#server-integration" class="text-decoration-none">8. Server Integration</a></li>
+                                <li><a href="#admin-gui" class="text-decoration-none">9. Admin GUI & Commands</a></li>
+                                <li><a href="#tips" class="text-decoration-none">10. Tips & Best Practices</a></li>
+                                <li><a href="#support" class="text-decoration-none">11. Support & Resources</a></li>
                             </ul>
                         </div>
                     </div>
@@ -284,10 +285,125 @@
                 </div>
             </div>
 
-            <!-- 5. Settings & Configuration -->
+            <!-- 5. Spawn Packs -->
+            <div class="card map-card mb-4" id="spawn-packs">
+                <div class="card-header">
+                    <strong><span class="bi bi-boxes"></span> 5. Spawn Packs</strong>
+                </div>
+                <div class="card-body">
+                    <h6 class="text-primary">What are Spawn Packs?</h6>
+                    <p>
+                        Spawn Packs are pre-configured collections of spawn data that you can share, import, and apply 
+                        with a single click. Instead of manually creating spawns from scratch, you can use community-created 
+                        packs or export your own configurations to share with others.
+                    </p>
+
+                    <h6 class="text-primary mt-4">Pack Types</h6>
+                    <ul>
+                        <li><strong>Approved Packs:</strong> Official packs reviewed and approved by the UORespawn team. 
+                            These are bundled with the application and guaranteed to work correctly.</li>
+                        <li><strong>Imported Packs:</strong> Custom packs you've imported from zip files. These are stored 
+                            in your local <code>Data/PACKS</code> folder and can be deleted if no longer needed.</li>
+                    </ul>
+
+                    <h6 class="text-primary mt-4">Pack Dashboard</h6>
+                    <p>When you select a pack, the dashboard shows detailed statistics:</p>
+                    <ul>
+                        <li><strong>Box Spawns:</strong> Number of manual spawn boxes defined</li>
+                        <li><strong>Tile Spawns:</strong> Number of terrain-based spawn configurations</li>
+                        <li><strong>Region Spawns:</strong> Number of named region spawn configurations</li>
+                        <li><strong>Maps:</strong> Number of maps with spawn data</li>
+                        <li><strong>Entries:</strong> Total spawn entries across all categories</li>
+                        <li><strong>Unique Mobs:</strong> Count of distinct creature types used</li>
+                    </ul>
+                    <p>The dashboard also shows spawn breakdown by type (Water, Weather, Timed, Common, Uncommon, Rare).</p>
+
+                    <h6 class="text-primary mt-4">Pack Card Features</h6>
+                    <p>Each spawn pack card displays:</p>
+                    <ul>
+                        <li><strong>Preview Image:</strong> Visual representation of the pack's theme</li>
+                        <li><strong>Author:</strong> Who created the pack</li>
+                        <li><strong>Description:</strong> Brief summary of what the pack contains</li>
+                        <li><strong>Action Buttons:</strong>
+                            <ul>
+                                <li><span class="bi bi-heart"></span> <strong>Like:</strong> Mark packs you enjoy</li>
+                                <li><span class="bi bi-star"></span> <strong>Favorite:</strong> Star your preferred packs</li>
+                                <li><span class="bi bi-check2-circle"></span> <strong>Apply:</strong> Load this pack's spawn data</li>
+                                <li><span class="bi bi-trash"></span> <strong>Delete:</strong> Remove imported packs (not available for approved packs)</li>
+                            </ul>
+                        </li>
+                    </ul>
+
+                    <h6 class="text-primary mt-4">Applying a Spawn Pack</h6>
+                    <ol>
+                        <li>Navigate to <strong>Spawn Packs</strong> in the left menu</li>
+                        <li>Switch between <strong>Approved</strong> and <strong>Imported</strong> tabs to browse packs</li>
+                        <li>Click on a pack card to view its statistics in the dashboard</li>
+                        <li>Click the <span class="bi bi-check2-circle"></span> <strong>Apply</strong> button on the card</li>
+                        <li>Your current spawn data will be replaced with the pack's configuration</li>
+                        <li>Use <code>[SpawnReload</code> in-game to load the new data on your server</li>
+                    </ol>
+
+                    <div class="alert alert-warning mt-3">
+                        <span class="bi bi-exclamation-triangle"></span> <strong>Warning:</strong> Applying a spawn pack 
+                        will <strong>replace</strong> your current spawn data (Box, Tile, Region spawns and Settings). 
+                        Consider exporting your current configuration first if you want to preserve it!
+                    </div>
+
+                    <h6 class="text-primary mt-4">Importing a Spawn Pack</h6>
+                    <ol>
+                        <li>Click <strong>Import Spawn Pack</strong> in the Pack Dashboard footer</li>
+                        <li>Click <strong>Choose Zip</strong> and select a spawn pack zip file</li>
+                        <li>The system will validate the zip contains valid UOR spawn data files</li>
+                        <li>Optionally provide a custom name, description, and preview image</li>
+                        <li>Click <strong>Import Pack</strong> to add it to your Imported packs</li>
+                    </ol>
+                    <p class="small text-muted">
+                        Imported packs are stored in <code>Data/PACKS/[PackName]/</code> and appear in the Imported tab.
+                    </p>
+
+                    <h6 class="text-primary mt-4">Exporting Your Spawn Data</h6>
+                    <ol>
+                        <li>Create and configure your spawns using the Map, Region, and Tile Spawn pages</li>
+                        <li>Go to <strong>Spawn Packs</strong> and click <strong>Export Spawn Pack</strong></li>
+                        <li>A zip file containing all your spawn data will be created</li>
+                        <li>Share this zip with others or keep it as a backup</li>
+                    </ol>
+
+                    <h6 class="text-primary mt-4">Submitting a Spawn Pack for Approval</h6>
+                    <p>Want your pack included as an official Approved pack? Here's how:</p>
+                    <ol>
+                        <li>Create a complete, well-tested spawn configuration</li>
+                        <li>Click <strong>Submit Spawn Pack</strong> in the Pack Dashboard</li>
+                        <li>Fill in the pack name and description</li>
+                        <li>Select a preview image that represents your pack's theme</li>
+                        <li>Click <strong>Compose Email</strong> - this creates a zip and opens your email client</li>
+                        <li>Attach the generated zip file and send it for review</li>
+                    </ol>
+
+                    <div class="alert alert-info mt-3">
+                        <span class="bi bi-lightbulb"></span> <strong>Tip:</strong> When creating packs for submission, 
+                        include a variety of spawn types (Box, Tile, Region) and make sure creature names match 
+                        standard ServUO mobile classes for maximum compatibility.
+                    </div>
+
+                    <h6 class="text-primary mt-4">Pack Contents</h6>
+                    <p>A spawn pack zip file contains:</p>
+                    <ul>
+                        <li><code>UOR_SpawnSettings.bin</code> - System configuration (ranges, chances, options)</li>
+                        <li><code>UOR_BoxSpawn.bin</code> - Map spawn boxes</li>
+                        <li><code>UOR_TileSpawn.bin</code> - World tile spawns</li>
+                        <li><code>UOR_RegionSpawn.bin</code> - Named region spawns</li>
+                        <li><code>pack_metadata.json</code> - Pack name, author, description</li>
+                        <li><code>preview.png/jpg</code> - Preview image (optional)</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 6. Settings & Configuration -->
             <div class="card map-card mb-4" id="settings">
                 <div class="card-header">
-                    <strong><span class="bi bi-gear"></span> 5. Settings & Configuration</strong>
+                    <strong><span class="bi bi-gear"></span> 6. Settings & Configuration</strong>
                 </div>
                 <div class="card-body">
                     <h6 class="text-primary">Spawn Settings</h6>
@@ -369,10 +485,10 @@
                 </div>
             </div>
 
-            <!-- 6. Maps -->
+            <!-- 7. Maps -->
             <div class="card map-card mb-4" id="maps">
                 <div class="card-header">
-                    <strong><span class="bi bi-map"></span> 6. Maps</strong>
+                    <strong><span class="bi bi-map"></span> 7. Maps</strong>
                 </div>
                 <div class="card-body">
                     <h6 class="text-primary">Default Maps</h6>
@@ -427,10 +543,10 @@
                 </div>
             </div>
 
-            <!-- 7. Server Integration -->
+            <!-- 8. Server Integration -->
             <div class="card map-card mb-4" id="server-integration">
                 <div class="card-header">
-                    <strong><span class="bi bi-server"></span> 7. Server Integration</strong>
+                    <strong><span class="bi bi-server"></span> 8. Server Integration</strong>
                 </div>
                 <div class="card-body">
                     <h6 class="text-primary">How UORespawn v2.0 Works</h6>
@@ -569,10 +685,10 @@
                 </div>
             </div>
 
-            <!-- 8. Admin GUI & Commands -->
+            <!-- 9. Admin GUI & Commands -->
             <div class="card map-card mb-4" id="admin-gui">
                 <div class="card-header">
-                    <strong><span class="bi bi-terminal"></span> 8. Admin GUI & Commands</strong>
+                    <strong><span class="bi bi-terminal"></span> 9. Admin GUI & Commands</strong>
                 </div>
                 <div class="card-body">
                     <h6 class="text-primary">Professional Admin Control Panel</h6>
@@ -634,10 +750,10 @@
                 </div>
             </div>
 
-            <!-- 9. Tips & Best Practices -->
+            <!-- 10. Tips & Best Practices -->
             <div class="card map-card mb-4" id="tips">
                 <div class="card-header">
-                    <strong><span class="bi bi-star"></span> 9. Tips & Best Practices</strong>
+                    <strong><span class="bi bi-star"></span> 10. Tips & Best Practices</strong>
                 </div>
                 <div class="card-body">
                     <h6 class="text-primary">Map Spawn Tips</h6>
@@ -692,10 +808,10 @@
                 </div>
             </div>
 
-            <!-- 10. Support & Resources -->
+            <!-- 11. Support & Resources -->
             <div class="card map-card mb-4" id="support">
                 <div class="card-header">
-                    <strong><span class="bi bi-question-circle"></span> 10. Support & Resources</strong>
+                    <strong><span class="bi bi-question-circle"></span> 11. Support & Resources</strong>
                 </div>
                 <div class="card-body">
                     <h6 class="text-primary">Need Help?</h6>
@@ -751,6 +867,50 @@
     </div>
 </div>
 
+<!-- Back to Top Button -->
+<a href="#" class="back-to-top" @onclick="ScrollToTop" @onclick:preventDefault title="Back to Top">
+    <span class="bi bi-arrow-up-circle-fill"></span>
+</a>
+
+<style>
+    .back-to-top {
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        z-index: 1000;
+        width: 44px;
+        height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #1a1a2e;
+        border-radius: 50%;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        box-shadow: 0 0 12px rgba(218, 165, 32, 0.5), 0 0 20px rgba(218, 165, 32, 0.3);
+    }
+
+    .back-to-top:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 0 18px rgba(218, 165, 32, 0.8), 0 0 30px rgba(255, 215, 0, 0.5), 0 0 40px rgba(218, 165, 32, 0.3);
+    }
+
+    .back-to-top .bi {
+        font-size: 2rem;
+        color: goldenrod;
+        transition: color 0.3s ease;
+    }
+
+    .back-to-top:hover .bi {
+        color: #ffd700;
+    }
+</style>
+
 @code {
-    // No code-behind needed for static instructions
+    [Inject] private IJSRuntime JS { get; set; } = default!;
+
+    private async Task ScrollToTop()
+    {
+        await JS.InvokeVoidAsync("scrollTo", new { top = 0, behavior = "smooth" });
+    }
 }

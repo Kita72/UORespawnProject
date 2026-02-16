@@ -5,10 +5,33 @@
              xmlns:components="clr-namespace:UORespawnApp.Components"
              x:Class="UORespawnApp.MainPage">
 
-    <BlazorWebView x:Name="blazorWebView" HostPage="wwwroot/index.html">
-        <BlazorWebView.RootComponents>
-            <RootComponent Selector="#app" ComponentType="{x:Type components:Routes}" />
-        </BlazorWebView.RootComponents>
-    </BlazorWebView>
+    <Grid>
+        <BlazorWebView x:Name="blazorWebView" HostPage="wwwroot/index.html">
+            <BlazorWebView.RootComponents>
+                <RootComponent Selector="#app" ComponentType="{x:Type components:Routes}" />
+            </BlazorWebView.RootComponents>
+        </BlazorWebView>
+
+        <!-- External Website WebView Overlay -->
+        <WebView x:Name="externalWebView" 
+                 IsVisible="False"
+                 Margin="250,0,0,0"
+                 ZIndex="100" />
+
+        <!-- Native Close Button (appears above WebView when open) -->
+        <Button x:Name="closeWebViewButton"
+                IsVisible="False"
+                Text="✕"
+                FontSize="36"
+                TextColor="#dc3545"
+                BackgroundColor="Transparent"
+                WidthRequest="50"
+                HeightRequest="50"
+                HorizontalOptions="End"
+                VerticalOptions="Start"
+                Margin="0,8,16,0"
+                Clicked="OnCloseWebViewClicked"
+                ZIndex="200" />
+    </Grid>
 
 </ContentPage>

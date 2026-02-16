@@ -1,6 +1,8 @@
 ﻿@page "/"
 
+@using UORespawnApp.Scripts.Services
 @inject ViewService ViewService
+@inject WebViewService WebViewService
 
 @implements IDisposable
 
@@ -8,11 +10,16 @@
 
 @if (ViewService.CurrentView == "home")
 {
+    <!-- Splash Screen (always visible, WebView overlays it via MAUI) -->
     <div style="position: fixed; top: 0; left: 250px; right: 0; bottom: 0; background-image: url('splash.png'); background-size: cover; background-position: center; background-repeat: no-repeat; z-index: 0;">
     </div>
-    <a href="http://blackboxprogramming.runasp.net" target="_blank" style="position: fixed; bottom: 16px; right: 32px; z-index: 10;" title="Black Box Programming">
+
+    <!-- Open Website Button (always visible, WebView covers it when open) -->
+    <button @onclick="OpenWebsite" 
+            style="position: fixed; bottom: 16px; right: 32px; z-index: 10; background: transparent; border: none; cursor: pointer; padding: 0;"
+            title="Black Box Programming">
         <span class="bi bi-box-fill" style="font-size: 50px; color: black;"></span>
-    </a>
+    </button>
 }
 else if (ViewService.CurrentView == "boxspawn" || ViewService.CurrentView == "mapview") // Support both for backward compatibility
 {
@@ -40,11 +47,13 @@ else if (ViewService.CurrentView == "spawnpacks")
 }
 
 @code {
+    private const string WebsiteUrl = "http://blackboxprogramming.runasp.net";
+
     protected override void OnInitialized()
     {
-        ViewService.OnViewChanged += StateHasChanged;
+        ViewService.OnViewChanged += OnViewChanged;
         ViewService.OnMapChanged += StateHasChanged;
-        
+
         // MauiProgram already initialized session and loaded all data
         // Just log the component initialization
         try
@@ -56,7 +65,7 @@ else if (ViewService.CurrentView == "spawnpacks")
         {
             Logger.Error("Error in Home.OnInitialized", ex);
         }
-        
+
         // Default to home view on startup
         if (string.IsNullOrEmpty(ViewService.CurrentView))
         {
@@ -64,9 +73,31 @@ else if (ViewService.CurrentView == "spawnpacks")
         }
     }
 
+    private void OnViewChanged()
+    {
+        // Close WebView when navigating away from home
+        if (ViewService.CurrentView != "home" && WebViewService.IsWebViewOpen)
+        {
+            WebViewService.HideWebView();
+        }
+        StateHasChanged();
+    }
+
+    private void OpenWebsite()
+    {
+        WebViewService.ShowWebView(WebsiteUrl);
+        StateHasChanged();
+    }
+
     public void Dispose()
     {
-        ViewService.OnViewChanged -= StateHasChanged;
+        ViewService.OnViewChanged -= OnViewChanged;
         ViewService.OnMapChanged -= StateHasChanged;
+
+        // Ensure WebView is closed when disposing
+        if (WebViewService.IsWebViewOpen)
+        {
+            WebViewService.HideWebView();
+        }
     }
 }

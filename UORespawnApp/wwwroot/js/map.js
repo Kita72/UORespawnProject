@@ -34,16 +34,25 @@ currentSpawns: [],
 regions: null,
 selectedRegionName: '',
 hoveredRegionName: '',
+hoveredAreaIndex: -1,  // Index of hovered area within region (-1 = none)
+
+// Hovered spawn for box spawn page
+hoveredSpawnId: null,
+
+// XML spawner hover/click state
+hoveredXmlSpawnerId: null,
+selectedXmlSpawner: null,
+xmlTooltipMousePos: { x: 0, y: 0 },
 
 // Settings from C#
 boxColor: '#8B0000',
 boxLineSize: 2,
 boxColorInc: 0.3,
-    
+
 // Keyboard panning state
 keyStates: new Set(),
 panAnimationId: null,
-    
+
     init: function(imgWidth, imgHeight, canvasId, imgId) {
         this.canvas = document.getElementById(canvasId || 'mapCanvas');
         this.img = document.getElementById(imgId || 'mapImg');
@@ -62,18 +71,37 @@ panAnimationId: null,
         this.regions = null;
         this.selectedRegionName = '';
         this.hoveredRegionName = '';
+        this.hoveredAreaIndex = -1;
+        this.hoveredSpawnId = null;
 
         console.log(`? Map initialized: ${imgWidth}x${imgHeight} at ${this.scale}x scale, viewport: ${this.viewportWidth}x${this.viewportHeight}`);
         return true;
     },
-    
+
+    // Set hovered region area for highlighting
+    setHoveredRegionArea: function(regionName, areaIndex) {
+        if (this.hoveredRegionName !== regionName || this.hoveredAreaIndex !== areaIndex) {
+            this.hoveredRegionName = regionName || '';
+            this.hoveredAreaIndex = areaIndex >= 0 ? areaIndex : -1;
+            this.redrawAll();
+        }
+    },
+
+    // Set hovered spawn for highlighting
+    setHoveredSpawn: function(spawnId) {
+        if (this.hoveredSpawnId !== spawnId) {
+            this.hoveredSpawnId = spawnId;
+            this.redrawAll();
+        }
+    },
+
     // Update settings from C#
     updateSettings: function(boxColor, boxLineSize, boxColorInc) {
         this.boxColor = boxColor || '#8B0000';
         this.boxLineSize = boxLineSize || 2;
         this.boxColorInc = boxColorInc || 0.3;
         console.log(`? Settings updated: color=${this.boxColor}, lineSize=${this.boxLineSize}, colorInc=${this.boxColorInc}`);
-        
+
         // Redraw with new settings
         this.redrawAll();
     },
@@ -294,25 +322,43 @@ panAnimationId: null,
                 if (!region) return;
 
                 const isSelected = region.name === this.selectedRegionName;
-                const isHovered = region.name === this.hoveredRegionName;
-
-                let fillColor, strokeColor, lineWidth;
-                if (isSelected) {
-                    fillColor = 'rgba(13, 110, 253, 0.3)';
-                    strokeColor = '#0d6efd';
-                    lineWidth = 3;
-                } else if (isHovered) {
-                    fillColor = 'rgba(255, 193, 7, 0.2)';
-                    strokeColor = '#ffc107';
-                    lineWidth = 2;
-                } else {
-                    fillColor = 'rgba(108, 117, 125, 0.1)';
-                    strokeColor = '#6c757d';
-                    lineWidth = 1;
-                }
+                const isRegionHovered = region.name === this.hoveredRegionName;
 
                 if (region.rectangles && region.rectangles.length > 0) {
-                    region.rectangles.forEach(rect => {
+                    region.rectangles.forEach((rect, areaIndex) => {
+                        // Check if this specific area is hovered
+                        const isAreaHovered = isRegionHovered && this.hoveredAreaIndex === areaIndex;
+
+                        let fillColor, strokeColor, lineWidth;
+                        if (isSelected) {
+                            if (isAreaHovered) {
+                                // Selected region, hovered area - extra bright
+                                fillColor = 'rgba(13, 110, 253, 0.45)';
+                                strokeColor = '#4da3ff';
+                                lineWidth = 4;
+                            } else {
+                                // Selected region, non-hovered area
+                                fillColor = 'rgba(13, 110, 253, 0.25)';
+                                strokeColor = '#0d6efd';
+                                lineWidth = 2;
+                            }
+                        } else if (isAreaHovered) {
+                            // Not selected, but this area is hovered - golden highlight
+                            fillColor = 'rgba(255, 215, 0, 0.25)';
+                            strokeColor = '#FFD700';
+                            lineWidth = 3;
+                        } else if (isRegionHovered) {
+                            // Region hovered but different area
+                            fillColor = 'rgba(255, 193, 7, 0.15)';
+                            strokeColor = '#ffc107';
+                            lineWidth = 2;
+                        } else {
+                            // Default unselected, unhovered
+                            fillColor = 'rgba(108, 117, 125, 0.1)';
+                            strokeColor = '#6c757d';
+                            lineWidth = 1;
+                        }
+
                         // Convert world to screen coordinates
                         const screenX = rect.x * this.scale + this.panX;
                         const screenY = rect.y * this.scale + this.panY;
@@ -327,13 +373,26 @@ panAnimationId: null,
                         this.ctx.strokeStyle = strokeColor;
                         this.ctx.lineWidth = lineWidth;
                         this.ctx.strokeRect(screenX, screenY, screenW, screenH);
+
+                        // Draw golden glow for hovered area
+                        if (isAreaHovered) {
+                            this.ctx.strokeStyle = 'rgba(255, 215, 0, 0.5)';
+                            this.ctx.lineWidth = lineWidth + 3;
+                            this.ctx.strokeRect(screenX - 2, screenY - 2, screenW + 4, screenH + 4);
+                        }
                     });
 
-                    // Draw region name label (on first rectangle only)
-                    if (isSelected || isHovered) {
-                        const firstRect = region.rectangles[0];
-                        const centerX = (firstRect.x + firstRect.width / 2) * this.scale + this.panX;
-                        const centerY = (firstRect.y + firstRect.height / 2) * this.scale + this.panY;
+                    // Draw region name label on hovered area (or first rect if just region selected)
+                    if (isSelected || isRegionHovered) {
+                        let labelRect;
+                        if (isRegionHovered && this.hoveredAreaIndex >= 0 && this.hoveredAreaIndex < region.rectangles.length) {
+                            labelRect = region.rectangles[this.hoveredAreaIndex];
+                        } else {
+                            labelRect = region.rectangles[0];
+                        }
+
+                        const centerX = (labelRect.x + labelRect.width / 2) * this.scale + this.panX;
+                        const centerY = (labelRect.y + labelRect.height / 2) * this.scale + this.panY;
 
                         this.ctx.font = 'bold 12px Arial';
                         this.ctx.textAlign = 'center';
@@ -347,7 +406,7 @@ panAnimationId: null,
                         this.ctx.fillRect(centerX - textWidth / 2, centerY - textHeight / 2, textWidth, textHeight);
 
                         // Draw text
-                        this.ctx.fillStyle = isSelected ? '#ffffff' : '#ffed4e';
+                        this.ctx.fillStyle = isSelected ? '#ffffff' : '#FFD700';
                         this.ctx.fillText(region.name, centerX, centerY);
                     }
                 }
@@ -356,7 +415,7 @@ panAnimationId: null,
 
         // Draw XML spawners (green circles, underneath user spawns)
         if (this.xmlSpawners && Array.isArray(this.xmlSpawners)) {
-            this.xmlSpawners.forEach((spawner) => {
+            this.xmlSpawners.forEach((spawner, idx) => {
                 if (!spawner) return;
 
                 // Use center coordinates and radius for circle visualization
@@ -370,19 +429,41 @@ panAnimationId: null,
                 // Scale the radius to screen size
                 const screenRadius = radius * this.scale;
 
-                // Draw XML spawner circle (green, semi-transparent)
-                this.ctx.strokeStyle = '#00FF00';
-                this.ctx.lineWidth = 1;
-                this.ctx.globalAlpha = 0.4;
+                // Check if this spawner is hovered or selected
+                const isHovered = this.hoveredXmlSpawnerId === idx;
+                const isSelected = this.selectedXmlSpawner && this.selectedXmlSpawner.idx === idx;
+
+                // Draw XML spawner circle
+                if (isHovered || isSelected) {
+                    // Draw golden glow for hover/selected
+                    this.ctx.strokeStyle = '#FFD700';
+                    this.ctx.lineWidth = 3;
+                    this.ctx.globalAlpha = 0.8;
+                    this.ctx.beginPath();
+                    this.ctx.arc(screenCenter.x, screenCenter.y, screenRadius + 2, 0, 2 * Math.PI);
+                    this.ctx.stroke();
+
+                    // Fill with semi-transparent gold
+                    this.ctx.fillStyle = 'rgba(255, 215, 0, 0.15)';
+                    this.ctx.globalAlpha = 1.0;
+                    this.ctx.beginPath();
+                    this.ctx.arc(screenCenter.x, screenCenter.y, screenRadius, 0, 2 * Math.PI);
+                    this.ctx.fill();
+                }
+
+                // Normal circle outline
+                this.ctx.strokeStyle = isHovered || isSelected ? '#00FF00' : '#00FF00';
+                this.ctx.lineWidth = isHovered || isSelected ? 2 : 1;
+                this.ctx.globalAlpha = isHovered || isSelected ? 0.8 : 0.4;
                 this.ctx.beginPath();
                 this.ctx.arc(screenCenter.x, screenCenter.y, screenRadius, 0, 2 * Math.PI);
                 this.ctx.stroke();
 
                 // Draw "X" marker in center
-                const markerSize = 3;
+                const markerSize = isHovered || isSelected ? 5 : 3;
                 this.ctx.strokeStyle = '#00FF00';
-                this.ctx.lineWidth = 2;
-                this.ctx.globalAlpha = 0.6;
+                this.ctx.lineWidth = isHovered || isSelected ? 3 : 2;
+                this.ctx.globalAlpha = isHovered || isSelected ? 0.9 : 0.6;
                 this.ctx.beginPath();
                 this.ctx.moveTo(screenCenter.x - markerSize, screenCenter.y - markerSize);
                 this.ctx.lineTo(screenCenter.x + markerSize, screenCenter.y + markerSize);
@@ -391,6 +472,68 @@ panAnimationId: null,
                 this.ctx.stroke();
                 this.ctx.globalAlpha = 1.0;
             });
+
+            // Draw info tooltip for selected XML spawner (at mouse position)
+            if (this.selectedXmlSpawner) {
+                const spawner = this.selectedXmlSpawner;
+                const mouseX = this.xmlTooltipMousePos.x;
+                const mouseY = this.xmlTooltipMousePos.y;
+
+                // Tooltip content
+                const lines = [
+                    `XML Spawner`,
+                    `Location: (${spawner.centerX}, ${spawner.centerY})`,
+                    `Home Range: ${spawner.radius}`
+                ];
+
+                // Measure text for sizing
+                this.ctx.font = 'bold 12px Arial';
+                let maxWidth = 0;
+                lines.forEach(line => {
+                    const width = this.ctx.measureText(line).width;
+                    if (width > maxWidth) maxWidth = width;
+                });
+
+                const padding = 8;
+                const lineHeight = 16;
+                const boxWidth = maxWidth + padding * 2;
+                const boxHeight = lines.length * lineHeight + padding * 2;
+
+                // Position tooltip near mouse (offset to not cover cursor)
+                let tooltipX = mouseX + 15;
+                let tooltipY = mouseY + 15;
+
+                // Keep tooltip within canvas bounds
+                if (tooltipX + boxWidth > this.viewportWidth) {
+                    tooltipX = mouseX - boxWidth - 10;
+                }
+                if (tooltipY + boxHeight > this.viewportHeight) {
+                    tooltipY = mouseY - boxHeight - 10;
+                }
+
+                // Draw tooltip background
+                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+                this.ctx.strokeStyle = '#00FF00';
+                this.ctx.lineWidth = 2;
+                this.ctx.beginPath();
+                this.ctx.roundRect(tooltipX, tooltipY, boxWidth, boxHeight, 5);
+                this.ctx.fill();
+                this.ctx.stroke();
+
+                // Draw tooltip text
+                this.ctx.fillStyle = '#00FF00';
+                this.ctx.font = 'bold 12px Arial';
+                this.ctx.textAlign = 'left';
+                this.ctx.textBaseline = 'top';
+                lines.forEach((line, i) => {
+                    if (i === 0) {
+                        this.ctx.fillStyle = '#FFD700'; // Title in gold
+                    } else {
+                        this.ctx.fillStyle = '#FFFFFF'; // Content in white
+                    }
+                    this.ctx.fillText(line, tooltipX + padding, tooltipY + padding + i * lineHeight);
+                });
+            }
         }
 
         // Draw server spawns (heatmap) - colored dots showing where creatures spawned
@@ -438,18 +581,41 @@ panAnimationId: null,
 
                 // Get priority (default 0 if not set) - uses camelCase from C# serialization
                 const priority = spawn.priority || 0;
+                const pos = spawn.position || (idx + 1);
+                const isHovered = this.hoveredSpawnId === pos;
 
                 // Draw box with priority-based color
                 this.ctx.strokeStyle = this.getColorForPriority(priority);
                 this.ctx.lineWidth = this.boxLineSize;
                 this.ctx.strokeRect(topLeft.x, topLeft.y, screenW, screenH);
-                
+
+                // Draw hover highlight effect (golden glow)
+                if (isHovered) {
+                    // Draw outer glow
+                    this.ctx.strokeStyle = '#FFD700';
+                    this.ctx.lineWidth = this.boxLineSize + 4;
+                    this.ctx.globalAlpha = 0.5;
+                    this.ctx.strokeRect(topLeft.x - 2, topLeft.y - 2, screenW + 4, screenH + 4);
+
+                    // Draw inner bright border
+                    this.ctx.strokeStyle = '#FFFFFF';
+                    this.ctx.lineWidth = this.boxLineSize + 1;
+                    this.ctx.globalAlpha = 0.8;
+                    this.ctx.strokeRect(topLeft.x, topLeft.y, screenW, screenH);
+
+                    // Fill with semi-transparent highlight
+                    this.ctx.fillStyle = 'rgba(255, 215, 0, 0.15)';
+                    this.ctx.globalAlpha = 1.0;
+                    this.ctx.fillRect(topLeft.x, topLeft.y, screenW, screenH);
+
+                    this.ctx.globalAlpha = 1.0;
+                }
+
                 // Draw position number
-                this.ctx.fillStyle = '#FFFFFF';
-                this.ctx.font = 'bold 16px Arial';
+                this.ctx.fillStyle = isHovered ? '#FFD700' : '#FFFFFF';
+                this.ctx.font = isHovered ? 'bold 18px Arial' : 'bold 16px Arial';
                 this.ctx.textAlign = 'center';
                 this.ctx.textBaseline = 'top';
-                const pos = spawn.position || (idx + 1);
                 this.ctx.fillText(pos.toString(), topLeft.x + screenW / 2, topLeft.y + 5);
             });
         }
@@ -480,13 +646,96 @@ panAnimationId: null,
     showXMLSpawners: function(spawners) {
         console.log(`??? Showing ${spawners.length} XML spawners`);
         this.xmlSpawners = spawners;
+        this.hoveredXmlSpawnerId = null;
+        this.selectedXmlSpawner = null;
         this.redrawAll();
     },
-    
+
     hideXMLSpawners: function() {
         console.log(`??????? Hiding XML spawners`);
         this.xmlSpawners = null;
+        this.hoveredXmlSpawnerId = null;
+        this.selectedXmlSpawner = null;
         this.redrawAll();
+    },
+
+    // Set hovered XML spawner (called from C#)
+    setHoveredXmlSpawner: function(idx) {
+        if (this.hoveredXmlSpawnerId !== idx) {
+            this.hoveredXmlSpawnerId = idx;
+            this.redrawAll();
+        }
+    },
+
+    // Handle XML spawner click - toggle selection and store mouse position
+    handleXmlSpawnerClick: function(idx, mouseX, mouseY) {
+        if (!this.xmlSpawners || idx < 0 || idx >= this.xmlSpawners.length) {
+            this.selectedXmlSpawner = null;
+            this.redrawAll();
+            return false;
+        }
+
+        // If clicking same spawner, deselect
+        if (this.selectedXmlSpawner && this.selectedXmlSpawner.idx === idx) {
+            this.selectedXmlSpawner = null;
+            this.redrawAll();
+            return false;
+        }
+
+        // Select new spawner
+        const spawner = this.xmlSpawners[idx];
+        this.selectedXmlSpawner = {
+            idx: idx,
+            centerX: spawner.centerX || spawner.x || 0,
+            centerY: spawner.centerY || spawner.y || 0,
+            radius: spawner.radius || spawner.width || 10
+        };
+        this.xmlTooltipMousePos = { x: mouseX, y: mouseY };
+        this.redrawAll();
+        return true;
+    },
+
+    // Update tooltip position while hovering with selection active
+    updateXmlTooltipPosition: function(mouseX, mouseY) {
+        if (this.selectedXmlSpawner) {
+            this.xmlTooltipMousePos = { x: mouseX, y: mouseY };
+            this.redrawAll();
+        }
+    },
+
+    // Clear XML spawner selection (called when mouse leaves area)
+    clearXmlSpawnerSelection: function() {
+        if (this.selectedXmlSpawner) {
+            this.selectedXmlSpawner = null;
+            this.redrawAll();
+        }
+    },
+
+    // Find XML spawner at world coordinates (returns index or -1)
+    findXmlSpawnerAt: function(worldX, worldY) {
+        if (!this.xmlSpawners || !Array.isArray(this.xmlSpawners)) {
+            return -1;
+        }
+
+        for (let i = 0; i < this.xmlSpawners.length; i++) {
+            const spawner = this.xmlSpawners[i];
+            if (!spawner) continue;
+
+            const centerX = spawner.centerX || spawner.x || 0;
+            const centerY = spawner.centerY || spawner.y || 0;
+            const radius = spawner.radius || spawner.width || 10;
+
+            // Check if point is within circle
+            const dx = worldX - centerX;
+            const dy = worldY - centerY;
+            const distSquared = dx * dx + dy * dy;
+
+            if (distSquared <= radius * radius) {
+                return i;
+            }
+        }
+
+        return -1;
     },
     
     // Server Spawn methods (heatmap)

@@ -17,6 +17,7 @@
                     <span class="bi bi-bounding-box me-1" style="color: goldenrod;"></span><strong style="color: goldenrod;">Box Spawn</strong> | @MapUtility.GetMapName(ViewService.CurrentMapId) | Size: @imageDim | Mouse: (@mouseWorldX, @mouseWorldY)
                 </div>
                 <div class="d-flex align-items-center gap-2">
+                    <span class="bi bi-info-circle" style="color: #6c757d; cursor: help;" title="Draw spawn boxes on the map to define creature spawn areas. Use priority levels for overlapping regions."></span>
                     <span class="badge bg-light text-dark" title="Total spawns across all boxes">@GetTotalBoxSpawnCount() Spawns</span>
                     <button class="btn btn-sm @(zoomLevel == 2.0 ? "btn-primary" : "btn-outline-primary")" @onclick="ToggleZoom" title="Toggle Zoom (1x / 2x)">
                         <span class="bi bi-zoom-@(zoomLevel == 2.0 ? "in" : "out")"></span> @(zoomLevel == 1.0 ? "1x" : "2x")
@@ -67,11 +68,11 @@
                                 style="cursor:pointer; border:1px solid #333; display:block; image-rendering:pixelated; width: 100%; height: auto;"
                                 @onclick="OnMiniMapClick" />
                         <div class="d-flex gap-2 mt-2">
-                            <button class="btn btn-sm w-50 @(showXMLSpawners ? "btn-success" : "btn-danger")" 
+                            <button class="btn btn-sm w-50 @(ViewService.ShowXMLSpawners ? "btn-success" : "btn-danger")" 
                                     @onclick="ToggleXMLSpawners" title="Toggle XML Spawners">
                                 <span class="bi bi-gear-fill"></span> XML
                             </button>
-                            <button class="btn btn-sm w-50 @(showServerSpawns ? "btn-success" : "btn-danger")" 
+                            <button class="btn btn-sm w-50 @(ViewService.ShowServerSpawns ? "btn-success" : "btn-danger")" 
                                     @onclick="ToggleServerSpawns" title="Toggle Server Spawns">
                                 <span class="bi bi-bullseye"></span> Spawns
                             </button>
@@ -246,10 +247,15 @@ private double panY = 0;
 private int mouseWorldX = 0;
 private int mouseWorldY = 0;
 private BoxSpawnEntity? selected = null;
-    
+private BoxSpawnEntity? hoveredSpawn = null;
+
 private bool isDrawing = false;
 private bool isPanning = false;
-    
+
+// Track mouse down position for click detection
+private double mouseDownX = 0;
+private double mouseDownY = 0;
+
 private int imgWidth = 0;
 private int imgHeight = 0;
 
@@ -270,12 +276,6 @@ private string currentCategory = "Common";
 private List<string> currentCategorySpawns = new();
 private BoxSpawnEntity? editingSpawn = null;
 private Frequency editingFrequency = Frequency.Common;
-
-// XML Spawner toggle (static to persist across map changes)
-private static bool showXMLSpawners = false;
-
-// Server Spawn toggle (static to persist across map changes)
-private static bool showServerSpawns = false;
 
 // Mini map collapse
 private bool showMiniMap = true;
@@ -301,6 +301,8 @@ private int? spawnSearchId = null;
         }
 
         ViewService.OnMapChanged += HandleMapChanged;
+        ViewService.OnXMLSpawnersChanged += HandleXMLSpawnersChanged;
+        ViewService.OnServerSpawnsChanged += HandleServerSpawnsChanged;
     }
     
     private void HandleMapChanged()
@@ -345,10 +347,64 @@ private int? spawnSearchId = null;
         spawnSearchId = null; // Reset spawn search when changing maps
         
         // Note: JavaScript will apply these values in OnImageLoaded after map loads
-        
+
         StateHasChanged();
     }
-    
+
+    private async void HandleXMLSpawnersChanged()
+    {
+        // Refresh the display when XML spawners toggle changes from another page
+        await InvokeAsync(async () =>
+        {
+            if (ViewService.ShowXMLSpawners)
+            {
+                var xmlSpawners = XMLSpawnUtility.GetSpawnersForMap(ViewService.CurrentMapId);
+                if (xmlSpawners.Count > 0)
+                {
+                    var options = new System.Text.Json.JsonSerializerOptions 
+                    { 
+                        PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+                        WriteIndented = false 
+                    };
+                    var json = System.Text.Json.JsonSerializer.Serialize(xmlSpawners, options);
+                    await JS.InvokeVoidAsync("eval", $"window.mapModule.showXMLSpawners({json})");
+                }
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("eval", "window.mapModule.hideXMLSpawners()");
+            }
+            StateHasChanged();
+        });
+    }
+
+    private async void HandleServerSpawnsChanged()
+    {
+        // Refresh the display when server spawns toggle changes from another page
+        await InvokeAsync(async () =>
+        {
+            if (ViewService.ShowServerSpawns && MapDisplayUtility.HasSpawnData)
+            {
+                var spawnData = MapDisplayUtility.GetSpawnDataForMap(ViewService.CurrentMapId);
+                if (spawnData.Count > 0)
+                {
+                    var options = new System.Text.Json.JsonSerializerOptions 
+                    { 
+                        PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+                        WriteIndented = false 
+                    };
+                    var json = System.Text.Json.JsonSerializer.Serialize(spawnData, options);
+                    await JS.InvokeVoidAsync("eval", $"window.mapModule.showServerSpawns({json})");
+                }
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("eval", "window.mapModule.hideServerSpawns()");
+            }
+            StateHasChanged();
+        });
+    }
+
     private async Task OnImageLoaded()
     {
         await Task.Delay(100);
@@ -401,9 +457,9 @@ private int? spawnSearchId = null;
                     await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
                     
                     await Redraw();
-                    
+
                     // Re-apply XML spawners if toggle is ON
-                    if (showXMLSpawners)
+                    if (ViewService.ShowXMLSpawners)
                     {
                         var xmlSpawners = XMLSpawnUtility.GetSpawnersForMap(ViewService.CurrentMapId);
                         if (xmlSpawners.Count > 0)
@@ -419,9 +475,9 @@ private int? spawnSearchId = null;
                         }
                         await InvokeAsync(StateHasChanged); // Force UI update for button state
                     }
-                    
+
                     // Re-apply server spawns if toggle is ON
-                    if (showServerSpawns && MapDisplayUtility.HasSpawnData)
+                    if (ViewService.ShowServerSpawns && MapDisplayUtility.HasSpawnData)
                     {
                         var spawnData = MapDisplayUtility.GetSpawnDataForMap(ViewService.CurrentMapId);
                         if (spawnData.Count > 0)
@@ -674,7 +730,11 @@ private int? spawnSearchId = null;
     {
         // Update mouse world coordinates
         await UpdateMouseCoordinates(e.OffsetX, e.OffsetY);
-        
+
+        // Track mouse down position for click detection
+        mouseDownX = e.OffsetX;
+        mouseDownY = e.OffsetY;
+
         if (e.Button == 0) // Left - draw
         {
             isDrawing = true;
@@ -691,7 +751,7 @@ private int? spawnSearchId = null;
     {
         // Update mouse coordinates on every move
         await UpdateMouseCoordinates(e.OffsetX, e.OffsetY);
-        
+
         if (isDrawing)
         {
             await JS.InvokeVoidAsync("eval", $"window.mapModule.updateDrawing({e.OffsetX}, {e.OffsetY})");
@@ -699,6 +759,17 @@ private int? spawnSearchId = null;
         else if (isPanning)
         {
             await JS.InvokeVoidAsync("eval", $"window.mapModule.updatePanning({e.OffsetX}, {e.OffsetY})");
+        }
+        else
+        {
+            // Check for hover over spawn boxes and XML spawners when not drawing or panning
+            await UpdateHoveredSpawn(e.OffsetX, e.OffsetY);
+
+            // Update XML tooltip position if one is selected
+            if (ViewService.ShowXMLSpawners)
+            {
+                await JS.InvokeVoidAsync("eval", $"window.mapModule.updateXmlTooltipPosition({e.OffsetX}, {e.OffsetY})");
+            }
         }
     }
     
@@ -757,22 +828,34 @@ private int? spawnSearchId = null;
                 spawnSearchId = spawn.Position; // Sync the search ID to the newly created spawn
 
                 Logger.Info($"Spawn #{spawn.Position} created at ({spawn.SpawnBox.X},{spawn.SpawnBox.Y}) size {spawn.SpawnBox.Width}x{spawn.SpawnBox.Height} Priority:{spawn.Priority}");
-                
+
                 // Auto-save spawn data
                 Utility.SaveSpawnData();
                 Logger.Info("Auto-saved spawn data");
-                
+
                 // Force a complete redraw
                 await Redraw();
                 StateHasChanged();
-                
+
                 // Auto-scroll to the newly created spawn in the list
                 await Task.Delay(100); // Small delay to ensure DOM is updated
                 await ScrollToSelectedSpawn();
             }
             else
             {
-                Logger.Info("Box too small or invalid");
+                // Check if this was a click (not a drag) - detect spawn box click
+                double deltaX = Math.Abs(e.OffsetX - mouseDownX);
+                double deltaY = Math.Abs(e.OffsetY - mouseDownY);
+
+                // If mouse moved less than 5 pixels, treat as a click
+                if (deltaX < 5 && deltaY < 5)
+                {
+                    await TrySelectSpawnAtPosition(e.OffsetX, e.OffsetY);
+                }
+                else
+                {
+                    Logger.Info("Box too small or invalid");
+                }
             }
         }
         else if (isPanning)
@@ -793,10 +876,24 @@ private int? spawnSearchId = null;
         }
     }
     
-    private void OnMouseLeave()
+    private async Task OnMouseLeave()
     {
         isDrawing = false;
         isPanning = false;
+
+        // Clear hover highlight when mouse leaves canvas
+        if (hoveredSpawn != null)
+        {
+            hoveredSpawn = null;
+            await JS.InvokeVoidAsync("eval", "window.mapModule.setHoveredSpawn(null)");
+        }
+
+        // Clear XML spawner hover and selection when mouse leaves
+        if (ViewService.ShowXMLSpawners)
+        {
+            await JS.InvokeVoidAsync("eval", "window.mapModule.setHoveredXmlSpawner(-1)");
+            await JS.InvokeVoidAsync("eval", "window.mapModule.clearXmlSpawnerSelection()");
+        }
     }
     
     private async Task ResetView()
@@ -910,14 +1007,14 @@ private int? spawnSearchId = null;
     
     private async Task ToggleXMLSpawners()
     {
-        showXMLSpawners = !showXMLSpawners;
-        
-        if (showXMLSpawners)
+        ViewService.ToggleXMLSpawners();
+
+        if (ViewService.ShowXMLSpawners)
         {
             // Get XML spawners for current map
             var xmlSpawners = XMLSpawnUtility.GetSpawnersForMap(ViewService.CurrentMapId);
             Logger.Info($"Showing {xmlSpawners.Count} XML spawners for {ViewService.CurrentMapId}");
-            
+
             // Convert to JSON and send to JavaScript
             var options = new System.Text.Json.JsonSerializerOptions 
             { 
@@ -925,7 +1022,7 @@ private int? spawnSearchId = null;
                 WriteIndented = false 
             };
             var json = System.Text.Json.JsonSerializer.Serialize(xmlSpawners, options);
-            
+
             await JS.InvokeVoidAsync("eval", $"window.mapModule.showXMLSpawners({json})");
         }
         else
@@ -933,7 +1030,7 @@ private int? spawnSearchId = null;
             Logger.Info("Hiding XML spawners");
             await JS.InvokeVoidAsync("eval", "window.mapModule.hideXMLSpawners()");
         }
-        
+
         StateHasChanged();
     }
     
@@ -944,9 +1041,9 @@ private int? spawnSearchId = null;
     
     private async Task ToggleServerSpawns()
     {
-        showServerSpawns = !showServerSpawns;
+        ViewService.ToggleServerSpawns();
 
-        if (showServerSpawns)
+        if (ViewService.ShowServerSpawns)
         {
             Logger.Info($"Toggling ON server spawn statistics for {ViewService.CurrentMapId}");
 
@@ -955,7 +1052,7 @@ private int? spawnSearchId = null;
             {
                 Logger.Warning("Server Data folder not configured!");
                     ToastService.ShowWarning("Server Data folder not configured! Go to Settings to set your ServUO Data folder path.");
-                showServerSpawns = false;
+                ViewService.ToggleServerSpawns(); // Toggle back off
                 StateHasChanged();
                 return;
             }
@@ -966,7 +1063,7 @@ private int? spawnSearchId = null;
             {
                 Logger.Warning($"UOR_STATS folder not found at: {statsFolderPath}");
                     ToastService.ShowWarning($"UOR_STATS folder not found! Ensure UOR_DATA/UOR_STATS/ exists in your server data folder.");
-                showServerSpawns = false;
+                ViewService.ToggleServerSpawns(); // Toggle back off
                 StateHasChanged();
                 return;
             }
@@ -982,7 +1079,7 @@ private int? spawnSearchId = null;
                 {
                     Logger.Warning("No spawn statistics files found!");
                     ToastService.ShowWarning("No spawn statistics files found! Play on your server to generate data, then run [PushRespawnStats].");
-                    showServerSpawns = false;
+                    ViewService.ToggleServerSpawns(); // Toggle back off
                     StateHasChanged();
                     return;
                 }
@@ -1000,11 +1097,11 @@ private int? spawnSearchId = null;
             {
                 Logger.Warning($"No spawn data for {ViewService.CurrentMapId}");
                 ToastService.ShowWarning($"No spawn data available for {MapUtility.GetMapName(ViewService.CurrentMapId)}. Try a different map or play on this map to generate data.");
-                showServerSpawns = false;
+                ViewService.ToggleServerSpawns(); // Toggle back off
                 StateHasChanged();
                 return;
             }
-            
+
             // Convert to JSON and send to JavaScript
             var options = new System.Text.Json.JsonSerializerOptions 
             { 
@@ -1012,7 +1109,7 @@ private int? spawnSearchId = null;
                 WriteIndented = false 
             };
             var json = System.Text.Json.JsonSerializer.Serialize(spawnData, options);
-            
+
             await JS.InvokeVoidAsync("eval", $"window.mapModule.showServerSpawns({json})");
             Logger.Info($"Displayed {spawnData.Count} spawn points on map");
         }
@@ -1021,7 +1118,7 @@ private int? spawnSearchId = null;
             Logger.Info("Hiding server spawn statistics");
             await JS.InvokeVoidAsync("eval", "window.mapModule.hideServerSpawns()");
         }
-        
+
         StateHasChanged();
     }
     
@@ -1247,7 +1344,154 @@ private int? spawnSearchId = null;
             _ => "bg-danger"
         };
     }
-    
+
+    private async Task TrySelectSpawnAtPosition(double screenX, double screenY)
+    {
+        try
+        {
+            // Convert screen coordinates to world coordinates using JS
+            var result = await JS.InvokeAsync<string>("eval", $"JSON.stringify(window.mapModule.screenToWorld({screenX}, {screenY}))");
+            if (string.IsNullOrEmpty(result)) return;
+
+            var coords = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, int>>(result);
+            if (coords == null) return;
+
+            int worldX = coords["x"];
+            int worldY = coords["y"];
+
+            // Check for XML spawner click first (if XML spawners are visible) - XML spawners always have highest click priority
+            if (ViewService.ShowXMLSpawners)
+            {
+                var xmlIdx = await JS.InvokeAsync<int>("eval", $"window.mapModule.findXmlSpawnerAt({worldX}, {worldY})");
+                if (xmlIdx >= 0)
+                {
+                    // Toggle XML spawner selection - pass screen coordinates for tooltip
+                    await JS.InvokeVoidAsync("eval", $"window.mapModule.handleXmlSpawnerClick({xmlIdx}, {screenX}, {screenY})");
+                    return; // Don't select spawn boxes when clicking XML spawners
+                }
+                else
+                {
+                    // Clicked outside XML spawner - clear selection
+                    await JS.InvokeVoidAsync("eval", "window.mapModule.clearXmlSpawnerSelection()");
+                }
+            }
+
+            // Find spawn box that contains this point
+            // Prioritize smaller/higher-priority boxes (more specific spawns)
+            var spawns = GetSpawnList();
+            BoxSpawnEntity? clickedSpawn = null;
+            double smallestArea = double.MaxValue;
+
+            foreach (var spawn in spawns)
+            {
+                var box = spawn.SpawnBox;
+
+                // Check if point is inside this box
+                if (worldX >= box.X && worldX <= box.X + box.Width &&
+                    worldY >= box.Y && worldY <= box.Y + box.Height)
+                {
+                    double area = box.Width * box.Height;
+
+                    // Prefer smaller boxes (more specific) or higher priority
+                    if (clickedSpawn == null || area < smallestArea || 
+                        (area == smallestArea && spawn.Priority > clickedSpawn.Priority))
+                    {
+                        clickedSpawn = spawn;
+                        smallestArea = area;
+                    }
+                }
+            }
+
+            if (clickedSpawn != null)
+            {
+                Logger.Info($"Clicked on Spawn #{clickedSpawn.Position} at world ({worldX}, {worldY})");
+
+                // Select the spawn
+                selected = clickedSpawn;
+                spawnSearchId = clickedSpawn.Position;
+
+                // Redraw to show selection
+                await Redraw();
+                StateHasChanged();
+
+                // Scroll to the selected spawn in the list
+                await Task.Delay(50);
+                await ScrollToSelectedSpawn();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Error selecting spawn at position", ex);
+        }
+    }
+
+    private async Task UpdateHoveredSpawn(double screenX, double screenY)
+    {
+        try
+        {
+            // Convert screen coordinates to world coordinates
+            var result = await JS.InvokeAsync<string>("eval", $"JSON.stringify(window.mapModule.screenToWorld({screenX}, {screenY}))");
+            if (string.IsNullOrEmpty(result)) return;
+
+            var coords = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, int>>(result);
+            if (coords == null) return;
+
+            int worldX = coords["x"];
+            int worldY = coords["y"];
+
+            // Check for XML spawner hover first (if XML spawners are visible)
+            if (ViewService.ShowXMLSpawners)
+            {
+                var xmlIdx = await JS.InvokeAsync<int>("eval", $"window.mapModule.findXmlSpawnerAt({worldX}, {worldY})");
+                await JS.InvokeVoidAsync("eval", $"window.mapModule.setHoveredXmlSpawner({xmlIdx})");
+            }
+
+            // Find spawn box that contains this point - prefer highest priority (smallest/most specific)
+            var spawns = GetSpawnList();
+            BoxSpawnEntity? newHoveredSpawn = null;
+            int highestPriority = -1;
+            double smallestArea = double.MaxValue;
+
+            foreach (var spawn in spawns)
+            {
+                var box = spawn.SpawnBox;
+
+                // Check if point is inside this box
+                if (worldX >= box.X && worldX <= box.X + box.Width &&
+                    worldY >= box.Y && worldY <= box.Y + box.Height)
+                {
+                    double area = box.Width * box.Height;
+
+                    // Prefer highest priority, then smallest area
+                    if (spawn.Priority > highestPriority || 
+                        (spawn.Priority == highestPriority && area < smallestArea))
+                    {
+                        newHoveredSpawn = spawn;
+                        highestPriority = spawn.Priority;
+                        smallestArea = area;
+                    }
+                }
+            }
+
+            // Only update if hover changed
+            if (newHoveredSpawn != hoveredSpawn)
+            {
+                hoveredSpawn = newHoveredSpawn;
+
+                // Update JavaScript with hovered spawn ID for highlighting
+                if (hoveredSpawn != null)
+                {
+                    await JS.InvokeVoidAsync("eval", $"window.mapModule.setHoveredSpawn({hoveredSpawn.Position})");
+                }
+                else
+                {
+                    await JS.InvokeVoidAsync("eval", "window.mapModule.setHoveredSpawn(null)");
+                }
+            }
+        }
+        catch { }
+    }
+
     private async Task SelectSpawn(BoxSpawnEntity spawn)
     {
         selected = spawn;
@@ -1555,6 +1799,8 @@ private int? spawnSearchId = null;
     public void Dispose()
     {
         ViewService.OnMapChanged -= HandleMapChanged;
+        ViewService.OnXMLSpawnersChanged -= HandleXMLSpawnersChanged;
+        ViewService.OnServerSpawnsChanged -= HandleServerSpawnsChanged;
 
         // Auto-save settings when leaving the page (binary file for server)
         try

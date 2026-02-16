@@ -64,6 +64,24 @@ namespace UORespawnApp.Scripts.Utilities
         }
 
         /// <summary>
+        /// Find which specific area (rectangle index) contains the point within a region
+        /// Returns -1 if not found
+        /// </summary>
+        public static int FindAreaIndexAt(RegionInfo region, int x, int y)
+        {
+            for (int i = 0; i < region.Rectangles.Count; i++)
+            {
+                var rect = region.Rectangles[i];
+                if (x >= rect.X && x < (rect.X + rect.Width) &&
+                    y >= rect.Y && y < (rect.Y + rect.Height))
+                {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
+        /// <summary>
         /// Clear region data to force reload from server-generated file
         /// </summary>
         public static void ClearRegionData()

@@ -17,6 +17,7 @@
                     <span class="bi bi-map me-1" style="color: goldenrod;"></span><strong style="color: goldenrod;">Region Spawn</strong> | @MapUtility.GetMapName(ViewService.CurrentMapId) | Size: @imageDim | Mouse: (@mouseWorldX, @mouseWorldY)
                 </div>
                 <div class="d-flex align-items-center gap-2">
+                    <span class="bi bi-info-circle" style="color: #6c757d; cursor: help;" title="Configure spawns for named server regions. Click a region on the map or list to edit its spawn configuration."></span>
                     <span class="badge bg-light text-dark" title="Total spawns across all regions">@GetTotalRegionSpawnCount() Spawns</span>
                     <button class="btn btn-sm @(zoomLevel == 2.0 ? "btn-primary" : "btn-outline-primary")" @onclick="ToggleZoom" title="Toggle Zoom (1x / 2x)">
                         <span class="bi bi-zoom-@(zoomLevel == 2.0 ? "in" : "out")"></span> @(zoomLevel == 1.0 ? "1x" : "2x")
@@ -67,11 +68,11 @@
                                 style="cursor:pointer; border:1px solid #333; display:block; image-rendering:pixelated; width: 100%; height: auto;"
                                 @onclick="OnMiniMapClick" />
                         <div class="d-flex gap-2 mt-2">
-                            <button class="btn btn-sm w-50 @(showXMLSpawners ? "btn-success" : "btn-danger")" 
+                            <button class="btn btn-sm w-50 @(ViewService.ShowXMLSpawners ? "btn-success" : "btn-danger")" 
                                     @onclick="ToggleXMLSpawners" title="Toggle XML Spawners">
                                 <span class="bi bi-gear-fill"></span> XML
                             </button>
-                            <button class="btn btn-sm w-50 @(showServerSpawns ? "btn-success" : "btn-danger")" 
+                            <button class="btn btn-sm w-50 @(ViewService.ShowServerSpawns ? "btn-success" : "btn-danger")" 
                                     @onclick="ToggleServerSpawns" title="Toggle Server Spawns">
                                 <span class="bi bi-bullseye"></span> Spawns
                             </button>
@@ -266,12 +267,6 @@
     // Mini map collapse
     private bool showMiniMap = true;
 
-    // XML Spawner toggle (static to persist across map changes - shared with BoxSpawn)
-    private static bool showXMLSpawners = false;
-
-    // Server Spawn toggle (static to persist across map changes - shared with BoxSpawn)
-    private static bool showServerSpawns = false;
-
     // Region selection
     private RegionInfo? selectedRegion = null;
 
@@ -300,8 +295,64 @@
         }
 
         ViewService.OnViewChanged += OnViewChanged;
+        ViewService.OnXMLSpawnersChanged += HandleXMLSpawnersChanged;
+        ViewService.OnServerSpawnsChanged += HandleServerSpawnsChanged;
     }
-    
+
+    private async void HandleXMLSpawnersChanged()
+    {
+        // Refresh the display when XML spawners toggle changes from another page
+        await InvokeAsync(async () =>
+        {
+            if (ViewService.ShowXMLSpawners)
+            {
+                var xmlSpawners = XMLSpawnUtility.GetSpawnersForMap(ViewService.CurrentMapId);
+                if (xmlSpawners.Count > 0)
+                {
+                    var options = new System.Text.Json.JsonSerializerOptions 
+                    { 
+                        PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+                        WriteIndented = false 
+                    };
+                    var json = System.Text.Json.JsonSerializer.Serialize(xmlSpawners, options);
+                    await JS.InvokeVoidAsync("eval", $"window.mapModule.showXMLSpawners({json})");
+                }
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("eval", "window.mapModule.hideXMLSpawners()");
+            }
+            StateHasChanged();
+        });
+    }
+
+    private async void HandleServerSpawnsChanged()
+    {
+        // Refresh the display when server spawns toggle changes from another page
+        await InvokeAsync(async () =>
+        {
+            if (ViewService.ShowServerSpawns && MapDisplayUtility.HasSpawnData)
+            {
+                var spawnData = MapDisplayUtility.GetSpawnDataForMap(ViewService.CurrentMapId);
+                if (spawnData.Count > 0)
+                {
+                    var options = new System.Text.Json.JsonSerializerOptions 
+                    { 
+                        PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+                        WriteIndented = false 
+                    };
+                    var json = System.Text.Json.JsonSerializer.Serialize(spawnData, options);
+                    await JS.InvokeVoidAsync("eval", $"window.mapModule.showServerSpawns({json})");
+                }
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("eval", "window.mapModule.hideServerSpawns()");
+            }
+            StateHasChanged();
+        });
+    }
+
     private void OnViewChanged()
     {
         // Save current position AND zoom for the OLD map (the one we're leaving)
@@ -396,7 +447,41 @@
                     await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
 
                     await RenderRegions();
-                    
+
+                    // Re-apply XML spawners if toggle is ON
+                    if (ViewService.ShowXMLSpawners)
+                    {
+                        var xmlSpawners = XMLSpawnUtility.GetSpawnersForMap(ViewService.CurrentMapId);
+                        if (xmlSpawners.Count > 0)
+                        {
+                            var options = new System.Text.Json.JsonSerializerOptions 
+                            { 
+                                PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+                                WriteIndented = false 
+                            };
+                            var json = System.Text.Json.JsonSerializer.Serialize(xmlSpawners, options);
+                            await JS.InvokeVoidAsync("eval", $"window.mapModule.showXMLSpawners({json})");
+                            Logger.Info($"Re-applied XML spawners for {ViewService.CurrentMapId}: {xmlSpawners.Count} spawners");
+                        }
+                    }
+
+                    // Re-apply server spawns if toggle is ON
+                    if (ViewService.ShowServerSpawns && MapDisplayUtility.HasSpawnData)
+                    {
+                        var spawnData = MapDisplayUtility.GetSpawnDataForMap(ViewService.CurrentMapId);
+                        if (spawnData.Count > 0)
+                        {
+                            var options = new System.Text.Json.JsonSerializerOptions 
+                            { 
+                                PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+                                WriteIndented = false 
+                            };
+                            var json = System.Text.Json.JsonSerializer.Serialize(spawnData, options);
+                            await JS.InvokeVoidAsync("eval", $"window.mapModule.showServerSpawns({json})");
+                            Logger.Info($"Re-applied server spawns for {ViewService.CurrentMapId}: {spawnData.Count} spawn points");
+                        }
+                    }
+
                     StateHasChanged();
                 }
             }
@@ -658,10 +743,29 @@
                 mouseWorldX = coords[0];
                 mouseWorldY = coords[1];
 
+                // Check for XML spawner click first (if XML spawners are visible) - XML spawners always have highest click priority
+                if (ViewService.ShowXMLSpawners)
+                {
+                    var xmlIdx = await JS.InvokeAsync<int>("eval", $"window.mapModule.findXmlSpawnerAt({mouseWorldX}, {mouseWorldY})");
+                    if (xmlIdx >= 0)
+                    {
+                        // Toggle XML spawner selection - pass screen coordinates for tooltip
+                        await JS.InvokeVoidAsync("eval", $"window.mapModule.handleXmlSpawnerClick({xmlIdx}, {e.OffsetX}, {e.OffsetY})");
+                        return; // Don't select regions when clicking XML spawners
+                    }
+                    else
+                    {
+                        // Clicked outside XML spawner - clear selection
+                        await JS.InvokeVoidAsync("eval", "window.mapModule.clearXmlSpawnerSelection()");
+                    }
+                }
+
                 var clickedRegion = RegionDataUtility.FindRegionAt(ViewService.CurrentMapId, mouseWorldX, mouseWorldY);
                 if (clickedRegion != null)
                 {
-                    await SelectRegion(clickedRegion);
+                    // Find which specific area was clicked
+                    var clickedAreaIndex = RegionDataUtility.FindAreaIndexAt(clickedRegion, mouseWorldX, mouseWorldY);
+                    await SelectRegion(clickedRegion, clickedAreaIndex);
                 }
             }
         }
@@ -680,12 +784,34 @@
             mouseWorldX = coords[0];
             mouseWorldY = coords[1];
             StateHasChanged();
+
+            // Check for XML spawner hover first (if XML spawners are visible)
+            if (ViewService.ShowXMLSpawners)
+            {
+                var xmlIdx = await JS.InvokeAsync<int>("eval", $"window.mapModule.findXmlSpawnerAt({mouseWorldX}, {mouseWorldY})");
+                await JS.InvokeVoidAsync("eval", $"window.mapModule.setHoveredXmlSpawner({xmlIdx})");
+
+                // Update XML tooltip position if one is selected
+                await JS.InvokeVoidAsync("eval", $"window.mapModule.updateXmlTooltipPosition({e.OffsetX}, {e.OffsetY})");
+            }
+
+            // Detect hovered region and area for visual feedback
+            var hoveredRegion = RegionDataUtility.FindRegionAt(ViewService.CurrentMapId, mouseWorldX, mouseWorldY);
+            if (hoveredRegion != null)
+            {
+                var areaIndex = RegionDataUtility.FindAreaIndexAt(hoveredRegion, mouseWorldX, mouseWorldY);
+                await JS.InvokeVoidAsync("eval", $"window.mapModule.setHoveredRegionArea('{hoveredRegion.Name.Replace("'", "\\'")}', {areaIndex})");
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("eval", "window.mapModule.setHoveredRegionArea(null, -1)");
+            }
         }
-        
+
         if (isPanning)
         {
             await JS.InvokeVoidAsync("eval", $"window.mapModule.updatePanning({e.OffsetX}, {e.OffsetY})");
-            
+
             // Get updated pan position
             var panCoords = await JS.InvokeAsync<double[]>("eval", "window.mapModule.getPan()");
             if (panCoords.Length == 2)
@@ -693,7 +819,7 @@
                 panX = panCoords[0];
                 panY = panCoords[1];
             }
-            
+
             await UpdateMiniMapViewport();
         }
     }
@@ -706,9 +832,17 @@
         }
     }
     
-    private void OnMouseLeave(MouseEventArgs e)
+    private async Task OnMouseLeave(MouseEventArgs e)
     {
         isPanning = false;
+        await JS.InvokeVoidAsync("eval", "window.mapModule.setHoveredRegionArea(null, -1)");
+
+        // Clear XML spawner hover and selection when mouse leaves
+        if (ViewService.ShowXMLSpawners)
+        {
+            await JS.InvokeVoidAsync("eval", "window.mapModule.setHoveredXmlSpawner(-1)");
+            await JS.InvokeVoidAsync("eval", "window.mapModule.clearXmlSpawnerSelection()");
+        }
     }
     
     private async Task OnMiniMapClick(MouseEventArgs e)
@@ -868,7 +1002,7 @@
         return list.FirstOrDefault(r => r.Name.Equals(regionName, StringComparison.OrdinalIgnoreCase));
     }
     
-    private async Task SelectRegion(RegionInfo region)
+    private async Task SelectRegion(RegionInfo region, int areaIndex = 0)
     {
         selectedRegion = region;
 
@@ -896,9 +1030,9 @@
             list.Add(currentEntity);
         }
 
-        // Render regions to highlight selection, then jump to location
+        // Render regions to highlight selection, then jump to clicked area
         await RenderRegions();
-        await JumpToRegion(region);
+        await JumpToRegion(region, areaIndex);
 
         // Trigger UI update to expand the region card
         StateHasChanged();
@@ -908,16 +1042,20 @@
         await ScrollToSelectedRegion();
     }
 
-    private async Task JumpToRegion(RegionInfo region)
+    private async Task JumpToRegion(RegionInfo region, int areaIndex = 0)
     {
         try
         {
-            // Calculate the center of the first rectangle (main region area)
+            // Calculate the center of the specified rectangle (or first if invalid index)
             if (region.Rectangles.Count == 0) return;
 
-            var firstRect = region.Rectangles[0];
-            double centerX = firstRect.X + (firstRect.Width / 2.0);
-            double centerY = firstRect.Y + (firstRect.Height / 2.0);
+            // Clamp area index to valid range
+            if (areaIndex < 0 || areaIndex >= region.Rectangles.Count)
+                areaIndex = 0;
+
+            var targetRect = region.Rectangles[areaIndex];
+            double centerX = targetRect.X + (targetRect.Width / 2.0);
+            double centerY = targetRect.Y + (targetRect.Height / 2.0);
 
             // Center the viewport on this position
             // Account for current zoom level and viewport size
@@ -933,7 +1071,7 @@
             await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
             await UpdateMiniMapViewport();
 
-            Logger.Info($"Jumped to region '{region.Name}' at ({centerX:F0}, {centerY:F0})");
+            Logger.Info($"Jumped to region '{region.Name}' area {areaIndex} at ({centerX:F0}, {centerY:F0})");
         }
         catch (Exception ex)
         {
@@ -1104,9 +1242,9 @@
 
     private async Task ToggleXMLSpawners()
     {
-        showXMLSpawners = !showXMLSpawners;
+        ViewService.ToggleXMLSpawners();
 
-        if (showXMLSpawners)
+        if (ViewService.ShowXMLSpawners)
         {
             Logger.Info($"Toggling ON XML spawners for {ViewService.CurrentMapId}");
             var xmlSpawners = XMLSpawnUtility.GetSpawnersForMap(ViewService.CurrentMapId);
@@ -1125,7 +1263,7 @@
             {
                 Logger.Info("No XML spawners found for this map");
                 ToastService.ShowWarning($"No XML spawners found for {MapUtility.GetMapName(ViewService.CurrentMapId)}. Import XML Spawner data first.");
-                showXMLSpawners = false;
+                ViewService.ToggleXMLSpawners(); // Toggle back off
             }
         }
         else
@@ -1139,9 +1277,9 @@
 
     private async Task ToggleServerSpawns()
     {
-        showServerSpawns = !showServerSpawns;
+        ViewService.ToggleServerSpawns();
 
-        if (showServerSpawns)
+        if (ViewService.ShowServerSpawns)
         {
             Logger.Info($"Toggling ON server spawn statistics for {ViewService.CurrentMapId}");
 
@@ -1150,7 +1288,7 @@
             {
                 Logger.Warning("Server Data folder not configured!");
                 ToastService.ShowWarning("Server Data folder not configured! Go to Settings to set your ServUO Data folder path.");
-                showServerSpawns = false;
+                ViewService.ToggleServerSpawns(); // Toggle back off
                 StateHasChanged();
                 return;
             }
@@ -1161,7 +1299,7 @@
             {
                 Logger.Warning($"UOR_STATS folder not found at: {statsFolderPath}");
                 ToastService.ShowWarning($"UOR_STATS folder not found! Ensure UOR_DATA/UOR_STATS/ exists in your server data folder.");
-                showServerSpawns = false;
+                ViewService.ToggleServerSpawns(); // Toggle back off
                 StateHasChanged();
                 return;
             }
@@ -1177,7 +1315,7 @@
                 {
                     Logger.Warning("No spawn statistics files found!");
                     ToastService.ShowWarning("No spawn statistics files found! Play on your server to generate data, then run [PushRespawnStats].");
-                    showServerSpawns = false;
+                    ViewService.ToggleServerSpawns(); // Toggle back off
                     StateHasChanged();
                     return;
                 }
@@ -1192,7 +1330,7 @@
             {
                 Logger.Warning($"No spawn data available for {ViewService.CurrentMapId}");
                 ToastService.ShowWarning($"No spawn data available for {MapUtility.GetMapName(ViewService.CurrentMapId)}. Try a different map or play on this map to generate data.");
-                showServerSpawns = false;
+                ViewService.ToggleServerSpawns(); // Toggle back off
                 StateHasChanged();
                 return;
             }
@@ -1220,6 +1358,8 @@
     public void Dispose()
     {
         ViewService.OnViewChanged -= OnViewChanged;
+        ViewService.OnXMLSpawnersChanged -= HandleXMLSpawnersChanged;
+        ViewService.OnServerSpawnsChanged -= HandleServerSpawnsChanged;
 
         // Auto-save settings when leaving the page (binary file for server)
         try
