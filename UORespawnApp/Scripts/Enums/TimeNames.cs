@@ -1,4 +1,4 @@
-namespace UORespawnApp.Scripts.DTO.Enums
+namespace UORespawnApp
 {
     /// <summary>
     /// Time-based spawn trigger types

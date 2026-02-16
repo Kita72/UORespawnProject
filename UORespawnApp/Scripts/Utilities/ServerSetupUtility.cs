@@ -1,5 +1,3 @@
-using UORespawnApp.Scripts.Constants;
-
 namespace UORespawnApp.Scripts.Utilities
 {
     /// <summary>
@@ -95,6 +93,11 @@ namespace UORespawnApp.Scripts.Utilities
         }
 
         /// <summary>
+        /// Server-side scripts folder name in app base directory
+        /// </summary>
+        private const string SERVER_SCRIPTS_FOLDER = "UORespawnSystem";
+
+        /// <summary>
         /// Setup server-side scripts in ServUO/Scripts/Custom folder
         /// Creates Custom folder if needed and copies UORespawn server scripts
         /// </summary>
@@ -118,19 +121,32 @@ namespace UORespawnApp.Scripts.Utilities
                 }
 
                 // Check/create UORespawn subfolder in Custom
-                var uorRespawnFolderPath = Path.Combine(customFolderPath, "UORespawn");
-                if (!Directory.Exists(uorRespawnFolderPath))
+                var destinationPath = Path.Combine(customFolderPath, "UORespawn");
+                if (!Directory.Exists(destinationPath))
                 {
-                    Directory.CreateDirectory(uorRespawnFolderPath);
-                    Logger.Info($"Created UORespawn folder: {uorRespawnFolderPath}");
+                    Directory.CreateDirectory(destinationPath);
+                    Logger.Info($"Created UORespawn folder: {destinationPath}");
                 }
 
-                // TODO: Copy server-side scripts from Resources to UORespawn folder
-                // For now, just create the folder structure
-                // Future: Copy .cs files from Resources/Raw/ServerScripts to this location
+                // Get the source UORespawnSystem folder from the app's base directory
+                var sourcePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, SERVER_SCRIPTS_FOLDER);
 
-                Logger.Info($"Server scripts setup complete at: {uorRespawnFolderPath}");
-                return (true, $"Server scripts folder ready at: Scripts/Custom/UORespawn");
+                if (!Directory.Exists(sourcePath))
+                {
+                    Logger.Error($"Source server scripts folder not found: {sourcePath}");
+                    return (false, "Server scripts source folder not found. Please ensure UORespawnSystem folder exists in the app directory.");
+                }
+
+                // Copy all files and subdirectories from UORespawnSystem to Scripts/Custom/UORespawn
+                int filesCopied = CopyDirectoryRecursive(sourcePath, destinationPath);
+
+                if (filesCopied == 0)
+                {
+                    return (false, "No server script files found to copy");
+                }
+
+                Logger.Info($"Server scripts setup complete: {filesCopied} files copied to {destinationPath}");
+                return (true, $"Successfully installed {filesCopied} server script files to Scripts/Custom/UORespawn");
             }
             catch (Exception ex)
             {
@@ -140,39 +156,48 @@ namespace UORespawnApp.Scripts.Utilities
         }
 
         /// <summary>
-        /// Get user-friendly status message for current server integration state
+        /// Recursively copy all files and subdirectories from source to destination
         /// </summary>
-        /// <param name="dataFolderPath">Current Data folder path from Settings</param>
-        /// <returns>Status message with setup instructions</returns>
-        public static string GetServerIntegrationStatus(string? dataFolderPath)
+        /// <param name="sourceDir">Source directory path</param>
+        /// <param name="destDir">Destination directory path</param>
+        /// <returns>Number of files copied</returns>
+        private static int CopyDirectoryRecursive(string sourceDir, string destDir)
         {
-            if (string.IsNullOrEmpty(dataFolderPath))
+            int filesCopied = 0;
+
+            // Create destination directory if it doesn't exist
+            if (!Directory.Exists(destDir))
             {
-                return "Not configured";
+                Directory.CreateDirectory(destDir);
             }
 
-            // Check if the Data folder still exists and is accessible
-            try
+            // Copy all files
+            foreach (var file in Directory.GetFiles(sourceDir))
             {
-                if (Directory.Exists(dataFolderPath))
+                var fileName = Path.GetFileName(file);
+                var destFile = Path.Combine(destDir, fileName);
+
+                try
                 {
-                    // Get parent folder (should be ServUO main folder)
-                    var servUOFolder = Directory.GetParent(dataFolderPath)?.FullName;
-                    if (!string.IsNullOrEmpty(servUOFolder))
-                    {
-                        return $"Connected: {servUOFolder}";
-                    }
-                    return $"Connected: {dataFolderPath}";
+                    File.Copy(file, destFile, overwrite: true);
+                    filesCopied++;
+                    Logger.Info($"Copied: {fileName}");
                 }
-                else
+                catch (Exception ex)
                 {
-                    return "Configured but folder not found - please update";
+                    Logger.Error($"Failed to copy {fileName}: {ex.Message}");
                 }
             }
-            catch
+
+            // Recursively copy subdirectories
+            foreach (var subDir in Directory.GetDirectories(sourceDir))
             {
-                return "Error checking status - please reconfigure";
+                var dirName = Path.GetFileName(subDir);
+                var destSubDir = Path.Combine(destDir, dirName);
+                filesCopied += CopyDirectoryRecursive(subDir, destSubDir);
             }
+
+            return filesCopied;
         }
 
         /// <summary>

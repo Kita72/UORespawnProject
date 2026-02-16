@@ -31,6 +31,7 @@ namespace UORespawnApp
             builder.Services.AddSingleton<ToastService>();
             builder.Services.AddSingleton<BackgroundDataLoader>();
             builder.Services.AddSingleton<UpdateChecker>();
+            builder.Services.AddSingleton<SpawnPackService>();
 
             try
             {

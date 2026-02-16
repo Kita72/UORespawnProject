@@ -1,4 +1,4 @@
-namespace UORespawnApp.Scripts.DTO.Enums
+namespace UORespawnApp
 {
     /// <summary>
     /// Tile type names for tile-based spawning

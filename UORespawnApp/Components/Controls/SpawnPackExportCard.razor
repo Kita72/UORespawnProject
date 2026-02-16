@@ -1,0 +1,128 @@
+@using System.IO.Compression
+@using UORespawnApp.Scripts.Constants
+@using UORespawnApp.Scripts.Utilities
+
+<div class="card bg-dark text-light spawn-pack-export-card">
+    <div class="card-body">
+        <h6 class="mb-2">Download Pack Files</h6>
+        <p class="small text-muted mb-3">
+            Export your current spawn data and settings as a zip for sharing or backups.
+        </p>
+        <button class="btn btn-primary w-100" @onclick="ExportSpawnData" disabled="@isExporting">
+            @if (isExporting)
+            {
+                <span class="spinner-border spinner-border-sm me-2"></span>
+                <text>Exporting...</text>
+            }
+            else
+            {
+                <span class="bi bi-database-down me-2"></span>
+                <text>Export Spawn Data (.zip)</text>
+            }
+        </button>
+        @if (!string.IsNullOrEmpty(exportMessage))
+        {
+            <div class="alert @(exportSuccess ? "alert-success" : "alert-danger") small mt-3 mb-0">
+                @exportMessage
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private bool isExporting;
+    private string? exportMessage;
+    private bool exportSuccess;
+
+    public Task TriggerExportAsync()
+    {
+        return ExportSpawnData();
+    }
+
+    private async Task ExportSpawnData()
+    {
+        isExporting = true;
+        exportMessage = string.Empty;
+        StateHasChanged();
+
+        try
+        {
+            var dataPath = PathConstants.LocalDataPath;
+            if (!Directory.Exists(dataPath))
+            {
+                exportMessage = "Error: Data folder not found. No spawn data to export.";
+                exportSuccess = false;
+                return;
+            }
+
+            var binFiles = Directory.GetFiles(dataPath, "UOR_*.bin");
+            if (binFiles.Length == 0)
+            {
+                exportMessage = "Error: No spawn data files found. Create some spawns first.";
+                exportSuccess = false;
+                return;
+            }
+
+            var tempPath = Path.Combine(Path.GetTempPath(), "UORespawn_SpawnPack.zip");
+            if (File.Exists(tempPath))
+            {
+                File.Delete(tempPath);
+            }
+
+            using (var zipArchive = System.IO.Compression.ZipFile.Open(tempPath, System.IO.Compression.ZipArchiveMode.Create))
+            {
+                foreach (var file in binFiles)
+                {
+                    var fileName = Path.GetFileName(file);
+                    zipArchive.CreateEntryFromFile(file, fileName);
+                }
+            }
+
+#if WINDOWS
+            var downloadsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", "UORespawn_SpawnPack.zip");
+            File.Copy(tempPath, downloadsPath, true);
+
+            exportMessage = $"Spawn pack exported to Downloads folder:\n{downloadsPath}";
+            exportSuccess = true;
+
+            try
+            {
+                System.Diagnostics.Process.Start("explorer.exe", Path.GetDirectoryName(downloadsPath) ?? "");
+            }
+            catch { }
+#elif MACCATALYST
+            var downloadsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", "UORespawn_SpawnPack.zip");
+            File.Copy(tempPath, downloadsPath, true);
+
+            exportMessage = $"Spawn pack exported to Downloads folder:\n{downloadsPath}";
+            exportSuccess = true;
+
+            try
+            {
+                System.Diagnostics.Process.Start("open", Path.GetDirectoryName(downloadsPath) ?? "");
+            }
+            catch { }
+#else
+            await Share.Default.RequestAsync(new ShareFileRequest
+            {
+                Title = "UORespawn Spawn Pack",
+                File = new ShareFile(tempPath)
+            });
+
+            exportMessage = "Spawn pack ready to share!";
+            exportSuccess = true;
+#endif
+        }
+        catch (Exception ex)
+        {
+            exportMessage = $"Error exporting spawn data: {ex.Message}";
+            exportSuccess = false;
+            Logger.Error("Spawn pack export error", ex);
+        }
+        finally
+        {
+            isExporting = false;
+            StateHasChanged();
+        }
+    }
+}

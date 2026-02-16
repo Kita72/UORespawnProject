@@ -1,6 +1,3 @@
-using UORespawnApp.Scripts.DTO.Enums;
-using UORespawnApp.Scripts.DTO.Models;
-
 namespace UORespawnApp.Scripts.Entities
 {
     /// <summary>
@@ -41,32 +38,32 @@ namespace UORespawnApp.Scripts.Entities
         /// <summary>
         /// Water-based spawns (for water tiles)
         /// </summary>
-        public List<string> WaterSpawns { get; set; } = new();
+        public List<string> WaterSpawns { get; set; } = [];
 
         /// <summary>
         /// Weather-triggered spawns
         /// </summary>
-        public List<string> WeatherSpawns { get; set; } = new();
+        public List<string> WeatherSpawns { get; set; } = [];
 
         /// <summary>
         /// Time-triggered spawns
         /// </summary>
-        public List<string> TimedSpawns { get; set; } = new();
+        public List<string> TimedSpawns { get; set; } = [];
 
         /// <summary>
         /// Common spawns (primary list)
         /// </summary>
-        public List<string> CommonSpawns { get; set; } = new();
+        public List<string> CommonSpawns { get; set; } = [];
 
         /// <summary>
         /// Uncommon spawns (secondary list)
         /// </summary>
-        public List<string> UncommonSpawns { get; set; } = new();
+        public List<string> UncommonSpawns { get; set; } = [];
 
         /// <summary>
         /// Rare spawns (tertiary list)
         /// </summary>
-        public List<string> RareSpawns { get; set; } = new();
+        public List<string> RareSpawns { get; set; } = [];
 
         /// <summary>
         /// Check if this tile spawn has any data configured
@@ -92,47 +89,6 @@ namespace UORespawnApp.Scripts.Entities
                    CommonSpawns.Count +
                    UncommonSpawns.Count +
                    RareSpawns.Count;
-        }
-
-        /// <summary>
-        /// Convert to TileModel DTO for binary serialization
-        /// </summary>
-        public TileModel ToTileModel()
-        {
-            return new TileModel
-            {
-                Name = Name,
-                MapId = MapId,
-                WeatherSpawn = WeatherSpawn,
-                TimedSpawn = TimedSpawn,
-                WaterSpawns = new List<string>(WaterSpawns),
-                WeatherSpawns = new List<string>(WeatherSpawns),
-                TimedSpawns = new List<string>(TimedSpawns),
-                CommonSpawns = new List<string>(CommonSpawns),
-                UncommonSpawns = new List<string>(UncommonSpawns),
-                RareSpawns = new List<string>(RareSpawns)
-            };
-        }
-
-        /// <summary>
-        /// Create TileSpawnEntity from TileModel DTO
-        /// </summary>
-        public static TileSpawnEntity FromTileModel(TileModel model, int id)
-        {
-            return new TileSpawnEntity
-            {
-                Id = id,
-                Name = model.Name ?? string.Empty,
-                MapId = model.MapId,
-                WeatherSpawn = model.WeatherSpawn,
-                TimedSpawn = model.TimedSpawn,
-                WaterSpawns = model.WaterSpawns != null ? new List<string>(model.WaterSpawns) : new(),
-                WeatherSpawns = model.WeatherSpawns != null ? new List<string>(model.WeatherSpawns) : new(),
-                TimedSpawns = model.TimedSpawns != null ? new List<string>(model.TimedSpawns) : new(),
-                CommonSpawns = model.CommonSpawns != null ? new List<string>(model.CommonSpawns) : new(),
-                UncommonSpawns = model.UncommonSpawns != null ? new List<string>(model.UncommonSpawns) : new(),
-                RareSpawns = model.RareSpawns != null ? new List<string>(model.RareSpawns) : new()
-            };
         }
     }
 }

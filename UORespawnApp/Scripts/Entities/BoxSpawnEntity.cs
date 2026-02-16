@@ -1,6 +1,3 @@
-using UORespawnApp.Scripts.DTO.Enums;
-using UORespawnApp.Scripts.DTO.Models;
-
 namespace UORespawnApp.Scripts.Entities
 {
     /// <summary>
@@ -112,53 +109,6 @@ namespace UORespawnApp.Scripts.Entities
                    CommonSpawns.Count +
                    UncommonSpawns.Count +
                    RareSpawns.Count;
-        }
-
-        /// <summary>
-        /// Convert to BoxModel DTO for binary serialization
-        /// </summary>
-        public BoxModel ToBoxModel()
-        {
-            return new BoxModel
-            {
-                Id = Position,
-                SpawnPriority = Priority,
-                MapId = MapId,
-                X = (int)SpawnBox.X,
-                Y = (int)SpawnBox.Y,
-                Width = (int)SpawnBox.Width,
-                Height = (int)SpawnBox.Height,
-                WeatherSpawn = WeatherSpawn,
-                TimedSpawn = TimedSpawn,
-                WaterSpawns = [.. WaterSpawns],
-                WeatherSpawns = [.. WeatherSpawns],
-                TimedSpawns = [.. TimedSpawns],
-                CommonSpawns = [.. CommonSpawns],
-                UncommonSpawns = [.. UncommonSpawns],
-                RareSpawns = [.. RareSpawns]
-            };
-        }
-
-        /// <summary>
-        /// Create BoxSpawnEntity from BoxModel DTO
-        /// </summary>
-        public static BoxSpawnEntity FromBoxModel(BoxModel model, int mapId)
-        {
-            return new BoxSpawnEntity
-            {
-                Position = model.Id,
-                Priority = model.SpawnPriority,
-                MapId = mapId,
-                SpawnBox = new Rect(model.X, model.Y, model.Width, model.Height),
-                WeatherSpawn = model.WeatherSpawn,
-                TimedSpawn = model.TimedSpawn,
-                WaterSpawns = model.WaterSpawns != null ? [.. model.WaterSpawns] : new(),
-                WeatherSpawns = model.WeatherSpawns != null ? [.. model.WeatherSpawns] : new(),
-                TimedSpawns = model.TimedSpawns != null ? [.. model.TimedSpawns] : new(),
-                CommonSpawns = model.CommonSpawns != null ? [.. model.CommonSpawns] : new(),
-                UncommonSpawns = model.UncommonSpawns != null ? [.. model.UncommonSpawns] : new(),
-                RareSpawns = model.RareSpawns != null ? [.. model.RareSpawns] : new()
-            };
         }
     }
 }

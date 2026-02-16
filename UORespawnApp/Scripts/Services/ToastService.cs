@@ -6,8 +6,8 @@ namespace UORespawnApp.Scripts.Services;
 /// </summary>
 public class ToastService
 {
-    private readonly List<ToastMessage> _messages = new();
-    
+    private readonly List<ToastMessage> _messages = [];
+
     /// <summary>
     /// Event triggered when a new toast message is added
     /// </summary>

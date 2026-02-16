@@ -1,0 +1,134 @@
+@using UORespawnApp.Scripts.Entities
+
+<div class="card spawn-pack-card shadow-sm @(IsMockPack ? "mock-pack" : "")" @onclick="HandleSelect">
+    <div class="spawn-pack-header">
+        @Pack.Metadata.Name
+        @if (IsMockPack)
+        {
+            <span class="badge bg-secondary ms-1" style="font-size: 0.6rem; vertical-align: middle;">PREVIEW</span>
+        }
+    </div>
+    <div class="spawn-pack-image">
+        <img src="@GetImageSource()" alt="@Pack.Metadata.Name" />
+    </div>
+    <div class="card-body spawn-pack-details">
+        <div class="spawn-pack-author">@Pack.Metadata.Author</div>
+        <div class="spawn-pack-description">@Pack.Metadata.Description</div>
+        <div class="spawn-pack-actions">
+            <button class="btn btn-sm btn-link" type="button" title="Like" @onclick:stopPropagation="true" @onclick="ToggleLike">
+                <span class="bi @(Pack.IsLiked ? "bi-heart-fill" : "bi-heart")"></span>
+            </button>
+            <button class="btn btn-sm btn-link" type="button" title="Favorite" @onclick:stopPropagation="true" @onclick="ToggleFavorite">
+                <span class="bi @(Pack.IsFavorite ? "bi-star-fill" : "bi-star")"></span>
+            </button>
+            <button class="btn btn-sm btn-link @(IsMockPack ? "disabled" : "")" 
+                    type="button" 
+                    title="@(IsMockPack ? "Preview pack - cannot apply" : "Apply")" 
+                    disabled="@IsMockPack"
+                    @onclick:stopPropagation="true" 
+                    @onclick="ApplyPack">
+                <span class="bi bi-check2-circle"></span>
+            </button>
+            @if (ShowDelete && !Pack.Metadata.IsApproved && !IsMockPack)
+            {
+                <button class="btn btn-sm btn-link delete-btn" 
+                        type="button" 
+                        title="Delete pack" 
+                        @onclick:stopPropagation="true" 
+                        @onclick="DeletePack">
+                    <span class="bi bi-trash"></span>
+                </button>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public SpawnPackInfo Pack { get; set; } = new();
+
+    [Parameter]
+    public EventCallback<SpawnPackInfo> OnSelect { get; set; }
+
+    [Parameter]
+    public EventCallback<SpawnPackInfo> OnLike { get; set; }
+
+    [Parameter]
+    public EventCallback<SpawnPackInfo> OnFavorite { get; set; }
+
+    [Parameter]
+    public EventCallback<SpawnPackInfo> OnApply { get; set; }
+
+    [Parameter]
+    public EventCallback<SpawnPackInfo> OnDelete { get; set; }
+
+    [Parameter]
+    public bool ShowDelete { get; set; } = false;
+
+    // Mock packs have no folder path - they're just placeholders for the dashboard
+    private bool IsMockPack => string.IsNullOrWhiteSpace(Pack.PackFolderPath);
+
+    private async Task HandleSelect()
+    {
+        if (OnSelect.HasDelegate)
+        {
+            await OnSelect.InvokeAsync(Pack);
+        }
+    }
+
+    private async Task ToggleLike()
+    {
+        Pack.IsLiked = !Pack.IsLiked;
+        if (OnLike.HasDelegate)
+        {
+            await OnLike.InvokeAsync(Pack);
+        }
+    }
+
+    private async Task ToggleFavorite()
+    {
+        Pack.IsFavorite = !Pack.IsFavorite;
+        if (OnFavorite.HasDelegate)
+        {
+            await OnFavorite.InvokeAsync(Pack);
+        }
+    }
+
+    private async Task ApplyPack()
+    {
+        // Don't allow applying mock/preview packs
+        if (IsMockPack)
+        {
+            return;
+        }
+
+        if (OnApply.HasDelegate)
+        {
+            await OnApply.InvokeAsync(Pack);
+        }
+    }
+
+    private async Task DeletePack()
+    {
+        // Safety: never delete approved or mock packs
+        if (Pack.Metadata.IsApproved || IsMockPack)
+        {
+            return;
+        }
+
+        if (OnDelete.HasDelegate)
+        {
+            await OnDelete.InvokeAsync(Pack);
+        }
+    }
+
+    private string GetImageSource()
+    {
+        if (!string.IsNullOrWhiteSpace(Pack.Metadata.ImageFileName))
+        {
+            return Pack.Metadata.ImageFileName;
+        }
+
+        return "logo.png";
+    }
+}

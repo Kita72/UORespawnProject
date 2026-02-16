@@ -1,0 +1,758 @@
+@using Microsoft.Maui.ApplicationModel.Communication
+@using Microsoft.Maui.ApplicationModel
+@using System.IO.Compression
+@using System.Text.Json
+@using Microsoft.Maui.Devices
+@using Microsoft.Maui.Storage
+@using UORespawnApp.Scripts.Constants
+@using UORespawnApp.Scripts.Entities
+@using UORespawnApp.Scripts.Services
+@using UORespawnApp.Scripts.Utilities
+@inject SpawnPackService SpawnPackService
+@inject ToastService ToastService
+
+<div class="container-fluid p-2 spawn-packs-page">
+    <div class="alert alert-dark mb-2 text-center shadow-sm">
+        <h5 class="mb-0"><span class="bi bi-boxes me-2" style="color: goldenrod; font-size: 1.25rem;"></span><span style="color: goldenrod;">Spawn Packs</span></h5>
+    </div>
+
+    <div class="row g-2">
+        <div class="col-xl-7">
+            <div class="card map-card mb-2">
+                <div class="card-header">
+                    <div class="pack-toggle-container">
+                        <button class="pack-toggle-btn @(showApproved ? "active" : "")" @onclick="() => SetPackView(true)">
+                            <span class="bi bi-patch-check me-1"></span>Approved
+                        </button>
+                        <button class="pack-toggle-btn @(!showApproved ? "active" : "")" @onclick="() => SetPackView(false)">
+                            <span class="bi bi-cloud-download me-1"></span>Imported
+                            @if (ImportedPacks.Count > 0)
+                            {
+                                <span class="badge bg-secondary ms-1">@ImportedPacks.Count</span>
+                            }
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    @if (showApproved)
+                    {
+                        <div class="spawn-pack-grid">
+                            @foreach (var pack in ApprovedPacks)
+                            {
+                                <SpawnPackCard Pack="pack" OnSelect="SelectPack" OnApply="ApplyPack" />
+                            }
+                        </div>
+                        @if (ApprovedPacks.Count == 0)
+                        {
+                            <p class="text-muted text-center mb-0">No approved packs available yet.</p>
+                        }
+                    }
+                    else
+                    {
+                        <div class="spawn-pack-grid">
+                            @foreach (var pack in ImportedPacks)
+                            {
+                                <SpawnPackCard Pack="pack" OnSelect="SelectPack" OnApply="ApplyPack" OnDelete="DeletePack" ShowDelete="true" />
+                            }
+                        </div>
+                        @if (ImportedPacks.Count == 0)
+                        {
+                            <p class="text-muted text-center mb-0">No imported packs. Use the Import button to add spawn packs.</p>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-5">
+            <div class="card map-card mb-2">
+                <div class="card-header text-center">
+                    <span class="text-primary" style="font-size: 1.25rem;">Pack Dashboard</span>
+                </div>
+                <div class="card-body">
+                    @if (SelectedPack != null)
+                    {
+                        <h6 class="mb-3">@SelectedPack.Metadata.Name</h6>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <div class="stat-tile">
+                                    <span class="stat-label">Box Spawns</span>
+                                    <span class="stat-value">@SelectedPack.Stats.BoxSpawnCount</span>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="stat-tile">
+                                    <span class="stat-label">Tile Spawns</span>
+                                    <span class="stat-value">@SelectedPack.Stats.TileSpawnCount</span>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="stat-tile">
+                                    <span class="stat-label">Region Spawns</span>
+                                    <span class="stat-value">@SelectedPack.Stats.RegionSpawnCount</span>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="stat-tile">
+                                    <span class="stat-label">Maps</span>
+                                    <span class="stat-value">@SelectedPack.Stats.MapCount</span>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="stat-tile">
+                                    <span class="stat-label">Entries</span>
+                                    <span class="stat-value">@SelectedPack.Stats.TotalSpawnEntries</span>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="stat-tile">
+                                    <span class="stat-label">Unique Mobs</span>
+                                    <span class="stat-value">@SelectedPack.Stats.UniqueCreatureCount</span>
+                                </div>
+                            </div>
+                        </div>
+                        <hr />
+                        <div class="spawn-type-list">
+                            <div class="spawn-type-column">
+                                <div class="d-flex justify-content-between">
+                                    <span>Water</span>
+                                    <span>@GetSpawnTypeCount("Water")</span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span>Weather</span>
+                                    <span>@GetSpawnTypeCount("Weather")</span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span>Timed</span>
+                                    <span>@GetSpawnTypeCount("Timed")</span>
+                                </div>
+                            </div>
+                            <div class="spawn-type-column">
+                                <div class="d-flex justify-content-between">
+                                    <span>Common</span>
+                                    <span>@GetSpawnTypeCount("Common")</span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span>Uncommon</span>
+                                    <span>@GetSpawnTypeCount("Uncommon")</span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span>Rare</span>
+                                    <span>@GetSpawnTypeCount("Rare")</span>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted mb-0">Select a spawn pack to view details.</p>
+                    }
+                </div>
+                <div class="card-footer spawn-pack-dashboard-footer">
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-info" @onclick="OpenSubmitModal">
+                            <span class="bi bi-envelope me-2"></span>Submit Spawn Pack
+                        </button>
+                        <button class="btn btn-outline-light" @onclick="OpenImportModal">
+                            <span class="bi bi-cloud-upload me-2"></span>Import Spawn Pack
+                        </button>
+                        <button class="btn btn-outline-warning" @onclick="ExportCurrentPack">
+                            <span class="bi bi-database-down me-2"></span>Export Spawn Pack
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="d-none">
+    <SpawnPackExportCard @ref="exportCard" />
+</div>
+
+<div class="modal fade @(isSubmitModalVisible ? "show d-block" : "") spawn-pack-modal" tabindex="-1" style="@(isSubmitModalVisible ? "background-color: rgba(0,0,0,0.6);" : "")">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Submit Spawn Pack</h5>
+                <button type="button" class="btn-close" @onclick="CloseSubmitModal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="submission-card">
+                    <p class="text-muted small">
+                        Submit your spawn pack for approval. Fill in the details below, select a preview image,
+                        then click <strong>Compose Email</strong>. A zip file containing your spawn data and preview image
+                        will be created automatically - just drag and drop it into the email!
+                    </p>
+                    <div class="mb-2">
+                        <label class="form-label small">Pack Name</label>
+                        <input class="form-control form-control-sm" @bind="submissionName" placeholder="Your pack name" />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">Description</label>
+                        <textarea class="form-control form-control-sm" rows="3" @bind="submissionDescription" placeholder="Short summary of your spawn pack"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small">Preview Image <span class="text-muted">(included in zip)</span></label>
+                        <button class="btn btn-outline-light btn-sm w-100" @onclick="PickSubmissionImage">
+                            <span class="bi bi-image me-2"></span>Choose Image
+                        </button>
+                        @if (!string.IsNullOrWhiteSpace(submissionImageName))
+                        {
+                            <small class="text-success d-block mt-1"><span class="bi bi-check-circle me-1"></span>@submissionImageName</small>
+                        }
+                    </div>
+                    <button class="btn btn-outline-warning w-100" @onclick="ComposePackEmail" disabled="@isSubmitting">
+                        <span class="bi bi-envelope me-2"></span>Compose Email
+                    </button>
+                    @if (!string.IsNullOrEmpty(submissionMessage))
+                    {
+                        <div class="alert @(submissionSuccess ? "alert-success" : "alert-danger") small mt-3 mb-0">
+                            @submissionMessage
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade @(isImportModalVisible ? "show d-block" : "") spawn-pack-modal" tabindex="-1" style="@(isImportModalVisible ? "background-color: rgba(0,0,0,0.6);" : "")">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Import Spawn Pack</h5>
+                <button type="button" class="btn-close" @onclick="CloseImportModal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="submission-card">
+                    <p class="text-muted small">
+                        Select a spawn pack zip containing UOR spawn data files. The pack will be extracted to 
+                        <strong>Data/PACKS</strong> and appear in your Imported packs list.
+                    </p>
+                    <div class="mb-2">
+                        <label class="form-label small">Spawn Pack Zip <span class="text-warning">*</span></label>
+                        <button class="btn btn-outline-light btn-sm w-100" @onclick="PickImportZip">
+                            <span class="bi bi-file-earmark-zip me-2"></span>Choose Zip
+                        </button>
+                        @if (!string.IsNullOrWhiteSpace(importZipName))
+                        {
+                            <small class="text-muted d-block mt-1">@importZipName</small>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(importValidationInfo))
+                        {
+                            <small class="text-success d-block mt-1">@importValidationInfo</small>
+                        }
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">Pack Name</label>
+                        <input class="form-control form-control-sm" @bind="importName" placeholder="Pack name (optional - uses zip name if empty)" />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">Description</label>
+                        <textarea class="form-control form-control-sm" rows="2" @bind="importDescription" placeholder="Short summary (optional)"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small">Preview Image <span class="text-muted">(optional)</span></label>
+                        <button class="btn btn-outline-light btn-sm w-100" @onclick="PickImportImage">
+                            <span class="bi bi-image me-2"></span>Choose Image
+                        </button>
+                        @if (!string.IsNullOrWhiteSpace(importImageName))
+                        {
+                            <small class="text-success d-block mt-1"><span class="bi bi-check-circle me-1"></span>@importImageName</small>
+                        }
+                    </div>
+                    <button class="btn btn-outline-warning w-100" @onclick="ImportPack" disabled="@(isImporting || string.IsNullOrWhiteSpace(importZipPath))">
+                        <span class="bi bi-box-arrow-in-down me-2"></span>Import Pack
+                    </button>
+                    @if (!string.IsNullOrEmpty(importMessage))
+                    {
+                        <div class="alert @(importSuccess ? "alert-success" : "alert-danger") small mt-3 mb-0">
+                            @importMessage
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<SpawnPackInfo> ApprovedPacks { get; set; } = new();
+    private List<SpawnPackInfo> ImportedPacks { get; set; } = new();
+    private SpawnPackInfo? SelectedPack { get; set; }
+    private SpawnPackExportCard? exportCard;
+    private bool isSubmitModalVisible;
+    private bool isImportModalVisible;
+    private bool showApproved = true;
+
+    private string submissionName = string.Empty;
+    private string submissionDescription = string.Empty;
+    private string? submissionImagePath;
+    private string? submissionImageName;
+    private string? submissionMessage;
+    private bool submissionSuccess;
+    private bool isSubmitting;
+
+    private string importName = string.Empty;
+    private string importDescription = string.Empty;
+    private string? importZipPath;
+    private string? importZipName;
+    private string? importImagePath;
+    private string? importImageName;
+    private string? importMessage;
+    private bool importSuccess;
+    private bool isImporting;
+    private string? importValidationInfo;
+
+    protected override void OnInitialized()
+    {
+        RefreshPacks();
+    }
+
+    private void RefreshPacks()
+    {
+        ApprovedPacks = SpawnPackService.LoadApprovedPacks();
+        ImportedPacks = SpawnPackService.LoadImportedPacks();
+
+        // Keep selected pack if it still exists, otherwise select first available
+        if (SelectedPack != null)
+        {
+            var allPacks = ApprovedPacks.Concat(ImportedPacks).ToList();
+            SelectedPack = allPacks.FirstOrDefault(p => p.Metadata.Id == SelectedPack.Metadata.Id) 
+                           ?? allPacks.FirstOrDefault();
+        }
+        else
+        {
+            SelectedPack = showApproved ? ApprovedPacks.FirstOrDefault() : ImportedPacks.FirstOrDefault();
+        }
+    }
+
+    private void SetPackView(bool approved)
+    {
+        showApproved = approved;
+        SelectedPack = showApproved 
+            ? ApprovedPacks.FirstOrDefault() 
+            : ImportedPacks.FirstOrDefault();
+    }
+
+    private Task SelectPack(SpawnPackInfo pack)
+    {
+        SelectedPack = pack;
+        return Task.CompletedTask;
+    }
+
+    private int GetSpawnTypeCount(string key)
+    {
+        if (SelectedPack == null)
+        {
+            return 0;
+        }
+
+        return SelectedPack.Stats.SpawnTypeCounts.TryGetValue(key, out var count) ? count : 0;
+    }
+
+    private Task ApplyPack(SpawnPackInfo pack)
+    {
+        var success = SpawnPackService.ApplyPack(pack);
+        if (success)
+        {
+            ToastService.ShowSuccess($"Applied spawn pack: {pack.Metadata.Name}");
+        }
+        else
+        {
+            ToastService.ShowError("Unable to apply spawn pack. Check the pack contents.");
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private Task DeletePack(SpawnPackInfo pack)
+    {
+        // Safety check - don't delete approved packs
+        if (pack.Metadata.IsApproved)
+        {
+            ToastService.ShowError("Cannot delete approved packs.");
+            return Task.CompletedTask;
+        }
+
+        var (success, error) = SpawnPackService.DeleteImportedPack(pack);
+        if (success)
+        {
+            ToastService.ShowSuccess($"Deleted spawn pack: {pack.Metadata.Name}");
+            RefreshPacks();
+            StateHasChanged();
+        }
+        else
+        {
+            ToastService.ShowError(error ?? "Unable to delete spawn pack.");
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private void OpenSubmitModal()
+    {
+        if (SelectedPack != null)
+        {
+            submissionName = SelectedPack.Metadata.Name;
+            submissionDescription = SelectedPack.Metadata.Description;
+
+            if (!string.IsNullOrWhiteSpace(SelectedPack.Metadata.ImageFileName) && File.Exists(SelectedPack.Metadata.ImageFileName))
+            {
+                submissionImagePath = SelectedPack.Metadata.ImageFileName;
+                submissionImageName = Path.GetFileName(SelectedPack.Metadata.ImageFileName);
+            }
+            else
+            {
+                submissionImagePath = null;
+                submissionImageName = null;
+            }
+        }
+
+        submissionMessage = string.Empty;
+        submissionSuccess = false;
+        isSubmitModalVisible = true;
+    }
+
+    private void CloseSubmitModal()
+    {
+        isSubmitModalVisible = false;
+    }
+
+    private void OpenImportModal()
+    {
+        importName = string.Empty;
+        importDescription = string.Empty;
+        importZipPath = null;
+        importZipName = null;
+        importImagePath = null;
+        importImageName = null;
+        importMessage = string.Empty;
+        importSuccess = false;
+        importValidationInfo = null;
+        isImportModalVisible = true;
+    }
+
+    private void CloseImportModal()
+    {
+        isImportModalVisible = false;
+    }
+
+    private async Task ExportCurrentPack()
+    {
+        if (exportCard != null)
+        {
+            await exportCard.TriggerExportAsync();
+        }
+    }
+
+    private async Task PickSubmissionImage()
+    {
+        try
+        {
+            var imageTypes = new FilePickerFileType(new Dictionary<DevicePlatform, IEnumerable<string>>
+            {
+                { DevicePlatform.WinUI, new[] { ".png", ".jpg", ".jpeg" } },
+                { DevicePlatform.macOS, new[] { "png", "jpg", "jpeg" } },
+                { DevicePlatform.MacCatalyst, new[] { "png", "jpg", "jpeg" } }
+            });
+
+            var result = await FilePicker.Default.PickAsync(new PickOptions
+            {
+                PickerTitle = "Select Preview Image",
+                FileTypes = imageTypes
+            });
+
+            if (result != null)
+            {
+                submissionImagePath = result.FullPath;
+                submissionImageName = result.FileName;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Error selecting spawn pack image", ex);
+            submissionMessage = "Unable to select image on this device.";
+            submissionSuccess = false;
+        }
+    }
+
+    private async Task ComposePackEmail()
+    {
+        isSubmitting = true;
+        submissionMessage = string.Empty;
+        StateHasChanged();
+
+        try
+        {
+            // Include the preview image in the zip file along with spawn data
+            var zipPath = await CreateSubmissionZipAsync(submissionImagePath);
+            if (string.IsNullOrWhiteSpace(zipPath))
+            {
+                submissionMessage = "No spawn data files found to attach.";
+                submissionSuccess = false;
+                return;
+            }
+
+            var packName = string.IsNullOrWhiteSpace(submissionName) ? "Unnamed Pack" : submissionName;
+            var subject = $"UORespawn Spawn Pack Submission - {packName}";
+
+            var includesImage = !string.IsNullOrWhiteSpace(submissionImagePath) && File.Exists(submissionImagePath);
+            var filesIncluded = includesImage ? "UOR_*.bin + preview image" : "UOR_*.bin";
+            var body = $"Pack Name: {packName}\nDescription: {submissionDescription}\nIncluded Files: {filesIncluded}\n\nPlease attach the zip file located at:\n{zipPath}";
+
+            // On Windows desktop, MAUI Email API often fails - use mailto directly
+            // This opens the default mail client (Outlook, etc.) reliably
+            await OpenMailtoAsync(subject, body);
+
+            submissionMessage = $"Mail app opened! Please attach the zip file:\n{zipPath}";
+            if (includesImage)
+            {
+                submissionMessage += "\n\n✓ Preview image included in zip!";
+            }
+            submissionSuccess = true;
+
+            // Open the folder containing the zip so user can easily drag it into the email
+            try
+            {
+                System.Diagnostics.Process.Start("explorer.exe", $"/select,\"{zipPath}\"");
+            }
+            catch { /* Ignore if folder open fails */ }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Unable to compose spawn pack email", ex);
+            submissionMessage = "Unable to open mail client. Please email blackboxprogramming@gmail.com manually.";
+            submissionSuccess = false;
+        }
+        finally
+        {
+            isSubmitting = false;
+            StateHasChanged();
+        }
+    }
+
+    private static Task OpenMailtoAsync(string subject, string body)
+    {
+        var uri = new Uri($"mailto:blackboxprogramming@gmail.com?subject={Uri.EscapeDataString(subject)}&body={Uri.EscapeDataString(body)}");
+        return Launcher.Default.OpenAsync(uri);
+    }
+
+    private static async Task<string?> CreateSubmissionZipAsync(string? imagePath = null)
+    {
+        try
+        {
+            var dataPath = PathConstants.LocalDataPath;
+            if (!Directory.Exists(dataPath))
+            {
+                return null;
+            }
+
+            var binFiles = Directory.GetFiles(dataPath, "UOR_*.bin");
+            if (binFiles.Length == 0)
+            {
+                return null;
+            }
+
+            var tempPath = Path.Combine(Path.GetTempPath(), "UORespawn_SpawnPack_Submission.zip");
+            if (File.Exists(tempPath))
+            {
+                File.Delete(tempPath);
+            }
+
+            using (var zipArchive = System.IO.Compression.ZipFile.Open(tempPath, System.IO.Compression.ZipArchiveMode.Create))
+            {
+                foreach (var file in binFiles)
+                {
+                    var fileName = Path.GetFileName(file);
+                    zipArchive.CreateEntryFromFile(file, fileName);
+                }
+
+                // Include the preview image in the zip if provided
+                if (!string.IsNullOrWhiteSpace(imagePath) && File.Exists(imagePath))
+                {
+                    var imageFileName = Path.GetFileName(imagePath);
+                    zipArchive.CreateEntryFromFile(imagePath, imageFileName);
+                }
+            }
+
+            return tempPath;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private async Task PickImportZip()
+    {
+        try
+        {
+            var zipTypes = new FilePickerFileType(new Dictionary<DevicePlatform, IEnumerable<string>>
+            {
+                { DevicePlatform.WinUI, new[] { ".zip" } },
+                { DevicePlatform.macOS, new[] { "zip" } },
+                { DevicePlatform.MacCatalyst, new[] { "zip" } }
+            });
+
+            var result = await FilePicker.Default.PickAsync(new PickOptions
+            {
+                PickerTitle = "Select Spawn Pack Zip",
+                FileTypes = zipTypes
+            });
+
+            if (result != null)
+            {
+                importZipPath = result.FullPath;
+                importZipName = result.FileName;
+
+                // Validate immediately and show feedback
+                var (isValid, foundFiles, error) = SpawnPackService.ValidateSpawnPackZip(importZipPath);
+                if (isValid)
+                {
+                    importValidationInfo = $"✓ Valid pack: {string.Join(", ", foundFiles)}";
+                    importMessage = string.Empty;
+                }
+                else
+                {
+                    importValidationInfo = null;
+                    importMessage = error ?? "Invalid spawn pack.";
+                    importSuccess = false;
+                }
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Error selecting spawn pack zip", ex);
+            importMessage = "Unable to select zip on this device.";
+            importSuccess = false;
+        }
+    }
+
+    private async Task PickImportImage()
+    {
+        try
+        {
+            var imageTypes = new FilePickerFileType(new Dictionary<DevicePlatform, IEnumerable<string>>
+            {
+                { DevicePlatform.WinUI, new[] { ".png", ".jpg", ".jpeg" } },
+                { DevicePlatform.macOS, new[] { "png", "jpg", "jpeg" } },
+                { DevicePlatform.MacCatalyst, new[] { "png", "jpg", "jpeg" } }
+            });
+
+            var result = await FilePicker.Default.PickAsync(new PickOptions
+            {
+                PickerTitle = "Select Pack Image",
+                FileTypes = imageTypes
+            });
+
+            if (result != null)
+            {
+                importImagePath = result.FullPath;
+                importImageName = result.FileName;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Error selecting spawn pack image", ex);
+            importMessage = "Unable to select image on this device.";
+            importSuccess = false;
+        }
+    }
+
+    private async Task ImportPack()
+    {
+        isImporting = true;
+        importMessage = string.Empty;
+        StateHasChanged();
+
+        try
+        {
+            if (string.IsNullOrWhiteSpace(importZipPath) || !File.Exists(importZipPath))
+            {
+                importMessage = "Please choose a spawn pack zip to import.";
+                importSuccess = false;
+                return;
+            }
+
+            // Validate the zip contains valid spawn pack files
+            var (isValid, foundFiles, validationError) = SpawnPackService.ValidateSpawnPackZip(importZipPath);
+            if (!isValid)
+            {
+                importMessage = validationError ?? "Invalid spawn pack zip.";
+                importSuccess = false;
+                return;
+            }
+
+            var packName = string.IsNullOrWhiteSpace(importName)
+                ? Path.GetFileNameWithoutExtension(importZipPath)
+                : importName.Trim();
+
+            if (string.IsNullOrWhiteSpace(packName))
+            {
+                importMessage = "Pack name is required.";
+                importSuccess = false;
+                return;
+            }
+
+            var packId = $"{SanitizeFileName(packName)}_{DateTime.Now:yyyyMMddHHmmss}";
+            var packFolder = Path.Combine(PathConstants.PacksPath, packId);
+            Directory.CreateDirectory(packFolder);
+
+            ZipFile.ExtractToDirectory(importZipPath, packFolder, true);
+
+            string? savedImageName = null;
+            if (!string.IsNullOrWhiteSpace(importImagePath) && File.Exists(importImagePath))
+            {
+                savedImageName = Path.GetFileName(importImagePath);
+                var destinationImagePath = Path.Combine(packFolder, savedImageName);
+                File.Copy(importImagePath, destinationImagePath, true);
+            }
+
+            var metadata = new SpawnPackMetadata
+            {
+                Id = packId,
+                Name = packName,
+                Description = importDescription,
+                ImageFileName = savedImageName ?? string.Empty,
+                Version = Utility.Version,
+                PublishedOn = DateTime.UtcNow,
+                IsApproved = false  // User imports are never approved
+            };
+
+            var manifestPath = Path.Combine(packFolder, "pack.json");
+            var json = JsonSerializer.Serialize(metadata, new JsonSerializerOptions { WriteIndented = true });
+            await File.WriteAllTextAsync(manifestPath, json);
+
+            // Refresh packs and switch to imported view
+            RefreshPacks();
+            showApproved = false;  // Switch to imported tab to show the new pack
+            SelectedPack = ImportedPacks.FirstOrDefault(p => p.Metadata.Id == packId) ?? SelectedPack;
+
+            importMessage = $"Spawn pack imported successfully! Found: {string.Join(", ", foundFiles)}";
+            importSuccess = true;
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Error importing spawn pack", ex);
+            importMessage = "Unable to import spawn pack.";
+            importSuccess = false;
+        }
+        finally
+        {
+            isImporting = false;
+            StateHasChanged();
+        }
+    }
+
+    private static string SanitizeFileName(string name)
+    {
+        foreach (var invalidChar in Path.GetInvalidFileNameChars())
+        {
+            name = name.Replace(invalidChar, '_');
+        }
+
+        return name.Replace(' ', '_');
+    }
+}

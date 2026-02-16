@@ -1,6 +1,5 @@
 using UORespawnApp.Scripts.Utilities;
 using UORespawnApp.Scripts.Entities;
-using UORespawnApp.Scripts.DTO.Enums;
 
 namespace UORespawnApp
 {

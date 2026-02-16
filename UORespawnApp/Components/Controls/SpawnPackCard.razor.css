@@ -1,0 +1,117 @@
+.spawn-pack-card {
+    border-radius: 12px;
+    overflow: hidden;
+    background: #121212 !important;
+    color: #e0e0e0;
+    cursor: pointer;
+    border: 1px solid rgba(247, 201, 72, 0.3) !important;
+    box-shadow: 0 0 15px rgba(247, 201, 72, 0.35), 
+                0 0 30px rgba(247, 201, 72, 0.15),
+                0 8px 18px rgba(0, 0, 0, 0.45) !important;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.spawn-pack-card:hover {
+    transform: translateY(-4px) scale(1.02);
+    border-color: rgba(247, 201, 72, 0.5) !important;
+    box-shadow: 0 0 20px rgba(247, 201, 72, 0.5), 
+                0 0 40px rgba(247, 201, 72, 0.25),
+                0 12px 26px rgba(0, 0, 0, 0.5) !important;
+}
+
+.spawn-pack-card:active {
+    transform: translateY(-1px) scale(0.99);
+    border-color: rgba(247, 201, 72, 0.25) !important;
+    box-shadow: 0 0 12px rgba(247, 201, 72, 0.3), 
+                0 0 25px rgba(247, 201, 72, 0.1),
+                0 6px 16px rgba(0, 0, 0, 0.35) !important;
+}
+
+.spawn-pack-image {
+    height: 72px;
+    background: #0a0a0a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.spawn-pack-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.spawn-pack-header {
+    padding: 0.35rem 0.5rem;
+    font-weight: 600;
+    text-align: center;
+    font-size: 0.9rem;
+    background: rgba(0, 0, 0, 0.4);
+    color: #f7c948;
+}
+
+.spawn-pack-details {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 0.5rem;
+    gap: 0.35rem;
+}
+
+.spawn-pack-author {
+    font-size: 0.75rem;
+    color: #999;
+}
+
+.spawn-pack-description {
+    font-size: 0.72rem;
+    color: #777;
+    min-height: 2.4em;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.spawn-pack-actions {
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+}
+
+.spawn-pack-actions .btn {
+    color: #e0e0e0;
+}
+
+.spawn-pack-actions .btn:hover {
+    color: #f7c948;
+}
+
+.spawn-pack-actions .btn.delete-btn:hover {
+    color: #dc3545;
+}
+
+.spawn-pack-actions .btn.disabled,
+.spawn-pack-actions .btn:disabled {
+    color: #444 !important;
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+/* Mock/Preview pack styling - slightly muted appearance */
+.spawn-pack-card.mock-pack {
+    border-color: rgba(150, 150, 150, 0.3) !important;
+    box-shadow: 0 0 10px rgba(150, 150, 150, 0.2), 
+                0 6px 14px rgba(0, 0, 0, 0.4) !important;
+}
+
+.spawn-pack-card.mock-pack:hover {
+    border-color: rgba(150, 150, 150, 0.4) !important;
+    box-shadow: 0 0 15px rgba(150, 150, 150, 0.25), 
+                0 10px 20px rgba(0, 0, 0, 0.45) !important;
+}
+
+.spawn-pack-card.mock-pack .spawn-pack-header {
+    color: #aaa;
+}

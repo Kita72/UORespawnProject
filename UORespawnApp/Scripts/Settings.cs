@@ -42,20 +42,18 @@ namespace UORespawnApp
             LoadCache();
         }
         
+        private const string DefaultBoxColorHex = "#8B0000";
+        private static readonly Color DefaultBoxColor = Color.FromArgb(DefaultBoxColorHex);
+
         private static void LoadCache()
         {
             _cachedServUODataFolder = Preferences.Get("ServUODataFolder", "");
-            
-            var colorString = Preferences.Get("BoxColor", "#8B0000");
-            try
-            {
-                _cachedBoxColor = Color.FromArgb(colorString);
-            }
-            catch
-            {
-                _cachedBoxColor = Color.FromArgb("#8B0000");
-            }
-            
+
+            var colorString = Preferences.Get("BoxColor", DefaultBoxColorHex);
+            _cachedBoxColor = colorString == DefaultBoxColorHex 
+                ? DefaultBoxColor 
+                : (Color.TryParse(colorString, out var parsed) ? parsed : DefaultBoxColor);
+
             _cachedBoxColorInc = Preferences.Get("BoxColorInc", 0.3);
             _cachedBoxLineSize = Preferences.Get("BoxLineSize", 2);
         }

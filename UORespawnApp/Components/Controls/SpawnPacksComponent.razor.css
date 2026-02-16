@@ -1,0 +1,117 @@
+.spawn-packs-page .stat-tile {
+    background: #151515;
+    border-radius: 10px;
+    padding: 10px;
+    text-align: center;
+    color: #e0e0e0;
+}
+
+.spawn-packs-page .stat-label {
+    display: block;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: #888;
+}
+
+.spawn-packs-page .stat-value {
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.spawn-packs-page .spawn-type-list {
+    display: grid;
+    gap: 8px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    font-size: 0.85rem;
+}
+
+.spawn-packs-page .spawn-type-column {
+    display: grid;
+    gap: 6px;
+}
+
+.spawn-packs-page .submission-card {
+    background: #0f0f0f;
+    border-radius: 12px;
+    padding: 16px;
+}
+
+.spawn-pack-dashboard-footer {
+    background: #0f0f0f;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.spawn-pack-modal .modal-content {
+    background: #0f0f0f;
+    color: #e0e0e0;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+}
+
+.spawn-pack-modal .modal-header,
+.spawn-pack-modal .modal-footer {
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Toggle buttons for Approved/Imported */
+.pack-toggle-container {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    padding: 4px;
+}
+
+.pack-toggle-btn {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #888;
+    padding: 6px 16px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.pack-toggle-btn:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: #ccc;
+    border-color: rgba(255, 255, 255, 0.25);
+}
+
+.pack-toggle-btn.active {
+    background: rgba(247, 201, 72, 0.15);
+    color: #f7c948;
+    border-color: rgba(247, 201, 72, 0.4);
+}
+
+.pack-toggle-btn.active:hover {
+    background: rgba(247, 201, 72, 0.2);
+}
+
+/* Flexbox grid for spawn pack cards - auto-aligns as cards are added */
+.spawn-pack-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: flex-start;
+}
+
+.spawn-pack-grid > * {
+    flex: 0 0 auto;
+    width: calc(33.333% - 8px);
+    min-width: 180px;
+    max-width: 250px;
+}
+
+@media (max-width: 992px) {
+    .spawn-pack-grid > * {
+        width: calc(50% - 6px);
+    }
+}
+
+@media (max-width: 576px) {
+    .spawn-pack-grid > * {
+        width: 100%;
+        max-width: none;
+    }
+}

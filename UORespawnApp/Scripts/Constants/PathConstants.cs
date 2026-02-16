@@ -49,6 +49,12 @@ namespace UORespawnApp.Scripts.Constants
         /// </summary>
         public const string MAPS_SUBFOLDER = "MAPS";
 
+        /// <summary>
+        /// Packs subfolder in Data folder (contains spawn pack data)
+        /// Each pack is stored in its own subfolder under Data/PACKS
+        /// </summary>
+        public const string PACKS_SUBFOLDER = "PACKS";
+
         // ==================== BINARY DATA FILE NAMES (.bin) ====================
         // Editor creates/saves these files, server reads them
         // Uses BinaryReader/BinaryWriter (ServUO-style) for .NET 10 compatibility
@@ -239,6 +245,25 @@ namespace UORespawnApp.Scripts.Constants
                 return mapsPath;
             }
         }
+
+        /// <summary>
+        /// Get the packs folder path (Data/PACKS/)
+        /// Used for storing spawn pack backups and staging data
+        /// </summary>
+        public static string PacksPath
+        {
+            get
+            {
+                var packsPath = Path.Combine(BASE_DIR, DATA_FOLDER, PACKS_SUBFOLDER);
+
+                if (!Directory.Exists(packsPath))
+                {
+                    Directory.CreateDirectory(packsPath);
+                }
+
+                return packsPath;
+            }
+        }
         
         /// <summary>
         /// Get the legacy CSV folder path (Data/ - NOT Data/UOR_DATA/)
@@ -281,23 +306,7 @@ namespace UORespawnApp.Scripts.Constants
             return fileName.EndsWith(STATS_FILE_SUFFIX, StringComparison.OrdinalIgnoreCase) ||
                    fileName.Contains("SpawnStats", StringComparison.OrdinalIgnoreCase);
         }
-        
-        /// <summary>
-        /// Check if a filename is a binary file (.bin)
-        /// </summary>
-        public static bool IsBinaryFile(string fileName)
-        {
-            return fileName.EndsWith(".bin", StringComparison.OrdinalIgnoreCase);
-        }
-        
-        /// <summary>
-        /// Check if a filename is a text file (.txt)
-        /// </summary>
-        public static bool IsTextFile(string fileName)
-        {
-            return fileName.EndsWith(".txt", StringComparison.OrdinalIgnoreCase);
-        }
-        
+
         /// <summary>
         /// Check if a filename is a bestiary file
         /// </summary>

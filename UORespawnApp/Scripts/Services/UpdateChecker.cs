@@ -25,7 +25,7 @@ namespace UORespawnApp.Scripts.Services
         private UpdateInfo? _cachedUpdateInfo = null;
         private readonly TimeSpan _cacheExpiration = TimeSpan.FromHours(1);
         
-        public string CurrentVersion => CURRENT_VERSION;
+        public const string CurrentVersion = CURRENT_VERSION;
         
         /// <summary>
         /// Checks GitHub API for the latest release version.

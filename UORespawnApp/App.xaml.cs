@@ -20,9 +20,10 @@ namespace UORespawnApp
 
             _backgroundLoader = backgroundLoader;
 
+            // Delay background loading to ensure UI is fully rendered before any work begins
             Dispatcher.Dispatch(async () =>
             {
-                await Task.Delay(100);
+                await Task.Delay(300); // Increased from 100ms to allow window to fully appear
                 await _backgroundLoader.LoadAllDataAsync();
             });
         }

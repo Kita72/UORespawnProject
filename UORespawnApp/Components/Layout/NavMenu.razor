@@ -29,6 +29,11 @@
                 <span class="bi bi-book-fill-nav-menu" aria-hidden="true"></span> Instructions
             </button>
         </div>
+        <div class="nav-item px-3">
+            <button class="nav-link btn btn-link @GetActiveClass("spawnpacks")" @onclick="ShowSpawnPacks">
+                <span class="bi bi-boxes-nav-menu" aria-hidden="true"></span> Spawn Packs
+            </button>
+        </div>
         
         <hr style="border-color: rgba(255,255,255,0.2); margin: 10px 15px;" />
 
@@ -109,6 +114,7 @@
     private void ShowWorldSpawn() => ViewService.SetView("tilespawn");
     private void ShowSettings() => ViewService.SetView("settings");
     private void ShowInstructions() => ViewService.SetView("instructions");
+    private void ShowSpawnPacks() => ViewService.SetView("spawnpacks");
 
     private string GetActiveClass(string view)
     {

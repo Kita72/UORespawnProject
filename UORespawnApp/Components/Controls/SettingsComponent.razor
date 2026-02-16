@@ -108,22 +108,7 @@
                                         <small class="text-muted d-block mt-1">Scripts go to: <code>Scripts/Custom/UORespawn/</code></small>
                                     </div>
 
-                                    <!-- Export Spawn Data -->
-                                    <div class="mb-3">
-                                        <button class="btn btn-primary w-100" @onclick="ExportSpawnData" disabled="@isExportingData">
-                                            @if (isExportingData)
-                                            {
-                                                <span class="spinner-border spinner-border-sm me-2"></span>
-                                                <text>Exporting...</text>
-                                            }
-                                            else
-                                            {
-                                                <span class="bi bi-database-down me-2"></span>
-                                                <text>Export Spawn Data (.zip)</text>
-                                            }
-                                        </button>
-                                        <small class="text-muted d-block mt-1">Data files go to: <code>Data/UOR_DATA/</code></small>
-                                    </div>
+                                    <SpawnPackExportCard />
 
                                     <!-- Export Messages -->
                                     @if (!string.IsNullOrEmpty(exportMessage))
@@ -660,7 +645,6 @@ private string boxColorHex = "#8B0000";
 private bool isExporting = false;
 private string exportMessage = "";
 private bool exportSuccess = false;
-private bool isExportingData = false;
 private bool showRemoteServerSection = false;
 private bool isImportingLegacy = false;
 private string legacyImportMessage = "";
@@ -790,44 +774,6 @@ private bool cleanServerOnReset = false;
         if (e.Key == "Enter" && !string.IsNullOrWhiteSpace(newCreatureName))
         {
             _ = AddCreature();
-        }
-    }
-    
-    private async Task BrowseFolder()
-    {
-        try
-        {
-#if WINDOWS
-            // Use Windows folder picker
-            var folderPicker = new Windows.Storage.Pickers.FolderPicker();
-            
-            // Get the current window handle
-            var window = (Application.Current?.Windows[0]?.Handler?.PlatformView as Microsoft.UI.Xaml.Window);
-            if (window != null)
-            {
-                var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(window);
-                WinRT.Interop.InitializeWithWindow.Initialize(folderPicker, hwnd);
-            }
-            
-            folderPicker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.ComputerFolder;
-            folderPicker.FileTypeFilter.Add("*");
-            
-            var folder = await folderPicker.PickSingleFolderAsync();
-            if (folder != null)
-            {
-                Settings.ServUODataFolder = folder.Path;
-                Logger.Info($"ServUO folder selected: {folder.Path}");
-                StateHasChanged();
-            }
-#else
-// For other platforms, show instruction
-Logger.Info("Folder picker not available on this platform. Please enter path manually.");
-            await Task.CompletedTask;
-#endif
-        }
-        catch (Exception ex)
-        {
-            Logger.Error("Error browsing folder", ex);
         }
     }
 
@@ -1713,114 +1659,6 @@ Logger.Info("Folder picker not available on this platform. Please enter path man
     private void ToggleRemoteServerSection()
     {
         showRemoteServerSection = !showRemoteServerSection;
-    }
-
-    private async Task ExportSpawnData()
-    {
-        isExportingData = true;
-        exportMessage = "";
-        StateHasChanged();
-
-        try
-        {
-            // Get the app's data folder where spawn files are stored
-            var dataPath = PathConstants.LocalDataPath;
-
-            if (!Directory.Exists(dataPath))
-            {
-                exportMessage = "Error: Data folder not found. No spawn data to export.";
-                exportSuccess = false;
-                return;
-            }
-
-            // Check if there are any .bin files to export
-            var binFiles = Directory.GetFiles(dataPath, "UOR_*.bin");
-            if (binFiles.Length == 0)
-            {
-                exportMessage = "Error: No spawn data files found.\n\n" +
-                               "Create some spawns first, then export.";
-                exportSuccess = false;
-                return;
-            }
-
-            // Create temp ZIP file
-            var tempPath = Path.Combine(Path.GetTempPath(), "UORespawn_SpawnData.zip");
-
-            // Delete existing temp file
-            if (File.Exists(tempPath))
-            {
-                File.Delete(tempPath);
-            }
-
-            Logger.Info($"Creating spawn data ZIP at: {tempPath}");
-
-            // Create ZIP with only the UOR_*.bin files
-            using (var zipArchive = System.IO.Compression.ZipFile.Open(tempPath, System.IO.Compression.ZipArchiveMode.Create))
-            {
-                foreach (var file in binFiles)
-                {
-                    var fileName = Path.GetFileName(file);
-                    zipArchive.CreateEntryFromFile(file, fileName);
-                    Logger.Info($"Added to ZIP: {fileName}");
-                }
-            }
-
-            var zipInfo = new FileInfo(tempPath);
-            Logger.Info($"Spawn data ZIP created successfully ({zipInfo.Length / 1024:N0} KB)");
-
-            // Copy to Downloads folder
-#if WINDOWS
-            var downloadsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", "UORespawn_SpawnData.zip");
-            File.Copy(tempPath, downloadsPath, true);
-
-            exportMessage = $"Spawn data exported to Downloads folder:\n{downloadsPath}\n\n" +
-                           $"Copy contents to your server's Data/UOR_DATA/ folder.";
-            exportSuccess = true;
-            Logger.Info($"Spawn data saved to: {downloadsPath}");
-
-            // Open Downloads folder
-            try
-            {
-                System.Diagnostics.Process.Start("explorer.exe", Path.GetDirectoryName(downloadsPath) ?? "");
-            }
-            catch { }
-#elif MACCATALYST
-            var downloadsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", "UORespawn_SpawnData.zip");
-            File.Copy(tempPath, downloadsPath, true);
-
-            exportMessage = $"Spawn data exported to Downloads folder:\n{downloadsPath}\n\n" +
-                           $"Copy contents to your server's Data/UOR_DATA/ folder.";
-            exportSuccess = true;
-            Logger.Info($"Spawn data saved to: {downloadsPath}");
-
-            try
-            {
-                System.Diagnostics.Process.Start("open", Path.GetDirectoryName(downloadsPath) ?? "");
-            }
-            catch { }
-#else
-            await Share.Default.RequestAsync(new ShareFileRequest
-            {
-                Title = "UORespawn Spawn Data",
-                File = new ShareFile(tempPath)
-            });
-
-            exportMessage = "Spawn data ready to share!\n\nCopy contents to your server's Data/UOR_DATA/ folder.";
-            exportSuccess = true;
-            Logger.Info("Share request sent for spawn data");
-#endif
-        }
-        catch (Exception ex)
-        {
-            exportMessage = $"Error exporting spawn data: {ex.Message}";
-            exportSuccess = false;
-            Logger.Error("Spawn data export error", ex);
-        }
-        finally
-        {
-            isExportingData = false;
-            StateHasChanged();
-        }
     }
 
     private void ResetToDefaults()

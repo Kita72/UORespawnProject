@@ -140,20 +140,4 @@ public static class Logger
             // Silent fail on cleanup
         }
     }
-
-    /// <summary>
-    /// Get the path to the current log file (for displaying to users)
-    /// </summary>
-    public static string GetCurrentLogPath()
-    {
-        return _currentLogFile ?? GetLogFilePath(DateTime.Today);
-    }
-
-    /// <summary>
-    /// Get the logs directory path (for displaying to users or opening in file explorer)
-    /// </summary>
-    public static string GetLogsDirectory()
-    {
-        return LogDirectory;
-    }
 }

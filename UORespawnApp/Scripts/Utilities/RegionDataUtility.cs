@@ -64,23 +64,6 @@ namespace UORespawnApp.Scripts.Utilities
         }
 
         /// <summary>
-        /// Get total region count across all maps
-        /// </summary>
-        public static int GetTotalRegionCount()
-        {
-            EnsureLoaded();
-            return _regionsByMap?.Values.Sum(list => list.Count) ?? 0;
-        }
-
-        /// <summary>
-        /// Get region count for a specific map
-        /// </summary>
-        public static int GetRegionCountForMap(int mapId)
-        {
-            return GetRegionsForMap(mapId).Count;
-        }
-
-        /// <summary>
         /// Clear region data to force reload from server-generated file
         /// </summary>
         public static void ClearRegionData()
@@ -255,15 +238,6 @@ namespace UORespawnApp.Scripts.Utilities
         {
             EnsureLoaded();
             return _regionsByMap != null && _regionsByMap.Count != 0;
-        }
-
-        /// <summary>
-        /// Get all loaded regions (for debugging)
-        /// </summary>
-        public static Dictionary<int, List<RegionInfo>> GetAllRegions()
-        {
-            EnsureLoaded();
-            return _regionsByMap ?? [];
         }
     }
 }

@@ -1,6 +1,3 @@
-using UORespawnApp.Scripts.DTO.Enums;
-using UORespawnApp.Scripts.DTO.Models;
-
 namespace UORespawnApp.Scripts.Entities
 {
     /// <summary>
@@ -30,7 +27,7 @@ namespace UORespawnApp.Scripts.Entities
         /// Region bounds for editor visualization (all rectangles that make up this region)
         /// Loaded from UOR_RegionList.txt for display on map
         /// </summary>
-        public List<Rect> RegionBounds { get; set; } = new();
+        public List<Rect> RegionBounds { get; set; } = [];
 
         /// <summary>
         /// Weather trigger type for WeatherSpawns list
@@ -47,32 +44,32 @@ namespace UORespawnApp.Scripts.Entities
         /// <summary>
         /// Water-based spawns (for water tiles in region)
         /// </summary>
-        public List<string> WaterSpawns { get; set; } = new();
+        public List<string> WaterSpawns { get; set; } = [];
 
         /// <summary>
         /// Weather-triggered spawns
         /// </summary>
-        public List<string> WeatherSpawns { get; set; } = new();
+        public List<string> WeatherSpawns { get; set; } = [];
 
         /// <summary>
         /// Time-triggered spawns
         /// </summary>
-        public List<string> TimedSpawns { get; set; } = new();
+        public List<string> TimedSpawns { get; set; } = [];
 
         /// <summary>
         /// Common spawns (primary list)
         /// </summary>
-        public List<string> CommonSpawns { get; set; } = new();
+        public List<string> CommonSpawns { get; set; } = [];
 
         /// <summary>
         /// Uncommon spawns (secondary list)
         /// </summary>
-        public List<string> UncommonSpawns { get; set; } = new();
+        public List<string> UncommonSpawns { get; set; } = [];
 
         /// <summary>
         /// Rare spawns (tertiary list)
         /// </summary>
-        public List<string> RareSpawns { get; set; } = new();
+        public List<string> RareSpawns { get; set; } = [];
 
         /// <summary>
         /// Check if this region spawn has any data configured
@@ -99,48 +96,6 @@ namespace UORespawnApp.Scripts.Entities
                    UncommonSpawns.Count +
                    RareSpawns.Count;
         }
-
-        /// <summary>
-        /// Convert to RegionModel DTO for binary serialization
-        /// </summary>
-        public RegionModel ToRegionModel()
-        {
-            return new RegionModel
-            {
-                Name = Name,
-                MapId = MapId,
-                WeatherSpawn = WeatherSpawn,
-                TimedSpawn = TimedSpawn,
-                WaterSpawns = new List<string>(WaterSpawns),
-                WeatherSpawns = new List<string>(WeatherSpawns),
-                TimedSpawns = new List<string>(TimedSpawns),
-                CommonSpawns = new List<string>(CommonSpawns),
-                UncommonSpawns = new List<string>(UncommonSpawns),
-                RareSpawns = new List<string>(RareSpawns)
-            };
-        }
-
-        /// <summary>
-        /// Create RegionSpawnEntity from RegionModel DTO
-        /// </summary>
-        public static RegionSpawnEntity FromRegionModel(RegionModel model, int id)
-        {
-            return new RegionSpawnEntity
-            {
-                Id = id,
-                Name = model.Name ?? string.Empty,
-                MapId = model.MapId,
-                RegionBounds = new List<Rect>(), // Loaded separately from RegionDataUtility
-                WeatherSpawn = model.WeatherSpawn,
-                TimedSpawn = model.TimedSpawn,
-                WaterSpawns = model.WaterSpawns != null ? new List<string>(model.WaterSpawns) : new(),
-                WeatherSpawns = model.WeatherSpawns != null ? new List<string>(model.WeatherSpawns) : new(),
-                TimedSpawns = model.TimedSpawns != null ? new List<string>(model.TimedSpawns) : new(),
-                CommonSpawns = model.CommonSpawns != null ? new List<string>(model.CommonSpawns) : new(),
-                UncommonSpawns = model.UncommonSpawns != null ? new List<string>(model.UncommonSpawns) : new(),
-                RareSpawns = model.RareSpawns != null ? new List<string>(model.RareSpawns) : new()
-            };
-        }
     }
 
     /// <summary>
@@ -152,7 +107,7 @@ namespace UORespawnApp.Scripts.Entities
     {
         public string Name { get; set; } = string.Empty;
         public int MapId { get; set; }
-        public List<Rect> Rectangles { get; set; } = new();
+        public List<Rect> Rectangles { get; set; } = [];
 
         /// <summary>
         /// Get first/primary bounds (for display)

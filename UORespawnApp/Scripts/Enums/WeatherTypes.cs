@@ -1,4 +1,4 @@
-namespace UORespawnApp.Scripts.DTO.Enums
+namespace UORespawnApp
 {
     /// <summary>
     /// Weather-based spawn trigger types
