@@ -192,5 +192,14 @@ namespace UORespawnApp
             get => Preferences.Get("IsScaleSpawn", false);
             set => Preferences.Set("IsScaleSpawn", value);
         }
+
+        /// <summary>
+        /// Whether debug mode is enabled (shows in-app log viewer panel)
+        /// </summary>
+        public static bool IsDebugMode
+        {
+            get => Preferences.Get("IsDebugMode", false);
+            set => Preferences.Set("IsDebugMode", value);
+        }
     }
 }

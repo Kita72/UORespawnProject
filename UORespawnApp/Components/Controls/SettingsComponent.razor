@@ -561,6 +561,27 @@
                 </div>
             </div>
 
+            <!-- Developer Tools -->
+            <div class="card map-card mb-3" style="border-color: #6f42c1;">
+                <div class="card-header text-center" style="background: linear-gradient(135deg, #6f42c1 0%, #9d4edd 100%); color: white;">
+                    <span style="font-size: 1.25rem;"><span class="bi bi-bug me-2"></span>Developer Tools</span>
+                    <InfoIcon Text="Enable debug mode to show a live log viewer panel on the right side of the app. Useful for testing and troubleshooting." />
+                </div>
+                <div class="card-body text-center">
+                    <div class="form-check form-switch d-inline-block text-start mb-3">
+                        <input class="form-check-input" type="checkbox" checked="@Settings.IsDebugMode" @onchange="ToggleDebugMode" id="debugMode" style="transform: scale(1.3);">
+                        <label class="form-check-label" for="debugMode" style="font-size: 1.1rem;">
+                            <span class="bi bi-terminal me-1"></span>
+                            Debug Mode
+                        </label>
+                    </div>
+                    <p class="text-muted small mb-0">
+                        When enabled, a Debug Log panel appears on the right side showing live application logs.
+                        <br />Use it to monitor app activity, add test markers, and copy logs for troubleshooting.
+                    </p>
+                </div>
+            </div>
+
             <!-- Complete Reset Confirmation Modal -->
             @if (showCompleteResetModal)
             {
@@ -627,6 +648,7 @@
 @inject NavigationManager Navigation
 @inject BackgroundDataLoader BackgroundLoader
 @inject ToastService ToastService
+@inject DebugService DebugService
 @using System.IO.Compression
 @using UORespawnApp.Scripts.Constants
 @using UORespawnApp.Scripts.Utilities
@@ -695,6 +717,24 @@ private bool cleanServerOnReset = false;
         {
             Logger.Error("Error auto-saving settings", ex);
         }
+    }
+
+    private void ToggleDebugMode(ChangeEventArgs e)
+    {
+        var enabled = (bool)(e.Value ?? false);
+        Settings.IsDebugMode = enabled;
+        DebugService.SetEnabled(enabled);
+
+        if (enabled)
+        {
+            Logger.Info("Debug mode enabled via Settings");
+        }
+        else
+        {
+            Logger.Info("Debug mode disabled via Settings");
+        }
+
+        StateHasChanged();
     }
     
     private List<string> GetFilteredSpawns()

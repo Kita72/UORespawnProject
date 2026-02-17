@@ -1,8 +1,11 @@
+using UORespawnApp.Scripts.Services;
+
 namespace UORespawnApp.Scripts.Utilities;
 
 /// <summary>
 /// Simple file-based logger that writes to daily log files in the app's Data directory.
 /// Thread-safe and performance-optimized with lazy initialization.
+/// Also sends entries to DebugService for in-app visualization when debug mode is enabled.
 /// </summary>
 public static class Logger
 {
@@ -11,6 +14,12 @@ public static class Logger
     private static string? _currentLogFile;
     private static DateTime _currentLogDate;
     private static bool _initialized = false;
+
+    /// <summary>
+    /// Reference to DebugService for in-app log visualization.
+    /// Set during app startup from MauiProgram.
+    /// </summary>
+    public static DebugService? DebugService { get; set; }
 
     static Logger()
     {
@@ -22,19 +31,19 @@ public static class Logger
     private static void EnsureInitialized()
     {
         if (_initialized) return;
-        
+
         lock (_lock)
         {
             if (_initialized) return; // Double-check inside lock
-            
+
             try
             {
                 Directory.CreateDirectory(LogDirectory);
                 _currentLogFile = GetLogFilePath(DateTime.Today);
-                
+
                 // Defer cleanup to background task to avoid blocking startup
                 Task.Run(() => CleanupOldLogs());
-                
+
                 _initialized = true;
                 Write("INFO", "=== Application Started ===");
             }
@@ -53,6 +62,7 @@ public static class Logger
     {
         EnsureInitialized();
         Write("INFO", message);
+        DebugService?.AddEntry(DebugLogLevel.Info, message);
     }
 
     /// <summary>
@@ -62,6 +72,7 @@ public static class Logger
     {
         EnsureInitialized();
         Write("WARN", message);
+        DebugService?.AddEntry(DebugLogLevel.Warning, message);
     }
 
     /// <summary>
@@ -71,6 +82,7 @@ public static class Logger
     {
         EnsureInitialized();
         Write("ERROR", message);
+        DebugService?.AddEntry(DebugLogLevel.Error, message);
     }
 
     /// <summary>
@@ -79,7 +91,9 @@ public static class Logger
     public static void Error(string message, Exception ex)
     {
         EnsureInitialized();
-        Write("ERROR", $"{message} | Exception: {ex.GetType().Name} - {ex.Message}\n{ex.StackTrace}");
+        var fullMessage = $"{message} | Exception: {ex.GetType().Name} - {ex.Message}";
+        Write("ERROR", $"{fullMessage}\n{ex.StackTrace}");
+        DebugService?.AddEntry(DebugLogLevel.Error, fullMessage);
     }
 
     private static void Write(string level, string message)

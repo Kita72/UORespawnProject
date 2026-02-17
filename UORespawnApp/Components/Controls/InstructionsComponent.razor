@@ -44,7 +44,8 @@
                                 <li><a href="#server-integration" class="text-decoration-none">8. Server Integration</a></li>
                                 <li><a href="#admin-gui" class="text-decoration-none">9. Admin GUI & Commands</a></li>
                                 <li><a href="#tips" class="text-decoration-none">10. Tips & Best Practices</a></li>
-                                <li><a href="#support" class="text-decoration-none">11. Support & Resources</a></li>
+                                <li><a href="#debug-mode" class="text-decoration-none">11. Debug Mode</a></li>
+                                <li><a href="#support" class="text-decoration-none">12. Support & Resources</a></li>
                             </ul>
                         </div>
                     </div>
@@ -822,10 +823,87 @@
                 </div>
             </div>
 
-            <!-- 11. Support & Resources -->
+            <!-- 11. Debug Mode -->
+            <div class="card map-card mb-4" id="debug-mode">
+                <div class="card-header">
+                    <strong><span class="bi bi-bug"></span> 11. Debug Mode</strong>
+                </div>
+                <div class="card-body">
+                    <h6 class="text-primary">What is Debug Mode?</h6>
+                    <p>
+                        Debug Mode provides an in-app log viewer panel that displays real-time application logs. 
+                        This is useful for troubleshooting issues, monitoring app activity, and testing functionality 
+                        without needing to open external log files.
+                    </p>
+
+                    <h6 class="text-primary mt-4">Enabling Debug Mode</h6>
+                    <ol>
+                        <li>Go to <strong>Settings</strong></li>
+                        <li>Scroll to the bottom to find <strong>Developer Tools</strong> (purple section)</li>
+                        <li>Toggle <strong>Debug Mode</strong> on</li>
+                        <li>A debug panel will appear on the right side of the app</li>
+                    </ol>
+
+                    <h6 class="text-primary mt-4">Debug Panel Features</h6>
+                    <ul>
+                        <li><strong>Live Log Viewer:</strong> Shows all application logs in real-time</li>
+                        <li><strong>Session History:</strong> When enabled, loads all logs from the current session (even from before you turned it on!)</li>
+                        <li><strong>Log Levels:</strong> Color-coded entries for INFO (blue), WARNING (yellow), and ERROR (red)</li>
+                        <li><strong>Stats Bar:</strong> Shows count of each log level type</li>
+                        <li><strong>Collapsible:</strong> Click the header to collapse/expand the panel</li>
+                    </ul>
+
+                    <h6 class="text-primary mt-4">Toolbar Buttons</h6>
+                    <table class="table table-dark table-sm">
+                        <thead>
+                            <tr>
+                                <th>Button</th>
+                                <th>Function</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Bookmark</strong></td>
+                                <td>Add a visual mark/separator in the log for reference</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Play</strong></td>
+                                <td>Start a numbered test marker (useful for manual testing)</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Stop</strong></td>
+                                <td>End the current test marker</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Copy</strong></td>
+                                <td>Copy all log entries to clipboard (for sharing or bug reports)</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Trash</strong></td>
+                                <td>Clear all entries from the debug panel</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h6 class="text-primary mt-4">Log Files</h6>
+                    <p>
+                        Application logs are also saved to files in the <code>Data/Logs</code> folder. 
+                        Log files are named by date (e.g., <code>uor_spawn_2024-01-15.log</code>) and are 
+                        automatically cleaned up after 7 days.
+                    </p>
+
+                    <div class="alert alert-info mt-3">
+                        <span class="bi bi-lightbulb"></span> <strong>Tip:</strong> If you experience an issue, 
+                        enable Debug Mode, reproduce the problem, then use the <strong>Copy</strong> button to 
+                        capture the logs for a bug report!
+                    </div>
+                </div>
+            </div>
+
+            <!-- 12. Support & Resources -->
             <div class="card map-card mb-4" id="support">
                 <div class="card-header">
-                    <strong><span class="bi bi-question-circle"></span> 11. Support & Resources</strong>
+                    <strong><span class="bi bi-question-circle"></span> 12. Support & Resources</strong>
                 </div>
                 <div class="card-body">
                     <h6 class="text-primary">Need Help?</h6>

@@ -1,9 +1,13 @@
 ﻿@inherits LayoutComponentBase
+@inject DebugService DebugService
+@using UORespawnApp.Scripts.Services
+@using UORespawnApp.Scripts.Utilities
+@implements IDisposable
 
 <LoadingIndicator />
 <ToastNotification />
 
-<div class="page">
+<div class="page @(DebugService.IsEnabled ? (isDebugCollapsed ? "debug-mode-collapsed" : "debug-mode") : "")">
     <div class="sidebar">
         <NavMenu />
     </div>
@@ -13,6 +17,34 @@
             @Body
         </article>
     </main>
+
+    @if (DebugService.IsEnabled)
+    {
+        <DebugPanel OnCollapseChanged="OnDebugCollapseChanged" />
+    }
 </div>
 
+@code {
+    private bool isDebugCollapsed = false;
 
+    protected override void OnInitialized()
+    {
+        DebugService.OnDebugModeChanged += OnDebugModeChanged;
+    }
+
+    private void OnDebugModeChanged(bool enabled)
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnDebugCollapseChanged(bool collapsed)
+    {
+        isDebugCollapsed = collapsed;
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        DebugService.OnDebugModeChanged -= OnDebugModeChanged;
+    }
+}

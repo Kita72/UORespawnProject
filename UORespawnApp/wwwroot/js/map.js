@@ -1089,4 +1089,14 @@ window.clearCanvas = function(canvasId) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 };
 
+/**
+ * Scrolls the debug panel viewport to the bottom
+ */
+window.scrollDebugPanel = function() {
+    const viewport = document.getElementById('debugViewport');
+    if (viewport) {
+        viewport.scrollTop = viewport.scrollHeight;
+    }
+};
+
 console.log('Region drawing function loaded');

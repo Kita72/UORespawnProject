@@ -1,0 +1,160 @@
+@using UORespawnApp.Scripts.Services
+@using UORespawnApp.Scripts.Utilities
+@inject DebugService DebugService
+@inject IJSRuntime JS
+@implements IDisposable
+
+<div class="debug-panel @(IsCollapsed ? "collapsed" : "")">
+    <div class="debug-header" @onclick="ToggleCollapse">
+        @if (!IsCollapsed)
+        {
+            <span class="bi bi-bug me-2"></span>
+            <span class="header-text">Debug Log</span>
+        }
+        <span class="bi @(IsCollapsed ? "bi-chevron-left" : "bi-chevron-right") collapse-icon"></span>
+    </div>
+    
+    @if (!IsCollapsed)
+    {
+        <div class="debug-toolbar">
+            <button class="debug-btn" @onclick="AddMark" title="Add mark to log">
+                <span class="bi bi-bookmark-plus"></span>
+            </button>
+            <button class="debug-btn" @onclick="StartTest" title="Start test marker">
+                <span class="bi bi-play-fill"></span>
+            </button>
+            <button class="debug-btn" @onclick="EndTest" title="End test marker">
+                <span class="bi bi-stop-fill"></span>
+            </button>
+            <div class="toolbar-divider"></div>
+            <button class="debug-btn" @onclick="CopyLog" title="Copy log to clipboard">
+                <span class="bi bi-clipboard"></span>
+            </button>
+            <button class="debug-btn" @onclick="ClearLog" title="Clear log">
+                <span class="bi bi-trash"></span>
+            </button>
+        </div>
+        
+        <div class="debug-stats">
+            <span class="stat-item stat-info">INFO: @GetCount(DebugLogLevel.Info)</span>
+            <span class="stat-item stat-warning">WARN: @GetCount(DebugLogLevel.Warning)</span>
+            <span class="stat-item stat-error">ERROR: @GetCount(DebugLogLevel.Error)</span>
+        </div>
+        
+        <div class="debug-viewport" id="debugViewport">
+            @foreach (var entry in DebugService.GetEntries())
+            {
+                <div class="log-entry @entry.CssClass @(entry.IsMark ? "mark-entry" : "")">
+                    @if (entry.IsMark)
+                    {
+                        <div class="mark-line">
+                            <span class="mark-text">@entry.Message</span>
+                            <span class="mark-time">@entry.Timestamp.ToString("HH:mm:ss")</span>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="entry-header">
+                            <span class="entry-time">@entry.Timestamp.ToString("HH:mm:ss.fff")</span>
+                            <span class="entry-level">@entry.Level.ToString().ToUpper()</span>
+                        </div>
+                        <div class="entry-message" title="@entry.Source">@entry.Message</div>
+                    }
+                </div>
+            }
+
+            @if (!DebugService.GetEntries().Any())
+            {
+                <div class="empty-log">
+                    <p>No log entries yet</p>
+                    <small>Enable debug mode in Settings to capture logs</small>
+                </div>
+            }
+        </div>
+
+        <div class="debug-footer">
+            <span class="entry-count">@DebugService.EntryCount entries</span>
+            <span class="session-time">Session: @GetSessionDuration()</span>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public EventCallback<bool> OnCollapseChanged { get; set; }
+
+    private bool IsCollapsed = false;
+    private DateTime sessionStart = DateTime.Now;
+    private int testCounter = 0;
+
+    protected override void OnInitialized()
+    {
+        DebugService.OnLogEntry += OnLogEntryReceived;
+        sessionStart = DateTime.Now;
+    }
+
+    public void Dispose()
+    {
+        DebugService.OnLogEntry -= OnLogEntryReceived;
+    }
+
+    private void OnLogEntryReceived(DebugLogEntry entry)
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ToggleCollapse()
+    {
+        IsCollapsed = !IsCollapsed;
+        await OnCollapseChanged.InvokeAsync(IsCollapsed);
+    }
+
+    private void AddMark()
+    {
+        DebugService.AddMark("Manual Mark");
+    }
+
+    private void StartTest()
+    {
+        testCounter++;
+        DebugService.StartTest($"Test #{testCounter}");
+    }
+
+    private void EndTest()
+    {
+        DebugService.EndTest($"Test #{testCounter}");
+    }
+    
+    private async Task CopyLog()
+    {
+        try
+        {
+            var logText = DebugService.GetLogText();
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", logText);
+            DebugService.AddEntry(DebugLogLevel.Info, "Log copied to clipboard", "DebugPanel");
+        }
+        catch (Exception ex)
+        {
+            DebugService.AddEntry(DebugLogLevel.Error, $"Failed to copy: {ex.Message}", "DebugPanel");
+        }
+    }
+    
+    private void ClearLog()
+    {
+        DebugService.Clear();
+    }
+
+    private int GetCount(DebugLogLevel level)
+    {
+        return DebugService.GetEntries().Count(e => e.Level == level && !e.IsMark);
+    }
+    
+    private string GetSessionDuration()
+    {
+        var duration = DateTime.Now - sessionStart;
+        if (duration.TotalHours >= 1)
+            return $"{(int)duration.TotalHours}h {duration.Minutes}m";
+        if (duration.TotalMinutes >= 1)
+            return $"{(int)duration.TotalMinutes}m {duration.Seconds}s";
+        return $"{(int)duration.TotalSeconds}s";
+    }
+}

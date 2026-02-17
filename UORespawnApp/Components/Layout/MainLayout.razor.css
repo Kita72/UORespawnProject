@@ -76,3 +76,16 @@ main {
         padding-right: 1.5rem !important;
     }
 }
+
+/* Debug mode - no extra margins needed, flex handles it */
+.page.debug-mode,
+.page.debug-mode-collapsed {
+    /* Panel is part of flex flow, main automatically adjusts */
+}
+
+/* Main content should fill remaining space */
+.page.debug-mode main,
+.page.debug-mode-collapsed main {
+    flex: 1;
+    min-width: 0; /* Allow shrinking */
+}

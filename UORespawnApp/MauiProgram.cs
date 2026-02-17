@@ -33,6 +33,7 @@ namespace UORespawnApp
             builder.Services.AddSingleton<UpdateChecker>();
             builder.Services.AddSingleton<SpawnPackService>();
             builder.Services.AddSingleton<WebViewService>();
+            builder.Services.AddSingleton<DebugService>();
 
             try
             {
@@ -58,7 +59,19 @@ namespace UORespawnApp
             builder.Logging.AddDebug();
 #endif
 
-            return builder.Build();
+            var app = builder.Build();
+
+            // Wire up DebugService to Logger for in-app log visualization
+            var debugService = app.Services.GetRequiredService<DebugService>();
+            Logger.DebugService = debugService;
+
+            // Initialize debug mode from settings
+            if (Settings.IsDebugMode)
+            {
+                debugService.SetEnabled(true);
+            }
+
+            return app;
         }
     }
 }
