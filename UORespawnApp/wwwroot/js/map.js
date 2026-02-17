@@ -39,10 +39,12 @@ hoveredAreaIndex: -1,  // Index of hovered area within region (-1 = none)
 // Hovered spawn for box spawn page
 hoveredSpawnId: null,
 
-// XML spawner hover/click state
+// XML spawner hover state (hover-based like spawn data)
 hoveredXmlSpawnerId: null,
-selectedXmlSpawner: null,
+xmlSpawnerTooltipVisible: false,
 xmlTooltipMousePos: { x: 0, y: 0 },
+xmlSpawnerDwellTimer: null,
+xmlSpawnerDwellDelay: 500, // milliseconds to wait before showing tooltip
 
 // Server spawn (stats) hover state
 hoveredServerSpawnIdx: -1,
@@ -50,6 +52,7 @@ serverSpawnTooltipVisible: false,
 serverSpawnTooltipMousePos: { x: 0, y: 0 },
 serverSpawnDwellTimer: null,
 serverSpawnDwellDelay: 500, // milliseconds to wait before showing tooltip
+serverSpawnFlashAnimationId: null, // Animation frame ID for spawn dot flashing
 
 // Settings from C#
 boxColor: '#8B0000',
@@ -85,6 +88,13 @@ panAnimationId: null,
         if (this.serverSpawnDwellTimer) {
             clearTimeout(this.serverSpawnDwellTimer);
             this.serverSpawnDwellTimer = null;
+        }
+        // Reset XML spawner state
+        this.hoveredXmlSpawnerId = null;
+        this.xmlSpawnerTooltipVisible = false;
+        if (this.xmlSpawnerDwellTimer) {
+            clearTimeout(this.xmlSpawnerDwellTimer);
+            this.xmlSpawnerDwellTimer = null;
         }
 
         console.log(`? Map initialized: ${imgWidth}x${imgHeight} at ${this.scale}x scale, viewport: ${this.viewportWidth}x${this.viewportHeight}`);
@@ -427,9 +437,19 @@ panAnimationId: null,
         }
 
         // Draw XML spawners (green circles, underneath user spawns)
+        // Sort by radius descending so smaller circles are drawn on top (more accessible)
         if (this.xmlSpawners && Array.isArray(this.xmlSpawners)) {
-            this.xmlSpawners.forEach((spawner, idx) => {
-                if (!spawner) return;
+            // Create indexed array and sort by radius (largest first = drawn first = bottom layer)
+            const sortedSpawners = this.xmlSpawners
+                .map((spawner, idx) => ({ spawner, idx }))
+                .filter(item => item.spawner != null)
+                .sort((a, b) => {
+                    const radiusA = a.spawner.radius || a.spawner.width || 10;
+                    const radiusB = b.spawner.radius || b.spawner.width || 10;
+                    return radiusB - radiusA; // Descending order (largest first)
+                });
+
+            sortedSpawners.forEach(({ spawner, idx }) => {
 
                 // Use center coordinates and radius for circle visualization
                 const centerX = spawner.centerX || spawner.x || 0;
@@ -442,13 +462,12 @@ panAnimationId: null,
                 // Scale the radius to screen size
                 const screenRadius = radius * this.scale;
 
-                // Check if this spawner is hovered or selected
+                // Check if this spawner is hovered (hover-based like spawn data)
                 const isHovered = this.hoveredXmlSpawnerId === idx;
-                const isSelected = this.selectedXmlSpawner && this.selectedXmlSpawner.idx === idx;
 
                 // Draw XML spawner circle
-                if (isHovered || isSelected) {
-                    // Draw golden glow for hover/selected
+                if (isHovered) {
+                    // Draw golden glow for hover
                     this.ctx.strokeStyle = '#FFD700';
                     this.ctx.lineWidth = 3;
                     this.ctx.globalAlpha = 0.8;
@@ -465,18 +484,18 @@ panAnimationId: null,
                 }
 
                 // Normal circle outline
-                this.ctx.strokeStyle = isHovered || isSelected ? '#00FF00' : '#00FF00';
-                this.ctx.lineWidth = isHovered || isSelected ? 2 : 1;
-                this.ctx.globalAlpha = isHovered || isSelected ? 0.8 : 0.4;
+                this.ctx.strokeStyle = '#00FF00';
+                this.ctx.lineWidth = isHovered ? 2 : 1;
+                this.ctx.globalAlpha = isHovered ? 0.8 : 0.4;
                 this.ctx.beginPath();
                 this.ctx.arc(screenCenter.x, screenCenter.y, screenRadius, 0, 2 * Math.PI);
                 this.ctx.stroke();
 
                 // Draw "X" marker in center
-                const markerSize = isHovered || isSelected ? 5 : 3;
+                const markerSize = isHovered ? 5 : 3;
                 this.ctx.strokeStyle = '#00FF00';
-                this.ctx.lineWidth = isHovered || isSelected ? 3 : 2;
-                this.ctx.globalAlpha = isHovered || isSelected ? 0.9 : 0.6;
+                this.ctx.lineWidth = isHovered ? 3 : 2;
+                this.ctx.globalAlpha = isHovered ? 0.9 : 0.6;
                 this.ctx.beginPath();
                 this.ctx.moveTo(screenCenter.x - markerSize, screenCenter.y - markerSize);
                 this.ctx.lineTo(screenCenter.x + markerSize, screenCenter.y + markerSize);
@@ -486,9 +505,9 @@ panAnimationId: null,
                 this.ctx.globalAlpha = 1.0;
             });
 
-            // Draw info tooltip for selected XML spawner (at mouse position)
-            if (this.selectedXmlSpawner) {
-                const spawner = this.selectedXmlSpawner;
+            // Draw info tooltip for hovered XML spawner (at mouse position, after dwell)
+            if (this.xmlSpawnerTooltipVisible && this.hoveredXmlSpawnerId >= 0 && this.hoveredXmlSpawnerId < this.xmlSpawners.length) {
+                const spawner = this.xmlSpawners[this.hoveredXmlSpawnerId];
                 const mouseX = this.xmlTooltipMousePos.x;
                 const mouseY = this.xmlTooltipMousePos.y;
 
@@ -498,6 +517,25 @@ panAnimationId: null,
                     `Location: (${spawner.centerX}, ${spawner.centerY})`,
                     `Home Range: ${spawner.radius}`
                 ];
+
+                // Add MaxCount if available
+                if (spawner.maxCount && spawner.maxCount > 0) {
+                    lines.push(`Max Count: ${spawner.maxCount}`);
+                }
+
+                // Add spawn names if available
+                if (spawner.spawnNames && spawner.spawnNames.length > 0) {
+                    lines.push(`Creatures:`);
+                    // Show up to 8 creatures, then "and X more..."
+                    const maxToShow = 8;
+                    const displayNames = spawner.spawnNames.slice(0, maxToShow);
+                    displayNames.forEach(name => {
+                        lines.push(`  • ${name}`);
+                    });
+                    if (spawner.spawnNames.length > maxToShow) {
+                        lines.push(`  ...and ${spawner.spawnNames.length - maxToShow} more`);
+                    }
+                }
 
                 // Measure text for sizing
                 this.ctx.font = 'bold 12px Arial';
@@ -541,6 +579,10 @@ panAnimationId: null,
                 lines.forEach((line, i) => {
                     if (i === 0) {
                         this.ctx.fillStyle = '#FFD700'; // Title in gold
+                    } else if (line === 'Creatures:') {
+                        this.ctx.fillStyle = '#00BFFF'; // Creatures header in blue
+                    } else if (line.startsWith('  •') || line.startsWith('  ...')) {
+                        this.ctx.fillStyle = '#98FB98'; // Creature names in pale green
                     } else {
                         this.ctx.fillStyle = '#FFFFFF'; // Content in white
                     }
@@ -551,6 +593,10 @@ panAnimationId: null,
 
         // Draw server spawns (heatmap) - colored dots showing where creatures spawned
         if (this.serverSpawns && Array.isArray(this.serverSpawns)) {
+            // Calculate flash pulse for hovered spawn dots (pulsing animation)
+            const flashPulse = this.hoveredServerSpawnIdx >= 0 ? 
+                0.5 + 0.5 * Math.sin(Date.now() / 150) : 1.0; // Faster pulsing
+
             this.serverSpawns.forEach((spawn, idx) => {
                 if (!spawn) return;
 
@@ -572,12 +618,69 @@ panAnimationId: null,
                     this.ctx.strokeRect(playerPos.x - playerSize - 1, playerPos.y - playerSize - 1, playerSize * 2 + 2, playerSize * 2 + 2);
                 }
 
-                // Draw spawn location (smaller dot, 2x2 pixels normally, 4x4 when hovered)
+                // Draw spawn location (creature spawn position)
                 const spawnPos = this.worldToScreen(spawn.spawnX, spawn.spawnY);
-                const spawnSize = isHovered ? 2 : 1;
-                this.ctx.fillStyle = playerColor;
-                this.ctx.globalAlpha = isHovered ? 1.0 : 0.9;
-                this.ctx.fillRect(spawnPos.x - spawnSize, spawnPos.y - spawnSize, spawnSize * 2, spawnSize * 2);
+
+                if (isHovered) {
+                    // Flashing/pulsing spawn dot when player is hovered
+                    const pulseSize = 4 + 3 * flashPulse; // Pulses between 4 and 7 pixels
+
+                    // Draw outer glow effect
+                    this.ctx.fillStyle = '#FFFFFF';
+                    this.ctx.globalAlpha = 0.3 * flashPulse;
+                    this.ctx.beginPath();
+                    this.ctx.arc(spawnPos.x, spawnPos.y, pulseSize + 5, 0, 2 * Math.PI);
+                    this.ctx.fill();
+
+                    // Draw middle glow
+                    this.ctx.fillStyle = '#FFFFFF';
+                    this.ctx.globalAlpha = 0.5 * flashPulse;
+                    this.ctx.beginPath();
+                    this.ctx.arc(spawnPos.x, spawnPos.y, pulseSize + 2, 0, 2 * Math.PI);
+                    this.ctx.fill();
+
+                    // Draw bright spawn dot
+                    this.ctx.fillStyle = '#FFFFFF';
+                    this.ctx.globalAlpha = 0.7 + 0.3 * flashPulse;
+                    this.ctx.beginPath();
+                    this.ctx.arc(spawnPos.x, spawnPos.y, pulseSize, 0, 2 * Math.PI);
+                    this.ctx.fill();
+
+                    // Draw colored center
+                    this.ctx.fillStyle = playerColor;
+                    this.ctx.globalAlpha = 1.0;
+                    this.ctx.beginPath();
+                    this.ctx.arc(spawnPos.x, spawnPos.y, pulseSize - 2, 0, 2 * Math.PI);
+                    this.ctx.fill();
+
+                    // Draw connecting line from player to spawn location
+                    this.ctx.strokeStyle = playerColor;
+                    this.ctx.lineWidth = 2;
+                    this.ctx.globalAlpha = 0.6;
+                    this.ctx.setLineDash([4, 4]); // Dashed line
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(playerPos.x, playerPos.y);
+                    this.ctx.lineTo(spawnPos.x, spawnPos.y);
+                    this.ctx.stroke();
+                    this.ctx.setLineDash([]); // Reset to solid
+                } else {
+                    // Normal spawn dot - small circle with contrasting border
+                    const spawnSize = 3;
+
+                    // Draw white border for visibility
+                    this.ctx.fillStyle = '#FFFFFF';
+                    this.ctx.globalAlpha = 0.5;
+                    this.ctx.beginPath();
+                    this.ctx.arc(spawnPos.x, spawnPos.y, spawnSize + 1, 0, 2 * Math.PI);
+                    this.ctx.fill();
+
+                    // Draw colored center
+                    this.ctx.fillStyle = playerColor;
+                    this.ctx.globalAlpha = 0.9;
+                    this.ctx.beginPath();
+                    this.ctx.arc(spawnPos.x, spawnPos.y, spawnSize, 0, 2 * Math.PI);
+                    this.ctx.fill();
+                }
 
                 this.ctx.globalAlpha = 1.0;
             });
@@ -594,6 +697,11 @@ panAnimationId: null,
                     `Location: (${spawn.playerX}, ${spawn.playerY})`,
                     `Total Events: ${spawn.totalDotsForPlayer}`
                 ];
+
+                // Add creature name if available
+                if (spawn.creatureName && spawn.creatureName.length > 0) {
+                    lines.push(`Spawned: ${spawn.creatureName}`);
+                }
 
                 // Measure text for sizing
                 this.ctx.font = 'bold 12px Arial';
@@ -637,6 +745,8 @@ panAnimationId: null,
                 lines.forEach((line, i) => {
                     if (i === 0) {
                         this.ctx.fillStyle = playerColor; // Player name in their color
+                    } else if (line.startsWith('Spawned:')) {
+                        this.ctx.fillStyle = '#98FB98'; // Creature name in pale green
                     } else {
                         this.ctx.fillStyle = '#FFFFFF'; // Content in white
                     }
@@ -733,7 +843,11 @@ panAnimationId: null,
         console.log(`??? Showing ${spawners.length} XML spawners`);
         this.xmlSpawners = spawners;
         this.hoveredXmlSpawnerId = null;
-        this.selectedXmlSpawner = null;
+        this.xmlSpawnerTooltipVisible = false;
+        if (this.xmlSpawnerDwellTimer) {
+            clearTimeout(this.xmlSpawnerDwellTimer);
+            this.xmlSpawnerDwellTimer = null;
+        }
         this.redrawAll();
     },
 
@@ -741,67 +855,66 @@ panAnimationId: null,
         console.log(`??????? Hiding XML spawners`);
         this.xmlSpawners = null;
         this.hoveredXmlSpawnerId = null;
-        this.selectedXmlSpawner = null;
+        this.xmlSpawnerTooltipVisible = false;
+        if (this.xmlSpawnerDwellTimer) {
+            clearTimeout(this.xmlSpawnerDwellTimer);
+            this.xmlSpawnerDwellTimer = null;
+        }
         this.redrawAll();
     },
 
-    // Set hovered XML spawner (called from C#)
-    setHoveredXmlSpawner: function(idx) {
-        if (this.hoveredXmlSpawnerId !== idx) {
-            this.hoveredXmlSpawnerId = idx;
+    // Called when mouse moves - starts dwell timer for XML spawner tooltip (like spawn data)
+    updateXmlSpawnerHover: function(screenX, screenY) {
+        const worldPos = this.screenToWorld(screenX, screenY);
+        const newIdx = this.findXmlSpawnerAt(worldPos.x, worldPos.y);
+
+        // Clear existing dwell timer
+        if (this.xmlSpawnerDwellTimer) {
+            clearTimeout(this.xmlSpawnerDwellTimer);
+            this.xmlSpawnerDwellTimer = null;
+        }
+
+        // If mouse moved to a different spawner or off spawners
+        if (newIdx !== this.hoveredXmlSpawnerId) {
+            this.hoveredXmlSpawnerId = newIdx;
+            this.xmlSpawnerTooltipVisible = false; // Hide tooltip immediately on move
             this.redrawAll();
+        }
+
+        // If hovering over a spawner, start dwell timer to show tooltip
+        if (newIdx >= 0) {
+            this.xmlTooltipMousePos = { x: screenX, y: screenY };
+            this.xmlSpawnerDwellTimer = setTimeout(() => {
+                if (this.hoveredXmlSpawnerId === newIdx) {
+                    this.xmlSpawnerTooltipVisible = true;
+                    this.redrawAll();
+                }
+            }, this.xmlSpawnerDwellDelay);
         }
     },
 
-    // Handle XML spawner click - toggle selection and store mouse position
-    handleXmlSpawnerClick: function(idx, mouseX, mouseY) {
-        if (!this.xmlSpawners || idx < 0 || idx >= this.xmlSpawners.length) {
-            this.selectedXmlSpawner = null;
-            this.redrawAll();
-            return false;
+    // Clear XML spawner hover state (called when mouse leaves canvas)
+    clearXmlSpawnerHover: function() {
+        if (this.xmlSpawnerDwellTimer) {
+            clearTimeout(this.xmlSpawnerDwellTimer);
+            this.xmlSpawnerDwellTimer = null;
         }
-
-        // If clicking same spawner, deselect
-        if (this.selectedXmlSpawner && this.selectedXmlSpawner.idx === idx) {
-            this.selectedXmlSpawner = null;
-            this.redrawAll();
-            return false;
-        }
-
-        // Select new spawner
-        const spawner = this.xmlSpawners[idx];
-        this.selectedXmlSpawner = {
-            idx: idx,
-            centerX: spawner.centerX || spawner.x || 0,
-            centerY: spawner.centerY || spawner.y || 0,
-            radius: spawner.radius || spawner.width || 10
-        };
-        this.xmlTooltipMousePos = { x: mouseX, y: mouseY };
-        this.redrawAll();
-        return true;
-    },
-
-    // Update tooltip position while hovering with selection active
-    updateXmlTooltipPosition: function(mouseX, mouseY) {
-        if (this.selectedXmlSpawner) {
-            this.xmlTooltipMousePos = { x: mouseX, y: mouseY };
-            this.redrawAll();
-        }
-    },
-
-    // Clear XML spawner selection (called when mouse leaves area)
-    clearXmlSpawnerSelection: function() {
-        if (this.selectedXmlSpawner) {
-            this.selectedXmlSpawner = null;
+        if (this.hoveredXmlSpawnerId >= 0 || this.xmlSpawnerTooltipVisible) {
+            this.hoveredXmlSpawnerId = -1;
+            this.xmlSpawnerTooltipVisible = false;
             this.redrawAll();
         }
     },
 
     // Find XML spawner at world coordinates (returns index or -1)
+    // Checks in reverse radius order so smaller circles (on top) are found first
     findXmlSpawnerAt: function(worldX, worldY) {
         if (!this.xmlSpawners || !Array.isArray(this.xmlSpawners)) {
             return -1;
         }
+
+        // Create list of spawners that contain the point, with their radii
+        const containingSpawners = [];
 
         for (let i = 0; i < this.xmlSpawners.length; i++) {
             const spawner = this.xmlSpawners[i];
@@ -817,11 +930,17 @@ panAnimationId: null,
             const distSquared = dx * dx + dy * dy;
 
             if (distSquared <= radius * radius) {
-                return i;
+                containingSpawners.push({ idx: i, radius: radius });
             }
         }
 
-        return -1;
+        // Return the one with smallest radius (it's on top visually)
+        if (containingSpawners.length === 0) {
+            return -1;
+        }
+
+        containingSpawners.sort((a, b) => a.radius - b.radius);
+        return containingSpawners[0].idx;
     },
     
     // Server Spawn methods (heatmap)
@@ -840,6 +959,7 @@ panAnimationId: null,
             clearTimeout(this.serverSpawnDwellTimer);
             this.serverSpawnDwellTimer = null;
         }
+        this.stopSpawnFlashAnimation();
         this.redrawAll();
     },
 
@@ -885,7 +1005,7 @@ panAnimationId: null,
             this.redrawAll();
         }
 
-        // If hovering over a spawn, start dwell timer to show tooltip
+        // If hovering over a spawn, start dwell timer to show tooltip and start flash animation
         if (newIdx >= 0) {
             this.serverSpawnTooltipMousePos = { x: screenX, y: screenY };
             this.serverSpawnDwellTimer = setTimeout(() => {
@@ -894,6 +1014,37 @@ panAnimationId: null,
                     this.redrawAll();
                 }
             }, this.serverSpawnDwellDelay);
+
+            // Start flash animation for spawn dot
+            this.startSpawnFlashAnimation();
+        } else {
+            // Stop flash animation when not hovering
+            this.stopSpawnFlashAnimation();
+        }
+    },
+
+    // Start the spawn dot flash animation loop
+    startSpawnFlashAnimation: function() {
+        if (this.serverSpawnFlashAnimationId !== null) return; // Already running
+
+        const animate = () => {
+            if (this.hoveredServerSpawnIdx < 0) {
+                this.serverSpawnFlashAnimationId = null;
+                return; // Stop animation when not hovering
+            }
+
+            this.redrawAll();
+            this.serverSpawnFlashAnimationId = requestAnimationFrame(animate);
+        };
+
+        this.serverSpawnFlashAnimationId = requestAnimationFrame(animate);
+    },
+
+    // Stop the spawn dot flash animation
+    stopSpawnFlashAnimation: function() {
+        if (this.serverSpawnFlashAnimationId !== null) {
+            cancelAnimationFrame(this.serverSpawnFlashAnimationId);
+            this.serverSpawnFlashAnimationId = null;
         }
     },
 
@@ -903,6 +1054,7 @@ panAnimationId: null,
             clearTimeout(this.serverSpawnDwellTimer);
             this.serverSpawnDwellTimer = null;
         }
+        this.stopSpawnFlashAnimation();
         if (this.hoveredServerSpawnIdx >= 0 || this.serverSpawnTooltipVisible) {
             this.hoveredServerSpawnIdx = -1;
             this.serverSpawnTooltipVisible = false;

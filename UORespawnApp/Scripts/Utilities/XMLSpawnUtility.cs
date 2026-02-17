@@ -33,6 +33,9 @@ namespace UORespawnApp
                     {
                         string[] parts = line.Split(':');
 
+                        // Support both old format (4 parts) and new format (6 parts)
+                        // Old: Map:X:Y:HomeRange
+                        // New: Map:X:Y:HomeRange:MaxCount:SpawnNames (SpawnNames are pipe-separated)
                         if (parts.Length < 4) continue;
 
                         if (TryGetMap(parts[0], out int mapId))
@@ -40,6 +43,20 @@ namespace UORespawnApp
                             int x = int.Parse(parts[1]);
                             int y = int.Parse(parts[2]);
                             int range = int.Parse(parts[3]);
+
+                            // Parse MaxCount (default to 0 if not present)
+                            int maxCount = 0;
+                            if (parts.Length >= 5 && int.TryParse(parts[4], out int parsedMax))
+                            {
+                                maxCount = parsedMax;
+                            }
+
+                            // Parse SpawnNames (pipe-separated, default to empty list)
+                            List<string> spawnNames = [];
+                            if (parts.Length >= 6 && !string.IsNullOrWhiteSpace(parts[5]))
+                            {
+                                spawnNames = [.. parts[5].Split('|', StringSplitOptions.RemoveEmptyEntries)];
+                            }
 
                             // Store center coordinates and radius for circle visualization
                             // Also keep legacy X/Y adjusted to top-left for backward compatibility
@@ -52,6 +69,8 @@ namespace UORespawnApp
                                 CenterX = x,
                                 CenterY = y,
                                 Radius = range,
+                                MaxCount = maxCount,
+                                SpawnNames = spawnNames,
                                 X = adjustedX,
                                 Y = adjustedY,
                                 Width = range,

@@ -743,23 +743,6 @@
                 mouseWorldX = coords[0];
                 mouseWorldY = coords[1];
 
-                // Check for XML spawner click first (if XML spawners are visible) - XML spawners always have highest click priority
-                if (ViewService.ShowXMLSpawners)
-                {
-                    var xmlIdx = await JS.InvokeAsync<int>("eval", $"window.mapModule.findXmlSpawnerAt({mouseWorldX}, {mouseWorldY})");
-                    if (xmlIdx >= 0)
-                    {
-                        // Toggle XML spawner selection - pass screen coordinates for tooltip
-                        await JS.InvokeVoidAsync("eval", $"window.mapModule.handleXmlSpawnerClick({xmlIdx}, {e.OffsetX}, {e.OffsetY})");
-                        return; // Don't select regions when clicking XML spawners
-                    }
-                    else
-                    {
-                        // Clicked outside XML spawner - clear selection
-                        await JS.InvokeVoidAsync("eval", "window.mapModule.clearXmlSpawnerSelection()");
-                    }
-                }
-
                 var clickedRegion = RegionDataUtility.FindRegionAt(ViewService.CurrentMapId, mouseWorldX, mouseWorldY);
                 if (clickedRegion != null)
                 {
@@ -785,14 +768,10 @@
             mouseWorldY = coords[1];
             StateHasChanged();
 
-            // Check for XML spawner hover first (if XML spawners are visible)
+            // Update XML spawner hover (for dwell-based tooltip, like server spawns)
             if (ViewService.ShowXMLSpawners)
             {
-                var xmlIdx = await JS.InvokeAsync<int>("eval", $"window.mapModule.findXmlSpawnerAt({mouseWorldX}, {mouseWorldY})");
-                await JS.InvokeVoidAsync("eval", $"window.mapModule.setHoveredXmlSpawner({xmlIdx})");
-
-                // Update XML tooltip position if one is selected
-                await JS.InvokeVoidAsync("eval", $"window.mapModule.updateXmlTooltipPosition({e.OffsetX}, {e.OffsetY})");
+                await JS.InvokeVoidAsync("eval", $"window.mapModule.updateXmlSpawnerHover({e.OffsetX}, {e.OffsetY})");
             }
 
             // Update server spawn hover (for dwell-based tooltip)
@@ -843,11 +822,10 @@
         isPanning = false;
         await JS.InvokeVoidAsync("eval", "window.mapModule.setHoveredRegionArea(null, -1)");
 
-        // Clear XML spawner hover and selection when mouse leaves
+        // Clear XML spawner hover when mouse leaves
         if (ViewService.ShowXMLSpawners)
         {
-            await JS.InvokeVoidAsync("eval", "window.mapModule.setHoveredXmlSpawner(-1)");
-            await JS.InvokeVoidAsync("eval", "window.mapModule.clearXmlSpawnerSelection()");
+            await JS.InvokeVoidAsync("eval", "window.mapModule.clearXmlSpawnerHover()");
         }
 
         // Clear server spawn hover when mouse leaves

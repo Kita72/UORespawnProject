@@ -11,17 +11,21 @@
         // HomeRange as radius for circle visualization
         public int Radius { get; set; }
 
+        // MaxCount from spawner
+        public int MaxCount { get; set; }
+
         // Legacy properties for backward compatibility
         public int X { get; set; }
         public int Y { get; set; }
         public int Width { get; set; }
         public int Height { get; set; }
 
-        public List<string> ObjectNames { get; set; } 
+        // List of creature/spawn names from the spawner
+        public List<string> SpawnNames { get; set; } 
 
         public XMLSpawnPoint()
         {
-            ObjectNames = [];
+            SpawnNames = [];
         }
     }
 }

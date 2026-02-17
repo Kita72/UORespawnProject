@@ -1569,83 +1569,59 @@ private bool cleanServerOnReset = false;
         isExporting = true;
         exportMessage = "";
         StateHasChanged();
-        
+
         try
         {
             Logger.Info("Starting server scripts export...");
-            
-            // Get UORespawnSystem folder path - try multiple locations
-            string? spawnSystemPath = null;
+
             var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-            
-            Logger.Info($"Base directory: {baseDir}");
-            
-            // Try relative paths from base directory
+
+            // Look for pre-packaged ZIP file
             var possiblePaths = new[]
             {
-                Path.Combine(baseDir, "UORespawnSystem"),                                    // Published location
-                Path.Combine(baseDir, "..", "UORespawnSystem"),                              // Alternative 1
-                Path.Combine(baseDir, "..", "..", "UORespawnSystem"),                        // Alternative 2
-                Path.Combine(baseDir, "..", "..", "..", "..", "UORespawnSystem"),           // Development
-                Path.Combine(baseDir, "..", "..", "..", "..", "..", "UORespawnSystem")      // Deep development
+                Path.Combine(baseDir, "Data", "ServerScripts", "UORespawnSystem.zip"),           // Published/Runtime location
+                Path.Combine(baseDir, "..", "..", "..", "..", "Data", "ServerScripts", "UORespawnSystem.zip")  // Development
             };
-            
+
+            string? zipPath = null;
             foreach (var testPath in possiblePaths)
             {
                 var fullPath = Path.GetFullPath(testPath);
                 Logger.Info($"Testing: {fullPath}");
-                
-                if (Directory.Exists(fullPath))
+
+                if (File.Exists(fullPath))
                 {
-                    spawnSystemPath = fullPath;
-                    Logger.Info($"Found SpawnSystem at: {spawnSystemPath}");
+                    zipPath = fullPath;
+                    Logger.Info($"Found server scripts ZIP at: {zipPath}");
                     break;
                 }
             }
-            
-            if (string.IsNullOrEmpty(spawnSystemPath))
+
+            if (string.IsNullOrEmpty(zipPath))
             {
-                exportMessage = "Error: UORespawnSystem folder not found.\n\n" +
-                               "The UORespawnSystem folder should be in the application directory.\n" +
-                               "Please download the source code from GitHub to access server scripts.";
+                exportMessage = "Error: Server scripts package not found.\n\n" +
+                               "The UORespawnSystem.zip file should be in Data/ServerScripts/.\n" +
+                               "Please ensure the application was installed correctly.";
                 exportSuccess = false;
-                Logger.Warning($"UORespawnSystem not found. Searched paths: {string.Join(", ", possiblePaths.Select(Path.GetFullPath))}");
+                Logger.Warning($"UORespawnSystem.zip not found. Searched paths: {string.Join(", ", possiblePaths.Select(Path.GetFullPath))}");
                 return;
             }
-            
-            // Create temp ZIP file
-            var tempPath = Path.Combine(Path.GetTempPath(), "UORespawn_ServerScripts.zip");
-            
-            // Delete existing temp file
-            if (File.Exists(tempPath))
-            {
-                File.Delete(tempPath);
-            }
-            
-            
-            Logger.Info($"Creating ZIP at: {tempPath}");
-            
-            // Create ZIP file
-            System.IO.Compression.ZipFile.CreateFromDirectory(spawnSystemPath, tempPath, 
-                System.IO.Compression.CompressionLevel.Optimal, false);
-            
-            
-            var zipInfo = new FileInfo(tempPath);
-            Logger.Info($"ZIP created successfully ({zipInfo.Length / 1024:N0} KB)");
-            
+
+            var zipInfo = new FileInfo(zipPath);
+            Logger.Info($"Server scripts package found ({zipInfo.Length / 1024:N0} KB)");
+
             // Copy to Downloads folder or use Share
 #if WINDOWS
             // Windows - save to user's Downloads folder
             var downloadsPath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             downloadsPath = Path.Combine(downloadsPath, "Downloads", "UORespawn_ServerScripts.zip");
-            
-            File.Copy(tempPath, downloadsPath, true);
-            
-            
+
+            File.Copy(zipPath, downloadsPath, true);
+
             exportMessage = $"Server scripts exported to Downloads folder:\n{downloadsPath}";
             exportSuccess = true;
             Logger.Info($"File saved to: {downloadsPath}");
-            
+
             // Open Downloads folder
             try
             {
@@ -1655,14 +1631,13 @@ private bool cleanServerOnReset = false;
 #elif MACCATALYST
             // macOS - save to user's Downloads folder
             var downloadsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", "UORespawn_ServerScripts.zip");
-            
-            File.Copy(tempPath, downloadsPath, true);
-            
-            
+
+            File.Copy(zipPath, downloadsPath, true);
+
             exportMessage = $"Server scripts exported to Downloads folder:\n{downloadsPath}";
             exportSuccess = true;
             Logger.Info($"File saved to: {downloadsPath}");
-            
+
             // Open Downloads folder
             try
             {
@@ -1674,10 +1649,9 @@ private bool cleanServerOnReset = false;
             await Share.Default.RequestAsync(new ShareFileRequest
             {
                 Title = "UORespawn Server Scripts",
-                File = new ShareFile(tempPath)
+                File = new ShareFile(zipPath)
             });
-            
-            
+
             exportMessage = "Server scripts ready to share!";
             exportSuccess = true;
             Logger.Info("Share request sent");
@@ -1685,7 +1659,7 @@ private bool cleanServerOnReset = false;
         }
         catch (Exception ex)
         {
-            exportMessage = $"Error exporting server scripts: {ex.Message}\n\nStack Trace:\n{ex.StackTrace}";
+            exportMessage = $"Error exporting server scripts: {ex.Message}";
             exportSuccess = false;
             Logger.Error("Export error", ex);
         }

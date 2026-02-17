@@ -104,11 +104,17 @@
         <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
     </ItemGroup>
 
-    <!-- Exclude Server-Side SpawnSystem folder from compilation but include for distribution -->
-
-    <!-- Include SpawnSystem folder in published output for export functionality -->
+    <!-- Pre-packaged server scripts ZIP for export functionality -->
     <ItemGroup>
-      <None Include="UORespawnSystem\**\*.*" CopyToPublishDirectory="PreserveNewest" />
+      <None Include="Data\ServerScripts\UORespawnSystem.zip" Condition="Exists('Data\ServerScripts\UORespawnSystem.zip')">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
+
+    <!-- Exclude any server-side scripts that may exist in the project folder (legacy/development) -->
+    <ItemGroup>
+      <Compile Remove="UORespawnSystem\**\*.cs" />
+      <None Remove="UORespawnSystem\**\*.*" />
     </ItemGroup>
     <ItemGroup>
       <MauiImage Remove="Resources\Images\splash.png" />
@@ -137,7 +143,6 @@
 
     <ItemGroup>
       <Folder Include="Data\PACKS\" />
-      <Folder Include="UORespawnSystem\Entities\BinaryModels\" />
     </ItemGroup>
 
 </Project>

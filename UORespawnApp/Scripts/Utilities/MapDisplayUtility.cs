@@ -4,7 +4,7 @@ namespace UORespawnApp
 {
     internal static class MapDisplayUtility
     {
-        private static readonly List<(string ShortTime, string PlayerName, int PlayerMap, Microsoft.Maui.Graphics.Point PlayerLocation, Microsoft.Maui.Graphics.Point SpawnLocation)> SpawnStats = [];
+        private static readonly List<(string ShortTime, string PlayerName, int PlayerMap, Microsoft.Maui.Graphics.Point PlayerLocation, Microsoft.Maui.Graphics.Point SpawnLocation, string CreatureName)> SpawnStats = [];
 
         private static readonly Dictionary<string, Color> playerColorCache = [];
 
@@ -43,6 +43,7 @@ namespace UORespawnApp
                     PlayerY = (int)data.PlayerLocation.Y,
                     SpawnX = (int)data.SpawnLocation.X,
                     SpawnY = (int)data.SpawnLocation.Y,
+                    CreatureName = data.CreatureName,
                     ColorR = (int)(playerColor.Red * 255),
                     ColorG = (int)(playerColor.Green * 255),
                     ColorB = (int)(playerColor.Blue * 255),
@@ -93,7 +94,10 @@ namespace UORespawnApp
 
                             string[] parts = line.Split('|');
 
-                            if (parts.Length == 7)
+                            // Support both old format (7 parts) and new format (8 parts with creature name)
+                            // Old: Time|Player|Map|PX|PY|SX|SY
+                            // New: Time|Player|Map|PX|PY|SX|SY|CreatureName
+                            if (parts.Length >= 7)
                             {
                                 try
                                 {
@@ -109,9 +113,13 @@ namespace UORespawnApp
                                     int spawnX = int.Parse(parts[5].Trim());
                                     int spawnY = int.Parse(parts[6].Trim());
 
+                                    // Parse creature name (default to empty if not present)
+                                    string creatureName = parts.Length >= 8 ? parts[7].Trim() : "";
+
                                     SpawnStats.Add((shortTime, playerName, mapId,
                                         new Microsoft.Maui.Graphics.Point(playerX, playerY), 
-                                        new Microsoft.Maui.Graphics.Point(spawnX, spawnY)));
+                                        new Microsoft.Maui.Graphics.Point(spawnX, spawnY),
+                                        creatureName));
 
                                     successfulLines++;
                                 }
@@ -123,7 +131,7 @@ namespace UORespawnApp
                             }
                             else
                             {
-                                Logger.Warning($"Invalid spawn stat line format (expected 7 parts, got {parts.Length}): '{line}'");
+                                Logger.Warning($"Invalid spawn stat line format (expected 7-8 parts, got {parts.Length}): '{line}'");
                                 skippedLines++;
                             }
                         }
@@ -152,6 +160,7 @@ namespace UORespawnApp
         public int PlayerY { get; set; }
         public int SpawnX { get; set; }
         public int SpawnY { get; set; }
+        public string CreatureName { get; set; } = "";
         public int ColorR { get; set; }
         public int ColorG { get; set; }
         public int ColorB { get; set; }
