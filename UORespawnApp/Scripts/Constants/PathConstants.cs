@@ -51,9 +51,31 @@ namespace UORespawnApp.Scripts.Constants
 
         /// <summary>
         /// Packs subfolder in Data folder (contains spawn pack data)
-        /// Each pack is stored in its own subfolder under Data/PACKS
+        /// Structure: Data/PACKS/Approved/, Data/PACKS/Imported/, Data/PACKS/Backup/
         /// </summary>
         public const string PACKS_SUBFOLDER = "PACKS";
+
+        /// <summary>
+        /// Approved packs subfolder - contains unpacked approved packs ready to use
+        /// </summary>
+        public const string PACKS_APPROVED_SUBFOLDER = "Approved";
+
+        /// <summary>
+        /// Imported packs subfolder - contains user-imported packs
+        /// </summary>
+        public const string PACKS_IMPORTED_SUBFOLDER = "Imported";
+
+        /// <summary>
+        /// Backup subfolder - contains original ZIP files for approved packs
+        /// Used to reset packs to default state
+        /// </summary>
+        public const string PACKS_BACKUP_SUBFOLDER = "Backup";
+
+        /// <summary>
+        /// Server scripts/data folder in Data directory
+        /// Contains UORespawnSystem.zip for server setup
+        /// </summary>
+        public const string SERVER_SUBFOLDER = "SERVER";
 
         // ==================== BINARY DATA FILE NAMES (.bin) ====================
         // Editor creates/saves these files, server reads them
@@ -264,7 +286,83 @@ namespace UORespawnApp.Scripts.Constants
                 return packsPath;
             }
         }
-        
+
+        /// <summary>
+        /// Get the approved packs folder path (Data/PACKS/Approved/)
+        /// Contains unpacked approved packs ready to use
+        /// </summary>
+        public static string PacksApprovedPath
+        {
+            get
+            {
+                var path = Path.Combine(PacksPath, PACKS_APPROVED_SUBFOLDER);
+
+                if (!Directory.Exists(path))
+                {
+                    Directory.CreateDirectory(path);
+                }
+
+                return path;
+            }
+        }
+
+        /// <summary>
+        /// Get the imported packs folder path (Data/PACKS/Imported/)
+        /// Contains user-imported packs
+        /// </summary>
+        public static string PacksImportedPath
+        {
+            get
+            {
+                var path = Path.Combine(PacksPath, PACKS_IMPORTED_SUBFOLDER);
+
+                if (!Directory.Exists(path))
+                {
+                    Directory.CreateDirectory(path);
+                }
+
+                return path;
+            }
+        }
+
+        /// <summary>
+        /// Get the backup packs folder path (Data/PACKS/Backup/)
+        /// Contains original ZIP files for approved packs
+        /// </summary>
+        public static string PacksBackupPath
+        {
+            get
+            {
+                var path = Path.Combine(PacksPath, PACKS_BACKUP_SUBFOLDER);
+
+                if (!Directory.Exists(path))
+                {
+                    Directory.CreateDirectory(path);
+                }
+
+                return path;
+            }
+        }
+
+        /// <summary>
+        /// Get the server folder path (Data/SERVER/)
+        /// Contains UORespawnSystem.zip for server setup
+        /// </summary>
+        public static string ServerPath
+        {
+            get
+            {
+                var path = Path.Combine(BASE_DIR, DATA_FOLDER, SERVER_SUBFOLDER);
+
+                if (!Directory.Exists(path))
+                {
+                    Directory.CreateDirectory(path);
+                }
+
+                return path;
+            }
+        }
+
         /// <summary>
         /// Get the legacy CSV folder path (Data/ - NOT Data/UOR_DATA/)
         /// User manually places old CSV files here for import

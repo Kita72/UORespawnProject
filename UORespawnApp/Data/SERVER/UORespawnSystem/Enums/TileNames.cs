@@ -1,0 +1,40 @@
+namespace Server.Custom.UORespawnSystem.Enums
+{
+    internal enum TileNames
+    {
+        None,
+        acid,
+        blood,
+        brick,
+        cave,
+        cave_exit,
+        cave_floor,
+        cloud,
+        cobblestones,
+        dirt,
+        embank,
+        flagstone,
+        forest,
+        furrows,
+        grass,
+        jungle,
+        leaves,
+        marble,
+        obsidian,
+        planks,
+        rain_event,
+        sand,
+        sand_stone,
+        snow,
+        snow_event,
+        stone,
+        stone_moss,
+        swamp,
+        tile,
+        tree,
+        _void,
+        voiddestruction,
+        water,
+        wooden_floor
+    }
+}

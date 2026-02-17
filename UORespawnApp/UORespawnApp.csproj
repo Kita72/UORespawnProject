@@ -104,14 +104,45 @@
         <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
     </ItemGroup>
 
-    <!-- Pre-packaged server scripts ZIP for export functionality -->
+    <!-- ==================== DEVELOPMENT vs PUBLISH STRATEGY ====================
+         Development (Debug): Track unpacked folders in Git for easy editing
+         Publish (Release): Include only ZIPs, extract on first launch
+         ======================================================================== -->
+
+    <!-- SERVER: Pre-packaged server scripts ZIP for export functionality -->
+    <!-- In Publish: Include ZIP, exclude unpacked folder -->
+    <!-- In Debug: Unpacked folder exists for development, ZIP optional -->
     <ItemGroup>
-      <None Include="Data\ServerScripts\UORespawnSystem.zip" Condition="Exists('Data\ServerScripts\UORespawnSystem.zip')">
+      <None Include="Data\SERVER\UORespawnSystem.zip" Condition="Exists('Data\SERVER\UORespawnSystem.zip')">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <!-- Exclude server .cs files from compilation (they're ServUO scripts, not app code) -->
+      <Compile Remove="Data\SERVER\**\*.cs" />
+      <None Remove="Data\SERVER\UORespawnSystem\**\*.*" Condition="'$(Configuration)' == 'Release'" />
+    </ItemGroup>
+
+    <!-- PACKS: Spawn pack system folders -->
+    <!-- Approved: Unpacked packs ready to use (Debug) / ZIPs extracted on first launch (Release) -->
+    <!-- Imported: User-imported packs (empty on publish) -->
+    <!-- Backup: Original ZIPs for reset functionality -->
+    <ItemGroup>
+      <!-- Include Backup ZIPs (for reset functionality) -->
+      <None Include="Data\PACKS\Backup\*.zip" Condition="Exists('Data\PACKS\Backup\')">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <!-- Preserve empty folder structure -->
+      <None Include="Data\PACKS\Approved\.gitkeep" Condition="Exists('Data\PACKS\Approved\.gitkeep')">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Include="Data\PACKS\Imported\.gitkeep" Condition="Exists('Data\PACKS\Imported\.gitkeep')">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Include="Data\PACKS\Backup\.gitkeep" Condition="Exists('Data\PACKS\Backup\.gitkeep')">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
     </ItemGroup>
 
-    <!-- Exclude any server-side scripts that may exist in the project folder (legacy/development) -->
+    <!-- Exclude any legacy server-side scripts that may exist in root project folder -->
     <ItemGroup>
       <Compile Remove="UORespawnSystem\**\*.cs" />
       <None Remove="UORespawnSystem\**\*.*" />
@@ -139,10 +170,6 @@
       <None Update="Data\MAPS\Map5.bmp">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
-    </ItemGroup>
-
-    <ItemGroup>
-      <Folder Include="Data\PACKS\" />
     </ItemGroup>
 
 </Project>

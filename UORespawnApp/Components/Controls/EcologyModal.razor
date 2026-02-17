@@ -1,0 +1,463 @@
+@* Modal to display the UOR Ecology document in a stylish, readable format *@
+
+<div class="modal fade @(IsVisible ? "show d-block" : "")" tabindex="-1" style="@(IsVisible ? "background-color: rgba(0,0,0,0.7);" : "")">
+    <div class="modal-dialog modal-xl ecology-modal-dialog">
+        <div class="modal-content ecology-modal-content">
+            <div class="modal-header ecology-header">
+                <h5 class="modal-title">
+                    <span class="bi bi-book me-2"></span>Ecological Dynamics & Spawn Architecture
+                </h5>
+                <button type="button" class="btn-close btn-close-white" @onclick="Close"></button>
+            </div>
+            <div class="modal-body ecology-body">
+                @if (IsLoading)
+                {
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-warning" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-3 text-muted">Loading ecology data...</p>
+                    </div>
+                }
+                else
+                {
+                    <!-- Content Area -->
+                    <div class="ecology-content" @ref="contentRef">
+                        <!-- Introduction -->
+                        <section id="intro" class="ecology-section">
+                            <h2 class="section-title">
+                                <span class="bi bi-journal-text me-2"></span>
+                                Introduction: The Philosophy of a Living Shard
+                            </h2>
+                            <p class="intro-text">
+                                The implementation of a dynamic UORespawn system represents a fundamental shift in the 
+                                architectural design of Ultima Online's virtual ecology. Historically, spawn management 
+                                in MMORPGs has relied on static, point-based persistence—a <em>"monster in a box"</em> philosophy 
+                                where an Orc stands in a forest regardless of whether it is high noon or the dead of a blizzard.
+                            </p>
+                            <p class="intro-text">
+                                This report outlines a sophisticated, data-driven approach to replacing that static model with 
+                                a <strong class="highlight">"Living Shard"</strong> simulation. By leveraging spatial data and integrating 
+                                deep ecological lore from the Ultima franchise, we establish a system where 
+                                <em>the environment dictates the inhabitants</em>.
+                            </p>
+                        </section>
+
+                        <!-- Six Frequency System -->
+                        <section id="frequencies" class="ecology-section">
+                            <h2 class="section-title">
+                                <span class="bi bi-layers me-2"></span>
+                                1. The Six-Frequency System
+                            </h2>
+                            <p>These represent specific ecological niches, not arbitrary RNG buckets:</p>
+                            
+                            <div class="frequency-grid">
+                                <div class="frequency-card common">
+                                    <div class="frequency-header">Common</div>
+                                    <div class="frequency-subtitle">The Biomass</div>
+                                    <p>Forms the base of the food chain. In a Forest, this is the Hind or Timber Wolf. They define the "flavor" of the location.</p>
+                                </div>
+                                <div class="frequency-card uncommon">
+                                    <div class="frequency-header">Uncommon</div>
+                                    <div class="frequency-subtitle">The Specialists</div>
+                                    <p>Creatures requiring specific conditions or naturally solitary. The Great Hart or the Ogre.</p>
+                                </div>
+                                <div class="frequency-card rare">
+                                    <div class="frequency-header">Rare</div>
+                                    <div class="frequency-subtitle">The Apex</div>
+                                    <p>High-threat entities governing local hierarchy. Greater Dragon, Rotting Corpse, or Titan serve as heavy hitters.</p>
+                                </div>
+                                <div class="frequency-card water">
+                                    <div class="frequency-header">Water</div>
+                                    <div class="frequency-subtitle">The Aquatic Layer</div>
+                                    <p>Triggered when water tiles or "Wet" flags are detected. Bullfrogs in swamps, Kraken in deep water.</p>
+                                </div>
+                                <div class="frequency-card weather">
+                                    <div class="frequency-header">Weather</div>
+                                    <div class="frequency-subtitle">The Meteorological Layer</div>
+                                    <p>4-slot list responding to global weather: Rain, Storm, Snow, Blizzard.</p>
+                                </div>
+                                <div class="frequency-card timed">
+                                    <div class="frequency-header">Timed</div>
+                                    <div class="frequency-subtitle">The Chronobiological Layer</div>
+                                    <p>8-slot list simulating diurnal, nocturnal, and crepuscular cycles of fauna.</p>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- Chronobiology -->
+                        <section id="chronobiology" class="ecology-section">
+                            <h2 class="section-title">
+                                <span class="bi bi-clock-history me-2"></span>
+                                2. Chronobiology: The 8-Window Cycle
+                            </h2>
+                            <p>The 24-hour cycle is divided into 3-hour phases to maximize ecological variance:</p>
+                            
+                            <div class="time-cycle-container">
+                                @foreach (var slot in TimeSlots)
+                                {
+                                    <div class="time-slot @slot.CssClass">
+                                        <div class="slot-number">@slot.Number</div>
+                                        <div class="slot-name">@slot.Name</div>
+                                        <div class="slot-hours">@slot.Hours</div>
+                                        <div class="slot-theme">@slot.Theme</div>
+                                    </div>
+                                }
+                            </div>
+                        </section>
+
+                        <!-- Tile Types -->
+                        <section id="tiles" class="ecology-section">
+                            <h2 class="section-title">
+                                <span class="bi bi-grid-3x3 me-2"></span>
+                                3. Tile-Based Ecology: The 32 Substrates
+                            </h2>
+                            <p>Configuration strings for 32 specific tile types covering standard geography and exotic environments:</p>
+                            
+                            <div class="tile-category">
+                                <h3 class="category-title">
+                                    <span class="bi bi-tree me-2"></span>Natural Terrains
+                                </h3>
+                                <div class="tile-grid">
+                                    @foreach (var tile in NaturalTiles)
+                                    {
+                                        <div class="tile-card">
+                                            <div class="tile-header">@tile.Name</div>
+                                            <div class="tile-subtitle">@tile.Description</div>
+                                            <div class="tile-analysis">@tile.Analysis</div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+
+                            <div class="tile-category">
+                                <h3 class="category-title">
+                                    <span class="bi bi-building me-2"></span>Constructed & Civilized
+                                </h3>
+                                <div class="tile-grid">
+                                    @foreach (var tile in ConstructedTiles)
+                                    {
+                                        <div class="tile-card">
+                                            <div class="tile-header">@tile.Name</div>
+                                            <div class="tile-subtitle">@tile.Description</div>
+                                            <div class="tile-analysis">@tile.Analysis</div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+
+                            <div class="tile-category">
+                                <h3 class="category-title">
+                                    <span class="bi bi-stars me-2"></span>Exotic, Magical & Alien
+                                </h3>
+                                <div class="tile-grid">
+                                    @foreach (var tile in ExoticTiles)
+                                    {
+                                        <div class="tile-card exotic">
+                                            <div class="tile-header">@tile.Name</div>
+                                            <div class="tile-subtitle">@tile.Description</div>
+                                            <div class="tile-analysis">@tile.Analysis</div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- Regions -->
+                        <section id="regions" class="ecology-section">
+                            <h2 class="section-title">
+                                <span class="bi bi-map me-2"></span>
+                                4. Regional Spawn Analysis
+                            </h2>
+                            <p>Regions grouped into logical clusters (Archetypes) for comprehensive coverage:</p>
+
+                            <div class="region-category">
+                                <h3 class="category-title">
+                                    <span class="bi bi-houses me-2"></span>The Civilized World
+                                </h3>
+                                <div class="region-grid">
+                                    @foreach (var region in CivilizedRegions)
+                                    {
+                                        <div class="region-card">
+                                            <div class="region-header">@region.Name</div>
+                                            <div class="region-locations">@region.Locations</div>
+                                            <div class="region-narrative">@region.Narrative</div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+
+                            <div class="region-category">
+                                <h3 class="category-title">
+                                    <span class="bi bi-door-open me-2"></span>The Dungeons
+                                </h3>
+                                <div class="region-grid">
+                                    @foreach (var region in DungeonRegions)
+                                    {
+                                        <div class="region-card dungeon">
+                                            <div class="region-header">@region.Name</div>
+                                            <div class="region-locations">@region.Locations</div>
+                                            <div class="region-narrative">@region.Narrative</div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+
+                            <div class="region-category">
+                                <h3 class="category-title">
+                                    <span class="bi bi-flower1 me-2"></span>Mondain's Legacy & Elven Lands
+                                </h3>
+                                <div class="region-grid">
+                                    @foreach (var region in ElvenRegions)
+                                    {
+                                        <div class="region-card elven">
+                                            <div class="region-header">@region.Name</div>
+                                            <div class="region-locations">@region.Locations</div>
+                                            <div class="region-narrative">@region.Narrative</div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- Weather Mechanics -->
+                        <section id="weather" class="ecology-section">
+                            <h2 class="section-title">
+                                <span class="bi bi-cloud-rain me-2"></span>
+                                5. Weather: The Catalyst of Spawning
+                            </h2>
+                            
+                            <div class="weather-grid">
+                                <div class="weather-card rain">
+                                    <div class="weather-icon"><span class="bi bi-cloud-drizzle"></span></div>
+                                    <div class="weather-name">Rain</div>
+                                    <div class="weather-effect">Hydrological Expansion</div>
+                                    <p>Water tables rise. Bullfrogs and Giant Toads move to land. Slimes reproduce.</p>
+                                </div>
+                                <div class="weather-card storm">
+                                    <div class="weather-icon"><span class="bi bi-cloud-lightning"></span></div>
+                                    <div class="weather-name">Storm</div>
+                                    <div class="weather-effect">Electrical Energy</div>
+                                    <p>High atmospheric charge attracts Air Elementals and Wisps. Dragons ride storm fronts.</p>
+                                </div>
+                                <div class="weather-card snow">
+                                    <div class="weather-icon"><span class="bi bi-snow"></span></div>
+                                    <div class="weather-name">Snow</div>
+                                    <div class="weather-effect">Thermodynamic Drop</div>
+                                    <p>Forces reptiles into torpor. Draws out warm-blooded predators. Ice Fiends manifest.</p>
+                                </div>
+                                <div class="weather-card blizzard">
+                                    <div class="weather-icon"><span class="bi bi-snow3"></span></div>
+                                    <div class="weather-name">Blizzard</div>
+                                    <div class="weather-effect">Extreme Cold</div>
+                                    <p>Rare event. Only Cold-aligned monsters survive. White Wyrms become common!</p>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- Conclusion -->
+                        <section id="conclusion" class="ecology-section">
+                            <h2 class="section-title">
+                                <span class="bi bi-check2-circle me-2"></span>
+                                Conclusion
+                            </h2>
+                            <div class="conclusion-box">
+                                <p>
+                                    This configuration provides a complete architectural blueprint for the UORespawn system. 
+                                    The strict categorization of <strong>32 tiles</strong> and <strong>hundreds of regions</strong> ensures 
+                                    that no two locations feel identical.
+                                </p>
+                                <p>
+                                    The integration of the <strong>8-phase timeline</strong> and <strong>4-phase weather system</strong> 
+                                    elevates the spawn logic from a static database to a <em>dynamic ecosystem simulation</em>.
+                                </p>
+                                <p class="final-note">
+                                    Players will learn that hunting <span class="creature-highlight dragon">Dragons</span> is best done at 
+                                    <span class="time-highlight">Noon</span> when they are active, while hunting 
+                                    <span class="creature-highlight lich">Liches</span> requires the bravery to venture out during the 
+                                    <span class="time-highlight">Witching Hour</span>.
+                                </p>
+                            </div>
+                        </section>
+                    </div>
+                }
+            </div>
+            <div class="modal-footer ecology-footer">
+                <span class="footer-note">
+                    <span class="bi bi-info-circle me-1"></span>
+                    This ecology forms the foundation of the Default Spawn Pack
+                </span>
+                <button type="button" class="btn btn-outline-light" @onclick="Close">
+                    <span class="bi bi-x-lg me-1"></span>Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public bool IsVisible { get; set; }
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    private bool IsLoading { get; set; } = false;
+    private ElementReference contentRef;
+
+    // Time slots data
+    private List<TimeSlotInfo> TimeSlots = new()
+    {
+        new(1, "Dawn", "05:00 - 08:00", "Awakening. Birds sing, herbivores graze, nocturnal predators retreat.", "dawn"),
+        new(2, "Morning", "08:00 - 11:00", "Humanoid activity peak. Bandits, farmers, livestock.", "morning"),
+        new(3, "Noon", "11:00 - 14:00", "Solar maximum. Reptiles are fastest. Shadows disappear.", "noon"),
+        new(4, "Afternoon", "14:00 - 17:00", "Hunting hour. Predators stalk the grazing herbivores.", "afternoon"),
+        new(5, "Dusk", "17:00 - 20:00", "The transition. Bats emerge. Birds roost. Visibility drops.", "dusk"),
+        new(6, "Evening", "20:00 - 23:00", "Darkness falls. Low-tier undead and nocturnal beasts emerge.", "evening"),
+        new(7, "Midnight", "23:00 - 02:00", "Deep dark. Shades, Spectres, and ambush predators active.", "midnight"),
+        new(8, "Witching Hour", "02:00 - 05:00", "Magical peak. Wisps, Liches, and ethereal beings are strongest.", "witching")
+    };
+
+    // Natural Tiles - Full ecological narratives
+    private List<TileInfo> NaturalTiles = new()
+    {
+        new("Grass", "The Verdant Plains", 
+            "The most common tile in Britannia. Ecologically, it supports domesticated livestock near cities and wild game in the hinterlands. The weather affects this biome significantly; rain draws out amphibians."),
+        new("Forest", "The Deep Woods", 
+            "Found in Yew and the Spiritwood. The canopy creates varying light levels. Fauna here is skittish (Rabbits) or predatory (Cougars). The Witching Hour in a forest is traditionally dangerous, spawning Reapers and Wisps."),
+        new("Jungle", "The Tropical Belts", 
+            "Prevalent in Eodon and the Valorian Isles. High humidity supports reptilian life and poisonous flora. The Noon slot is particularly dangerous as cold-blooded giant serpents become active."),
+        new("Sand", "The Arid Wastes", 
+            "The Desert of Compassion and the Lost Lands. Life here must be hardy. Scorpions and snakes dominate. At night, the desert cools rapidly, attracting undead (Mummies) who preserve well in the dry air."),
+        new("Snow", "The Frozen Tundra", 
+            "Dagger Isle and the Winter Spur in Tokuno. The ecosystem relies on blubber-heavy mammals (Walrus, Polar Bear) and magical constructs of ice."),
+        new("Swamp", "The Festering Bogs", 
+            "Found in the Lost Lands and near Trinsic. Disease vectors are high. Plague Beasts and Bog Things thrive here. The humidity is constant, making Rain weather events trigger massive slime spawns."),
+        new("Cave", "Subterranean Natural", 
+            "Natural caverns, distinct from brick dungeons. Home to troglodytic life: bats, rats, and earth elementals. The absence of light renders the Day/Night cycle irrelevant visually, but biologically, bats emerge at Dusk."),
+        new("Dirt", "Roads and Farmland", 
+            "The beaten path. Generally safe, populated by travel mounts (Horses, Llamas) and the occasional bandit or brigand looking to waylay travelers."),
+        new("Furrows", "Plowed Agriculture", 
+            "Distinct agricultural tiles found in Skara Brae and Britain farms. These areas are food sources for vermin (Rabbits, Crows) and thus attract low-level predators."),
+        new("Mountain", "High Altitude", 
+            "Rocky crags and peaks. Home to Goats, Eagles, and Giants (Ogres, Ettins) who use the height for territory scanning."),
+        new("Water_Shallow", "Coastlines", 
+            "The littoral zone. Crabs, Walruses (in north), and Frogs. It serves as the transition point for Sea Serpents to attack land-dwellers."),
+        new("Water_Deep", "The High Seas", 
+            "The domain of the Kraken, Sea Serpents, and the mighty Dragon Turtle. These tiles are only accessible by boat, requiring high-threat spawns.")
+    };
+
+    // Constructed Tiles - Full ecological narratives
+    private List<TileInfo> ConstructedTiles = new()
+    {
+        new("Flagstone", "City Streets & Plazas", 
+            "Within guard zones, spawns are suppressed, but in Felucca or ruined towns, these tiles host urban vermin and criminals."),
+        new("Brick", "Dungeon Interiors", 
+            "The quintessential dungeon tile (Deceit, Despise). It represents the 'Old World' architecture. Home to Skeletons, Zombies, and Rats."),
+        new("Wood_Plank", "Docks, Bridges, Floors", 
+            "Docks at Vesper or Buccaneer's Den. Rats and Seagulls are common. Pirates and Brigands appear in lawless areas."),
+        new("Marble", "Palaces and High Shrines", 
+            "High-value architecture found in Montor (Ilshenar) or Nujel'm. Often guarded by Terathans (in ruins) or Nobles/Gargoyles."),
+        new("Stone_Moss", "Overgrown Ruins", 
+            "Ancient ruins like those in the Lost Lands or the entrance to the Blighted Grove. Nature reclaiming stone attracts Slimes, Snakes, and Rotting Corpses."),
+        new("Sandstone", "Canyons and Desert Cities", 
+            "Common in the Desert of Compassion and the Orc Forts. Scorpions and Earth Elementals blend in here. Orcs favor this terrain for their forts."),
+        new("Gravel", "Roadways & Mines", 
+            "Roads less traveled and mine floors. Wolves and bandits ambush travelers here. Minoc mines use this tile, attracting Ore Elementals."),
+        new("Embank", "Cliff Edges & Ridges", 
+            "The sharp edge of mountains. Eagles nest here; Harpies roost on the sheer faces to utilize gravity for attacks.")
+    };
+
+    // Exotic Tiles - Full ecological narratives
+    private List<TileInfo> ExoticTiles = new()
+    {
+        new("Obsidian", "Volcanic/Evil", 
+            "Found in Hythloth and the Fire Dungeon. Obsidian radiates heat and malice. Home to Fire Elementals, Daemons, and Lava Lizards. Biology here is silicon or plasma-based."),
+        new("Void", "Ethereal Plane / Ter Mur", 
+            "The Void tiles represent the space between worlds or the abyss of Ter Mur. Inhabited by Korpre, Void Wanderers, and Ortanords. This tile bridges dimensions, allowing for 'Alien' spawns."),
+        new("Acid", "Corrosive Environments", 
+            "The sickly green tiles of the Blighted Grove and Palace of Paroxysmus. Touching it often causes damage. Acid Elementals, Plague Beasts, and Slimes thrive here."),
+        new("Blood", "Necromantic Grounds", 
+            "Found in Covetous and champion altars. Attracts blood-drinking entities like Blood Elementals, Rotting Corpses, and Flesh Golems. The biological imperative here is hematophagy."),
+        new("Cloud", "The Sky Realms", 
+            "The magical city of Wind or high-altitude areas like the Serpentine Passage. Air Elementals, Harpies, and Wisps are natural residents of the upper atmosphere."),
+        new("Crystal", "The Prism of Light", 
+            "Shimmering, refractive tiles found in the Prism of Light. Crystal Elementals, Wisps, and energy-based beings utilize the refraction for camouflage."),
+        new("Mycelium", "Fungal Floors", 
+            "The fungal floors of the Solen Hives, Mushroom Caves, and Twisted Weald. Ecology is dominated by insectoids (Solens, Myrmidex) and fungal symbionts."),
+        new("Shadow", "Dark Tiles of Umbra", 
+            "The dark tiles of Malas (Umbra) and the Shadowguard. Shadow Wisps, Necromancers, and undead are the norm. Light-sensitive creatures thrive here continuously."),
+        new("Lava", "Molten Rock", 
+            "Molten rock. Only fire-immune creatures survive. Lava Lizards, Fire Elementals, and Hell Hounds. Non-immune creatures spawning here would instantly perish, so the list must be strict."),
+        new("Ice_Slippery", "Frozen Lakes", 
+            "The surface of the Ice Dungeon. Slippery footing implies low friction. Ice Snakes and Frost Oozes are perfectly adapted to locomotion here."),
+        new("Ash", "Desolation & Volcanic Fallout", 
+            "The aftermath of volcanic activity or the dead lands of The Lost Lands/Stygian Abyss. Hell Hounds and undead roam these barren wastes where vegetation cannot grow."),
+        new("Leaves", "Forest Underbrush", 
+            "The forest floor, distinct from grass. Deep leaf litter hides small predators like snakes and rabbits, as well as Pixies in the Weald. It represents the 'Old Forest' biome.")
+    };
+
+    // Civilized Regions - Full ecological narratives
+    private List<RegionInfo> CivilizedRegions = new()
+    {
+        new("Britain & Farms", "Britain, Wheatfields 1-5, Carrot/Onion/Cabbage Fields, Blackthorn Castle", 
+            "Britain is the hub of civilization. Spawns here must be low-threat to avoid griefing new players, but the farms are historically plagued by vermin and small predators. The Timed list is crucial; citizens should appear during the day, while rats and thieves emerge at night."),
+        new("Yew & Skara Brae", "Yew, Field of Sheep in Yew, Skara Brae, Wheatfield in Skara Brae", 
+            "Yew is deeply forested and dangerous. The undead from the crypts often spill into the town limits. Skara Brae, being the spiritual center, has a higher density of Reapers and spirits."),
+        new("Minoc & Mountains", "Minoc, Mt Kendall, Minoc Cave 1-3, Minoc Mine", 
+            "Minoc is industrial. The noise of mining attracts Trolls and Ettins from the nearby mountains. The caves are filled with Ore Elementals."),
+        new("Trinsic & Jhelom", "Trinsic, Jhelom, Jhelom Islands", 
+            "Trinsic is surrounded by swamps (Barrier Isle), pushing Lizardmen against the walls. Jhelom is a warrior culture; the islands are used for bullfighting and farming, but the tropical climate allows Dragons to roost on the outlaying islands."),
+        new("Moonglow & Magincia", "Moonglow, Magincia, Cotton Field in Moonglow", 
+            "Moonglow is saturated with mana. Wisps and Gazers are drawn to the Lycaeum. Magincia, if ruined (Felucca context), is overrun by Demons; if restored (Trammel), it is a garden city.")
+    };
+
+    // Dungeon Regions - Full ecological narratives
+    private List<RegionInfo> DungeonRegions = new()
+    {
+        new("Deceit & Bedlam", "Deceit, Bedlam, Britain Graveyard", 
+            "The ecology of death. Creatures here do not eat; they exist to extinguish life. They are nocturnal by nature, making the Night phases of the Timed list particularly deadly with increased spawn rates of Liches and Rotting Corpses."),
+        new("Despise, Wrong & Shame", "Despise, Wrong, Shame", 
+            "These dungeons house tribal societies. Despise has a Lizardman upper level and Ogre lower level. Shame is unique, housing Elementals and scorpions."),
+        new("Destard", "Destard", 
+            "The heat inside Destard is oppressive. Cold-blooded Dragons thrive here. Shadows define the deepest levels where Shadow Wyrms reside."),
+        new("Fire & Ice Dungeons", "Fire Dungeon, Ice Dungeon, Hythloth", 
+            "Biomes defined by temperature extremes. Fire dungeon supports carbon-based life that is immune to heat (Lava Lizards). Ice dungeon supports cryo-life."),
+        new("Terathan Keep", "Terathan Keep", 
+            "A perpetual war zone between the Terathans (Spiders) and Ophidians (Snakes). Spawns should reflect this conflict.")
+    };
+
+    // Elven & Expansion Regions - Full ecological narratives
+    private List<RegionInfo> ElvenRegions = new()
+    {
+        new("Heartwood", "Heartwood", 
+            "A city within the World Tree. The ecology is fey-centric. Safe inside, but dangerous flora surrounds it."),
+        new("Blighted Grove", "Blighted Grove", 
+            "A twisted reflection of Heartwood. Sickly Dryads, Changelings, and biological corruption."),
+        new("Sanctuary", "Sanctuary", 
+            "An urban environment reclaimed by Minotaurs and Ratmen. High density of vermin."),
+        new("Prism of Light", "Prism of Light", 
+            "A subterranean geode. Life here is silicon/crystal based."),
+        new("Ter Mur & The Void", "Moongates (Ter Mur), Toxic Desert, Void Island", 
+            "The Void is encroaching. Void Wanderers and Korpre represent the 'glitch' in reality."),
+        new("Stygian Abyss", "Abyss, Underworld, Stygian Dragon Lair", 
+            "The largest dungeon. It contains mini-biomes (Lava, Undead, Goblin). A chaotic mix of threats."),
+        new("Lost Lands", "Delucia, Papua", 
+            "Papua is a swamp/jungle settlement; Delucia is rocky/plains. Both deal with Orcs and Terathans."),
+        new("Tokuno Islands", "Zento, Fan Dancer's Dojo, Yomotsu Mines", 
+            "Asian mythology. Kappas in water, Onis in cities, Tsuki Wolves in the snow.")
+    };
+
+    private async Task Close()
+    {
+        if (OnClose.HasDelegate)
+        {
+            await OnClose.InvokeAsync();
+        }
+    }
+
+    // Helper classes
+    private record TimeSlotInfo(int Number, string Name, string Hours, string Theme, string CssClass);
+    private record TileInfo(string Name, string Description, string Analysis);
+    private record RegionInfo(string Name, string Locations, string Narrative);
+}

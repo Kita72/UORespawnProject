@@ -59,6 +59,10 @@ namespace UORespawnApp.Scripts.Services
 
             try
             {
+                // Generate DefaultPack binary files if they don't exist
+                // Must run before loading spawn data to ensure pack is available
+                await Task.Run(() => DefaultPackGenerator.GenerateIfNeeded());
+
                 // Load data in logical order (some dependencies exist)
 
                 // Step 0: Load Settings (FIRST - other systems may depend on settings)

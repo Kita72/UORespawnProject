@@ -1,0 +1,10 @@
+{
+  "Id": "default-pack",
+  "Name": "Default Spawn Pack",
+  "Author": "Wilson",
+  "Description": "Ecology-based spawn system featuring 32 tile types and regional archetypes across all 6 maps. Implements the Living Shard philosophy with 6-frequency spawning (Common, Uncommon, Rare, Water, Weather, Timed).",
+  "ImageFileName": "logo.png",
+  "Version": "1.0.0",
+  "PublishedOn": "2024-01-01T00:00:00Z",
+  "IsApproved": true
+}

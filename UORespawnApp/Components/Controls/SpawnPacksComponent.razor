@@ -39,7 +39,7 @@
                         <div class="spawn-pack-grid">
                             @foreach (var pack in ApprovedPacks)
                             {
-                                <SpawnPackCard Pack="pack" OnSelect="SelectPack" OnApply="ApplyPack" />
+                                <SpawnPackCard Pack="pack" OnSelect="SelectPack" OnApply="ApplyPack" OnInfo="ShowEcologyModal" />
                             }
                         </div>
                         @if (ApprovedPacks.Count == 0)
@@ -52,7 +52,7 @@
                         <div class="spawn-pack-grid">
                             @foreach (var pack in ImportedPacks)
                             {
-                                <SpawnPackCard Pack="pack" OnSelect="SelectPack" OnApply="ApplyPack" OnDelete="DeletePack" ShowDelete="true" />
+                                <SpawnPackCard Pack="pack" OnSelect="SelectPack" OnApply="ApplyPack" OnDelete="DeletePack" OnInfo="ShowEcologyModal" ShowDelete="true" />
                             }
                         </div>
                         @if (ImportedPacks.Count == 0)
@@ -276,6 +276,8 @@
     </div>
 </div>
 
+<EcologyModal IsVisible="isEcologyModalVisible" OnClose="CloseEcologyModal" />
+
 @code {
     private List<SpawnPackInfo> ApprovedPacks { get; set; } = new();
     private List<SpawnPackInfo> ImportedPacks { get; set; } = new();
@@ -283,6 +285,7 @@
     private SpawnPackExportCard? exportCard;
     private bool isSubmitModalVisible;
     private bool isImportModalVisible;
+    private bool isEcologyModalVisible;
     private bool showApproved = true;
 
     private string submissionName = string.Empty;
@@ -388,6 +391,17 @@
         }
 
         return Task.CompletedTask;
+    }
+
+    private Task ShowEcologyModal(SpawnPackInfo pack)
+    {
+        isEcologyModalVisible = true;
+        return Task.CompletedTask;
+    }
+
+    private void CloseEcologyModal()
+    {
+        isEcologyModalVisible = false;
     }
 
     private void OpenSubmitModal()

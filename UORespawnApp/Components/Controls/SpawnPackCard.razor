@@ -1,12 +1,8 @@
 @using UORespawnApp.Scripts.Entities
 
-<div class="card spawn-pack-card shadow-sm @(IsMockPack ? "mock-pack" : "")" @onclick="HandleSelect">
+<div class="card spawn-pack-card shadow-sm" @onclick="HandleSelect">
     <div class="spawn-pack-header">
         @Pack.Metadata.Name
-        @if (IsMockPack)
-        {
-            <span class="badge bg-secondary ms-1" style="font-size: 0.6rem; vertical-align: middle;">PREVIEW</span>
-        }
     </div>
     <div class="spawn-pack-image">
         <img src="@GetImageSource()" alt="@Pack.Metadata.Name" />
@@ -21,15 +17,21 @@
             <button class="btn btn-sm btn-link" type="button" title="Favorite" @onclick:stopPropagation="true" @onclick="ToggleFavorite">
                 <span class="bi @(Pack.IsFavorite ? "bi-star-fill" : "bi-star")"></span>
             </button>
-            <button class="btn btn-sm btn-link @(IsMockPack ? "disabled" : "")" 
+            <button class="btn btn-sm btn-link" 
                     type="button" 
-                    title="@(IsMockPack ? "Preview pack - cannot apply" : "Apply")" 
-                    disabled="@IsMockPack"
+                    title="Apply"
                     @onclick:stopPropagation="true" 
                     @onclick="ApplyPack">
                 <span class="bi bi-check2-circle"></span>
             </button>
-            @if (ShowDelete && !Pack.Metadata.IsApproved && !IsMockPack)
+            <button class="btn btn-sm btn-link info-btn" 
+                    type="button" 
+                    title="View Ecology Info"
+                    @onclick:stopPropagation="true" 
+                    @onclick="ShowInfo">
+                <span class="bi bi-info-circle"></span>
+            </button>
+            @if (ShowDelete && !Pack.Metadata.IsApproved)
             {
                 <button class="btn btn-sm btn-link delete-btn" 
                         type="button" 
@@ -63,10 +65,10 @@
     public EventCallback<SpawnPackInfo> OnDelete { get; set; }
 
     [Parameter]
-    public bool ShowDelete { get; set; } = false;
+    public EventCallback<SpawnPackInfo> OnInfo { get; set; }
 
-    // Mock packs have no folder path - they're just placeholders for the dashboard
-    private bool IsMockPack => string.IsNullOrWhiteSpace(Pack.PackFolderPath);
+    [Parameter]
+    public bool ShowDelete { get; set; } = false;
 
     private async Task HandleSelect()
     {
@@ -96,22 +98,24 @@
 
     private async Task ApplyPack()
     {
-        // Don't allow applying mock/preview packs
-        if (IsMockPack)
-        {
-            return;
-        }
-
         if (OnApply.HasDelegate)
         {
             await OnApply.InvokeAsync(Pack);
         }
     }
 
+    private async Task ShowInfo()
+    {
+        if (OnInfo.HasDelegate)
+        {
+            await OnInfo.InvokeAsync(Pack);
+        }
+    }
+
     private async Task DeletePack()
     {
-        // Safety: never delete approved or mock packs
-        if (Pack.Metadata.IsApproved || IsMockPack)
+        // Safety: never delete approved packs
+        if (Pack.Metadata.IsApproved)
         {
             return;
         }
@@ -124,11 +128,33 @@
 
     private string GetImageSource()
     {
+        // If image path is set and it's a file path, convert to base64
         if (!string.IsNullOrWhiteSpace(Pack.Metadata.ImageFileName))
         {
-            return Pack.Metadata.ImageFileName;
+            if (File.Exists(Pack.Metadata.ImageFileName))
+            {
+                try
+                {
+                    var bytes = File.ReadAllBytes(Pack.Metadata.ImageFileName);
+                    var ext = Path.GetExtension(Pack.Metadata.ImageFileName).ToLowerInvariant();
+                    var mimeType = ext switch
+                    {
+                        ".png" => "image/png",
+                        ".jpg" or ".jpeg" => "image/jpeg",
+                        ".gif" => "image/gif",
+                        ".webp" => "image/webp",
+                        _ => "image/png"
+                    };
+                    return $"data:{mimeType};base64,{Convert.ToBase64String(bytes)}";
+                }
+                catch
+                {
+                    // Fall through to default
+                }
+            }
         }
 
+        // Default to app logo
         return "logo.png";
     }
 }

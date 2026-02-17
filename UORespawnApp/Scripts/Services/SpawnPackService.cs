@@ -8,6 +8,10 @@ namespace UORespawnApp.Scripts.Services
 {
     /// <summary>
     /// Loads spawn packs from Data/PACKS and provides stats and apply workflows.
+    /// Folder structure:
+    ///   Data/PACKS/Approved/  - Unpacked approved packs (ready to use)
+    ///   Data/PACKS/Imported/  - User-imported packs
+    ///   Data/PACKS/Backup/    - Original ZIP files for approved packs (for reset)
     /// </summary>
     public class SpawnPackService
     {
@@ -21,64 +25,112 @@ namespace UORespawnApp.Scripts.Services
         ];
 
         /// <summary>
-        /// Load approved packs only (packs with IsApproved = true in manifest)
+        /// Unpacks approved pack ZIPs from Backup folder to Approved folder.
+        /// Called on first launch to initialize approved packs.
         /// </summary>
-        public List<SpawnPackInfo> LoadApprovedPacks(bool includeMock = true)
+        public void UnpackApprovedPacks()
         {
-            var packs = LoadAllPacks().Where(p => p.Metadata.IsApproved).ToList();
+            var backupPath = PathConstants.PacksBackupPath;
+            var approvedPath = PathConstants.PacksApprovedPath;
 
-            if (includeMock && packs.Count == 0)
+            if (!Directory.Exists(backupPath))
             {
-                packs.Add(CreateMockPack());
+                return;
             }
 
-            return packs.OrderBy(p => p.Metadata.Name).ToList();
-        }
-
-        /// <summary>
-        /// Load imported/user packs only (packs with IsApproved = false)
-        /// </summary>
-        public List<SpawnPackInfo> LoadImportedPacks()
-        {
-            return LoadAllPacks()
-                .Where(p => !p.Metadata.IsApproved && !string.IsNullOrWhiteSpace(p.PackFolderPath))
-                .OrderBy(p => p.Metadata.Name)
-                .ToList();
-        }
-
-        /// <summary>
-        /// Load all packs from Data/PACKS folder
-        /// </summary>
-        public List<SpawnPackInfo> LoadAllPacks()
-        {
-            var packs = new List<SpawnPackInfo>();
-            var packsPath = PathConstants.PacksPath;
-
-            if (Directory.Exists(packsPath))
+            foreach (var zipFile in Directory.GetFiles(backupPath, "*.zip"))
             {
-                foreach (var packFolder in Directory.GetDirectories(packsPath))
+                try
+                {
+                    var packName = Path.GetFileNameWithoutExtension(zipFile);
+                    var packFolder = Path.Combine(approvedPath, packName);
+
+                    // Skip if already unpacked
+                    if (Directory.Exists(packFolder) && Directory.GetFiles(packFolder, "*.bin").Length > 0)
+                    {
+                        continue;
+                    }
+
+                    // Create folder and extract
+                    Directory.CreateDirectory(packFolder);
+                    ZipFile.ExtractToDirectory(zipFile, packFolder, overwriteFiles: true);
+
+                    Logger.Info($"Unpacked approved pack: {packName}");
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error($"Error unpacking approved pack: {zipFile}", ex);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Load approved packs from Data/PACKS/Approved/ folder
+        /// </summary>
+        public List<SpawnPackInfo> LoadApprovedPacks()
+        {
+            // Ensure approved packs are unpacked from Backup folder
+            UnpackApprovedPacks();
+
+            var packs = new List<SpawnPackInfo>();
+            var approvedPath = PathConstants.PacksApprovedPath;
+
+            if (Directory.Exists(approvedPath))
+            {
+                foreach (var packFolder in Directory.GetDirectories(approvedPath))
                 {
                     var pack = LoadPackInfo(packFolder);
                     if (pack != null)
                     {
+                        // Force IsApproved for packs in Approved folder
+                        pack.Metadata.IsApproved = true;
                         packs.Add(pack);
                     }
                 }
             }
 
-            return packs;
+            return packs.OrderBy(p => p.Metadata.Name).ToList();
         }
 
-        public List<SpawnPackInfo> LoadPacks(bool includeMock = true)
+        /// <summary>
+        /// Load imported/user packs from Data/PACKS/Imported/ folder
+        /// </summary>
+        public List<SpawnPackInfo> LoadImportedPacks()
         {
-            var packs = LoadAllPacks();
+            var packs = new List<SpawnPackInfo>();
+            var importedPath = PathConstants.PacksImportedPath;
 
-            if (includeMock && packs.Count == 0)
+            if (Directory.Exists(importedPath))
             {
-                packs.Add(CreateMockPack());
+                foreach (var packFolder in Directory.GetDirectories(importedPath))
+                {
+                    var pack = LoadPackInfo(packFolder);
+                    if (pack != null)
+                    {
+                        // Force IsApproved = false for imported packs
+                        pack.Metadata.IsApproved = false;
+                        packs.Add(pack);
+                    }
+                }
             }
 
             return packs.OrderBy(p => p.Metadata.Name).ToList();
+        }
+
+        /// <summary>
+        /// Load all packs from both Approved and Imported folders
+        /// </summary>
+        public List<SpawnPackInfo> LoadAllPacks()
+        {
+            var packs = new List<SpawnPackInfo>();
+            packs.AddRange(LoadApprovedPacks());
+            packs.AddRange(LoadImportedPacks());
+            return packs;
+        }
+
+        public List<SpawnPackInfo> LoadPacks()
+        {
+            return LoadAllPacks().OrderBy(p => p.Metadata.Name).ToList();
         }
 
         public SpawnPackInfo? LoadPackInfo(string packFolder)
@@ -106,7 +158,14 @@ namespace UORespawnApp.Scripts.Services
             };
         }
 
-        public bool ApplyPack(SpawnPackInfo pack, bool reloadAfterApply = true)
+        /// <summary>
+        /// Applies a spawn pack by copying its data files to UOR_DATA and syncing to server.
+        /// Optionally saves current data back to the currently active pack before applying.
+        /// </summary>
+        /// <param name="pack">The pack to apply</param>
+        /// <param name="currentPack">Optional: The currently active pack to save current data to before applying new pack</param>
+        /// <param name="reloadAfterApply">Whether to reload data and sync to server after applying</param>
+        public bool ApplyPack(SpawnPackInfo pack, SpawnPackInfo? currentPack = null, bool reloadAfterApply = true)
         {
             if (pack == null || string.IsNullOrWhiteSpace(pack.PackFolderPath))
             {
@@ -120,6 +179,13 @@ namespace UORespawnApp.Scripts.Services
                 {
                     Logger.Warning("Spawn pack does not contain any data files to apply.");
                     return false;
+                }
+
+                // Save current data back to the active pack before applying new one
+                if (currentPack != null && !string.IsNullOrWhiteSpace(currentPack.PackFolderPath))
+                {
+                    SaveCurrentDataToPack(currentPack);
+                    Logger.Info($"Saved current data to pack: {currentPack.Metadata.Name}");
                 }
 
                 var destinationPath = PathConstants.LocalDataPath;
@@ -522,40 +588,89 @@ namespace UORespawnApp.Scripts.Services
             stats.SpawnTypeCounts[typeKey] += count;
         }
 
-        private static SpawnPackInfo CreateMockPack()
+        /// <summary>
+        /// Resets an approved pack from its backup ZIP in the Backup folder.
+        /// Restores all data files to their original state.
+        /// </summary>
+        public (bool Success, string? Error) ResetPackFromBackup(SpawnPackInfo pack)
         {
-            return new SpawnPackInfo
+            if (pack == null || string.IsNullOrWhiteSpace(pack.PackFolderPath))
             {
-                Metadata = new SpawnPackMetadata
+                return (false, "Pack not specified.");
+            }
+
+            if (!pack.Metadata.IsApproved)
+            {
+                return (false, "Only approved packs can be reset from backup.");
+            }
+
+            // Get pack name from folder path
+            var packName = Path.GetFileName(pack.PackFolderPath);
+            var backupZipPath = Path.Combine(PathConstants.PacksBackupPath, $"{packName}.zip");
+
+            if (!File.Exists(backupZipPath))
+            {
+                return (false, $"No backup ZIP found for this pack at: {backupZipPath}");
+            }
+
+            try
+            {
+                var packDataPath = ResolvePackDataPath(pack.PackFolderPath) ?? pack.PackFolderPath;
+
+                using var archive = ZipFile.OpenRead(backupZipPath);
+                foreach (var entry in archive.Entries)
                 {
-                    Id = "default-pack",
-                    Name = "Default Spawn Pack",
-                    Author = "Black Box Programming",
-                    Description = "Approved default spawn pack.",
-                    ImageFileName = string.Empty,
-                    Version = "1.0.0",
-                    PublishedOn = DateTime.UtcNow,
-                    IsApproved = true
-                },
-                Stats = new SpawnPackStats
-                {
-                    BoxSpawnCount = 128,
-                    TileSpawnCount = 64,
-                    RegionSpawnCount = 32,
-                    TotalSpawnEntries = 1024,
-                    UniqueCreatureCount = 240,
-                    MapCount = 6,
-                    SpawnTypeCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+                    if (PackDataFiles.Contains(entry.Name, StringComparer.OrdinalIgnoreCase))
                     {
-                        ["Water"] = 120,
-                        ["Weather"] = 80,
-                        ["Timed"] = 60,
-                        ["Common"] = 520,
-                        ["Uncommon"] = 180,
-                        ["Rare"] = 64
+                        var destinationPath = Path.Combine(packDataPath, entry.Name);
+                        entry.ExtractToFile(destinationPath, overwrite: true);
                     }
                 }
-            };
+
+                Logger.Info($"Reset pack from backup: {pack.Metadata.Name}");
+                return (true, null);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error resetting pack from backup: {pack.Metadata.Name}", ex);
+                return (false, $"Failed to reset: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Saves current UOR_DATA files to a pack folder.
+        /// Used to preserve current state before applying a different pack.
+        /// </summary>
+        public bool SaveCurrentDataToPack(SpawnPackInfo pack)
+        {
+            if (pack == null || string.IsNullOrWhiteSpace(pack.PackFolderPath))
+            {
+                return false;
+            }
+
+            try
+            {
+                var sourcePath = PathConstants.LocalDataPath;
+                var packDataPath = ResolvePackDataPath(pack.PackFolderPath) ?? pack.PackFolderPath;
+
+                foreach (var fileName in PackDataFiles)
+                {
+                    var sourceFile = Path.Combine(sourcePath, fileName);
+                    if (File.Exists(sourceFile))
+                    {
+                        var destinationFile = Path.Combine(packDataPath, fileName);
+                        File.Copy(sourceFile, destinationFile, overwrite: true);
+                    }
+                }
+
+                Logger.Info($"Saved current data to pack: {pack.Metadata.Name}");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error saving current data to pack: {pack.Metadata.Name}", ex);
+                return false;
+            }
         }
     }
 }

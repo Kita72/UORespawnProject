@@ -9,6 +9,8 @@
                 0 0 30px rgba(247, 201, 72, 0.15),
                 0 8px 18px rgba(0, 0, 0, 0.45) !important;
     transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+    width: 100%;
+    max-width: 100%;
 }
 
 .spawn-pack-card:hover {
@@ -92,26 +94,13 @@
     color: #dc3545;
 }
 
+.spawn-pack-actions .btn.info-btn:hover {
+    color: #17a2b8;
+}
+
 .spawn-pack-actions .btn.disabled,
 .spawn-pack-actions .btn:disabled {
     color: #444 !important;
     cursor: not-allowed;
     opacity: 0.5;
-}
-
-/* Mock/Preview pack styling - slightly muted appearance */
-.spawn-pack-card.mock-pack {
-    border-color: rgba(150, 150, 150, 0.3) !important;
-    box-shadow: 0 0 10px rgba(150, 150, 150, 0.2), 
-                0 6px 14px rgba(0, 0, 0, 0.4) !important;
-}
-
-.spawn-pack-card.mock-pack:hover {
-    border-color: rgba(150, 150, 150, 0.4) !important;
-    box-shadow: 0 0 15px rgba(150, 150, 150, 0.25), 
-                0 10px 20px rgba(0, 0, 0, 0.45) !important;
-}
-
-.spawn-pack-card.mock-pack .spawn-pack-header {
-    color: #aaa;
 }

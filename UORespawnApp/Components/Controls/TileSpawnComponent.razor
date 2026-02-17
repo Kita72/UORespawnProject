@@ -253,7 +253,7 @@
                 Utility.TileSpawns[currentMapId] = tileList;
             }
 
-            var existing = tileList.FirstOrDefault(t => t.Name == tile.ToString());
+            var existing = tileList.FirstOrDefault(t => t.Name.Equals(tile.ToString(), StringComparison.OrdinalIgnoreCase));
 
             if (existing != null)
             {
@@ -266,7 +266,7 @@
                 currentEntity = new TileSpawnEntity
                 {
                     Id = nextId,
-                    Name = tile.ToString(),
+                    Name = tile.ToString().ToLowerInvariant(),
                     MapId = currentMapId
                 };
                 tileList.Add(currentEntity);
@@ -291,7 +291,7 @@
         if (!Utility.TileSpawns.TryGetValue(currentMapId, out var tileList))
             return 0;
 
-        var entity = tileList.FirstOrDefault(t => t.Name == tile.ToString());
+        var entity = tileList.FirstOrDefault(t => t.Name.Equals(tile.ToString(), StringComparison.OrdinalIgnoreCase));
         return entity?.GetTotalSpawnCount() ?? 0;
     }
 

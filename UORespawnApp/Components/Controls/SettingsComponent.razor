@@ -1579,8 +1579,8 @@ private bool cleanServerOnReset = false;
             // Look for pre-packaged ZIP file
             var possiblePaths = new[]
             {
-                Path.Combine(baseDir, "Data", "ServerScripts", "UORespawnSystem.zip"),           // Published/Runtime location
-                Path.Combine(baseDir, "..", "..", "..", "..", "Data", "ServerScripts", "UORespawnSystem.zip")  // Development
+                Path.Combine(baseDir, "Data", "SERVER", "UORespawnSystem.zip"),           // Published/Runtime location
+                Path.Combine(baseDir, "..", "..", "..", "..", "Data", "SERVER", "UORespawnSystem.zip")  // Development
             };
 
             string? zipPath = null;
@@ -1600,7 +1600,7 @@ private bool cleanServerOnReset = false;
             if (string.IsNullOrEmpty(zipPath))
             {
                 exportMessage = "Error: Server scripts package not found.\n\n" +
-                               "The UORespawnSystem.zip file should be in Data/ServerScripts/.\n" +
+                               "The UORespawnSystem.zip file should be in Data/SERVER/.\n" +
                                "Please ensure the application was installed correctly.";
                 exportSuccess = false;
                 Logger.Warning($"UORespawnSystem.zip not found. Searched paths: {string.Join(", ", possiblePaths.Select(Path.GetFullPath))}");
