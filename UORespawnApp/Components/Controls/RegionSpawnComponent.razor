@@ -795,6 +795,12 @@
                 await JS.InvokeVoidAsync("eval", $"window.mapModule.updateXmlTooltipPosition({e.OffsetX}, {e.OffsetY})");
             }
 
+            // Update server spawn hover (for dwell-based tooltip)
+            if (ViewService.ShowServerSpawns)
+            {
+                await JS.InvokeVoidAsync("eval", $"window.mapModule.updateServerSpawnHover({e.OffsetX}, {e.OffsetY})");
+            }
+
             // Detect hovered region and area for visual feedback
             var hoveredRegion = RegionDataUtility.FindRegionAt(ViewService.CurrentMapId, mouseWorldX, mouseWorldY);
             if (hoveredRegion != null)
@@ -842,6 +848,12 @@
         {
             await JS.InvokeVoidAsync("eval", "window.mapModule.setHoveredXmlSpawner(-1)");
             await JS.InvokeVoidAsync("eval", "window.mapModule.clearXmlSpawnerSelection()");
+        }
+
+        // Clear server spawn hover when mouse leaves
+        if (ViewService.ShowServerSpawns)
+        {
+            await JS.InvokeVoidAsync("eval", "window.mapModule.clearServerSpawnHover()");
         }
     }
     
@@ -1308,7 +1320,6 @@
             if (!MapDisplayUtility.HasSpawnData)
             {
                 Logger.Info("Loading spawn statistics...");
-                ToastService.ShowInfo("Loading spawn statistics...");
                 MapDisplayUtility.InstantiateStatData();
 
                 if (!MapDisplayUtility.HasSpawnData)
@@ -1321,7 +1332,6 @@
                 }
 
                 Logger.Info("Loaded spawn statistics successfully!");
-                ToastService.ShowSuccess("Spawn statistics loaded successfully!");
             }
 
             // Get spawn data for current map

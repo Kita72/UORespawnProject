@@ -770,6 +770,12 @@ private int? spawnSearchId = null;
             {
                 await JS.InvokeVoidAsync("eval", $"window.mapModule.updateXmlTooltipPosition({e.OffsetX}, {e.OffsetY})");
             }
+
+            // Update server spawn hover (for dwell-based tooltip)
+            if (ViewService.ShowServerSpawns)
+            {
+                await JS.InvokeVoidAsync("eval", $"window.mapModule.updateServerSpawnHover({e.OffsetX}, {e.OffsetY})");
+            }
         }
     }
     
@@ -894,6 +900,12 @@ private int? spawnSearchId = null;
             await JS.InvokeVoidAsync("eval", "window.mapModule.setHoveredXmlSpawner(-1)");
             await JS.InvokeVoidAsync("eval", "window.mapModule.clearXmlSpawnerSelection()");
         }
+
+        // Clear server spawn hover when mouse leaves
+        if (ViewService.ShowServerSpawns)
+        {
+            await JS.InvokeVoidAsync("eval", "window.mapModule.clearServerSpawnHover()");
+        }
     }
     
     private async Task ResetView()
@@ -1015,15 +1027,24 @@ private int? spawnSearchId = null;
             var xmlSpawners = XMLSpawnUtility.GetSpawnersForMap(ViewService.CurrentMapId);
             Logger.Info($"Showing {xmlSpawners.Count} XML spawners for {ViewService.CurrentMapId}");
 
-            // Convert to JSON and send to JavaScript
-            var options = new System.Text.Json.JsonSerializerOptions 
-            { 
-                PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
-                WriteIndented = false 
-            };
-            var json = System.Text.Json.JsonSerializer.Serialize(xmlSpawners, options);
+            if (xmlSpawners.Count > 0)
+            {
+                // Convert to JSON and send to JavaScript
+                var options = new System.Text.Json.JsonSerializerOptions 
+                { 
+                    PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+                    WriteIndented = false 
+                };
+                var json = System.Text.Json.JsonSerializer.Serialize(xmlSpawners, options);
 
-            await JS.InvokeVoidAsync("eval", $"window.mapModule.showXMLSpawners({json})");
+                await JS.InvokeVoidAsync("eval", $"window.mapModule.showXMLSpawners({json})");
+            }
+            else
+            {
+                Logger.Info("No XML spawners found for this map");
+                ToastService.ShowWarning($"No XML spawners found for {MapUtility.GetMapName(ViewService.CurrentMapId)}. Import XML Spawner data first.");
+                ViewService.ToggleXMLSpawners(); // Toggle back off
+            }
         }
         else
         {
@@ -1072,7 +1093,6 @@ private int? spawnSearchId = null;
             if (!MapDisplayUtility.HasSpawnData)
             {
                 Logger.Info($"Loading spawn statistics from: {statsFolderPath}");
-                    ToastService.ShowInfo("Loading spawn statistics...");
                     MapDisplayUtility.InstantiateStatData();
 
                 if (!MapDisplayUtility.HasSpawnData)
@@ -1085,7 +1105,6 @@ private int? spawnSearchId = null;
                 }
 
                 Logger.Info("Loaded spawn statistics successfully!");
-                ToastService.ShowSuccess("Spawn statistics loaded successfully!");
             }
 
             // Get spawn data for current map

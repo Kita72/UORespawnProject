@@ -111,6 +111,8 @@
                     <ul>
                         <li><strong>Left-Drag:</strong> Draw spawn box</li>
                         <li><strong>Right-Drag:</strong> Pan the map</li>
+                        <li><strong>WASD / Arrow Keys:</strong> Pan the map smoothly (supports diagonal movement)</li>
+                        <li><strong>Zoom Toggle:</strong> Switch between 1x (actual size) and 2x (zoomed) view</li>
                         <li><strong>Mini-Map:</strong> Click anywhere to jump to that location</li>
                         <li><strong>Reset Button:</strong> Return to map origin (0, 0)</li>
                     </ul>
@@ -153,13 +155,24 @@
                                 <li><span class="badge bg-danger">Red</span> = Feature OFF</li>
                             </ul>
                         </li>
-                        <li><strong>XML:</strong> Show default XML spawner locations (green boxes)</li>
-                        <li><strong>Spawns:</strong> Show server spawn statistics (heatmap)</li>
+                        <li><strong>XML Toggle:</strong> Show XML spawner locations (green circles with X markers)
+                            <ul>
+                                <li>Hover over a spawner to highlight it</li>
+                                <li>Click to show tooltip with location and home range</li>
+                            </ul>
+                        </li>
+                        <li><strong>Spawns Toggle:</strong> Show server spawn statistics (colored dots per player)
+                            <ul>
+                                <li>Each player has a unique color</li>
+                                <li>Hover over a dot - after a brief pause, a tooltip appears showing player name, location, and total spawn events</li>
+                                <li>Useful for visualizing where spawns are occurring most frequently</li>
+                            </ul>
+                        </li>
                     </ul>
 
                     <div class="alert alert-warning mt-3">
-                        <span class="bi bi-exclamation-triangle"></span> <strong>Note:</strong> The spawn heatmap 
-                        requires server-side statistics data. Use the <code>[PushRespawnStats</code> command in-game 
+                        <span class="bi bi-exclamation-triangle"></span> <strong>Note:</strong> The spawn statistics overlay 
+                        requires server-side data. Use the <code>[PushRespawnStats</code> command in-game 
                         to generate the data that the editor visualizes on the map.
                     </div>
                 </div>
@@ -218,7 +231,8 @@
                     <div class="alert alert-info mt-3">
                         <span class="bi bi-lightbulb"></span> <strong>Tip:</strong> Region Spawns have priority over 
                         World Spawns! Configure specific dungeons and towns with region spawns, then use world spawns 
-                        for general wilderness areas.
+                        for general wilderness areas. The Region Spawn page also has XML and Spawns toggles in the mini-map 
+                        for visualizing spawner locations and statistics.
                     </div>
                 </div>
             </div>
@@ -659,7 +673,7 @@
 
                     <h6 class="text-primary mt-4">Workflow: Editor → Server</h6>
                     <ol>
-                        <li><strong>Create spawns</strong> using the editor (Map, Region, World, or Static)</li>
+                        <li><strong>Create spawns</strong> using the editor (Box, Region, or Tile spawn pages)</li>
                         <li><strong>Files auto-save</strong> to <code>ServUO\Data\UOR_DATA\</code> (if configured)</li>
                         <li><strong>In-game:</strong> <code>[SpawnReload</code> to load new configurations</li>
                         <li><strong>Test:</strong> Walk around - spawns appear dynamically around you!</li>
@@ -674,7 +688,7 @@
                     <ul>
                         <li><strong>XML Spawners:</strong> Use for boss rooms, quest NPCs, town guards, static encounters</li>
                         <li><strong>UORespawn:</strong> Use for wilderness, dungeons, roads, random dynamic encounters</li>
-                        <li><strong>Overlap Prevention:</strong> The editor shows XML spawner locations (green boxes) to help you avoid conflicts</li>
+                        <li><strong>Overlap Prevention:</strong> The editor shows XML spawner locations (green circles) - hover to highlight, click for details</li>
                     </ul>
 
                     <div class="alert alert-success mt-3">

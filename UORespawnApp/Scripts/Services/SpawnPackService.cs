@@ -138,10 +138,20 @@ namespace UORespawnApp.Scripts.Services
 
                 if (reloadAfterApply)
                 {
+                    // Load the pack data into memory
                     Utility.LoadSettings();
                     Utility.LoadSpawnData();
                     Utility.LoadTileSpawnData();
                     Utility.LoadRegionSpawnData();
+
+                    // Save to sync data to server (if linked)
+                    // This ensures the server gets the pack data immediately
+                    Utility.SaveSettings();
+                    Utility.SaveSpawnData();
+                    Utility.SaveTileSpawnData();
+                    Utility.SaveRegionSpawnData();
+
+                    Logger.Info("Spawn pack data synced to server");
                 }
 
                 Logger.Info($"Applied spawn pack: {pack.Metadata.Name}");

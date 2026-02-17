@@ -5,30 +5,57 @@ All notable changes to UORespawn will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.0.3] - 2025-01-XX
+## [2.0.0.3] - 2025-02-16
 
 ### Added
-- ? Complete rewrite from WinForms to .NET MAUI with Blazor
-- ??? Visual map spawn editor with pan and zoom
-- ?? Interactive mini-map with click-to-navigate
-- ?? World spawn system for tile-based spawning
-- ?? Static spawn system for object-based spawning
-- ?? Comprehensive settings panel
-- ?? Dark/Light theme support
-- ?? Built-in instructions page
-- ?? Auto-sync with ServUO Data folder (Windows/macOS)
-- ?? XML spawner location overlay
-- ?? Server spawn heatmap visualization
-- ?? Priority-based spawn layering
-- ? Timed spawn support (day/night cycles)
-- ??? Custom map image upload with backup/restore
-- ?? Bestiary management with search
-- ?? Special NPCs (TownNPC, WorldNPC, AmbushNPC, Effect NPCs)
-- ?? Cross-platform support (Windows, macOS)
-- ?? Platform detection for server integration
-- ?? Auto-save on all changes
-- ?? Customizable spawn box appearance
-- ?? Aspect ratio-aware mini map with letterboxing
+- Interactive XML spawner overlay - hover to highlight, click for tooltip with location and home range
+- Interactive server spawn statistics - dwell-based tooltips showing player name, location, and total spawn events
+- WASD/Arrow key map panning with smooth diagonal movement support
+- Zoom toggle button (1x actual size / 2x zoomed view)
+- Spawn Packs system for sharing and importing spawn configurations
+  - Pack Dashboard with statistics (Box Spawns, Tile Spawns, Region Spawns, Maps, Entries, Unique Mobs)
+  - Import/Export spawn packs as zip files
+  - Submit packs for official approval
+  - Apply packs with single click
+- Pack Dashboard visual styling (golden centered pack name, blue frequency names)
+- Spawn ID search input in spawn list headers
+- Info icons throughout UI for contextual help
+- Back-to-top button on Instructions page
+
+### Changed
+- XML spawners now display as green circles with X markers (previously boxes)
+- Server spawn dots highlight individually on hover (previously all player dots)
+- Instructions page updated with complete interactive feature documentation
+- Toasts now only show warnings (removed success/info toasts for cleaner UX)
+- Copilot instructions updated with comprehensive project documentation
+
+### Fixed
+- Spawn type terminology corrected in Instructions (Box/Region/Tile spawn pages)
+
+## [2.0.0.3] - 2025-01-XX
+
+### Added
+- Complete rewrite from WinForms to .NET MAUI with Blazor
+- Visual map spawn editor with pan and zoom
+- Interactive mini-map with click-to-navigate
+- World spawn system for tile-based spawning
+- Region spawn system for named server regions
+- Comprehensive settings panel
+- Dark theme UI
+- Built-in instructions page
+- Auto-sync with ServUO Data folder (Windows/macOS)
+- XML spawner location overlay
+- Server spawn heatmap visualization
+- Priority-based spawn layering
+- Timed spawn support (day/night cycles)
+- Custom map image upload with backup/restore
+- Bestiary management with search
+- Special NPCs (TownNPC, WorldNPC, AmbushNPC, Effect NPCs)
+- Cross-platform support (Windows, macOS)
+- Platform detection for server integration
+- Auto-save on all changes
+- Customizable spawn box appearance
+- Aspect ratio-aware mini map with letterboxing
 
 ### Changed
 - Modernized UI with Bootstrap 5
@@ -60,4 +87,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-For detailed changes between versions, see the [GitHub Releases](https://github.com/yourusername/UORespawn/releases) page.
+For detailed changes between versions, see the [GitHub Releases](https://github.com/Kita72/UORespawnProject/releases) page.

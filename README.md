@@ -35,12 +35,13 @@ UORespawn is a modern .NET MAUI application that provides a comprehensive visual
 ### 🗺️ Map Spawn Editor
 - Visual map-based spawn box creation
 - Draw spawn areas with left-click and drag
-- Pan the map with right-click and drag
+- Pan the map with right-click and drag or WASD/Arrow keys
+- Zoom toggle (1x actual size / 2x zoomed view)
 - Mini-map with click-to-navigate
 - Priority-based spawn layering
 - Six frequency tiers (Common, Uncommon, Rare, Water, Weather, Timed)
-- XML spawner location overlay (circles showing HomeRange)
-- Server spawn heatmap visualization
+- **Interactive XML spawner overlay** - hover to highlight, click for tooltip with location and home range
+- **Interactive server spawn statistics** - dwell-based tooltips showing player name, location, and total spawn events
 
 ### 🏰 Region Spawn System
 - Spawn creatures by named server regions
@@ -64,11 +65,14 @@ UORespawn is a modern .NET MAUI application that provides a comprehensive visual
 - **Real-time Metrics** - Monitor spawn performance with `[SpawnMetrics`
 
 ### 🎨 Additional Features
-- Dark/Light theme support
+- **Spawn Packs** - Import, export, and share spawn configurations
+- Pack Dashboard with detailed statistics
+- Dark theme UI
 - Custom map image replacement
 - Bestiary management (600+ creatures)
 - Special NPCs (TownNPC, AmbushNPC, Effect NPCs)
 - Cross-platform (Windows and macOS)
+- Info icons for contextual help throughout
 
 ---
 
@@ -123,9 +127,11 @@ Download the latest version from the [Releases](https://github.com/Kita72/UOResp
 
 - **Left-Drag:** Draw spawn box
 - **Right-Drag:** Pan the map
-- **Mouse Wheel:** Zoom in/out
+- **WASD/Arrow Keys:** Pan the map (supports diagonal movement)
+- **Zoom Button:** Toggle 1x / 2x zoom
 - **Mini-Map Click:** Jump to location
-- **WASD/Arrow Keys:** Pan the map
+- **XML Toggle:** Show/hide XML spawners (hover to highlight, click for tooltip)
+- **Spawns Toggle:** Show/hide server spawn stats (hover for player info)
 
 ### Special NPCs
 
@@ -147,7 +153,7 @@ Add these predefined NPCs from the bestiary:
 ### Prerequisites
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
-- [Visual Studio 2025](https://visualstudio.microsoft.com/) or [Visual Studio 2022](https://visualstudio.microsoft.com/) (v17.14 or later)
+- [Visual Studio 2026](https://visualstudio.microsoft.com/) or [Visual Studio 2022](https://visualstudio.microsoft.com/) (v17.14 or later)
 - Workloads:
   - .NET Multi-platform App UI development
   - ASP.NET and web development
@@ -190,10 +196,10 @@ UORespawnProject/
 │   ├── Components/            # Blazor components
 │   │   ├── Layout/           # Navigation and layout
 │   │   └── Controls/         # Reusable components
-│   │       ├── MapComponent.razor
 │   │       ├── BoxSpawnComponent.razor
 │   │       ├── RegionSpawnComponent.razor
-│   │       ├── WorldSpawnComponent.razor
+│   │       ├── TileSpawnComponent.razor
+│   │       ├── SpawnPacksComponent.razor
 │   │       ├── SettingsComponent.razor
 │   │       └── InstructionsComponent.razor
 │   ├── Scripts/              # C# utility scripts

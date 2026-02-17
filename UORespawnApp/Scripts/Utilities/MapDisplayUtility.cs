@@ -16,11 +16,16 @@ namespace UORespawnApp
         {
             var result = new List<SpawnStatData>();
             var filteredData = SpawnStats.Where(item => item.PlayerMap == mapId).ToList();
-            
+
+            // Pre-calculate total dots per player for this map
+            var playerDotCounts = filteredData
+                .GroupBy(d => d.PlayerName)
+                .ToDictionary(g => g.Key, g => g.Count());
+
             foreach (var data in filteredData)
             {
                 Color playerColor;
-                
+
                 if (playerColorCache.TryGetValue(data.PlayerName, out Color? value))
                 {
                     playerColor = value;
@@ -30,19 +35,21 @@ namespace UORespawnApp
                     playerColor = Color.FromRgb(rand.Next(256), rand.Next(256), rand.Next(256));
                     playerColorCache[data.PlayerName] = playerColor;
                 }
-                
+
                 result.Add(new SpawnStatData
                 {
+                    PlayerName = data.PlayerName,
                     PlayerX = (int)data.PlayerLocation.X,
                     PlayerY = (int)data.PlayerLocation.Y,
                     SpawnX = (int)data.SpawnLocation.X,
                     SpawnY = (int)data.SpawnLocation.Y,
                     ColorR = (int)(playerColor.Red * 255),
                     ColorG = (int)(playerColor.Green * 255),
-                    ColorB = (int)(playerColor.Blue * 255)
+                    ColorB = (int)(playerColor.Blue * 255),
+                    TotalDotsForPlayer = playerDotCounts.GetValueOrDefault(data.PlayerName, 1)
                 });
             }
-            
+
             return result;
         }
 
@@ -140,6 +147,7 @@ namespace UORespawnApp
 
     public class SpawnStatData
     {
+        public string PlayerName { get; set; } = "";
         public int PlayerX { get; set; }
         public int PlayerY { get; set; }
         public int SpawnX { get; set; }
@@ -147,5 +155,6 @@ namespace UORespawnApp
         public int ColorR { get; set; }
         public int ColorG { get; set; }
         public int ColorB { get; set; }
+        public int TotalDotsForPlayer { get; set; }
     }
 }

@@ -44,6 +44,13 @@ hoveredXmlSpawnerId: null,
 selectedXmlSpawner: null,
 xmlTooltipMousePos: { x: 0, y: 0 },
 
+// Server spawn (stats) hover state
+hoveredServerSpawnIdx: -1,
+serverSpawnTooltipVisible: false,
+serverSpawnTooltipMousePos: { x: 0, y: 0 },
+serverSpawnDwellTimer: null,
+serverSpawnDwellDelay: 500, // milliseconds to wait before showing tooltip
+
 // Settings from C#
 boxColor: '#8B0000',
 boxLineSize: 2,
@@ -73,6 +80,12 @@ panAnimationId: null,
         this.hoveredRegionName = '';
         this.hoveredAreaIndex = -1;
         this.hoveredSpawnId = null;
+        this.hoveredServerSpawnIdx = -1;
+        this.serverSpawnTooltipVisible = false;
+        if (this.serverSpawnDwellTimer) {
+            clearTimeout(this.serverSpawnDwellTimer);
+            this.serverSpawnDwellTimer = null;
+        }
 
         console.log(`? Map initialized: ${imgWidth}x${imgHeight} at ${this.scale}x scale, viewport: ${this.viewportWidth}x${this.viewportHeight}`);
         return true;
@@ -538,25 +551,98 @@ panAnimationId: null,
 
         // Draw server spawns (heatmap) - colored dots showing where creatures spawned
         if (this.serverSpawns && Array.isArray(this.serverSpawns)) {
-            this.serverSpawns.forEach((spawn) => {
+            this.serverSpawns.forEach((spawn, idx) => {
                 if (!spawn) return;
 
-                // Draw player location (larger square, 10x10 pixels)
-                const playerPos = this.worldToScreen(spawn.playerX, spawn.playerY);
+                const isHovered = (this.hoveredServerSpawnIdx === idx);
                 const playerColor = `rgb(${spawn.colorR}, ${spawn.colorG}, ${spawn.colorB})`;
 
-                this.ctx.fillStyle = playerColor;
-                this.ctx.globalAlpha = 0.7;
-                this.ctx.fillRect(playerPos.x - 5, playerPos.y - 5, 10, 10);
+                // Draw player location (larger square, 10x10 pixels normally, 14x14 when hovered)
+                const playerPos = this.worldToScreen(spawn.playerX, spawn.playerY);
+                const playerSize = isHovered ? 7 : 5;
 
-                // Draw spawn location (smaller dot, 2x2 pixels)
-                const spawnPos = this.worldToScreen(spawn.spawnX, spawn.spawnY);
                 this.ctx.fillStyle = playerColor;
-                this.ctx.globalAlpha = 0.9;
-                this.ctx.fillRect(spawnPos.x - 1, spawnPos.y - 1, 2, 2);
+                this.ctx.globalAlpha = isHovered ? 1.0 : 0.7;
+                this.ctx.fillRect(playerPos.x - playerSize, playerPos.y - playerSize, playerSize * 2, playerSize * 2);
+
+                // Draw highlight border when hovered
+                if (isHovered) {
+                    this.ctx.strokeStyle = '#FFFFFF';
+                    this.ctx.lineWidth = 2;
+                    this.ctx.strokeRect(playerPos.x - playerSize - 1, playerPos.y - playerSize - 1, playerSize * 2 + 2, playerSize * 2 + 2);
+                }
+
+                // Draw spawn location (smaller dot, 2x2 pixels normally, 4x4 when hovered)
+                const spawnPos = this.worldToScreen(spawn.spawnX, spawn.spawnY);
+                const spawnSize = isHovered ? 2 : 1;
+                this.ctx.fillStyle = playerColor;
+                this.ctx.globalAlpha = isHovered ? 1.0 : 0.9;
+                this.ctx.fillRect(spawnPos.x - spawnSize, spawnPos.y - spawnSize, spawnSize * 2, spawnSize * 2);
 
                 this.ctx.globalAlpha = 1.0;
             });
+
+            // Draw tooltip for hovered server spawn (after all dots so it's on top)
+            if (this.serverSpawnTooltipVisible && this.hoveredServerSpawnIdx >= 0 && this.hoveredServerSpawnIdx < this.serverSpawns.length) {
+                const spawn = this.serverSpawns[this.hoveredServerSpawnIdx];
+                const mouseX = this.serverSpawnTooltipMousePos.x;
+                const mouseY = this.serverSpawnTooltipMousePos.y;
+
+                // Tooltip content
+                const lines = [
+                    `${spawn.playerName}`,
+                    `Location: (${spawn.playerX}, ${spawn.playerY})`,
+                    `Total Events: ${spawn.totalDotsForPlayer}`
+                ];
+
+                // Measure text for sizing
+                this.ctx.font = 'bold 12px Arial';
+                let maxWidth = 0;
+                lines.forEach(line => {
+                    const width = this.ctx.measureText(line).width;
+                    if (width > maxWidth) maxWidth = width;
+                });
+
+                const padding = 8;
+                const lineHeight = 16;
+                const boxWidth = maxWidth + padding * 2;
+                const boxHeight = lines.length * lineHeight + padding * 2;
+
+                // Position tooltip near mouse (offset to not cover cursor)
+                let tooltipX = mouseX + 15;
+                let tooltipY = mouseY + 15;
+
+                // Keep tooltip within canvas bounds
+                if (tooltipX + boxWidth > this.viewportWidth) {
+                    tooltipX = mouseX - boxWidth - 10;
+                }
+                if (tooltipY + boxHeight > this.viewportHeight) {
+                    tooltipY = mouseY - boxHeight - 10;
+                }
+
+                // Draw tooltip background
+                const playerColor = `rgb(${spawn.colorR}, ${spawn.colorG}, ${spawn.colorB})`;
+                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+                this.ctx.strokeStyle = playerColor;
+                this.ctx.lineWidth = 2;
+                this.ctx.beginPath();
+                this.ctx.roundRect(tooltipX, tooltipY, boxWidth, boxHeight, 5);
+                this.ctx.fill();
+                this.ctx.stroke();
+
+                // Draw tooltip text
+                this.ctx.font = 'bold 12px Arial';
+                this.ctx.textAlign = 'left';
+                this.ctx.textBaseline = 'top';
+                lines.forEach((line, i) => {
+                    if (i === 0) {
+                        this.ctx.fillStyle = playerColor; // Player name in their color
+                    } else {
+                        this.ctx.fillStyle = '#FFFFFF'; // Content in white
+                    }
+                    this.ctx.fillText(line, tooltipX + padding, tooltipY + padding + i * lineHeight);
+                });
+            }
         }
         
         // Draw existing spawn boxes
@@ -748,9 +834,82 @@ panAnimationId: null,
     hideServerSpawns: function() {
         console.log(`?? Hiding server spawns`);
         this.serverSpawns = null;
+        this.hoveredServerSpawnIdx = -1;
+        this.serverSpawnTooltipVisible = false;
+        if (this.serverSpawnDwellTimer) {
+            clearTimeout(this.serverSpawnDwellTimer);
+            this.serverSpawnDwellTimer = null;
+        }
         this.redrawAll();
     },
-    
+
+    // Find server spawn at screen coordinates (returns index or -1)
+    // Checks player location squares (10x10 pixels centered on position)
+    findServerSpawnAtScreen: function(screenX, screenY) {
+        if (!this.serverSpawns || !Array.isArray(this.serverSpawns)) {
+            return -1;
+        }
+
+        // Check in reverse order so most recently drawn (on top) is found first
+        for (let i = this.serverSpawns.length - 1; i >= 0; i--) {
+            const spawn = this.serverSpawns[i];
+            if (!spawn) continue;
+
+            // Check player location square (10x10 pixels, centered)
+            const playerPos = this.worldToScreen(spawn.playerX, spawn.playerY);
+            const halfSize = 5;
+
+            if (screenX >= playerPos.x - halfSize && screenX <= playerPos.x + halfSize &&
+                screenY >= playerPos.y - halfSize && screenY <= playerPos.y + halfSize) {
+                return i;
+            }
+        }
+
+        return -1;
+    },
+
+    // Called when mouse moves - starts dwell timer for tooltip
+    updateServerSpawnHover: function(screenX, screenY) {
+        const newIdx = this.findServerSpawnAtScreen(screenX, screenY);
+
+        // Clear existing dwell timer
+        if (this.serverSpawnDwellTimer) {
+            clearTimeout(this.serverSpawnDwellTimer);
+            this.serverSpawnDwellTimer = null;
+        }
+
+        // If mouse moved to a different spawn or off spawns
+        if (newIdx !== this.hoveredServerSpawnIdx) {
+            this.hoveredServerSpawnIdx = newIdx;
+            this.serverSpawnTooltipVisible = false; // Hide tooltip immediately on move
+            this.redrawAll();
+        }
+
+        // If hovering over a spawn, start dwell timer to show tooltip
+        if (newIdx >= 0) {
+            this.serverSpawnTooltipMousePos = { x: screenX, y: screenY };
+            this.serverSpawnDwellTimer = setTimeout(() => {
+                if (this.hoveredServerSpawnIdx === newIdx) {
+                    this.serverSpawnTooltipVisible = true;
+                    this.redrawAll();
+                }
+            }, this.serverSpawnDwellDelay);
+        }
+    },
+
+    // Clear server spawn hover state (called when mouse leaves canvas)
+    clearServerSpawnHover: function() {
+        if (this.serverSpawnDwellTimer) {
+            clearTimeout(this.serverSpawnDwellTimer);
+            this.serverSpawnDwellTimer = null;
+        }
+        if (this.hoveredServerSpawnIdx >= 0 || this.serverSpawnTooltipVisible) {
+            this.hoveredServerSpawnIdx = -1;
+            this.serverSpawnTooltipVisible = false;
+            this.redrawAll();
+        }
+    },
+
     // Smooth keyboard panning functions
     addKey: function(key) {
         const wasEmpty = this.keyStates.size === 0;
