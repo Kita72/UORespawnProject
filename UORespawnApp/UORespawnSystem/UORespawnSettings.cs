@@ -18,7 +18,7 @@ namespace Server.Custom.UORespawnSystem
             }
         }
 
-        private const string Version = "2.0.0.2";
+        private const string Version = "2.0.0.3";
         private static double SPAWN_MOD { get; set; } = 0.0;
 
         private static readonly string SettingsBinaryFile = Path.Combine(UOR_DATA, "UOR_SpawnSettings.bin");
