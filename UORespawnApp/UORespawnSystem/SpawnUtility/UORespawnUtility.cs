@@ -149,6 +149,8 @@ namespace Server.Custom.UORespawnSystem.SpawnUtility
                     if (!string.IsNullOrEmpty(mob_Name))
                     {
                         UORespawnCore.EnqueueSpawn(pm, mob_Name, spawnPoint);
+
+                        SpawnFactory.AddStats(pm.Name, map.Name, new Point2D(pm.Location.X, pm.Location.Y), new Point2D(location.X, location.Y), mob_Name);
                     }
                 }
             }

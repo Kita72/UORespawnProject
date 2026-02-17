@@ -1,4 +1,4 @@
-﻿# UORespawn v2.0 - Professional Spawn Management System
+# UORespawn v2.0 - Professional Spawn Management System
 
 ## 🎯 Overview
 

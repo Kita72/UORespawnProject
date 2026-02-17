@@ -105,12 +105,6 @@
     </ItemGroup>
 
     <!-- Exclude Server-Side SpawnSystem folder from compilation but include for distribution -->
-    <ItemGroup>
-        <Compile Remove="UORespawnSystem\**" />
-        <EmbeddedResource Remove="UORespawnSystem\**" />
-        <MauiCss Remove="UORespawnSystem\**" />
-        <MauiXaml Remove="UORespawnSystem\**" />
-    </ItemGroup>
 
     <!-- Include SpawnSystem folder in published output for export functionality -->
     <ItemGroup>

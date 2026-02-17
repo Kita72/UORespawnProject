@@ -15,13 +15,17 @@ namespace Server.Custom.UORespawnSystem.SpawnHelpers
     {
         private static readonly string STAT_DIR = Path.Combine(UORespawnSettings.UOR_DATA, "UOR_STATS");
 
-        private static List<(DateTime, PlayerMobile, Map, Point2D, Point2D)> SpawnStats { get; set; } = new List<(DateTime, PlayerMobile, Map, Point2D, Point2D)>();
+        private static List<(DateTime, string, string, Point2D, Point2D, string)> SpawnStats { get; set; }
 
+        internal static void AddStats(string playerName, string mapName, Point2D playerLoc, Point2D creatureLocation, string creatureName)
+        {
+            if (SpawnStats == null) SpawnStats = new List<(DateTime, string, string, Point2D, Point2D, string)>();
+
+            SpawnStats.Add((DateTime.Now, playerName, mapName, playerLoc, creatureLocation, creatureName));
+        }
 
         internal static string GetSpawnName(PlayerMobile pm, Map map, Region region, Point3D location, bool isWater)
         {
-            SpawnStats.Add((DateTime.Now, pm, map, new Point2D(pm.Location.X, pm.Location.Y), new Point2D(location.X, location.Y)));
-
             if (SpawnStats.Count > 1000)
             {
                 SpawnStats.RemoveAt(0);
@@ -125,7 +129,6 @@ namespace Server.Custom.UORespawnSystem.SpawnHelpers
 
         internal static void SaveStats()
         {
-
             if (!Directory.Exists(STAT_DIR))
             {
                 Directory.CreateDirectory(STAT_DIR);
@@ -133,7 +136,7 @@ namespace Server.Custom.UORespawnSystem.SpawnHelpers
 
             foreach (var spawn in SpawnStats)
             {
-                string converted = $"{spawn.Item1:t}|{spawn.Item2.Name}|{spawn.Item3}|{spawn.Item4.X}|{spawn.Item4.Y}|{spawn.Item5.X}|{spawn.Item5.Y}";
+                string converted = $"{spawn.Item1:t}|{spawn.Item2}|{spawn.Item3}|{spawn.Item4.X}|{spawn.Item4.Y}|{spawn.Item5.X}|{spawn.Item5.Y}|{spawn.Item6}";
 
                 File.AppendAllText(Path.Combine(STAT_DIR, $"{DateTime.Now.Year}_{DateTime.Now.DayOfYear}.txt"), converted + Environment.NewLine);
             }

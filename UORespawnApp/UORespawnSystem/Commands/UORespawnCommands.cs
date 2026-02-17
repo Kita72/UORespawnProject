@@ -11,6 +11,7 @@ using Server.Custom.UORespawnSystem.Gumps;
 using Server.Custom.UORespawnSystem.Services;
 using Server.Custom.UORespawnSystem.SpawnUtility;
 using System.Text;
+using System.CodeDom;
 
 namespace Server.Custom.UORespawnSystem.Commands
 {
@@ -222,7 +223,7 @@ namespace Server.Custom.UORespawnSystem.Commands
 
         // GenSpawnerList
         [Usage("GenSpawnerList")]
-        [Description("UORespawn: Gen Spawner List")]
+        [Description("UORespawn: Gen Spawner List (Map:X:Y:HomeRange:MaxCount:SpawnNames)")]
         public static void GenSpawnerList_OnCommand(CommandEventArgs e)
         {
             List<string> allSpawners = new List<string>();
@@ -233,12 +234,26 @@ namespace Server.Custom.UORespawnSystem.Commands
             {
                 if (spawner is Spawner s && s is ISpawner spwnr)
                 {
-                    allSpawners.Add($"{s.Map}:{s.X}:{s.Y}:{spwnr.HomeRange}");
+                    // Get spawn names from the spawner's spawn objects
+                    string spawnNames = string.Empty;
+                    if (s.SpawnObjects != null && s.SpawnObjects.Count > 0)
+                    {
+                        spawnNames = string.Join("|", s.SpawnObjects.Select(so => so.SpawnName));
+                    }
+
+                    allSpawners.Add($"{s.Map}:{s.X}:{s.Y}:{spwnr.HomeRange}:{s.MaxCount}:{spawnNames}");
                 }
 
                 if (spawner is XmlSpawner xml && xml is ISpawner xspwnr)
                 {
-                    allSpawners.Add($"{xml.Map}:{xml.X}:{xml.Y}:{xspwnr.HomeRange}");
+                    // Get spawn names from the XmlSpawner's spawn objects
+                    string spawnNames = string.Empty;
+                    if (xml.SpawnObjects != null && xml.SpawnObjects.Length > 0)
+                    {
+                        spawnNames = string.Join("|", xml.SpawnObjects.Select(so => so.TypeName));
+                    }
+
+                    allSpawners.Add($"{xml.Map}:{xml.X}:{xml.Y}:{xspwnr.HomeRange}:{xml.MaxCount}:{spawnNames}");
                 }
             }
 
@@ -246,7 +261,7 @@ namespace Server.Custom.UORespawnSystem.Commands
             {
                 File.WriteAllLines(Path.Combine(UORespawnSettings.UOR_DATA, "UOR_SpawnerList.txt"), allSpawners);
 
-                e.Mobile.SendMessage("List Generated!");
+                e.Mobile.SendMessage($"Spawner List Generated! ({allSpawners.Count} spawners)");
             }
             else
             {
