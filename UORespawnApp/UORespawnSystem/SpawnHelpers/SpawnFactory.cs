@@ -26,7 +26,7 @@ namespace Server.Custom.UORespawnSystem.SpawnHelpers
 
         internal static string GetSpawnName(PlayerMobile pm, Map map, Region region, Point3D location, bool isWater)
         {
-            if (SpawnStats.Count > 1000)
+            if (SpawnStats?.Count > 1000)
             {
                 SpawnStats.RemoveAt(0);
             }

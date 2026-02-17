@@ -98,6 +98,7 @@ namespace Server.Custom.UORespawnSystem.SpawnUtility
             {
                 do
                 {
+
                     if (attempts++ > UORespawnSettings.MAX_SPAWN_CHECKS)
                     {
                         isGoodSpawn = false;
