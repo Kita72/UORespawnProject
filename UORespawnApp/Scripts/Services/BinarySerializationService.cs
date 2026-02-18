@@ -27,6 +27,12 @@ namespace UORespawnApp.Scripts.Services
         {
             try
             {
+                // Skip sync if suppressed (during ApplyPack to preserve original bytes)
+                if (PathConstants.SuppressPackSync)
+                {
+                    return;
+                }
+
                 var activePackPath = PathConstants.ActivePackDataPath;
                 if (string.IsNullOrEmpty(activePackPath) || !Directory.Exists(activePackPath))
                 {

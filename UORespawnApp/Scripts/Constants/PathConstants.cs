@@ -377,6 +377,13 @@ namespace UORespawnApp.Scripts.Constants
         public static string? ActivePackDataPath { get; set; }
 
         /// <summary>
+        /// When true, suppresses syncing files back to the active pack folder.
+        /// Used during ApplyPack to prevent re-serializing data that would cause
+        /// byte-level differences when comparing against backup ZIPs.
+        /// </summary>
+        public static bool SuppressPackSync { get; set; }
+
+        /// <summary>
         /// Get the server folder path (Data/SERVER/)
         /// Contains UORespawnSystem.zip for server setup
         /// </summary>

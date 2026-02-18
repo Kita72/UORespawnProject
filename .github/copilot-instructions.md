@@ -22,6 +22,7 @@ UORespawn is a professional spawn management system for Ultima Online servers ru
 - Spawn packs are stored in `Data/PACKS`; applying a pack replaces live spawn/settings files in `Data/UOR_DATA` and relies on the data watcher to sync to the server, with `PACKS` acting as a backup/staging area.
 - Use Entities instead of DTO Models for data objects, following ServUO-style custom save approach.
 - Toasts: Only show warnings that explain failures. Do not show success/info toasts.
+- When creating spawn pack ZIPs (or server script ZIPs), zip the files directly at the root of the archive, then name the ZIP file as the desired folder name. Do NOT zip the folder itself. Correct: `DefaultPack.zip` contains `UOR_BoxSpawn.bin`, `UOR_TileSpawn.bin`, etc. at root level. Wrong: `DefaultPack.zip` contains `DefaultPack/UOR_BoxSpawn.bin` (nested folder). The app extracts ZIPs to a folder matching the ZIP name, so nesting creates unwanted double-folder structure.
 
 ## UI Features
 

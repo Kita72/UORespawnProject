@@ -42,6 +42,7 @@ namespace UORespawnApp.Scripts.Services
         /// <summary>
         /// Initializes the active pack path from the saved CurrentPackName setting.
         /// Called on startup to ensure edits sync back to the correct pack folder.
+        /// On first launch (no data files in LocalDataPath), applies the default pack.
         /// </summary>
         private void InitializeActivePackPath()
         {
@@ -54,14 +55,19 @@ namespace UORespawnApp.Scripts.Services
                     return;
                 }
 
-                // Check approved packs first, then imported
+                // Check approved packs first, then created, then imported
                 var approvedPath = Path.Combine(PathConstants.PacksApprovedPath, packName);
+                var createdPath = Path.Combine(PathConstants.PacksCreatedPath, packName);
                 var importedPath = Path.Combine(PathConstants.PacksImportedPath, packName);
 
                 string? packFolder = null;
                 if (Directory.Exists(approvedPath))
                 {
                     packFolder = approvedPath;
+                }
+                else if (Directory.Exists(createdPath))
+                {
+                    packFolder = createdPath;
                 }
                 else if (Directory.Exists(importedPath))
                 {
@@ -81,10 +87,78 @@ namespace UORespawnApp.Scripts.Services
                     PathConstants.ActivePackDataPath = dataPath;
                     Logger.Info($"Active pack path initialized: {dataPath}");
                 }
+
+                // Check if LocalDataPath is empty (first launch scenario)
+                // If so, copy pack files to LocalDataPath so data loading works
+                ApplyPackIfLocalDataEmpty(packFolder, dataPath);
             }
             catch (Exception ex)
             {
                 Logger.Error("Error initializing active pack path", ex);
+            }
+        }
+
+        /// <summary>
+        /// On first launch, LocalDataPath (Data/UOR_DATA/) has no SPAWN data files.
+        /// This method copies pack data files to LocalDataPath so the app can load data.
+        /// Note: We check for SPAWN files specifically (Box, Tile, Region), not Settings,
+        /// because Settings may have been created by LoadSettingsAsync before this runs.
+        /// </summary>
+        private void ApplyPackIfLocalDataEmpty(string packFolder, string? packDataPath)
+        {
+            try
+            {
+                var localDataPath = PathConstants.LocalDataPath;
+
+                // Check for SPAWN files only - Settings file may already exist from LoadSettingsAsync
+                // We need at least ONE spawn file to consider the data loaded
+                string[] spawnFiles = [PathConstants.BOX_FILENAME, PathConstants.TILE_FILENAME, PathConstants.REGION_FILENAME];
+
+                bool hasSpawnData = spawnFiles.Any(file => File.Exists(Path.Combine(localDataPath, file)));
+                if (hasSpawnData)
+                {
+                    Logger.Info("LocalDataPath already has spawn data files - skipping first-launch apply");
+                    return;
+                }
+
+                // No spawn data - this is first launch, apply the pack
+                var sourcePath = packDataPath ?? packFolder;
+
+                // Check if pack has spawn files to copy
+                bool packHasSpawnData = spawnFiles.Any(file => File.Exists(Path.Combine(sourcePath, file)));
+                if (!packHasSpawnData)
+                {
+                    Logger.Warning($"Pack has no spawn data files to apply: {sourcePath}");
+                    Logger.Warning("Files checked: " + string.Join(", ", spawnFiles.Select(f => Path.Combine(sourcePath, f) + " exists=" + File.Exists(Path.Combine(sourcePath, f)))));
+                    return;
+                }
+
+                Logger.Info($"First launch detected - applying pack data from: {sourcePath}");
+
+                // Copy ALL data files (including settings)
+                string[] allDataFiles = [PathConstants.SETTINGS_FILENAME, PathConstants.BOX_FILENAME,
+                                         PathConstants.TILE_FILENAME, PathConstants.REGION_FILENAME];
+
+                foreach (var fileName in allDataFiles)
+                {
+                    var sourceFile = Path.Combine(sourcePath, fileName);
+                    if (File.Exists(sourceFile))
+                    {
+                        var destFile = Path.Combine(localDataPath, fileName);
+                        File.Copy(sourceFile, destFile, overwrite: true);
+                        Logger.Info($"  Copied: {fileName}");
+                    }
+                    else
+                    {
+                        Logger.Warning($"  Missing in pack: {fileName}");
+                    }
+                }
+
+                Logger.Info("First launch pack apply completed");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error applying pack on first launch", ex);
             }
         }
 
@@ -135,7 +209,12 @@ namespace UORespawnApp.Scripts.Services
                 // Step 0: Load Settings (FIRST - other systems may depend on settings)
                 await LoadSettingsAsync();
 
+                // Step 0.5: Ensure approved packs are unpacked from Backup folder
+                // This MUST happen BEFORE InitializeActivePackPath so the pack exists in Approved
+                await EnsureApprovedPacksUnpackedAsync();
+
                 // Initialize active pack path from saved CurrentPackName setting
+                // Now the pack will exist in Approved (either from Backup ZIP or folder)
                 InitializeActivePackPath();
 
                 // Step 1: Load Box Spawn Data (Binary)
@@ -172,6 +251,32 @@ namespace UORespawnApp.Scripts.Services
             finally
             {
                 _isLoading = false;
+            }
+        }
+
+        /// <summary>
+        /// Ensures approved packs are unpacked from Backup folder to Approved folder.
+        /// Must be called BEFORE InitializeActivePackPath so the packs exist.
+        /// 
+        /// Flow:
+        ///   Backup/DefaultPack.zip  → Approved/DefaultPack/ (for releases)
+        ///   Backup/DefaultPack/     → Approved/DefaultPack/ (for Git repo/dev)
+        /// </summary>
+        private async Task EnsureApprovedPacksUnpackedAsync()
+        {
+            Logger.Info("[Startup] Ensuring approved packs are unpacked from Backup...");
+            try
+            {
+                await Task.Run(() =>
+                {
+                    var packService = new SpawnPackService();
+                    packService.UnpackApprovedPacks();
+                });
+                Logger.Info("[Startup] Approved packs unpacked successfully");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("[Startup] Error unpacking approved packs", ex);
             }
         }
 
