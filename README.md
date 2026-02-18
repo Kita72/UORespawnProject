@@ -23,7 +23,7 @@
 
 UORespawn is a modern .NET MAUI application that provides a comprehensive visual interface for creating and managing spawn systems in Ultima Online ServUO servers. It offers three complementary spawn methods to populate your world with creatures and NPCs.
 
-**Version:** 2.0  
+**Version:** 2.0.0.4  
 **Platform:** Windows, macOS  
 **Framework:** .NET 10 MAUI with Blazor  
 **License:** MIT
@@ -32,7 +32,7 @@ UORespawn is a modern .NET MAUI application that provides a comprehensive visual
 
 ## ✨ Features
 
-### 🗺️ Map Spawn Editor
+### 🗺️ Box Spawn Editor
 - Visual map-based spawn box creation
 - Draw spawn areas with left-click and drag
 - Pan the map with right-click and drag or WASD/Arrow keys
@@ -50,10 +50,9 @@ UORespawn is a modern .NET MAUI application that provides a comprehensive visual
 - Per-region creature assignments
 - Simplifies large area spawn management
 
-### 🌍 World Spawn System
+### 🌍 Tile Spawn System
 - Tile-based automatic spawning
 - Configure spawns for terrain types (grass, forest, water, desert, etc.)
-- Separate animal and creature spawns
 - Six frequency tiers for precise control
 - Applies globally to all maps
 
@@ -65,7 +64,7 @@ UORespawn is a modern .NET MAUI application that provides a comprehensive visual
 - **Real-time Metrics** - Monitor spawn performance with `[SpawnMetrics`
 
 ### 🎨 Additional Features
-- **Spawn Packs** - Import, export, and share spawn configurations
+- **Spawn Packs** - Three-category system (Approved, Created, Imported) for managing spawn configurations
 - Pack Dashboard with detailed statistics
 - Dark theme UI
 - Custom map image replacement
@@ -104,9 +103,10 @@ Download the latest version from the [Releases](https://github.com/Kita72/UOResp
 ### First Run
 
 1. The app will create a `Data` folder for spawn files
-2. Map images (Map0-Map5.bmp) should be in the `Data` folder
-3. Configure your spawn settings in the Settings page
-4. Start creating spawns!
+2. **DefaultPack** automatically loads on first launch
+3. Map images (Map0-Map5.bmp) should be in the `Data/MAPS` folder
+4. Configure your spawn settings in the Settings page
+5. Start creating spawns or import a spawn pack!
 
 ---
 
@@ -116,14 +116,14 @@ Download the latest version from the [Releases](https://github.com/Kita72/UOResp
 
 1. **Select a Map** - Use the dropdown in the left navigation
 2. **Choose a Spawn Type:**
-   - **Map Spawn** - Draw boxes directly on the map
+   - **Box Spawn** - Draw boxes directly on the map
    - **Region Spawn** - Assign creatures to named regions
-   - **World Spawn** - Configure tile-based automatic spawns
+   - **Tile Spawn** - Configure tile-based automatic spawns
 3. **Add Creatures** - Select from the bestiary
 4. **Configure Settings** - Adjust spawn parameters
 5. **Auto-Sync** - Files automatically save to your ServUO folder
 
-### Map Spawn Controls
+### Box Spawn Controls
 
 - **Left-Drag:** Draw spawn box
 - **Right-Drag:** Pan the map
@@ -143,7 +143,7 @@ Add these predefined NPCs from the bestiary:
 
 - `UOR_SpawnSettings.bin` - System configuration
 - `UOR_BoxSpawn.bin` - Map spawn boxes
-- `UOR_TileSpawn.bin` - World tile spawns
+- `UOR_TileSpawn.bin` - Tile spawns
 - `UOR_RegionSpawn.bin` - Named region spawns
 
 ---

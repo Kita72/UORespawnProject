@@ -5,6 +5,27 @@ All notable changes to UORespawn will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0.4] - 2026-02-17
+
+### Added
+- Three-category spawn pack system: Approved, Created, and Imported packs
+- "Create New Pack" functionality with modal dialog
+- Auto-apply behavior when creating new packs (pack is immediately loaded after creation)
+- Default pack auto-extraction from Backup ZIP on first launch
+
+### Changed
+- Unified terminology throughout app: "Box Spawn" (not Map Spawn), "Tile Spawn" (not World Spawn)
+- Instructions page comprehensively verified and updated for all 12 sections
+- Removed outdated Animals/Creatures concept (now uses 6-frequency system throughout)
+- Spawn Packs page reorganized with category tabs (Approved, Created, Imported)
+- Delete protection: Approved packs cannot be deleted; Created/Imported can only be deleted when not loaded
+
+### Fixed
+- Instructions terminology now matches actual UI (Box/Tile/Region spawn pages)
+- Info icon descriptions corrected for spawn type priorities
+- Max Mobs and Max Crowd descriptions clarified in Instructions
+- Priority color descriptions (1=highest/red, 5=lowest/green) corrected
+
 ## [2.0.0.3] - 2025-02-16
 
 ### Added
@@ -32,14 +53,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Spawn type terminology corrected in Instructions (Box/Region/Tile spawn pages)
 
-## [2.0.0.3] - 2025-01-XX
+## [2.0.0.2] - 2025-01-15
 
 ### Added
 - Complete rewrite from WinForms to .NET MAUI with Blazor
-- Visual map spawn editor with pan and zoom
+- Visual Box Spawn editor with pan and zoom
 - Interactive mini-map with click-to-navigate
-- World spawn system for tile-based spawning
-- Region spawn system for named server regions
+- Tile Spawn system for tile-based spawning
+- Region Spawn system for named server regions
 - Comprehensive settings panel
 - Dark theme UI
 - Built-in instructions page
