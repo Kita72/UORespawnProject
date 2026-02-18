@@ -40,6 +40,77 @@ namespace UORespawnApp.Scripts.Services
         private DataWatcher? _dataWatcher;
 
         /// <summary>
+        /// Initializes the active pack path from the saved CurrentPackName setting.
+        /// Called on startup to ensure edits sync back to the correct pack folder.
+        /// </summary>
+        private void InitializeActivePackPath()
+        {
+            try
+            {
+                var packName = Settings.CurrentPackName;
+                if (string.IsNullOrEmpty(packName))
+                {
+                    Logger.Info("No current pack name set - active pack path not initialized");
+                    return;
+                }
+
+                // Check approved packs first, then imported
+                var approvedPath = Path.Combine(PathConstants.PacksApprovedPath, packName);
+                var importedPath = Path.Combine(PathConstants.PacksImportedPath, packName);
+
+                string? packFolder = null;
+                if (Directory.Exists(approvedPath))
+                {
+                    packFolder = approvedPath;
+                }
+                else if (Directory.Exists(importedPath))
+                {
+                    packFolder = importedPath;
+                }
+
+                if (packFolder == null)
+                {
+                    Logger.Warning($"Pack folder not found for '{packName}' - active pack path not set");
+                    return;
+                }
+
+                // Resolve the actual data path (might be in UOR_DATA subfolder)
+                var dataPath = ResolvePackDataPath(packFolder);
+                if (dataPath != null)
+                {
+                    PathConstants.ActivePackDataPath = dataPath;
+                    Logger.Info($"Active pack path initialized: {dataPath}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error initializing active pack path", ex);
+            }
+        }
+
+        /// <summary>
+        /// Resolves the data path within a pack folder (handles UOR_DATA subfolder).
+        /// </summary>
+        private static string? ResolvePackDataPath(string packFolder)
+        {
+            string[] dataFiles = [PathConstants.SETTINGS_FILENAME, PathConstants.BOX_FILENAME, 
+                                  PathConstants.TILE_FILENAME, PathConstants.REGION_FILENAME];
+
+            if (dataFiles.Any(file => File.Exists(Path.Combine(packFolder, file))))
+            {
+                return packFolder;
+            }
+
+            var nestedPath = Path.Combine(packFolder, PathConstants.UOR_DATA_SUBFOLDER);
+            if (Directory.Exists(nestedPath) && dataFiles.Any(file => File.Exists(Path.Combine(nestedPath, file))))
+            {
+                return nestedPath;
+            }
+
+            return packFolder; // Return pack folder even if no files found yet
+        }
+
+        /// <summary>
         /// Loads all application data asynchronously in the background.
         /// Should be called after the UI has rendered.
         /// </summary>
@@ -59,14 +130,13 @@ namespace UORespawnApp.Scripts.Services
 
             try
             {
-                // Generate DefaultPack binary files if they don't exist
-                // Must run before loading spawn data to ensure pack is available
-                await Task.Run(() => DefaultPackGenerator.GenerateIfNeeded());
-
                 // Load data in logical order (some dependencies exist)
 
                 // Step 0: Load Settings (FIRST - other systems may depend on settings)
                 await LoadSettingsAsync();
+
+                // Initialize active pack path from saved CurrentPackName setting
+                InitializeActivePackPath();
 
                 // Step 1: Load Box Spawn Data (Binary)
                 await LoadBoxSpawnDataAsync();

@@ -1,3 +1,4 @@
+using UORespawnApp.Scripts.Entities;
 using UORespawnApp.Scripts.Utilities;
 
 namespace UORespawnApp
@@ -27,6 +28,12 @@ namespace UORespawnApp
         /// Whether server spawn statistics overlay is currently visible (shared across Box/Region spawn pages)
         /// </summary>
         public bool ShowServerSpawns { get; set; } = false;
+
+        /// <summary>
+        /// Currently active spawn pack (the last pack that was applied).
+        /// When spawn edits are saved, they're synced back to this pack's folder.
+        /// </summary>
+        public SpawnPackInfo? ActivePack { get; private set; }
 
         /// <summary>
         /// Event raised when the current view changes
@@ -90,6 +97,15 @@ namespace UORespawnApp
         {
             ShowServerSpawns = !ShowServerSpawns;
             OnServerSpawnsChanged?.Invoke();
+        }
+
+        /// <summary>
+        /// Set the currently active spawn pack
+        /// </summary>
+        /// <param name="pack">The pack that was applied</param>
+        public void SetActivePack(SpawnPackInfo? pack)
+        {
+            ActivePack = pack;
         }
     }
 }

@@ -84,6 +84,10 @@ namespace UORespawnApp.Scripts.Services
                     {
                         // Force IsApproved for packs in Approved folder
                         pack.Metadata.IsApproved = true;
+
+                        // Check if pack has been modified from backup
+                        pack.IsModified = IsPackModified(pack);
+
                         packs.Add(pack);
                     }
                 }
@@ -350,6 +354,19 @@ namespace UORespawnApp.Scripts.Services
             return null;
         }
 
+        /// <summary>
+        /// Gets the resolved data path for a pack (where the .bin files are located).
+        /// Returns the pack folder path if files are there, or the UOR_DATA subfolder if nested.
+        /// </summary>
+        public string? GetPackDataPath(SpawnPackInfo pack)
+        {
+            if (pack == null || string.IsNullOrEmpty(pack.PackFolderPath))
+            {
+                return null;
+            }
+            return ResolvePackDataPath(pack.PackFolderPath);
+        }
+
         private static SpawnPackMetadata LoadPackMetadata(string packFolder)
         {
             var metadata = new SpawnPackMetadata();
@@ -586,6 +603,94 @@ namespace UORespawnApp.Scripts.Services
             }
 
             stats.SpawnTypeCounts[typeKey] += count;
+        }
+
+        /// <summary>
+        /// Gets the backup ZIP path for an approved pack.
+        /// </summary>
+        public string? GetBackupZipPath(SpawnPackInfo pack)
+        {
+            if (pack == null || string.IsNullOrWhiteSpace(pack.PackFolderPath))
+            {
+                return null;
+            }
+
+            var packName = Path.GetFileName(pack.PackFolderPath);
+            var backupZipPath = Path.Combine(PathConstants.PacksBackupPath, $"{packName}.zip");
+
+            return File.Exists(backupZipPath) ? backupZipPath : null;
+        }
+
+        /// <summary>
+        /// Checks if an approved pack has a backup ZIP available for reset.
+        /// </summary>
+        public bool HasBackupZip(SpawnPackInfo pack)
+        {
+            return GetBackupZipPath(pack) != null;
+        }
+
+        /// <summary>
+        /// Checks if an approved pack has been modified from its original backup.
+        /// Compares file sizes and checksums of data files against the backup ZIP.
+        /// </summary>
+        public bool IsPackModified(SpawnPackInfo pack)
+        {
+            if (pack == null || !pack.Metadata.IsApproved)
+            {
+                return false;
+            }
+
+            var backupZipPath = GetBackupZipPath(pack);
+            if (backupZipPath == null)
+            {
+                return false; // No backup to compare against
+            }
+
+            try
+            {
+                var packDataPath = ResolvePackDataPath(pack.PackFolderPath) ?? pack.PackFolderPath;
+
+                using var archive = ZipFile.OpenRead(backupZipPath);
+                foreach (var entry in archive.Entries)
+                {
+                    if (!PackDataFiles.Contains(entry.Name, StringComparer.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    var currentFilePath = Path.Combine(packDataPath, entry.Name);
+                    if (!File.Exists(currentFilePath))
+                    {
+                        return true; // File missing = modified
+                    }
+
+                    // Compare file sizes first (fast check)
+                    var currentFileInfo = new FileInfo(currentFilePath);
+                    if (currentFileInfo.Length != entry.Length)
+                    {
+                        return true; // Size differs = modified
+                    }
+
+                    // Compare file contents (byte comparison)
+                    using var zipStream = entry.Open();
+                    using var memoryStream = new MemoryStream();
+                    zipStream.CopyTo(memoryStream);
+                    var zipBytes = memoryStream.ToArray();
+
+                    var currentBytes = File.ReadAllBytes(currentFilePath);
+                    if (!zipBytes.SequenceEqual(currentBytes))
+                    {
+                        return true; // Content differs = modified
+                    }
+                }
+
+                return false; // All files match
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error checking if pack is modified: {pack.Metadata.Name}", ex);
+                return false; // On error, assume not modified
+            }
         }
 
         /// <summary>

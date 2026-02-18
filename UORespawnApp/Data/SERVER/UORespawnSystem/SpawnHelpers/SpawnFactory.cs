@@ -134,14 +134,17 @@ namespace Server.Custom.UORespawnSystem.SpawnHelpers
                 Directory.CreateDirectory(STAT_DIR);
             }
 
-            foreach (var spawn in SpawnStats)
+            if (SpawnStats.Count > 0)
             {
-                string converted = $"{spawn.Item1:t}|{spawn.Item2}|{spawn.Item3}|{spawn.Item4.X}|{spawn.Item4.Y}|{spawn.Item5.X}|{spawn.Item5.Y}|{spawn.Item6}";
+                foreach (var spawn in SpawnStats)
+                {
+                    string converted = $"{spawn.Item1:t}|{spawn.Item2}|{spawn.Item3}|{spawn.Item4.X}|{spawn.Item4.Y}|{spawn.Item5.X}|{spawn.Item5.Y}|{spawn.Item6}";
 
-                File.AppendAllText(Path.Combine(STAT_DIR, $"{DateTime.Now.Year}_{DateTime.Now.DayOfYear}.txt"), converted + Environment.NewLine);
+                    File.AppendAllText(Path.Combine(STAT_DIR, $"{DateTime.Now.Year}_{DateTime.Now.DayOfYear}.txt"), converted + Environment.NewLine);
+                }
+
+                SpawnStats.Clear();
             }
-
-            SpawnStats.Clear();
 
             UORespawnUtility.CleanUpOldFiles(STAT_DIR);
         }

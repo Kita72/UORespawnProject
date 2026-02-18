@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Server.Custom.UORespawnSystem.Entities;
 using Server.Custom.UORespawnSystem.SpawnUtility;
 using Server.Custom.UORespawnSystem.SpawnHelpers;
+using Server.Targeting;
 
 namespace Server.Custom.UORespawnSystem
 {
@@ -24,6 +25,10 @@ namespace Server.Custom.UORespawnSystem
                 if (isWater)
                 {
                     tileName = SpawnWaterInfo.TryGetWetName(map, location);
+                }
+                else
+                {
+                    tileName = new LandTarget(location, map).Name;
                 }
 
                 if (string.IsNullOrEmpty(tileName) || tileName == "NoName")

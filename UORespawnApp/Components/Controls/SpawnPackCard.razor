@@ -8,8 +8,7 @@
         <img src="@GetImageSource()" alt="@Pack.Metadata.Name" />
     </div>
     <div class="card-body spawn-pack-details">
-        <div class="spawn-pack-author">@Pack.Metadata.Author</div>
-        <div class="spawn-pack-description">@Pack.Metadata.Description</div>
+        <div class="spawn-pack-author">By: @Pack.Metadata.Author</div>
         <div class="spawn-pack-actions">
             <button class="btn btn-sm btn-link" type="button" title="Like" @onclick:stopPropagation="true" @onclick="ToggleLike">
                 <span class="bi @(Pack.IsLiked ? "bi-heart-fill" : "bi-heart")"></span>
@@ -41,6 +40,16 @@
                     <span class="bi bi-trash"></span>
                 </button>
             }
+            @if (Pack.Metadata.IsApproved && Pack.IsModified)
+            {
+                <button class="btn btn-sm btn-link reset-btn" 
+                        type="button" 
+                        title="Reset to default" 
+                        @onclick:stopPropagation="true" 
+                        @onclick="ResetPack">
+                    <span class="bi bi-arrow-counterclockwise"></span>
+                </button>
+            }
         </div>
     </div>
 </div>
@@ -66,6 +75,9 @@
 
     [Parameter]
     public EventCallback<SpawnPackInfo> OnInfo { get; set; }
+
+    [Parameter]
+    public EventCallback<SpawnPackInfo> OnReset { get; set; }
 
     [Parameter]
     public bool ShowDelete { get; set; } = false;
@@ -123,6 +135,20 @@
         if (OnDelete.HasDelegate)
         {
             await OnDelete.InvokeAsync(Pack);
+        }
+    }
+
+    private async Task ResetPack()
+    {
+        // Safety: only reset approved packs that are modified
+        if (!Pack.Metadata.IsApproved || !Pack.IsModified)
+        {
+            return;
+        }
+
+        if (OnReset.HasDelegate)
+        {
+            await OnReset.InvokeAsync(Pack);
         }
     }
 

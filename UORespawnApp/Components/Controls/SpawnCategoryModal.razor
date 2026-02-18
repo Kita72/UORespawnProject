@@ -1,7 +1,7 @@
 @* Reusable modal for adding creatures to spawn categories (Common/Uncommon/Rare) *@
 
 <div class="modal fade @(IsVisible ? "show d-block" : "")" tabindex="-1" style="@(IsVisible ? "background-color: rgba(0,0,0,0.5);" : "")">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">
@@ -9,103 +9,109 @@
                 </h5>
                 <button type="button" class="btn-close" @onclick="Close"></button>
             </div>
-            <div class="modal-body">
-                <!-- Search and Add Section -->
-                <div class="card mb-3">
-                    <div class="card-header">
-                        <strong>Add from @SourceListName</strong>
-                    </div>
-                    <div class="card-body">
-                        <div class="input-group mb-3">
+            <div class="modal-body p-0">
+                <div class="spawn-modal-layout">
+                    <!-- Left: Bestiary Search/Select (Compact) -->
+                    <div class="bestiary-panel">
+                        <div class="panel-header">
+                            <span class="bi bi-search me-2"></span>@SourceListName
+                        </div>
+                        <div class="search-box">
                             <input type="text" 
-                                   class="form-control" 
-                                   placeholder="Search @SourceListName.ToLower()..." 
+                                   class="form-control form-control-sm" 
+                                   placeholder="Search..." 
                                    @bind="searchQuery" 
                                    @bind:event="oninput" />
-                            <button class="btn btn-outline-secondary" @onclick="ClearSearch">
-                                <span class="bi bi-x-lg"></span>
-                            </button>
+                            @if (!string.IsNullOrEmpty(searchQuery))
+                            {
+                                <button class="clear-btn" @onclick="ClearSearch" title="Clear search">
+                                    <span class="bi bi-x-lg"></span>
+                                </button>
+                            }
                         </div>
-                        
-                        <!-- Available List (just like Settings) -->
                         <div class="available-list">
                             @if (GetFilteredList().Any())
                             {
                                 @foreach (var entry in GetFilteredList())
                                 {
-                                    <div class="available-item @(CurrentSpawns.Contains(entry) ? "already-added" : "")" 
-                                         @onclick="() => SelectEntry(entry)">
+                                    var isAdded = CurrentSpawns.Contains(entry);
+                                    <div class="available-item @(isAdded ? "already-added" : "")" 
+                                         @onclick="() => SelectEntry(entry)"
+                                         title="@(isAdded ? "Already added" : "Click to add")">
                                         <span class="entry-name">@entry</span>
-                                        @if (CurrentSpawns.Contains(entry))
+                                        @if (isAdded)
                                         {
-                                            <span class="badge bg-success">
-                                                <span class="bi bi-check"></span> Added
-                                            </span>
+                                            <span class="bi bi-check-circle-fill text-success"></span>
                                         }
                                         else
                                         {
-                                            <button class="btn btn-sm btn-success" @onclick:stopPropagation="true">
-                                                <span class="bi bi-plus"></span>
-                                            </button>
+                                            <span class="bi bi-plus-circle add-icon"></span>
                                         }
                                     </div>
                                 }
                             }
                             else if (!string.IsNullOrEmpty(searchQuery))
                             {
-                                <div class="alert alert-info mb-0">
-                                    No @SourceListName.ToLower() found matching "@searchQuery"
+                                <div class="empty-state">
+                                    <span class="bi bi-emoji-frown"></span>
+                                    <span>No matches for "@searchQuery"</span>
                                 </div>
                             }
                             else
                             {
-                                <div class="alert alert-secondary mb-0">
-                                    Start typing to search @SourceListName.ToLower()...
+                                <div class="empty-state">
+                                    <span class="bi bi-search"></span>
+                                    <span>Type to search...</span>
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Right: Selected Spawns (Primary Focus) -->
+                    <div class="selected-panel">
+                        <div class="panel-header">
+                            <span>
+                                <span class="bi bi-list-check me-2"></span>Selected
+                                <span class="badge bg-light text-dark ms-2">@CurrentSpawns.Count</span>
+                            </span>
+                            @if (CurrentSpawns.Count > 0)
+                            {
+                                <button class="btn btn-sm btn-outline-danger" @onclick="ClearAll" title="Clear all">
+                                    <span class="bi bi-trash"></span>
+                                </button>
+                            }
+                        </div>
+                        <div class="selected-list">
+                            @if (CurrentSpawns.Count > 0)
+                            {
+                                @foreach (var spawn in CurrentSpawns)
+                                {
+                                    <div class="selected-item">
+                                        <span class="spawn-name">@spawn</span>
+                                        <button class="btn btn-sm btn-outline-danger remove-btn" 
+                                                @onclick="() => RemoveEntry(spawn)" 
+                                                title="Remove">
+                                            <span class="bi bi-x-lg"></span>
+                                        </button>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <div class="empty-selected">
+                                    <span class="bi bi-inbox" style="font-size: 2rem; opacity: 0.3;"></span>
+                                    <p>No spawns selected</p>
+                                    <small>Search and click creatures on the left to add them</small>
                                 </div>
                             }
                         </div>
                     </div>
                 </div>
-                
-                <!-- Current Spawns List -->
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <strong>Selected @CategoryName @SpawnTypeName (@CurrentSpawns.Count)</strong>
-                        @if (CurrentSpawns.Count > 0)
-                        {
-                            <button class="btn btn-sm btn-outline-danger" @onclick="ClearAll">
-                                <span class="bi bi-trash"></span> Clear All
-                            </button>
-                        }
-                    </div>
-                    <div class="card-body p-0">
-                        @if (CurrentSpawns.Count > 0)
-                        {
-                            <div class="list-group list-group-flush" style="max-height: 300px; overflow-y: auto;">
-                                @foreach (var spawn in CurrentSpawns)
-                                {
-                                    <div class="list-group-item d-flex justify-content-between align-items-center">
-                                        <span>@spawn</span>
-                                        <button class="btn btn-sm btn-danger" @onclick="() => RemoveEntry(spawn)">
-                                            <span class="bi bi-trash"></span>
-                                        </button>
-                                    </div>
-                                }
-                            </div>
-                        }
-                        else
-                        {
-                            <div class="alert alert-secondary m-3 mb-0">
-                                No @CategoryName.ToLower() @SpawnTypeName.ToLower() selected. Click items above to add them.
-                            </div>
-                        }
-                    </div>
-                </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" @onclick="Close">Close</button>
+                <button type="button" class="btn btn-secondary" @onclick="Close">Cancel</button>
                 <button type="button" class="btn btn-primary" @onclick="SaveAndClose">
-                    <span class="bi bi-check-lg"></span> Done (@CurrentSpawns.Count)
+                    <span class="bi bi-check-lg"></span> Save (@CurrentSpawns.Count)
                 </button>
             </div>
         </div>

@@ -10,6 +10,7 @@
 @using UORespawnApp.Scripts.Utilities
 @inject SpawnPackService SpawnPackService
 @inject ToastService ToastService
+@inject ViewService ViewService
 
 <div class="container-fluid p-2 spawn-packs-page">
     <div class="alert alert-dark mb-2 text-center shadow-sm">
@@ -39,7 +40,7 @@
                         <div class="spawn-pack-grid">
                             @foreach (var pack in ApprovedPacks)
                             {
-                                <SpawnPackCard Pack="pack" OnSelect="SelectPack" OnApply="ApplyPack" OnInfo="ShowEcologyModal" />
+                                <SpawnPackCard Pack="pack" OnSelect="SelectPack" OnApply="ApplyPack" OnInfo="ShowEcologyModal" OnReset="ResetPack" />
                             }
                         </div>
                         @if (ApprovedPacks.Count == 0)
@@ -71,7 +72,11 @@
                 <div class="card-body">
                     @if (SelectedPack != null)
                     {
-                        <h5 class="mb-3 text-center" style="color: goldenrod; font-weight: bold;">@SelectedPack.Metadata.Name</h5>
+                        <h5 class="mb-1 text-center" style="color: goldenrod; font-weight: bold;">@SelectedPack.Metadata.Name</h5>
+                        @if (!string.IsNullOrWhiteSpace(SelectedPack.Metadata.Description))
+                        {
+                            <p class="text-muted small text-center mb-3">@SelectedPack.Metadata.Description</p>
+                        }
                         <div class="row g-2">
                             <div class="col-6">
                                 <div class="stat-tile">
@@ -359,6 +364,19 @@
         var success = SpawnPackService.ApplyPack(pack);
         if (success)
         {
+            // Track this as the active pack for syncing edits back
+            ViewService.SetActivePack(pack);
+
+            // Get the pack folder name and save it for persistence across app restarts
+            var packFolderName = Path.GetFileName(pack.PackFolderPath);
+            Settings.CurrentPackName = packFolderName;
+
+            // Set the active pack data path for file sync
+            if (!string.IsNullOrEmpty(pack.PackFolderPath))
+            {
+                PathConstants.ActivePackDataPath = SpawnPackService.GetPackDataPath(pack);
+            }
+
             ToastService.ShowSuccess($"Applied spawn pack: {pack.Metadata.Name}");
         }
         else
@@ -378,6 +396,14 @@
             return Task.CompletedTask;
         }
 
+        // Check if this is the currently loaded pack - can't delete what's in use
+        var packFolderName = Path.GetFileName(pack.PackFolderPath);
+        if (packFolderName == Settings.CurrentPackName)
+        {
+            ToastService.ShowWarning("Cannot delete the currently loaded pack. Apply a different pack first.");
+            return Task.CompletedTask;
+        }
+
         var (success, error) = SpawnPackService.DeleteImportedPack(pack);
         if (success)
         {
@@ -388,6 +414,35 @@
         else
         {
             ToastService.ShowError(error ?? "Unable to delete spawn pack.");
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private Task ResetPack(SpawnPackInfo pack)
+    {
+        // Safety check - only reset approved packs
+        if (!pack.Metadata.IsApproved)
+        {
+            return Task.CompletedTask;
+        }
+
+        var (success, error) = SpawnPackService.ResetPackFromBackup(pack);
+        if (success)
+        {
+            // Re-apply the reset pack to sync UOR_DATA with the restored pack data
+            SpawnPackService.ApplyPack(pack);
+
+            // Keep active pack path pointing to this pack (still loaded, just reset)
+            PathConstants.ActivePackDataPath = SpawnPackService.GetPackDataPath(pack);
+            ViewService.SetActivePack(pack);
+
+            RefreshPacks();
+            StateHasChanged();
+        }
+        else
+        {
+            ToastService.ShowWarning(error ?? "Unable to reset pack to default.");
         }
 
         return Task.CompletedTask;

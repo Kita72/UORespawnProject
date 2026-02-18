@@ -10,6 +10,11 @@ namespace Server.Custom.UORespawnSystem.SpawnHelpers
         {
             string tile = new LandTarget(location, map).Name;
 
+            if (!string.IsNullOrEmpty(tile) && (tile == "water" || tile == "blood"))
+            {
+                return tile;
+            }
+
             StaticTile[] staticTiles = map.Tiles.GetStaticTiles(location.X, location.Y, false);
 
             for (int i = 0; i < staticTiles.Length; ++i)

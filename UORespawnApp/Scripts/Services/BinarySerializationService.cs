@@ -17,6 +17,35 @@ namespace UORespawnApp.Scripts.Services
         private const int TILE_SPAWN_VERSION = 1;
         private const int REGION_SPAWN_VERSION = 1;
 
+        #region Active Pack Sync Helper
+
+        /// <summary>
+        /// Copies a file to the active approved pack folder if one is set.
+        /// Called after saving spawn/settings files to keep the pack in sync with edits.
+        /// </summary>
+        private static void SyncFileToActivePack(string sourceFilePath, string fileName)
+        {
+            try
+            {
+                var activePackPath = PathConstants.ActivePackDataPath;
+                if (string.IsNullOrEmpty(activePackPath) || !Directory.Exists(activePackPath))
+                {
+                    return;
+                }
+
+                var destFilePath = Path.Combine(activePackPath, fileName);
+                File.Copy(sourceFilePath, destFilePath, overwrite: true);
+
+                Logger.Info($"Synced {fileName} to active pack: {activePackPath}");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error syncing {fileName} to active pack", ex);
+            }
+        }
+
+        #endregion
+
         #region Settings Save/Load
 
         /// <summary>
@@ -32,6 +61,7 @@ namespace UORespawnApp.Scripts.Services
 
                 Logger.Info($"Settings saved to: {localPath}");
 
+                // Sync to server if linked
                 var serverPath = PathConstants.ServerDataPath;
 
                 if (serverPath != null)
@@ -45,6 +75,9 @@ namespace UORespawnApp.Scripts.Services
                         Logger.Info($"Settings synced to server: {serverFilePath}");
                     }
                 }
+
+                // Sync to active approved pack if set
+                SyncFileToActivePack(localPath, PathConstants.SETTINGS_FILENAME);
             }
             catch (Exception ex)
             {
@@ -153,6 +186,7 @@ namespace UORespawnApp.Scripts.Services
 
                 Logger.Info($"Box spawns saved to: {localPath} ({count} boxes)");
 
+                // Sync to server if linked
                 var serverPath = PathConstants.ServerDataPath;
 
                 if (serverPath != null)
@@ -166,6 +200,9 @@ namespace UORespawnApp.Scripts.Services
                         Logger.Info($"Box spawns synced to server: {serverFilePath}");
                     }
                 }
+
+                // Sync to active approved pack if set
+                SyncFileToActivePack(localPath, PathConstants.BOX_FILENAME);
             }
             catch (Exception ex)
             {
@@ -341,6 +378,7 @@ namespace UORespawnApp.Scripts.Services
 
                 Logger.Info($"Tile spawns saved to: {localPath} ({count} tiles)");
 
+                // Sync to server if linked
                 var serverPath = PathConstants.ServerDataPath;
 
                 if (serverPath != null)
@@ -354,6 +392,9 @@ namespace UORespawnApp.Scripts.Services
                         Logger.Info($"Tile spawns synced to server: {serverFilePath}");
                     }
                 }
+
+                // Sync to active approved pack if set
+                SyncFileToActivePack(localPath, PathConstants.TILE_FILENAME);
             }
             catch (Exception ex)
             {
@@ -507,6 +548,7 @@ namespace UORespawnApp.Scripts.Services
 
                 Logger.Info($"Region spawns saved to: {localPath} ({count} regions)");
 
+                // Sync to server if linked
                 var serverPath = PathConstants.ServerDataPath;
 
                 if (serverPath != null)
@@ -520,6 +562,9 @@ namespace UORespawnApp.Scripts.Services
                         Logger.Info($"Region spawns synced to server: {serverFilePath}");
                     }
                 }
+
+                // Sync to active approved pack if set
+                SyncFileToActivePack(localPath, PathConstants.REGION_FILENAME);
             }
             catch (Exception ex)
             {

@@ -345,6 +345,14 @@ namespace UORespawnApp.Scripts.Constants
         }
 
         /// <summary>
+        /// Currently active approved pack's data folder path.
+        /// Set when an approved pack is applied. When spawn edits are saved,
+        /// they're also synced to this folder (similar to server sync).
+        /// Null if no approved pack is active.
+        /// </summary>
+        public static string? ActivePackDataPath { get; set; }
+
+        /// <summary>
         /// Get the server folder path (Data/SERVER/)
         /// Contains UORespawnSystem.zip for server setup
         /// </summary>

@@ -32,22 +32,25 @@ namespace UORespawnApp
     {
         // Cache for frequently accessed settings to avoid repeated Preferences.Get() calls
         private static string? _cachedServUODataFolder;
+        private static string? _cachedCurrentPackName;
         private static Color? _cachedBoxColor;
         private static double? _cachedBoxColorInc;
         private static int? _cachedBoxLineSize;
-        
+
         // Initialize cache on first access
         static Settings()
         {
             LoadCache();
         }
-        
+
         private const string DefaultBoxColorHex = "#8B0000";
+        private const string DefaultPackName = "DefaultPack";
         private static readonly Color DefaultBoxColor = Color.FromArgb(DefaultBoxColorHex);
 
         private static void LoadCache()
         {
             _cachedServUODataFolder = Preferences.Get("ServUODataFolder", "");
+            _cachedCurrentPackName = Preferences.Get("CurrentPackName", DefaultPackName);
 
             var colorString = Preferences.Get("BoxColor", DefaultBoxColorHex);
             _cachedBoxColor = colorString == DefaultBoxColorHex 
@@ -57,7 +60,7 @@ namespace UORespawnApp
             _cachedBoxColorInc = Preferences.Get("BoxColorInc", 0.3);
             _cachedBoxLineSize = Preferences.Get("BoxLineSize", 2);
         }
-        
+
         public static string ServUODataFolder
         {
             get => _cachedServUODataFolder ?? "";
@@ -65,6 +68,21 @@ namespace UORespawnApp
             {
                 _cachedServUODataFolder = value;
                 Preferences.Set("ServUODataFolder", value);
+            }
+        }
+
+        /// <summary>
+        /// The folder name of the currently loaded spawn pack.
+        /// Used to track which pack's data is in UOR_DATA and sync edits back to that pack.
+        /// Defaults to "DefaultPack" for first-time users.
+        /// </summary>
+        public static string CurrentPackName
+        {
+            get => _cachedCurrentPackName ?? DefaultPackName;
+            set
+            {
+                _cachedCurrentPackName = value;
+                Preferences.Set("CurrentPackName", value);
             }
         }
 
