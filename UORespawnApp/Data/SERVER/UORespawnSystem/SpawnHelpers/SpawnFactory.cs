@@ -42,6 +42,7 @@ namespace Server.Custom.UORespawnSystem.SpawnHelpers
             }
 
             // Region
+
             spawn = RegionSpawner.TryRegionSpawn(map, region, location, isWater);
 
             if (!string.IsNullOrEmpty(spawn))

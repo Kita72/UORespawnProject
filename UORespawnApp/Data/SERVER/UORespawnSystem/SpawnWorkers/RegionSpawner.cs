@@ -11,9 +11,7 @@ namespace Server.Custom.UORespawnSystem
     {
         internal static string TryRegionSpawn(Map map, Region region, Point3D location, bool isWater)
         {
-            if (region == null && region.Name == null) return string.Empty;
-
-            if (!region.Area.Contains(new Rectangle3D(location, location))) return string.Empty;
+            if (region == null || region.Name == null) return string.Empty;
 
             List<RegionEntity> spawnList = new List<RegionEntity>();
 
