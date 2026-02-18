@@ -61,7 +61,9 @@ namespace UORespawnApp
         /// <param name="view">View identifier to navigate to</param>
         public void SetView(string view)
         {
+            var previousView = CurrentView;
             CurrentView = view;
+            Logger.Info($"[Navigation] View changed: {previousView} → {view}");
             OnViewChanged?.Invoke();
         }
 
@@ -73,7 +75,9 @@ namespace UORespawnApp
         {
             if (CurrentMapId != mapId)
             {
+                var previousMap = CurrentMapId;
                 CurrentMapId = mapId;
+                Logger.Info($"[Navigation] Map changed: {MapUtility.GetMapName(previousMap)} (ID:{previousMap}) → {MapUtility.GetMapName(mapId)} (ID:{mapId})");
 
                 Utility.SESSION?.SetMap(mapId);
 
@@ -87,6 +91,7 @@ namespace UORespawnApp
         public void ToggleXMLSpawners()
         {
             ShowXMLSpawners = !ShowXMLSpawners;
+            Logger.Info($"[Overlay] XML Spawners visibility: {(ShowXMLSpawners ? "ON" : "OFF")}");
             OnXMLSpawnersChanged?.Invoke();
         }
 
@@ -96,6 +101,7 @@ namespace UORespawnApp
         public void ToggleServerSpawns()
         {
             ShowServerSpawns = !ShowServerSpawns;
+            Logger.Info($"[Overlay] Server Spawns visibility: {(ShowServerSpawns ? "ON" : "OFF")}");
             OnServerSpawnsChanged?.Invoke();
         }
 
@@ -105,7 +111,9 @@ namespace UORespawnApp
         /// <param name="pack">The pack that was applied</param>
         public void SetActivePack(SpawnPackInfo? pack)
         {
+            var previousPack = ActivePack?.Metadata.Name ?? "(none)";
             ActivePack = pack;
+            Logger.Info($"[Pack] Active pack changed: {previousPack} → {pack?.Metadata.Name ?? "(none)"}");
         }
     }
 }

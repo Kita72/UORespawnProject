@@ -31,9 +31,9 @@
                         <div class="col-md-6">
                             <ul class="list-unstyled mb-0">
                                 <li><a href="#getting-started" class="text-decoration-none">1. Getting Started</a></li>
-                                <li><a href="#map-editor" class="text-decoration-none">2. Map Spawn Editor</a></li>
+                                <li><a href="#map-editor" class="text-decoration-none">2. Box Spawn Editor</a></li>
                                 <li><a href="#region-spawn" class="text-decoration-none">3. Region Spawn System</a></li>
-                                <li><a href="#world-spawn" class="text-decoration-none">4. World Spawn System</a></li>
+                                <li><a href="#world-spawn" class="text-decoration-none">4. Tile Spawn System</a></li>
                                 <li><a href="#spawn-packs" class="text-decoration-none">5. Spawn Packs</a></li>
                                 <li><a href="#settings" class="text-decoration-none">6. Settings & Configuration</a></li>
                             </ul>
@@ -64,9 +64,9 @@
                         to populate your Ultima Online world with creatures:
                     </p>
                     <ul>
-                        <li><strong>Map Spawns:</strong> Manual spawn boxes you draw directly on the map</li>
+                        <li><strong>Box Spawns:</strong> Manual spawn boxes you draw directly on the map</li>
                         <li><strong>Region Spawns:</strong> Automatic spawns based on named server regions (Britain, Dungeon Despise, etc.)</li>
-                        <li><strong>World Spawns:</strong> Automatic spawns based on terrain tile types (grass, forest, water, etc.)</li>
+                        <li><strong>Tile Spawns:</strong> Automatic spawns based on terrain tile types (grass, forest, water, etc.)</li>
                     </ul>
 
                     <h6 class="text-primary mt-4">Key v2.0 Features</h6>
@@ -93,15 +93,15 @@
                 </div>
             </div>
 
-            <!-- 2. Map Spawn Editor -->
+            <!-- 2. Box Spawn Editor -->
             <div class="card map-card mb-4" id="map-editor">
                 <div class="card-header">
-                    <strong><span class="bi bi-map"></span> 2. Map Spawn Editor</strong>
+                    <strong><span class="bi bi-map"></span> 2. Box Spawn Editor</strong>
                 </div>
                 <div class="card-body">
                     <h6 class="text-primary">Creating Spawn Boxes</h6>
                     <ol>
-                        <li>Click <strong>"Map Spawn"</strong> in the left navigation</li>
+                        <li>Click <strong>"Box Spawn"</strong> in the left navigation</li>
                         <li>Select your map from the dropdown (Felucca, Trammel, Ilshenar, etc.)</li>
                         <li><strong>Left-click and drag</strong> on the map to draw a spawn box</li>
                         <li>Release to create the spawn box (minimum 3x3 pixels)</li>
@@ -238,25 +238,27 @@
                 </div>
             </div>
 
-            <!-- 4. World Spawn System -->
+            <!-- 4. Tile Spawn System -->
             <div class="card map-card mb-4" id="world-spawn">
                 <div class="card-header">
-                    <strong><span class="bi bi-grid-3x3-gap"></span> 4. World Spawn System</strong>
+                    <strong><span class="bi bi-grid-3x3-gap"></span> 4. Tile Spawn System</strong>
                 </div>
                 <div class="card-body">
                     <h6 class="text-primary">How It Works</h6>
                     <p>
-                        World Spawns automatically place creatures based on <strong>terrain tile types</strong>. 
+                        Tile Spawns automatically place creatures based on <strong>terrain tile types</strong>. 
                         When a player enters an area, the system checks the ground tiles and spawns appropriate creatures.
                     </p>
 
                     <h6 class="text-primary mt-4">Configuration</h6>
                     <ol>
-                        <li>Click <strong>"World Spawn"</strong> in the navigation</li>
+                        <li>Click <strong>"Tile Spawn"</strong> in the navigation</li>
                         <li>Select a <strong>tile type</strong> from the left list (Grass, Forest, Jungle, etc.)</li>
-                        <li>Configure <strong>Animals</strong> (passive) and <strong>Creatures</strong> (hostile) separately</li>
-                        <li>Set spawns for three frequency tiers:
+                        <li>Configure spawns for six frequency tiers:
                             <ul>
+                                <li><strong>Water:</strong> Water-specific spawns (sea creatures)</li>
+                                <li><strong>Weather:</strong> Weather-triggered spawns (storms, rain)</li>
+                                <li><strong>Timed:</strong> Time-of-day spawns (night creatures)</li>
                                 <li><strong>Common:</strong> Spawns frequently</li>
                                 <li><strong>Uncommon:</strong> Spawns occasionally</li>
                                 <li><strong>Rare:</strong> Spawns rarely</li>
@@ -266,20 +268,28 @@
 
                     <h6 class="text-primary mt-4">Tile Types Available</h6>
                     <div class="row">
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <ul>
                                 <li>Grass / Dirt</li>
                                 <li>Forest / Jungle</li>
-                                <li>Snow / Ice</li>
-                                <li>Swamp</li>
+                                <li>Snow / Swamp</li>
+                                <li>Sand / Sand Stone</li>
                             </ul>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <ul>
-                                <li>Sand / Desert</li>
-                                <li>Water (Fresh/Salt)</li>
-                                <li>Cave / Dungeon</li>
-                                <li>Mountain / Rock</li>
+                                <li>Cave / Cave Floor</li>
+                                <li>Water / Leaves</li>
+                                <li>Stone / Stone Moss</li>
+                                <li>Marble / Obsidian</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-4">
+                            <ul>
+                                <li>Brick / Cobblestones</li>
+                                <li>Wooden Floor / Planks</li>
+                                <li>Cloud / Void</li>
+                                <li>And more...</li>
                             </ul>
                         </div>
                     </div>
@@ -287,14 +297,14 @@
                     <h6 class="text-primary mt-4">Example Setup</h6>
                     <p><strong>Forest Tile:</strong></p>
                     <ul>
-                        <li><strong>Animals - Common:</strong> Deer, Rabbit, Squirrel</li>
-                        <li><strong>Animals - Rare:</strong> Great Hart, White Wolf</li>
-                        <li><strong>Creatures - Common:</strong> Orc, Ettin</li>
-                        <li><strong>Creatures - Rare:</strong> Orc Lord, Ettin Warrior</li>
+                        <li><strong>Common:</strong> Deer, Rabbit, Orc, Ettin</li>
+                        <li><strong>Uncommon:</strong> Great Hart, Orc Captain</li>
+                        <li><strong>Rare:</strong> White Wolf, Orc Lord</li>
+                        <li><strong>Timed:</strong> Shade, Wraith (night spawns)</li>
                     </ul>
 
                     <div class="alert alert-info mt-3">
-                        <span class="bi bi-lightbulb"></span> <strong>Tip:</strong> World Spawns apply to ALL maps! 
+                        <span class="bi bi-lightbulb"></span> <strong>Tip:</strong> Tile Spawns apply to ALL maps! 
                         Configure once, and it works everywhere grass, forest, water, etc. appears.
                     </div>
                 </div>
@@ -310,15 +320,23 @@
                     <p>
                         Spawn Packs are pre-configured collections of spawn data that you can share, import, and apply 
                         with a single click. Instead of manually creating spawns from scratch, you can use community-created 
-                        packs or export your own configurations to share with others.
+                        packs, create your own from scratch, or import configurations shared by others.
                     </p>
 
-                    <h6 class="text-primary mt-4">Pack Types</h6>
+                    <div class="alert alert-info">
+                        <span class="bi bi-info-circle"></span> <strong>Note:</strong> The editor launches with a default 
+                        spawn pack applied. If you want to start completely fresh, use <strong>Create New Pack</strong> to 
+                        create an empty pack and apply it.
+                    </div>
+
+                    <h6 class="text-primary mt-4">Pack Categories</h6>
                     <ul>
-                        <li><strong>Approved Packs:</strong> Official packs reviewed and approved by the UORespawn team. 
-                            These are bundled with the application and guaranteed to work correctly.</li>
-                        <li><strong>Imported Packs:</strong> Custom packs you've imported from zip files. These are stored 
-                            in your local <code>Data/PACKS</code> folder and can be deleted if no longer needed.</li>
+                        <li><strong><span class="bi bi-patch-check me-1"></span>Approved:</strong> Official packs reviewed and approved by the UORespawn team. 
+                            These are bundled with the application and can be reset to their original state if modified.</li>
+                        <li><strong><span class="bi bi-pencil-square me-1"></span>Created:</strong> Packs you've created from scratch using the editor. 
+                            Start with empty spawn data and build your own configuration from the ground up.</li>
+                        <li><strong><span class="bi bi-cloud-download me-1"></span>Imported:</strong> Custom packs you've imported from zip files shared by others. 
+                            These are stored in your local <code>Data/PACKS/Imported</code> folder.</li>
                     </ul>
 
                     <h6 class="text-primary mt-4">Pack Dashboard</h6>
@@ -338,21 +356,42 @@
                     <ul>
                         <li><strong>Preview Image:</strong> Visual representation of the pack's theme</li>
                         <li><strong>Author:</strong> Who created the pack</li>
-                        <li><strong>Description:</strong> Brief summary of what the pack contains</li>
                         <li><strong>Action Buttons:</strong>
                             <ul>
                                 <li><span class="bi bi-heart"></span> <strong>Like:</strong> Mark packs you enjoy</li>
                                 <li><span class="bi bi-star"></span> <strong>Favorite:</strong> Star your preferred packs</li>
                                 <li><span class="bi bi-check2-circle"></span> <strong>Apply:</strong> Load this pack's spawn data</li>
-                                <li><span class="bi bi-trash"></span> <strong>Delete:</strong> Remove imported packs (not available for approved packs)</li>
+                                <li><span class="bi bi-info-circle"></span> <strong>Info:</strong> Hover to see pack description (Default pack opens ecology modal)</li>
+                                <li><span class="bi bi-arrow-counterclockwise"></span> <strong>Reset:</strong> Restore approved packs to original state (approved packs only)</li>
+                                <li><span class="bi bi-trash"></span> <strong>Delete:</strong> Remove packs (created and imported packs only, not available for approved packs)</li>
                             </ul>
                         </li>
                     </ul>
 
+                    <div class="alert alert-secondary">
+                        <span class="bi bi-shield-check"></span> <strong>Delete Rules:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li><strong>Approved packs</strong> cannot be deleted (they ship with the app)</li>
+                            <li><strong>Created/Imported packs</strong> can be deleted, but not while loaded</li>
+                            <li>To delete the currently loaded pack, first apply a different pack</li>
+                        </ul>
+                    </div>
+
+                    <h6 class="text-primary mt-4">Creating a New Pack</h6>
+                    <p>Want to build your spawn configuration from scratch? Here's how:</p>
+                    <ol>
+                        <li>Navigate to <strong>Spawn Packs</strong> in the left menu</li>
+                        <li>Click <strong>Create New Pack</strong> in the Pack Dashboard footer</li>
+                        <li>Enter a name and optional description for your pack</li>
+                        <li>Click <strong>Create Pack</strong> - an empty pack will be created and <strong>automatically applied</strong></li>
+                        <li>Use the Box Spawn, Region Spawn, and Tile Spawn pages to build your configuration</li>
+                        <li>Your changes are automatically saved back to the pack</li>
+                    </ol>
+
                     <h6 class="text-primary mt-4">Applying a Spawn Pack</h6>
                     <ol>
                         <li>Navigate to <strong>Spawn Packs</strong> in the left menu</li>
-                        <li>Switch between <strong>Approved</strong> and <strong>Imported</strong> tabs to browse packs</li>
+                        <li>Switch between <strong>Approved</strong>, <strong>Created</strong>, and <strong>Imported</strong> tabs to browse packs</li>
                         <li>Click on a pack card to view its statistics in the dashboard</li>
                         <li>Click the <span class="bi bi-check2-circle"></span> <strong>Apply</strong> button on the card</li>
                         <li>Your current spawn data will be replaced with the pack's configuration</li>
@@ -374,7 +413,7 @@
                         <li>Click <strong>Import Pack</strong> to add it to your Imported packs</li>
                     </ol>
                     <p class="small text-muted">
-                        Imported packs are stored in <code>Data/PACKS/[PackName]/</code> and appear in the Imported tab.
+                        Imported packs are stored in <code>Data/PACKS/Imported/[PackName]/</code> and appear in the Imported tab.
                     </p>
 
                     <h6 class="text-primary mt-4">Exporting Your Spawn Data</h6>
@@ -424,9 +463,9 @@
                     <h6 class="text-primary">Spawn Settings</h6>
                     <ul>
                         <li><strong>Spawn Range Min/Max:</strong> Distance from player where creatures can spawn</li>
-                        <li><strong>Max Mob:</strong> Maximum creatures per spawn box</li>
-                        <li><strong>Max Crowd:</strong> Maximum creatures in an area</li>
-                        <li><strong>Creature/Common/Uncommon/Rare Chances:</strong> Probability for each tier</li>
+                        <li><strong>Max Mobs:</strong> Maximum creatures within Max Range</li>
+                        <li><strong>Max Crowd:</strong> Maximum creatures within Min Range</li>
+                        <li><strong>Common/Uncommon/Rare Chances:</strong> Probability for each rarity tier (0.0 to 1.0)</li>
                         <li><strong>Water/Weather/Timed Chances:</strong> Environmental spawn probabilities</li>
                     </ul>
 
@@ -439,9 +478,9 @@
 
                     <h6 class="text-primary mt-4">Spawn Box Appearance</h6>
                     <ul>
-                        <li><strong>Box Color:</strong> Choose the color for spawn box borders</li>
+                        <li><strong>Base Box Color:</strong> Choose the color for Priority 0 spawn boxes</li>
                         <li><strong>Line Thickness:</strong> Width of spawn box lines (1-5px)</li>
-                        <li><strong>Priority Color Increment:</strong> How much brighter each priority level appears</li>
+                        <li><strong>Priority Colors:</strong> Priorities 1-24 use distinct colors (red → orange → yellow → green → cyan → blue → violet → pink) for visual clarity when boxes overlap</li>
                     </ul>
 
                     <h6 class="text-primary mt-4">Bestiary Management</h6>
@@ -454,7 +493,7 @@
                     </ul>
 
                     <h6 class="text-primary mt-4">Special NPCs in Bestiary</h6>
-                    <p>The bestiary includes predefined special NPCs with unique behaviors and effects. These can be used in any spawn system (Map, Region, or World):</p>
+                    <p>The bestiary includes predefined special NPCs with unique behaviors and effects. These can be used in any spawn system (Box, Region, or Tile):</p>
                     
                     <p><strong>Interactive NPCs:</strong></p>
                     <ul>
@@ -519,11 +558,11 @@
 
                     <h6 class="text-primary mt-4">Replacing Default Maps</h6>
                     <ol>
-                        <li>Go to <strong>Settings</strong> and find Map Settings</li>
-                        <li>Select the map to replace (Map0-Map5)</li>
-                        <li>Click <strong>Browse BMP</strong> and select your image</li>
+                        <li>Go to <strong>Settings</strong> and find <strong>Map Management</strong></li>
+                        <li>Select the map to replace from the dropdown (Map0-Map5)</li>
+                        <li>A file picker opens - select your BMP image</li>
                         <li>Original maps are automatically backed up</li>
-                        <li>Use <strong>Restore</strong> to revert to the original</li>
+                        <li>Use <strong>Restore Original</strong> to revert to the original</li>
                     </ol>
 
                     <h6 class="text-primary mt-4">Custom Maps (Beyond the Default 6)</h6>
@@ -544,9 +583,9 @@
 
                     <h6 class="text-primary mt-4">Adding Custom Maps</h6>
                     <ol>
-                        <li>Go to <strong>Settings</strong> and find Custom Map Settings</li>
-                        <li>Click <strong>Browse BMP</strong> and select your custom map image</li>
-                        <li>The map will be assigned the next available Map ID</li>
+                        <li>Go to <strong>Settings</strong> and find <strong>Map Management</strong></li>
+                        <li>Click <strong>Add Map[N]</strong> button (shows next available ID)</li>
+                        <li>Select your custom BMP map image</li>
                         <li>Your custom map appears in the navigation alongside default maps</li>
                     </ol>
 
@@ -597,7 +636,7 @@
                     <h6 class="text-primary mt-4">Automatic File Syncing (Windows/macOS)</h6>
                     <ol>
                         <li>In the editor, go to <strong>Settings</strong></li>
-                        <li>Click <strong>Link Server</strong> under "ServUO Server Integration"</li>
+                        <li>Click <strong>Add Link</strong> under "ServUO Server Integration"</li>
                         <li>Select your main <code>ServUO\</code> folder</li>
                         <li>All spawn files will now auto-sync when you make changes!</li>
                     </ol>
@@ -665,7 +704,7 @@
                     <ul>
                         <li><code>UOR_SpawnSettings.bin</code> - System configuration (ranges, chances, options)</li>
                         <li><code>UOR_BoxSpawn.bin</code> - Map spawn boxes (manual placements)</li>
-                        <li><code>UOR_TileSpawn.bin</code> - World tile spawns (terrain-based)</li>
+                        <li><code>UOR_TileSpawn.bin</code> - Tile spawns (terrain-based)</li>
                         <li><code>UOR_RegionSpawn.bin</code> - Named region spawns</li>
                     </ul>
                     <p class="small text-muted">
@@ -771,7 +810,7 @@
                     <strong><span class="bi bi-star"></span> 10. Tips & Best Practices</strong>
                 </div>
                 <div class="card-body">
-                    <h6 class="text-primary">Map Spawn Tips</h6>
+                    <h6 class="text-primary">Box Spawn Tips</h6>
                     <ul>
                         <li>Start with <strong>larger spawn boxes</strong> for roaming creatures</li>
                         <li>Use <strong>smaller boxes</strong> for stationary guards or dungeon spawns</li>
@@ -783,18 +822,18 @@
                     <h6 class="text-primary mt-4">Region Spawn Tips</h6>
                     <ul>
                         <li>Use <strong>named regions</strong> for consistent themed spawns (all of Britain, all of Dungeon Despise)</li>
-                        <li>Combine with Map Spawns for <strong>layered control</strong></li>
+                        <li>Combine with Box Spawns for <strong>layered control</strong></li>
                         <li>Great for <strong>dungeon-wide</strong> creature themes</li>
                         <li>Reduces need for many individual spawn boxes</li>
                     </ul>
 
-                    <h6 class="text-primary mt-4">World Spawn Tips</h6>
+                    <h6 class="text-primary mt-4">Tile Spawn Tips</h6>
                     <ul>
-                        <li>Balance <strong>animals vs creatures</strong> (more passive wildlife, fewer monsters)</li>
+                        <li>Use <strong>Common</strong> for passive wildlife, <strong>Rare</strong> for dangerous creatures</li>
                         <li>Make <strong>dangerous creatures rare</strong> in common areas</li>
-                        <li>Use <strong>water spawns</strong> for sea serpents, kraken, water elementals</li>
-                        <li><strong>Desert</strong> should have heat-resistant creatures</li>
-                        <li><strong>Snow/Ice</strong> areas need cold-adapted spawns</li>
+                        <li>Use <strong>Water frequency</strong> for sea serpents, kraken, water elementals</li>
+                        <li><strong>Desert</strong> tiles should have heat-resistant creatures</li>
+                        <li><strong>Snow</strong> tiles need cold-adapted spawns</li>
                     </ul>
 
                     <h6 class="text-primary mt-4">Performance Tips</h6>

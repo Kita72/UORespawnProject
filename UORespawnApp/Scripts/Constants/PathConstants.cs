@@ -66,6 +66,11 @@ namespace UORespawnApp.Scripts.Constants
         public const string PACKS_IMPORTED_SUBFOLDER = "Imported";
 
         /// <summary>
+        /// Created packs subfolder - contains user-created packs (from scratch)
+        /// </summary>
+        public const string PACKS_CREATED_SUBFOLDER = "Created";
+
+        /// <summary>
         /// Backup subfolder - contains original ZIP files for approved packs
         /// Used to reset packs to default state
         /// </summary>
@@ -315,6 +320,25 @@ namespace UORespawnApp.Scripts.Constants
             get
             {
                 var path = Path.Combine(PacksPath, PACKS_IMPORTED_SUBFOLDER);
+
+                if (!Directory.Exists(path))
+                {
+                    Directory.CreateDirectory(path);
+                }
+
+                return path;
+            }
+        }
+
+        /// <summary>
+        /// Get the created packs folder path (Data/PACKS/Created/)
+        /// Contains user-created packs (made from scratch in the editor)
+        /// </summary>
+        public static string PacksCreatedPath
+        {
+            get
+            {
+                var path = Path.Combine(PacksPath, PACKS_CREATED_SUBFOLDER);
 
                 if (!Directory.Exists(path))
                 {

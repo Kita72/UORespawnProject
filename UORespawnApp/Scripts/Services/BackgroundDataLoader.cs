@@ -177,6 +177,7 @@ namespace UORespawnApp.Scripts.Services
 
         private async Task LoadSettingsAsync()
         {
+            Logger.Info("[Startup Step 0/7] Loading settings...");
             try
             {
                 await Task.Run(() =>
@@ -184,14 +185,15 @@ namespace UORespawnApp.Scripts.Services
                     try
                     {
                         Utility.LoadSettings();
-                        Logger.Info("Settings loaded from binary file (or defaults if file missing)");
+                        Logger.Info("[Startup Step 0/7] Settings loaded from binary file (or defaults if file missing)");
 
                         // Always save settings to ensure binary file exists (creates file if missing)
                         Utility.SaveSettings();
+                        Logger.Info($"[Startup Step 0/7] Current pack: {Settings.CurrentPackName}");
                     }
                     catch (Exception ex)
                     {
-                        Logger.Error("LoadSettings failed - using Preferences defaults", ex);
+                        Logger.Error("[Startup Step 0/7] LoadSettings failed - using Preferences defaults", ex);
                     }
                 });
 
@@ -199,12 +201,13 @@ namespace UORespawnApp.Scripts.Services
             }
             catch (Exception ex)
             {
-                Logger.Error("Error loading settings", ex);
+                Logger.Error("[Startup Step 0/7] Error loading settings", ex);
             }
         }
 
         private async Task LoadBoxSpawnDataAsync()
         {
+            Logger.Info("[Startup Step 1/7] Loading box spawn data...");
             try
             {
                 await Task.Run(() =>
@@ -213,11 +216,11 @@ namespace UORespawnApp.Scripts.Services
                     {
                         Utility.LoadSpawnData();
                         var totalSpawns = Utility.BoxSpawns.Values.Sum(list => list.Count);
-                        Logger.Info($"Loaded {totalSpawns} spawn boxes across all maps");
+                        Logger.Info($"[Startup Step 1/7] Loaded {totalSpawns} spawn boxes across all maps");
                     }
                     catch (Exception ex)
                     {
-                        Logger.Error("LoadSpawnData failed", ex);
+                        Logger.Error("[Startup Step 1/7] LoadSpawnData failed", ex);
                     }
                 });
 
@@ -227,12 +230,13 @@ namespace UORespawnApp.Scripts.Services
             }
             catch (Exception ex)
             {
-                Logger.Error("Error loading spawn data", ex);
+                Logger.Error("[Startup Step 1/7] Error loading spawn data", ex);
             }
         }
 
         private async Task LoadTileSpawnDataAsync()
         {
+            Logger.Info("[Startup Step 2/7] Loading tile spawn data...");
             try
             {
                 await Task.Run(() =>
@@ -241,11 +245,11 @@ namespace UORespawnApp.Scripts.Services
                     {
                         Utility.LoadTileSpawnData();
                         var totalTileSpawns = Utility.TileSpawns.Values.Sum(list => list.Count);
-                        Logger.Info($"Loaded {totalTileSpawns} tile spawn configurations across all maps");
+                        Logger.Info($"[Startup Step 2/7] Loaded {totalTileSpawns} tile spawn configurations across all maps");
                     }
                     catch (Exception ex)
                     {
-                        Logger.Error("LoadTileSpawnData failed", ex);
+                        Logger.Error("[Startup Step 2/7] LoadTileSpawnData failed", ex);
                     }
                 });
 
@@ -255,12 +259,13 @@ namespace UORespawnApp.Scripts.Services
             }
             catch (Exception ex)
             {
-                Logger.Error("Error loading tile spawn data", ex);
+                Logger.Error("[Startup Step 2/7] Error loading tile spawn data", ex);
             }
         }
 
         private async Task LoadRegionSpawnDataAsync()
         {
+            Logger.Info("[Startup Step 3/7] Loading region spawn data...");
             try
             {
                 await Task.Run(() =>
@@ -269,11 +274,11 @@ namespace UORespawnApp.Scripts.Services
                     {
                         Utility.LoadRegionSpawnData();
                         var totalRegionSpawns = Utility.RegionSpawns.Values.Sum(list => list.Count);
-                        Logger.Info($"Loaded {totalRegionSpawns} region spawn configurations across all maps");
+                        Logger.Info($"[Startup Step 3/7] Loaded {totalRegionSpawns} region spawn configurations across all maps");
                     }
                     catch (Exception ex)
                     {
-                        Logger.Error("LoadRegionSpawnData failed", ex);
+                        Logger.Error("[Startup Step 3/7] LoadRegionSpawnData failed", ex);
                     }
                 });
 
@@ -283,29 +288,31 @@ namespace UORespawnApp.Scripts.Services
             }
             catch (Exception ex)
             {
-                Logger.Error("Error loading region spawn data", ex);
+                Logger.Error("[Startup Step 3/7] Error loading region spawn data", ex);
             }
         }
 
         private async Task LoadBestiaryAsync()
         {
+            Logger.Info("[Startup Step 4/7] Loading bestiary...");
             try
             {
                 await BestiarySpawnUtility.LoadSpawnList();
-                
+
                 IsBestiaryLoaded = true;
                 CompletedSteps++;
                 BestiaryLoaded?.Invoke(this, EventArgs.Empty);
-                Logger.Info($"Loaded {BestiarySpawnUtility.BestiaryNameList?.Count ?? 0} creatures in bestiary");
+                Logger.Info($"[Startup Step 4/7] Loaded {BestiarySpawnUtility.BestiaryNameList?.Count ?? 0} creatures in bestiary");
             }
             catch (Exception ex)
             {
-                Logger.Error("LoadSpawnList (bestiary) failed", ex);
+                Logger.Error("[Startup Step 4/7] LoadSpawnList (bestiary) failed", ex);
             }
         }
 
         private async Task LoadXMLSpawnerListAsync()
         {
+            Logger.Info("[Startup Step 5/7] Loading XML spawner list...");
             try
             {
                 await Task.Run(() =>
@@ -316,21 +323,23 @@ namespace UORespawnApp.Scripts.Services
                     }
                     catch (Exception ex)
                     {
-                        Logger.Error("LoadSpawnerList failed", ex);
+                        Logger.Error("[Startup Step 5/7] LoadSpawnerList failed", ex);
                     }
                 });
 
                 IsXMLSpawnerListLoaded = true;
                 CompletedSteps++;
+                Logger.Info($"[Startup Step 5/7] XML spawner list loaded");
             }
             catch (Exception ex)
             {
-                Logger.Error("Error loading XML spawner list", ex);
+                Logger.Error("[Startup Step 5/7] Error loading XML spawner list", ex);
             }
         }
 
         private async Task CopyMapFilesAsync()
         {
+            Logger.Info("[Startup Step 6/7] Checking map files...");
             try
             {
                 await Task.Run(() =>
@@ -347,11 +356,11 @@ namespace UORespawnApp.Scripts.Services
                     var mapFiles = Directory.GetFiles(mapsPath, "Map*.bmp");
                     if (mapFiles.Length > 0)
                     {
-                        Logger.Info($"Found {mapFiles.Length} map files in Data/MAPS");
+                        Logger.Info($"[Startup Step 6/7] Found {mapFiles.Length} map files in Data/MAPS");
                     }
                     else
                     {
-                        Logger.Warning("No map files found in Data/MAPS - maps may not display correctly");
+                        Logger.Warning("[Startup Step 6/7] No map files found in Data/MAPS - maps may not display correctly");
                     }
                 });
 
@@ -360,12 +369,13 @@ namespace UORespawnApp.Scripts.Services
             }
             catch (Exception ex)
             {
-                Logger.Error("Error checking map files", ex);
+                Logger.Error("[Startup Step 6/7] Error checking map files", ex);
             }
         }
 
         private async Task StartDataWatcherAsync()
         {
+            Logger.Info("[Startup Step 7/7] Starting DataWatcher...");
             try
             {
                 // DataWatcher starts LAST to avoid false change events during initial loading
@@ -375,16 +385,16 @@ namespace UORespawnApp.Scripts.Services
                     {
                         _dataWatcher = new DataWatcher(() =>
                         {
-                            Logger.Info("Server data files have been updated - reloading...");
+                            Logger.Info("[DataWatcher] Server data files have been updated - reloading...");
                             // Trigger reload of affected data
                             _ = ReloadDataAsync();
                         });
-                        
-                        Logger.Info("DataWatcher started successfully");
+
+                        Logger.Info("[Startup Step 7/7] DataWatcher started successfully");
                     }
                     catch (Exception ex)
                     {
-                        Logger.Warning($"DataWatcher failed to start: {ex.Message}");
+                        Logger.Warning($"[Startup Step 7/7] DataWatcher failed to start: {ex.Message}");
                     }
                 });
 

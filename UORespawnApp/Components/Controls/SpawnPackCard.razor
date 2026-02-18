@@ -25,7 +25,7 @@
             </button>
             <button class="btn btn-sm btn-link info-btn" 
                     type="button" 
-                    title="View Ecology Info"
+                    title="@GetInfoTooltip()"
                     @onclick:stopPropagation="true" 
                     @onclick="ShowInfo">
                 <span class="bi bi-info-circle"></span>
@@ -182,5 +182,22 @@
 
         // Default to app logo
         return "logo.png";
+    }
+
+    private string GetInfoTooltip()
+    {
+        // Default Spawn Pack gets special modal - show minimal tooltip
+        if (Pack.Metadata.Name == "Default Spawn Pack")
+        {
+            return "View Ecology Info";
+        }
+
+        // For other packs, show description if available
+        if (!string.IsNullOrWhiteSpace(Pack.Metadata.Description))
+        {
+            return Pack.Metadata.Description;
+        }
+
+        return "Pack Info";
     }
 }

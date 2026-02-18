@@ -1,5 +1,6 @@
 ﻿@inherits LayoutComponentBase
 @inject DebugService DebugService
+@inject ViewService ViewService
 @using UORespawnApp.Scripts.Services
 @using UORespawnApp.Scripts.Utilities
 @implements IDisposable
@@ -7,7 +8,12 @@
 <LoadingIndicator />
 <ToastNotification />
 
-<div class="page @(DebugService.IsEnabled ? (isDebugCollapsed ? "debug-mode-collapsed" : "debug-mode") : "")">
+@{
+    // Hide debug panel on home page (splash screen)
+    var showDebugPanel = DebugService.IsEnabled && ViewService.CurrentView != "home";
+}
+
+<div class="page @(showDebugPanel ? (isDebugCollapsed ? "debug-mode-collapsed" : "debug-mode") : "")">
     <div class="sidebar">
         <NavMenu />
     </div>
@@ -18,7 +24,7 @@
         </article>
     </main>
 
-    @if (DebugService.IsEnabled)
+    @if (showDebugPanel)
     {
         <DebugPanel OnCollapseChanged="OnDebugCollapseChanged" />
     }
@@ -30,9 +36,15 @@
     protected override void OnInitialized()
     {
         DebugService.OnDebugModeChanged += OnDebugModeChanged;
+        ViewService.OnViewChanged += OnViewChanged;
     }
 
     private void OnDebugModeChanged(bool enabled)
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnViewChanged()
     {
         InvokeAsync(StateHasChanged);
     }
@@ -46,5 +58,6 @@
     public void Dispose()
     {
         DebugService.OnDebugModeChanged -= OnDebugModeChanged;
+        ViewService.OnViewChanged -= OnViewChanged;
     }
 }

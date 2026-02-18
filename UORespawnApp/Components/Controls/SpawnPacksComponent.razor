@@ -22,10 +22,17 @@
             <div class="card map-card mb-2">
                 <div class="card-header">
                     <div class="pack-toggle-container">
-                        <button class="pack-toggle-btn @(showApproved ? "active" : "")" @onclick="() => SetPackView(true)">
+                        <button class="pack-toggle-btn @(currentView == PackView.Approved ? "active" : "")" @onclick="() => SetPackView(PackView.Approved)">
                             <span class="bi bi-patch-check me-1"></span>Approved
                         </button>
-                        <button class="pack-toggle-btn @(!showApproved ? "active" : "")" @onclick="() => SetPackView(false)">
+                        <button class="pack-toggle-btn @(currentView == PackView.Created ? "active" : "")" @onclick="() => SetPackView(PackView.Created)">
+                            <span class="bi bi-pencil-square me-1"></span>Created
+                            @if (CreatedPacks.Count > 0)
+                            {
+                                <span class="badge bg-secondary ms-1">@CreatedPacks.Count</span>
+                            }
+                        </button>
+                        <button class="pack-toggle-btn @(currentView == PackView.Imported ? "active" : "")" @onclick="() => SetPackView(PackView.Imported)">
                             <span class="bi bi-cloud-download me-1"></span>Imported
                             @if (ImportedPacks.Count > 0)
                             {
@@ -35,7 +42,7 @@
                     </div>
                 </div>
                 <div class="card-body">
-                    @if (showApproved)
+                    @if (currentView == PackView.Approved)
                     {
                         <div class="spawn-pack-grid">
                             @foreach (var pack in ApprovedPacks)
@@ -46,6 +53,19 @@
                         @if (ApprovedPacks.Count == 0)
                         {
                             <p class="text-muted text-center mb-0">No approved packs available yet.</p>
+                        }
+                    }
+                    else if (currentView == PackView.Created)
+                    {
+                        <div class="spawn-pack-grid">
+                            @foreach (var pack in CreatedPacks)
+                            {
+                                <SpawnPackCard Pack="pack" OnSelect="SelectPack" OnApply="ApplyPack" OnDelete="DeleteCreatedPack" OnInfo="ShowEcologyModal" ShowDelete="true" />
+                            }
+                        </div>
+                        @if (CreatedPacks.Count == 0)
+                        {
+                            <p class="text-muted text-center mb-0">No created packs. Use "Create New Pack" below to start fresh.</p>
                         }
                     }
                     else
@@ -72,11 +92,7 @@
                 <div class="card-body">
                     @if (SelectedPack != null)
                     {
-                        <h5 class="mb-1 text-center" style="color: goldenrod; font-weight: bold;">@SelectedPack.Metadata.Name</h5>
-                        @if (!string.IsNullOrWhiteSpace(SelectedPack.Metadata.Description))
-                        {
-                            <p class="text-muted small text-center mb-3">@SelectedPack.Metadata.Description</p>
-                        }
+                        <h5 class="mb-3 text-center" style="color: goldenrod; font-weight: bold;">@SelectedPack.Metadata.Name</h5>
                         <div class="row g-2">
                             <div class="col-6">
                                 <div class="stat-tile">
@@ -154,6 +170,9 @@
                 </div>
                 <div class="card-footer spawn-pack-dashboard-footer">
                     <div class="d-grid gap-2">
+                        <button class="btn btn-success" @onclick="OpenCreateModal">
+                            <span class="bi bi-plus-circle me-2"></span>Create New Pack
+                        </button>
                         <button class="btn btn-outline-info" @onclick="OpenSubmitModal">
                             <span class="bi bi-envelope me-2"></span>Submit Spawn Pack
                         </button>
@@ -283,15 +302,67 @@
 
 <EcologyModal IsVisible="isEcologyModalVisible" OnClose="CloseEcologyModal" />
 
+<!-- Create Pack Modal -->
+@if (isCreateModalVisible)
+{
+    <div class="modal fade show d-block spawn-pack-modal" tabindex="-1" style="background-color: rgba(0,0,0,0.6);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><span class="bi bi-plus-circle me-2"></span>Create New Pack</h5>
+                    <button type="button" class="btn-close" @onclick="CloseCreateModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="submission-card">
+                        <p class="text-muted small mb-3">
+                            Create a new empty spawn pack. You can then apply it and start building your spawn configuration from scratch.
+                        </p>
+                        <div class="mb-3">
+                            <label class="form-label small">Pack Name <span class="text-warning">*</span></label>
+                            <input class="form-control form-control-sm" @bind="createPackName" placeholder="Enter pack name..." />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small">Description</label>
+                            <textarea class="form-control form-control-sm" rows="2" @bind="createPackDescription" placeholder="Short summary (optional)"></textarea>
+                        </div>
+                        <button class="btn btn-success w-100" @onclick="CreatePack" disabled="@(isCreating || string.IsNullOrWhiteSpace(createPackName))">
+                            @if (isCreating)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                                <text>Creating...</text>
+                            }
+                            else
+                            {
+                                <span class="bi bi-plus-circle me-2"></span>
+                                <text>Create Pack</text>
+                            }
+                        </button>
+                        @if (!string.IsNullOrEmpty(createMessage))
+                        {
+                            <div class="alert @(createSuccess ? "alert-success" : "alert-danger") small mt-3 mb-0">
+                                @createMessage
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
+    private enum PackView { Approved, Created, Imported }
+
     private List<SpawnPackInfo> ApprovedPacks { get; set; } = new();
+    private List<SpawnPackInfo> CreatedPacks { get; set; } = new();
     private List<SpawnPackInfo> ImportedPacks { get; set; } = new();
     private SpawnPackInfo? SelectedPack { get; set; }
     private SpawnPackExportCard? exportCard;
     private bool isSubmitModalVisible;
     private bool isImportModalVisible;
     private bool isEcologyModalVisible;
-    private bool showApproved = true;
+    private bool isCreateModalVisible;
+    private PackView currentView = PackView.Approved;
 
     private string submissionName = string.Empty;
     private string submissionDescription = string.Empty;
@@ -312,40 +383,61 @@
     private bool isImporting;
     private string? importValidationInfo;
 
+    // Create pack modal state
+    private string createPackName = string.Empty;
+    private string createPackDescription = string.Empty;
+    private string? createMessage;
+    private bool createSuccess;
+    private bool isCreating;
+
     protected override void OnInitialized()
     {
+        Logger.Info("[SpawnPacks] Component initialized");
         RefreshPacks();
     }
 
     private void RefreshPacks()
     {
         ApprovedPacks = SpawnPackService.LoadApprovedPacks();
+        CreatedPacks = SpawnPackService.LoadCreatedPacks();
         ImportedPacks = SpawnPackService.LoadImportedPacks();
+        Logger.Info($"[SpawnPacks] Refreshed packs - {ApprovedPacks.Count} approved, {CreatedPacks.Count} created, {ImportedPacks.Count} imported");
 
         // Keep selected pack if it still exists, otherwise select first available
         if (SelectedPack != null)
         {
-            var allPacks = ApprovedPacks.Concat(ImportedPacks).ToList();
+            var allPacks = ApprovedPacks.Concat(CreatedPacks).Concat(ImportedPacks).ToList();
             SelectedPack = allPacks.FirstOrDefault(p => p.Metadata.Id == SelectedPack.Metadata.Id) 
                            ?? allPacks.FirstOrDefault();
         }
         else
         {
-            SelectedPack = showApproved ? ApprovedPacks.FirstOrDefault() : ImportedPacks.FirstOrDefault();
+            SelectedPack = GetPacksForCurrentView().FirstOrDefault();
         }
     }
 
-    private void SetPackView(bool approved)
+    private List<SpawnPackInfo> GetPacksForCurrentView()
     {
-        showApproved = approved;
-        SelectedPack = showApproved 
-            ? ApprovedPacks.FirstOrDefault() 
-            : ImportedPacks.FirstOrDefault();
+        return currentView switch
+        {
+            PackView.Approved => ApprovedPacks,
+            PackView.Created => CreatedPacks,
+            PackView.Imported => ImportedPacks,
+            _ => ApprovedPacks
+        };
+    }
+
+    private void SetPackView(PackView view)
+    {
+        currentView = view;
+        Logger.Info($"[SpawnPacks] View changed to {view} packs");
+        SelectedPack = GetPacksForCurrentView().FirstOrDefault();
     }
 
     private Task SelectPack(SpawnPackInfo pack)
     {
         SelectedPack = pack;
+        Logger.Info($"[SpawnPacks] Selected pack: {pack.Metadata.Name}");
         return Task.CompletedTask;
     }
 
@@ -361,6 +453,7 @@
 
     private Task ApplyPack(SpawnPackInfo pack)
     {
+        Logger.Info($"[SpawnPacks] Applying pack: {pack.Metadata.Name}");
         var success = SpawnPackService.ApplyPack(pack);
         if (success)
         {
@@ -370,17 +463,20 @@
             // Get the pack folder name and save it for persistence across app restarts
             var packFolderName = Path.GetFileName(pack.PackFolderPath);
             Settings.CurrentPackName = packFolderName;
+            Logger.Info($"[SpawnPacks] Pack applied successfully, saved as CurrentPackName: {packFolderName}");
 
             // Set the active pack data path for file sync
             if (!string.IsNullOrEmpty(pack.PackFolderPath))
             {
                 PathConstants.ActivePackDataPath = SpawnPackService.GetPackDataPath(pack);
+                Logger.Info($"[SpawnPacks] ActivePackDataPath set: {PathConstants.ActivePackDataPath}");
             }
 
             ToastService.ShowSuccess($"Applied spawn pack: {pack.Metadata.Name}");
         }
         else
         {
+            Logger.Warning($"[SpawnPacks] Failed to apply pack: {pack.Metadata.Name}");
             ToastService.ShowError("Unable to apply spawn pack. Check the pack contents.");
         }
 
@@ -389,9 +485,12 @@
 
     private Task DeletePack(SpawnPackInfo pack)
     {
+        Logger.Info($"[SpawnPacks] Delete requested for pack: {pack.Metadata.Name}");
+
         // Safety check - don't delete approved packs
         if (pack.Metadata.IsApproved)
         {
+            Logger.Warning($"[SpawnPacks] Cannot delete approved pack: {pack.Metadata.Name}");
             ToastService.ShowError("Cannot delete approved packs.");
             return Task.CompletedTask;
         }
@@ -400,6 +499,7 @@
         var packFolderName = Path.GetFileName(pack.PackFolderPath);
         if (packFolderName == Settings.CurrentPackName)
         {
+            Logger.Warning($"[SpawnPacks] Cannot delete currently loaded pack: {pack.Metadata.Name}");
             ToastService.ShowWarning("Cannot delete the currently loaded pack. Apply a different pack first.");
             return Task.CompletedTask;
         }
@@ -407,12 +507,44 @@
         var (success, error) = SpawnPackService.DeleteImportedPack(pack);
         if (success)
         {
+            Logger.Info($"[SpawnPacks] Pack deleted successfully: {pack.Metadata.Name}");
             ToastService.ShowSuccess($"Deleted spawn pack: {pack.Metadata.Name}");
             RefreshPacks();
             StateHasChanged();
         }
         else
         {
+            Logger.Error($"[SpawnPacks] Failed to delete pack: {pack.Metadata.Name} - {error}");
+            ToastService.ShowError(error ?? "Unable to delete spawn pack.");
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private Task DeleteCreatedPack(SpawnPackInfo pack)
+    {
+        Logger.Info($"[SpawnPacks] Delete requested for created pack: {pack.Metadata.Name}");
+
+        // Check if this is the currently loaded pack - can't delete what's in use
+        var packFolderName = Path.GetFileName(pack.PackFolderPath);
+        if (packFolderName == Settings.CurrentPackName)
+        {
+            Logger.Warning($"[SpawnPacks] Cannot delete currently loaded pack: {pack.Metadata.Name}");
+            ToastService.ShowWarning("Cannot delete the currently loaded pack. Apply a different pack first.");
+            return Task.CompletedTask;
+        }
+
+        var (success, error) = SpawnPackService.DeleteCreatedPack(pack);
+        if (success)
+        {
+            Logger.Info($"[SpawnPacks] Created pack deleted successfully: {pack.Metadata.Name}");
+            ToastService.ShowSuccess($"Deleted spawn pack: {pack.Metadata.Name}");
+            RefreshPacks();
+            StateHasChanged();
+        }
+        else
+        {
+            Logger.Error($"[SpawnPacks] Failed to delete created pack: {pack.Metadata.Name} - {error}");
             ToastService.ShowError(error ?? "Unable to delete spawn pack.");
         }
 
@@ -421,27 +553,34 @@
 
     private Task ResetPack(SpawnPackInfo pack)
     {
+        Logger.Info($"[SpawnPacks] Reset requested for pack: {pack.Metadata.Name}");
+
         // Safety check - only reset approved packs
         if (!pack.Metadata.IsApproved)
         {
+            Logger.Warning($"[SpawnPacks] Cannot reset non-approved pack: {pack.Metadata.Name}");
             return Task.CompletedTask;
         }
 
         var (success, error) = SpawnPackService.ResetPackFromBackup(pack);
         if (success)
         {
+            Logger.Info($"[SpawnPacks] Pack reset from backup: {pack.Metadata.Name}");
+
             // Re-apply the reset pack to sync UOR_DATA with the restored pack data
             SpawnPackService.ApplyPack(pack);
 
             // Keep active pack path pointing to this pack (still loaded, just reset)
             PathConstants.ActivePackDataPath = SpawnPackService.GetPackDataPath(pack);
             ViewService.SetActivePack(pack);
+            Logger.Info($"[SpawnPacks] Pack re-applied after reset, path: {PathConstants.ActivePackDataPath}");
 
             RefreshPacks();
             StateHasChanged();
         }
         else
         {
+            Logger.Warning($"[SpawnPacks] Reset failed for pack: {pack.Metadata.Name} - {error}");
             ToastService.ShowWarning(error ?? "Unable to reset pack to default.");
         }
 
@@ -457,6 +596,70 @@
     private void CloseEcologyModal()
     {
         isEcologyModalVisible = false;
+    }
+
+    private void OpenCreateModal()
+    {
+        createPackName = string.Empty;
+        createPackDescription = string.Empty;
+        createMessage = string.Empty;
+        createSuccess = false;
+        isCreateModalVisible = true;
+    }
+
+    private void CloseCreateModal()
+    {
+        isCreateModalVisible = false;
+    }
+
+    private async Task CreatePack()
+    {
+        isCreating = true;
+        createMessage = string.Empty;
+        StateHasChanged();
+
+        try
+        {
+            var (pack, error) = SpawnPackService.CreateNewPack(createPackName, createPackDescription);
+
+            if (pack != null)
+            {
+                createMessage = $"Pack '{createPackName}' created and applied!";
+                createSuccess = true;
+
+                // Refresh packs and switch to Created view
+                RefreshPacks();
+                currentView = PackView.Created;
+                SelectedPack = CreatedPacks.FirstOrDefault(p => p.Metadata.Id == pack.Metadata.Id) ?? SelectedPack;
+
+                // Auto-apply the newly created pack so user can start editing immediately
+                if (SelectedPack != null)
+                {
+                    await ApplyPack(SelectedPack);
+                    Logger.Info($"[SpawnPacks] Auto-applied newly created pack: {SelectedPack.Metadata.Name}");
+                }
+
+                // Close modal after short delay
+                await Task.Delay(1000);
+                CloseCreateModal();
+            }
+            else
+            {
+                createMessage = error ?? "Failed to create pack.";
+                createSuccess = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Error creating spawn pack", ex);
+            createMessage = "Unable to create spawn pack.";
+            createSuccess = false;
+        }
+        finally
+        {
+            isCreating = false;
+            StateHasChanged();
+        }
     }
 
     private void OpenSubmitModal()
@@ -732,6 +935,7 @@
 
     private async Task ImportPack()
     {
+        Logger.Info("[SpawnPacks] Import pack started");
         isImporting = true;
         importMessage = string.Empty;
         StateHasChanged();
@@ -740,6 +944,7 @@
         {
             if (string.IsNullOrWhiteSpace(importZipPath) || !File.Exists(importZipPath))
             {
+                Logger.Warning("[SpawnPacks] Import failed - no zip file selected");
                 importMessage = "Please choose a spawn pack zip to import.";
                 importSuccess = false;
                 return;
@@ -749,6 +954,7 @@
             var (isValid, foundFiles, validationError) = SpawnPackService.ValidateSpawnPackZip(importZipPath);
             if (!isValid)
             {
+                Logger.Warning($"[SpawnPacks] Import validation failed: {validationError}");
                 importMessage = validationError ?? "Invalid spawn pack zip.";
                 importSuccess = false;
                 return;
@@ -768,6 +974,7 @@
             var packId = $"{SanitizeFileName(packName)}_{DateTime.Now:yyyyMMddHHmmss}";
             var packFolder = Path.Combine(PathConstants.PacksPath, packId);
             Directory.CreateDirectory(packFolder);
+            Logger.Info($"[SpawnPacks] Extracting to: {packFolder}");
 
             ZipFile.ExtractToDirectory(importZipPath, packFolder, true);
 
@@ -793,10 +1000,11 @@
             var manifestPath = Path.Combine(packFolder, "pack.json");
             var json = JsonSerializer.Serialize(metadata, new JsonSerializerOptions { WriteIndented = true });
             await File.WriteAllTextAsync(manifestPath, json);
+            Logger.Info($"[SpawnPacks] Import complete - Pack '{packName}' saved with ID: {packId}");
 
             // Refresh packs and switch to imported view
             RefreshPacks();
-            showApproved = false;  // Switch to imported tab to show the new pack
+            currentView = PackView.Imported;  // Switch to imported tab to show the new pack
             SelectedPack = ImportedPacks.FirstOrDefault(p => p.Metadata.Id == packId) ?? SelectedPack;
 
             importMessage = $"Spawn pack imported successfully! Found: {string.Join(", ", foundFiles)}";

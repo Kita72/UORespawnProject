@@ -69,6 +69,8 @@ namespace UORespawnApp.Scripts.Services
         /// </summary>
         public List<SpawnPackInfo> LoadApprovedPacks()
         {
+            Logger.Info("[SpawnPack] Loading approved packs...");
+
             // Ensure approved packs are unpacked from Backup folder
             UnpackApprovedPacks();
 
@@ -89,10 +91,12 @@ namespace UORespawnApp.Scripts.Services
                         pack.IsModified = IsPackModified(pack);
 
                         packs.Add(pack);
+                        Logger.Info($"[SpawnPack] Loaded approved pack: {pack.Metadata.Name} (Modified: {pack.IsModified})");
                     }
                 }
             }
 
+            Logger.Info($"[SpawnPack] Loaded {packs.Count} approved packs");
             return packs.OrderBy(p => p.Metadata.Name).ToList();
         }
 
@@ -101,6 +105,7 @@ namespace UORespawnApp.Scripts.Services
         /// </summary>
         public List<SpawnPackInfo> LoadImportedPacks()
         {
+            Logger.Info("[SpawnPack] Loading imported packs...");
             var packs = new List<SpawnPackInfo>();
             var importedPath = PathConstants.PacksImportedPath;
 
@@ -114,20 +119,51 @@ namespace UORespawnApp.Scripts.Services
                         // Force IsApproved = false for imported packs
                         pack.Metadata.IsApproved = false;
                         packs.Add(pack);
+                        Logger.Info($"[SpawnPack] Loaded imported pack: {pack.Metadata.Name}");
                     }
                 }
             }
 
+            Logger.Info($"[SpawnPack] Loaded {packs.Count} imported packs");
             return packs.OrderBy(p => p.Metadata.Name).ToList();
         }
 
         /// <summary>
-        /// Load all packs from both Approved and Imported folders
+        /// Load user-created packs from Data/PACKS/Created/ folder
+        /// </summary>
+        public List<SpawnPackInfo> LoadCreatedPacks()
+        {
+            Logger.Info("[SpawnPack] Loading created packs...");
+            var packs = new List<SpawnPackInfo>();
+            var createdPath = PathConstants.PacksCreatedPath;
+
+            if (Directory.Exists(createdPath))
+            {
+                foreach (var packFolder in Directory.GetDirectories(createdPath))
+                {
+                    var pack = LoadPackInfo(packFolder);
+                    if (pack != null)
+                    {
+                        // Force IsApproved = false for created packs
+                        pack.Metadata.IsApproved = false;
+                        packs.Add(pack);
+                        Logger.Info($"[SpawnPack] Loaded created pack: {pack.Metadata.Name}");
+                    }
+                }
+            }
+
+            Logger.Info($"[SpawnPack] Loaded {packs.Count} created packs");
+            return packs.OrderBy(p => p.Metadata.Name).ToList();
+        }
+
+        /// <summary>
+        /// Load all packs from Approved, Created, and Imported folders
         /// </summary>
         public List<SpawnPackInfo> LoadAllPacks()
         {
             var packs = new List<SpawnPackInfo>();
             packs.AddRange(LoadApprovedPacks());
+            packs.AddRange(LoadCreatedPacks());
             packs.AddRange(LoadImportedPacks());
             return packs;
         }
@@ -171,8 +207,11 @@ namespace UORespawnApp.Scripts.Services
         /// <param name="reloadAfterApply">Whether to reload data and sync to server after applying</param>
         public bool ApplyPack(SpawnPackInfo pack, SpawnPackInfo? currentPack = null, bool reloadAfterApply = true)
         {
+            Logger.Info($"[SpawnPack] ApplyPack started: {pack?.Metadata.Name ?? "(null)"}");
+
             if (pack == null || string.IsNullOrWhiteSpace(pack.PackFolderPath))
             {
+                Logger.Warning("[SpawnPack] ApplyPack failed: pack or path is null");
                 return false;
             }
 
@@ -181,9 +220,11 @@ namespace UORespawnApp.Scripts.Services
                 var packDataPath = ResolvePackDataPath(pack.PackFolderPath);
                 if (packDataPath == null)
                 {
-                    Logger.Warning("Spawn pack does not contain any data files to apply.");
+                    Logger.Warning("[SpawnPack] ApplyPack failed: no data files found in pack");
                     return false;
                 }
+
+                Logger.Info($"[SpawnPack] Pack data path resolved: {packDataPath}");
 
                 // Save current data back to the active pack before applying new one
                 if (currentPack != null && !string.IsNullOrWhiteSpace(currentPack.PackFolderPath))
@@ -208,12 +249,14 @@ namespace UORespawnApp.Scripts.Services
 
                 if (reloadAfterApply)
                 {
+                    Logger.Info("[SpawnPack] Reloading data into memory...");
                     // Load the pack data into memory
                     Utility.LoadSettings();
                     Utility.LoadSpawnData();
                     Utility.LoadTileSpawnData();
                     Utility.LoadRegionSpawnData();
 
+                    Logger.Info("[SpawnPack] Saving to sync data to server...");
                     // Save to sync data to server (if linked)
                     // This ensures the server gets the pack data immediately
                     Utility.SaveSettings();
@@ -221,10 +264,10 @@ namespace UORespawnApp.Scripts.Services
                     Utility.SaveTileSpawnData();
                     Utility.SaveRegionSpawnData();
 
-                    Logger.Info("Spawn pack data synced to server");
+                    Logger.Info("[SpawnPack] Data reload and server sync complete");
                 }
 
-                Logger.Info($"Applied spawn pack: {pack.Metadata.Name}");
+                Logger.Info($"[SpawnPack] ApplyPack completed successfully: {pack.Metadata.Name}");
                 return true;
             }
             catch (Exception ex)
@@ -776,6 +819,163 @@ namespace UORespawnApp.Scripts.Services
                 Logger.Error($"Error saving current data to pack: {pack.Metadata.Name}", ex);
                 return false;
             }
+        }
+
+        /// <summary>
+        /// Creates a new empty pack in the Created folder.
+        /// Initializes with default empty spawn data files.
+        /// </summary>
+        public (SpawnPackInfo? Pack, string? Error) CreateNewPack(string name, string? description = null)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return (null, "Pack name is required.");
+            }
+
+            try
+            {
+                Logger.Info($"[SpawnPack] Creating new pack: {name}");
+
+                // Generate unique ID using sanitized name + timestamp
+                var sanitizedName = SanitizeFileName(name.Trim());
+                var packId = $"{sanitizedName}_{DateTime.Now:yyyyMMddHHmmss}";
+                var packFolder = Path.Combine(PathConstants.PacksCreatedPath, packId);
+
+                // Create the pack folder
+                Directory.CreateDirectory(packFolder);
+                Logger.Info($"[SpawnPack] Created pack folder: {packFolder}");
+
+                // Create empty spawn data files with minimal structure
+                CreateEmptySpawnFiles(packFolder);
+
+                // Create pack metadata
+                var metadata = new SpawnPackMetadata
+                {
+                    Id = packId,
+                    Name = name.Trim(),
+                    Description = description ?? string.Empty,
+                    Version = Utility.Version,
+                    PublishedOn = DateTime.UtcNow,
+                    IsApproved = false
+                };
+
+                // Save pack.json
+                var manifestPath = Path.Combine(packFolder, PackManifestFileName);
+                var json = System.Text.Json.JsonSerializer.Serialize(metadata, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+                File.WriteAllText(manifestPath, json);
+
+                // Load and return the pack info
+                var pack = LoadPackInfo(packFolder);
+                if (pack != null)
+                {
+                    Logger.Info($"[SpawnPack] Pack created successfully: {name} (ID: {packId})");
+                    return (pack, null);
+                }
+
+                return (null, "Failed to load created pack.");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error creating new pack: {name}", ex);
+                return (null, $"Failed to create pack: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Creates empty spawn data files for a new pack.
+        /// </summary>
+        private void CreateEmptySpawnFiles(string packFolder)
+        {
+            // Create empty settings file with defaults
+            var settingsPath = Path.Combine(packFolder, PathConstants.SETTINGS_FILENAME);
+            using (var writer = new BinaryWriter(File.Create(settingsPath)))
+            {
+                // Version
+                writer.Write(1);
+                writer.Write(Utility.Version);
+                // Default settings values
+                writer.Write(0.05);  // WaterChance
+                writer.Write(0.05);  // WeatherChance
+                writer.Write(0.05);  // TimedChance
+                writer.Write(0.50);  // CommonChance
+                writer.Write(0.25);  // UncommonChance
+                writer.Write(0.10);  // RareChance
+                writer.Write(2);     // MinMobs
+                writer.Write(6);     // MaxMobs
+                writer.Write(30);    // MinSpawnTimer
+                writer.Write(120);   // MaxSpawnTimer
+                writer.Write(12);    // HomeRange
+                writer.Write(true);  // DebugMode (enabled for new packs)
+            }
+
+            // Create empty box spawn file
+            var boxPath = Path.Combine(packFolder, PathConstants.BOX_FILENAME);
+            using (var writer = new BinaryWriter(File.Create(boxPath)))
+            {
+                writer.Write(1);             // Version
+                writer.Write(Utility.Version);
+                writer.Write(0);             // Map count (empty)
+            }
+
+            // Create empty tile spawn file
+            var tilePath = Path.Combine(packFolder, PathConstants.TILE_FILENAME);
+            using (var writer = new BinaryWriter(File.Create(tilePath)))
+            {
+                writer.Write(1);             // Version
+                writer.Write(Utility.Version);
+                writer.Write(0);             // Map count (empty)
+            }
+
+            // Create empty region spawn file
+            var regionPath = Path.Combine(packFolder, PathConstants.REGION_FILENAME);
+            using (var writer = new BinaryWriter(File.Create(regionPath)))
+            {
+                writer.Write(1);             // Version
+                writer.Write(Utility.Version);
+                writer.Write(0);             // Map count (empty)
+            }
+
+            Logger.Info($"[SpawnPack] Created empty spawn files in: {packFolder}");
+        }
+
+        /// <summary>
+        /// Deletes a user-created pack from the Created folder.
+        /// </summary>
+        public (bool Success, string? Error) DeleteCreatedPack(SpawnPackInfo pack)
+        {
+            if (pack == null || string.IsNullOrWhiteSpace(pack.PackFolderPath))
+            {
+                return (false, "Pack not specified.");
+            }
+
+            // Safety check - must be in Created folder
+            if (!pack.PackFolderPath.Contains(PathConstants.PACKS_CREATED_SUBFOLDER, StringComparison.OrdinalIgnoreCase))
+            {
+                return (false, "Only user-created packs can be deleted with this method.");
+            }
+
+            try
+            {
+                Logger.Info($"[SpawnPack] Deleting created pack: {pack.Metadata.Name}");
+                Directory.Delete(pack.PackFolderPath, recursive: true);
+                Logger.Info($"[SpawnPack] Created pack deleted successfully: {pack.Metadata.Name}");
+                return (true, null);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error deleting created pack: {pack.Metadata.Name}", ex);
+                return (false, $"Failed to delete: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Sanitizes a filename by removing invalid characters.
+        /// </summary>
+        private static string SanitizeFileName(string name)
+        {
+            var invalidChars = Path.GetInvalidFileNameChars();
+            var sanitized = new string(name.Where(c => !invalidChars.Contains(c)).ToArray());
+            return sanitized.Replace(' ', '_');
         }
     }
 }
