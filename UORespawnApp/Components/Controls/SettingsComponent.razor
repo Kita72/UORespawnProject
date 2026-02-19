@@ -10,7 +10,7 @@
             <!-- ServUO Server Integration -->
             <div class="card map-card mb-3">
                 <div class="card-header text-center">
-                    <span class="text-primary" style="font-size: 1.25rem;">ServUO Server Integration</span>
+                    <span class="text-primary" style="font-size: 1.25rem;"><span class="bi bi-hdd-network me-2"></span>ServUO Server Integration</span>
                     <InfoIcon Text="Link your ServUO server folder. App validates structure, auto-creates Scripts/Custom/UORespawn, and syncs files automatically." />
                 </div>
                 <div class="card-body text-center">
@@ -135,7 +135,7 @@
             <!-- Spawn Settings -->
             <div class="card map-card mb-3">
                 <div class="card-header text-center">
-                    <span class="text-primary" style="font-size: 1.25rem;">Spawn Settings</span>
+                    <span class="text-primary" style="font-size: 1.25rem;"><span class="bi bi-sliders me-2"></span>Spawn Settings</span>
                     <InfoIcon Text="Configure spawn ranges, crowd limits, frequency chances, and special features for your server." />
                 </div>
                 <div class="card-body">
@@ -170,7 +170,7 @@
                     <hr class="my-4" />
 
                     <h6 class="mb-3 text-center">
-                        <span class="text-primary" style="font-size: 1.25rem; font-weight: normal;">Spawn Chances</span>
+                        <span class="text-primary" style="font-size: 1.25rem; font-weight: normal;"><span class="bi bi-dice-5 me-2"></span>Spawn Chances</span>
                         <InfoIcon Text="Probability values: 0.0 (0%) to 1.0 (100%). Controls spawn frequency for each rarity tier." />
                     </h6>
 
@@ -206,7 +206,7 @@
 
                     <hr class="my-4" />
 
-                    <h6 class="mb-3 text-center"><span class="text-primary" style="font-size: 1.25rem; font-weight: normal;">Special Features</span></h6>
+                    <h6 class="mb-3 text-center"><span class="text-primary" style="font-size: 1.25rem; font-weight: normal;"><span class="bi bi-stars me-2"></span>Special Features</span></h6>
 
                     <div class="row justify-content-center">
                         <div class="col-md-4 text-center">
@@ -236,12 +236,25 @@
                                 </label>
                             </div>
                         </div>
-                        <div class="col-md-4 text-center">
+                    </div>
+
+                    <hr class="my-4" />
+
+                    <!-- Vendor Spawn Subsection -->
+                    <h6 class="mb-3 text-center">
+                        <span class="text-primary" style="font-size: 1.25rem; font-weight: normal;">
+                            <span class="bi bi-shop me-2"></span>Vendor Spawn
+                        </span>
+                        <InfoIcon Text="Configure NPC vendor spawning in towns. Enable the system and customize vendor behavior." />
+                    </h6>
+
+                    <div class="row justify-content-center">
+                        <div class="col-md-6 text-center">
                             <div class="form-check form-switch d-inline-block text-start mb-3">
-                                <input class="form-check-input" type="checkbox" @bind="Settings.EnableVendorSpawn" id="vendorSpawn">
-                                <label class="form-check-label" for="vendorSpawn">
-                                    Vendor Spawn
-                                    <InfoIcon Text="Enable NPC vendor spawning in towns" />
+                                <input class="form-check-input" type="checkbox" @bind="Settings.EnableVendorSpawn" id="vendorSpawn" style="transform: scale(1.2);">
+                                <label class="form-check-label" for="vendorSpawn" style="font-size: 1.05rem;">
+                                    @(Settings.EnableVendorSpawn ? "Enabled" : "Disabled")
+                                    <InfoIcon Text="Master toggle for the vendor spawn system" />
                                 </label>
                             </div>
                         </div>
@@ -252,7 +265,7 @@
             <!-- Tool Settings -->
             <div class="card map-card mb-3">
                 <div class="card-header text-center">
-                    <span class="text-primary" style="font-size: 1.25rem;">Spawn Box Appearance</span>
+                    <span class="text-primary" style="font-size: 1.25rem;"><span class="bi bi-palette me-2"></span>Spawn Box Appearance</span>
                     <InfoIcon Text="Customize how spawn boxes appear on the map. Each priority level (0-24) has a distinct color for easy identification." />
                 </div>
                 <div class="card-body">
@@ -287,7 +300,7 @@
             <!-- Map Management -->
             <div class="card map-card mb-3">
                 <div class="card-header text-center">
-                    <span class="text-primary" style="font-size: 1.25rem;">Map Management</span>
+                    <span class="text-primary" style="font-size: 1.25rem;"><span class="bi bi-map me-2"></span>Map Management</span>
                     <InfoIcon Text="Manage map images. Original maps (0-5) require exact dimensions. Custom maps (6+) support 800x800 to 10000x10000." />
                 </div>
                 <div class="card-body">
@@ -385,7 +398,7 @@
             <!-- Bestiary -->
             <div class="card map-card mb-3">
                 <div class="card-header text-center">
-                    <span class="text-primary" style="font-size: 1.25rem;">Bestiary (@GetSpawnCount() Creatures)</span>
+                    <span class="text-primary" style="font-size: 1.25rem;"><span class="bi bi-book me-2"></span>Bestiary (@GetSpawnCount() Creatures)</span>
                     @if (IsCustomBestiary())
                     {
                         <span class="badge bg-info ms-2" style="vertical-align: middle;">Custom</span>
@@ -460,7 +473,7 @@
             {
                 <div class="card map-card mb-3" style="border: 2px solid #0dcaf0;">
                     <div class="card-header text-center" style="background: linear-gradient(135deg, #0dcaf0 0%, #0d6efd 100%); color: white;">
-                        <strong>Legacy Import (v1.0 → v2.0)</strong>
+                        <strong><span class="bi bi-arrow-up-circle me-2"></span>Legacy Import (v1.0 → v2.0)</strong>
                         <InfoIcon Text="Migrate CSV files from UORespawn v1.0 (3 frequencies) to v2.0 format (6 frequencies). Available per spawn type when empty." />
                     </div>
                     <div class="card-body text-center">
@@ -541,7 +554,7 @@
             <!-- Reset Section -->
             <div class="card map-card mb-3" style="border: 2px solid #dc3545;">
                 <div class="card-header text-center bg-danger text-white">
-                        <strong>Reset Options</strong>
+                        <strong><span class="bi bi-arrow-counterclockwise me-2"></span>Reset Options</strong>
                 </div>
                 <div class="card-body text-center">
                     <!-- Reset Settings Only -->
