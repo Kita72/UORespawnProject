@@ -132,89 +132,6 @@
                 </div>
             </div>
 
-            <!-- Legacy Import (v1.0 to v2.0) -->
-            @if (LegacyImportUtility.IsLegacyImportAvailable())
-            {
-                <div class="card map-card mb-3" style="border: 2px solid #0dcaf0;">
-                    <div class="card-header text-center" style="background: linear-gradient(135deg, #0dcaf0 0%, #0d6efd 100%); color: white;">
-                            <strong>Legacy Import (v1.0 → v2.0)</strong>
-                        <InfoIcon Text="Migrate CSV files from UORespawn v1.0 (3 frequencies) to v2.0 format (6 frequencies). Available per spawn type when empty." />
-                    </div>
-                    <div class="card-body text-center">
-                        <!-- Box Spawn Import -->
-                        @if (LegacyImportUtility.IsBoxImportAvailable())
-                        {
-                            <div class="mb-3">
-                                <h6 class="mb-2">Box Spawn</h6>
-                                <button class="btn btn-info" style="min-width: 200px;" @onclick="BrowseLegacyBoxSpawnFile" disabled="@isImportingLegacy">
-                                    @if (isImportingLegacy && currentImportType == "box")
-                                    {
-                                        <span class="spinner-border spinner-border-sm me-2"></span>
-                                        <text>Importing...</text>
-                                    }
-                                    else
-                                    {
-                                        <span class="bi bi-file-earmark-arrow-up me-2"></span>
-                                        <text>Import CSV</text>
-                                    }
-                                </button>
-                                @if (!string.IsNullOrEmpty(selectedLegacyBoxFile))
-                                {
-                                    <small class="text-muted d-block mt-1">@Path.GetFileName(selectedLegacyBoxFile)</small>
-                                }
-                            </div>
-                        }
-                        else
-                        {
-                            <div class="mb-3">
-                                <h6 class="mb-2 text-muted">Box Spawn</h6>
-                                <span class="badge bg-success"><span class="bi bi-check-circle me-1"></span>Already has data</span>
-                            </div>
-                        }
-
-                        <hr class="my-3" />
-
-                        <!-- Tile Spawn Import -->
-                        @if (LegacyImportUtility.IsTileImportAvailable())
-                        {
-                            <div class="mb-3">
-                                <h6 class="mb-2">Tile Spawn</h6>
-                                <button class="btn btn-info" style="min-width: 200px;" @onclick="BrowseLegacyTileSpawnFile" disabled="@isImportingLegacy">
-                                    @if (isImportingLegacy && currentImportType == "tile")
-                                    {
-                                        <span class="spinner-border spinner-border-sm me-2"></span>
-                                        <text>Importing...</text>
-                                    }
-                                    else
-                                    {
-                                        <span class="bi bi-file-earmark-arrow-up me-2"></span>
-                                        <text>Import CSV</text>
-                                    }
-                                </button>
-                                @if (!string.IsNullOrEmpty(selectedLegacyTileFile))
-                                {
-                                    <small class="text-muted d-block mt-1">@Path.GetFileName(selectedLegacyTileFile)</small>
-                                }
-                            </div>
-                        }
-                        else
-                        {
-                            <div class="mb-3">
-                                <h6 class="mb-2 text-muted">Tile Spawn</h6>
-                                <span class="badge bg-success"><span class="bi bi-check-circle me-1"></span>Already has data</span>
-                            </div>
-                        }
-
-                        @if (!string.IsNullOrEmpty(legacyImportMessage))
-                        {
-                            <div class="alert @(legacyImportSuccess ? "alert-success" : "alert-danger") mt-3 mb-0" style="white-space: pre-line;">
-                                @legacyImportMessage
-                            </div>
-                        }
-                    </div>
-                </div>
-            }
-
             <!-- Spawn Settings -->
             <div class="card map-card mb-3">
                 <div class="card-header text-center">
@@ -316,6 +233,15 @@
                                 <label class="form-check-label" for="debugSpawn">
                                     Debug Spawn
                                     <InfoIcon Text="Visual placeholders for testing" />
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <div class="form-check form-switch d-inline-block text-start mb-3">
+                                <input class="form-check-input" type="checkbox" @bind="Settings.EnableVendorSpawn" id="vendorSpawn">
+                                <label class="form-check-label" for="vendorSpawn">
+                                    Vendor Spawn
+                                    <InfoIcon Text="Enable NPC vendor spawning in towns" />
                                 </label>
                             </div>
                         </div>
@@ -528,6 +454,89 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Legacy Import (v1.0 to v2.0) -->
+            @if (LegacyImportUtility.IsLegacyImportAvailable())
+            {
+                <div class="card map-card mb-3" style="border: 2px solid #0dcaf0;">
+                    <div class="card-header text-center" style="background: linear-gradient(135deg, #0dcaf0 0%, #0d6efd 100%); color: white;">
+                        <strong>Legacy Import (v1.0 → v2.0)</strong>
+                        <InfoIcon Text="Migrate CSV files from UORespawn v1.0 (3 frequencies) to v2.0 format (6 frequencies). Available per spawn type when empty." />
+                    </div>
+                    <div class="card-body text-center">
+                        <!-- Box Spawn Import -->
+                        @if (LegacyImportUtility.IsBoxImportAvailable())
+                        {
+                            <div class="mb-3">
+                                <h6 class="mb-2">Box Spawn</h6>
+                                <button class="btn btn-info" style="min-width: 200px;" @onclick="BrowseLegacyBoxSpawnFile" disabled="@isImportingLegacy">
+                                    @if (isImportingLegacy && currentImportType == "box")
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2"></span>
+                                        <text>Importing...</text>
+                                    }
+                                    else
+                                    {
+                                        <span class="bi bi-file-earmark-arrow-up me-2"></span>
+                                        <text>Import CSV</text>
+                                    }
+                                </button>
+                                @if (!string.IsNullOrEmpty(selectedLegacyBoxFile))
+                                {
+                                    <small class="text-muted d-block mt-1">@Path.GetFileName(selectedLegacyBoxFile)</small>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="mb-3">
+                                <h6 class="mb-2 text-muted">Box Spawn</h6>
+                                <span class="badge bg-success"><span class="bi bi-check-circle me-1"></span>Already has data</span>
+                            </div>
+                        }
+
+                        <hr class="my-3" />
+
+                        <!-- Tile Spawn Import -->
+                        @if (LegacyImportUtility.IsTileImportAvailable())
+                        {
+                            <div class="mb-3">
+                                <h6 class="mb-2">Tile Spawn</h6>
+                                <button class="btn btn-info" style="min-width: 200px;" @onclick="BrowseLegacyTileSpawnFile" disabled="@isImportingLegacy">
+                                    @if (isImportingLegacy && currentImportType == "tile")
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2"></span>
+                                        <text>Importing...</text>
+                                    }
+                                    else
+                                    {
+                                        <span class="bi bi-file-earmark-arrow-up me-2"></span>
+                                        <text>Import CSV</text>
+                                    }
+                                </button>
+                                @if (!string.IsNullOrEmpty(selectedLegacyTileFile))
+                                {
+                                    <small class="text-muted d-block mt-1">@Path.GetFileName(selectedLegacyTileFile)</small>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="mb-3">
+                                <h6 class="mb-2 text-muted">Tile Spawn</h6>
+                                <span class="badge bg-success"><span class="bi bi-check-circle me-1"></span>Already has data</span>
+                            </div>
+                        }
+
+                        @if (!string.IsNullOrEmpty(legacyImportMessage))
+                        {
+                            <div class="alert @(legacyImportSuccess ? "alert-success" : "alert-danger") mt-3 mb-0" style="white-space: pre-line;">
+                                @legacyImportMessage
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
 
             <!-- Reset Section -->
             <div class="card map-card mb-3" style="border: 2px solid #dc3545;">

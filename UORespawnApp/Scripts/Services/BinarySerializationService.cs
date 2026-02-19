@@ -116,6 +116,7 @@ namespace UORespawnApp.Scripts.Services
             writer.Write(Settings.IsScaleSpawn);
             writer.Write(Settings.EnableRiftSpawn);
             writer.Write(Settings.EnableDebugSpawn);
+            writer.Write(Settings.EnableVendorSpawn);
         }
 
         /// <summary>
@@ -173,6 +174,7 @@ namespace UORespawnApp.Scripts.Services
             Settings.IsScaleSpawn = reader.ReadBoolean();
             Settings.EnableRiftSpawn = reader.ReadBoolean();
             Settings.EnableDebugSpawn = reader.ReadBoolean();
+            Settings.EnableVendorSpawn = reader.ReadBoolean();
         }
 
         #endregion

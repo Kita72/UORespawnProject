@@ -169,6 +169,12 @@ namespace UORespawnApp
             set => Preferences.Set("EnableDebugSpawn", value);
         }
 
+        public static bool EnableVendorSpawn
+        {
+            get => Preferences.Get("EnableVendorSpawn", false);
+            set => Preferences.Set("EnableVendorSpawn", value);
+        }
+
         public static int MaxMobs
         {
             get => Preferences.Get("MaxMobs", 15);
