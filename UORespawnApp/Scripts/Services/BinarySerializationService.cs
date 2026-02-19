@@ -12,7 +12,7 @@ namespace UORespawnApp.Scripts.Services
     public static class BinarySerializationService
     {
         // Current file format versions
-        private const int SETTINGS_VERSION = 1;
+        private const int SETTINGS_VERSION = 2;
         private const int BOX_SPAWN_VERSION = 1;
         private const int TILE_SPAWN_VERSION = 1;
         private const int REGION_SPAWN_VERSION = 1;
@@ -174,7 +174,11 @@ namespace UORespawnApp.Scripts.Services
             Settings.IsScaleSpawn = reader.ReadBoolean();
             Settings.EnableRiftSpawn = reader.ReadBoolean();
             Settings.EnableDebugSpawn = reader.ReadBoolean();
-            Settings.EnableVendorSpawn = reader.ReadBoolean();
+
+            if (version > 1)
+            {
+                Settings.EnableVendorSpawn = reader.ReadBoolean();
+            }
         }
 
         #endregion
