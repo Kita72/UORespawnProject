@@ -1,7 +1,6 @@
 using System;
 using System.Linq;
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
 
 using Server.Mobiles;
 using Server.Custom.UORespawnSystem.Services;
@@ -12,21 +11,6 @@ namespace Server.Custom.UORespawnSystem
 {
     internal static class UORespawnCore
     {
-        #region Console Close Handler (Windows API)
-
-        // Windows API for handling console close events
-        private delegate bool ConsoleEventDelegate(int eventType);
-        private static ConsoleEventDelegate _consoleHandler;
-
-        [DllImport("Kernel32")]
-        private static extern bool SetConsoleCtrlHandler(ConsoleEventDelegate handler, bool add);
-
-        private const int CTRL_CLOSE_EVENT = 2;
-        private const int CTRL_LOGOFF_EVENT = 5;
-        private const int CTRL_SHUTDOWN_EVENT = 6;
-
-        #endregion
-
         private static SpawnTimer _SpawnTimer;
 
         internal static List<PlayerMobile> _Players;
@@ -48,7 +32,9 @@ namespace Server.Custom.UORespawnSystem
                 if (mob == m)
                 {
                     _SpawnedList.RemoveAt(i);
+
                     UORespawnUtility.SendConsoleMsg(ConsoleColor.Yellow, $"RELEASED: {m?.Name ?? "Unknown"} removed from spawn list (tamed/killed)");
+
                     return;
                 }
             }
@@ -85,54 +71,13 @@ namespace Server.Custom.UORespawnSystem
 
             SubscribeEvents();
 
-            RegisterConsoleCloseHandler();
+            //RegisterConsoleCloseHandler();
+
+            SpawnVendors.LoadAllSigns();
 
             StartTimer();
 
             UORespawnUtility.SendConsoleMsg(ConsoleColor.DarkCyan, "System Running...");
-        }
-
-        /// <summary>
-        /// Register console close handler to cleanup spawns when console window is closed
-        /// (X button, task kill, system shutdown, etc.)
-        /// </summary>
-        private static void RegisterConsoleCloseHandler()
-        {
-            try
-            {
-                _consoleHandler = new ConsoleEventDelegate(ConsoleEventCallback);
-                SetConsoleCtrlHandler(_consoleHandler, true);
-                UORespawnUtility.SendConsoleMsg(ConsoleColor.Green, "Console Close Handler Registered...");
-            }
-            catch (Exception ex)
-            {
-                UORespawnUtility.SendConsoleMsg(ConsoleColor.Red, $"ERROR: Console close handler registration failed - {ex.Message}");
-            }
-        }
-
-        /// <summary>
-        /// Callback for console close events (X button, logoff, shutdown)
-        /// </summary>
-        private static bool ConsoleEventCallback(int eventType)
-        {
-            switch (eventType)
-            {
-                case CTRL_CLOSE_EVENT:
-                    UORespawnUtility.SendConsoleMsg(ConsoleColor.Yellow, "CONSOLE CLOSE: Flushing debug log and cleaning spawns...");
-                    SpawnDebugService.FlushToFile("Console close (X button)");
-                    ClearAllSpawns();
-                    return true;
-
-                case CTRL_LOGOFF_EVENT:
-                case CTRL_SHUTDOWN_EVENT:
-                    UORespawnUtility.SendConsoleMsg(ConsoleColor.Yellow, "SYSTEM SHUTDOWN: Flushing debug log and cleaning spawns...");
-                    SpawnDebugService.FlushToFile("System shutdown/logoff");
-                    ClearAllSpawns();
-                    return true;
-
-                default:
-                    return false;
-            }
         }
 
         private static void LoadLogo()
@@ -274,13 +219,13 @@ namespace Server.Custom.UORespawnSystem
         private static void EventSink_Shutdown(ShutdownEventArgs e)
         {
             SpawnDebugService.FlushToFile("Server shutdown");
-            ClearAllSpawns();
+            //ClearAllSpawns();
         }
 
         private static void EventSink_Crashed(CrashedEventArgs e)
         {
             SpawnDebugService.FlushToFile("Server crash");
-            ClearAllSpawns();
+            //ClearAllSpawns();
         }
 
         internal static void AddPlayer(PlayerMobile pm)
@@ -379,8 +324,7 @@ namespace Server.Custom.UORespawnSystem
 
                     // 3. Max Spawn Per Player Check: Now uses scaled MAX_MOBS if scaling is enabled
                     // Example: 15 base mobs + (15 * 0.3) = ~19 mobs when 3 players are nearby
-                    int playerSpawnCount = GetPlayerSpawnCount(pm);
-                    if (playerSpawnCount >= UORespawnSettings.MAX_MOBS)
+                    if (GetPlayerSpawnCount(pm) >= UORespawnSettings.MAX_MOBS)
                         return;
 
                     // 4. Deciding logic: This finds a spot and adds it to the Queue
@@ -588,6 +532,14 @@ namespace Server.Custom.UORespawnSystem
         #region Spawn Cleanup Methods
 
         /// <summary>
+        /// Public cleanup for commands - returns count for user feedback
+        /// </summary>
+        public static int ClearAllSpawns(string reason = "Manual clear command")
+        {
+            return PerformCompleteCleanup(reason, returnCount: true);
+        }
+
+        /// <summary>
         /// Complete cleanup of all spawns - used for shutdown, crashes, console close, and manual clearing
         /// Handles cleanup service, spawned list, and recycle pool
         /// </summary>
@@ -628,6 +580,9 @@ namespace Server.Custom.UORespawnSystem
                 UORespawnUtility.SendConsoleMsg(ConsoleColor.Yellow,
                     $"CLEANUP COMPLETE: Deleted {deletedCount} active + {recycledCount} recycled = {deletedCount + recycledCount} total spawns");
 
+                // 6. Clean Vendors
+                SpawnVendors.CleanUpVendors();
+
                 return returnCount ? deletedCount : 0;
             }
             catch
@@ -639,18 +594,10 @@ namespace Server.Custom.UORespawnSystem
         /// <summary>
         /// Internal cleanup for shutdown/crash events
         /// </summary>
-        private static void ClearAllSpawns()
-        {
-            PerformCompleteCleanup("Shutdown/crash cleanup initiated", returnCount: false);
-        }
-
-        /// <summary>
-        /// Public cleanup for commands - returns count for user feedback
-        /// </summary>
-        public static int ClearAllSpawns(string reason = "Manual clear command")
-        {
-            return PerformCompleteCleanup(reason, returnCount: true);
-        }
+        //private static void ClearAllSpawns()
+        //{
+        //    PerformCompleteCleanup("Shutdown/crash cleanup initiated", returnCount: false);
+        //}
 
         #endregion
 

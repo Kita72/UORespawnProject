@@ -293,8 +293,7 @@ namespace Server.Custom.UORespawnSystem.SpawnUtility
                 return null;
 
             // CRITICAL: Lookup Region by name on the map
-            Region regionHandle;
-            if (!map.Regions.TryGetValue(name, out regionHandle))
+            if (!map.Regions.TryGetValue(name, out Region regionHandle))
             {
                 // Fallback: Case-insensitive search if exact match fails
                 regionHandle = map.Regions.Values.FirstOrDefault(r =>

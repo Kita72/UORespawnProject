@@ -45,6 +45,7 @@ namespace Server.Custom.UORespawnSystem
         internal static bool ENABLE_SCALE_SPAWN { get; private set; } = false;
         internal static bool ENABLE_RIFT_SPAWN { get; private set; } = false;
         internal static bool ENABLE_DEBUG { get; set; } = false;
+        internal static bool ENABLE_VENDOR_SPAWN { get; set; } = false;
 
         // Performance & System Settings (hardcoded for stability)
         internal static int INTERVAL { get; private set; } = 50; // ms Main System Timer
@@ -122,6 +123,11 @@ namespace Server.Custom.UORespawnSystem
                     ENABLE_SCALE_SPAWN = reader.ReadBoolean();
                     ENABLE_RIFT_SPAWN = reader.ReadBoolean();
                     ENABLE_DEBUG = reader.ReadBoolean();
+
+                    if (fileVersion > 1)
+                    {
+                        ENABLE_VENDOR_SPAWN = reader.ReadBoolean();
+                    }
                 }
 
                 UORespawnUtility.SendConsoleMsg(ConsoleColor.Green, "Settings: Loaded successfully");

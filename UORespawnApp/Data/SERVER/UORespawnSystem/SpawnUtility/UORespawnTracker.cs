@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Text;
 using System.Collections.Generic;
+using Server.Custom.UORespawnSystem.SpawnHelpers;
 
 namespace Server.Custom.UORespawnSystem.SpawnUtility
 {
@@ -33,17 +34,17 @@ namespace Server.Custom.UORespawnSystem.SpawnUtility
                 }
             }
 
+            int deleted = 0;
+
             if (TrackedSpawn.Count > 0)
             {
-                int deleted = 0;
-
                 for (int i = 0; i < TrackedSpawn.Count; i++)
                 {
                     if (World.Mobiles.ContainsKey(TrackedSpawn[i]))
                     {
                         var spawn = World.Mobiles[TrackedSpawn[i]];
 
-                        if (spawn != null)
+                        if (spawn != null && !spawn.Deleted)
                         {
                             spawn.Delete();
 
@@ -51,12 +52,19 @@ namespace Server.Custom.UORespawnSystem.SpawnUtility
                         }
                     }
                 }
+            }
 
-                ResetTracking();
+            ResetTracking();
 
-                UORespawnUtility.SendConsoleMsg(ConsoleColor.DarkBlue, $"{deleted} Spawn Cleaned!");
+            UORespawnUtility.SendConsoleMsg(ConsoleColor.DarkBlue, $"{deleted} Spawn Cleaned!");
 
-                HasStarted = true;
+            HasStarted = true;
+
+            SpawnVendors.LoadVendorSpawn();
+
+            if (SpawnVendors.VendorSpawnList.Count == 0)
+            {
+                SpawnVendors.TrySpawnVendors();
             }
         }
 
@@ -98,10 +106,10 @@ namespace Server.Custom.UORespawnSystem.SpawnUtility
         {
             TrackedSpawn.Clear();
 
-            if (File.Exists(TrackSpawnFile))
-            {
-                File.Delete(TrackSpawnFile);
-            }
+            //if (File.Exists(TrackSpawnFile))
+            //{
+            //    File.Delete(TrackSpawnFile);
+            //}
         }
     }
 }

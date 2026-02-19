@@ -8,6 +8,7 @@ using Server.Custom.UORespawnSystem.SpawnUtility;
 using Server.Custom.UORespawnSystem.Interfaces;
 using Server.Custom.UORespawnSystem.Enums;
 using Server.Items;
+using Server.Regions;
 
 namespace Server.Custom.UORespawnSystem.SpawnHelpers
 {
@@ -21,22 +22,31 @@ namespace Server.Custom.UORespawnSystem.SpawnHelpers
         {
             if (SpawnStats == null) SpawnStats = new List<(DateTime, string, string, Point2D, Point2D, string)>();
 
-            SpawnStats.Add((DateTime.Now, playerName, mapName, playerLoc, creatureLocation, creatureName));
-        }
-
-        internal static string GetSpawnName(PlayerMobile pm, Map map, Region region, Point3D location, bool isWater)
-        {
             if (SpawnStats?.Count > 1000)
             {
                 SpawnStats.RemoveAt(0);
             }
 
+            SpawnStats.Add((DateTime.Now, playerName, mapName, playerLoc, creatureLocation, creatureName));
+        }
+
+        private static double _Roll;
+
+        internal static string GetSpawnName(PlayerMobile pm, Map map, Region region, Point3D location, bool isWater)
+        {
+            if (region != null && region.IsPartOf(typeof(TownRegion)))
+            {
+                return Utility.RandomList<string>("Bird", "Cat", "Dog", "TownNPC");
+            }
+
             string spawn;
+
+            _Roll = Utility.RandomDouble();
 
             // Box
             spawn = BoxSpawner.TryBoxSpawn(map, location, isWater);
 
-            if (!string.IsNullOrEmpty(spawn))
+            if (!string.IsNullOrEmpty(spawn) && _Roll > 0.5)
             {
                 return spawn;
             }
@@ -45,7 +55,7 @@ namespace Server.Custom.UORespawnSystem.SpawnHelpers
 
             spawn = RegionSpawner.TryRegionSpawn(map, region, location, isWater);
 
-            if (!string.IsNullOrEmpty(spawn))
+            if (!string.IsNullOrEmpty(spawn) && _Roll > 0.5)
             {
                 return spawn;
             }
@@ -135,7 +145,7 @@ namespace Server.Custom.UORespawnSystem.SpawnHelpers
                 Directory.CreateDirectory(STAT_DIR);
             }
 
-            if (SpawnStats.Count > 0)
+            if (SpawnStats?.Count > 0)
             {
                 foreach (var spawn in SpawnStats)
                 {
