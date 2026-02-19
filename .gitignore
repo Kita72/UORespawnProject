@@ -205,3 +205,26 @@ UORespawnApp/Data/UOR_StaticList_Custom.txt
 # It is excluded from build in .csproj but tracked in git
 !UORespawnApp/SpawnSystem/**
 
+# ==================== SERVER SCRIPTS ====================
+# The SERVER folder contains ServUO scripts that must be tracked for:
+# 1. Repo users - can see/modify the server-side code
+# 2. App distribution - UORespawnSystem.zip is packaged for export
+
+# Track the server scripts ZIP for app distribution (overrides *.zip rule)
+!UORespawnApp/Data/SERVER/UORespawnSystem.zip
+
+# ==================== SPAWN PACKS ====================
+# The PACKS/Backup folder contains the DefaultPack which MUST be tracked
+# so users cloning the repo can build and have working spawn data.
+
+# Track the Backup folder structure (override the generic Backup*/ rule above)
+!UORespawnApp/Data/PACKS/Backup/
+!UORespawnApp/Data/PACKS/Backup/.gitkeep
+
+# Track the DefaultPack folder and all its contents
+!UORespawnApp/Data/PACKS/Backup/DefaultPack/
+!UORespawnApp/Data/PACKS/Backup/DefaultPack/**
+
+# Track the DefaultPack.zip for app distribution
+!UORespawnApp/Data/PACKS/Backup/DefaultPack.zip
+

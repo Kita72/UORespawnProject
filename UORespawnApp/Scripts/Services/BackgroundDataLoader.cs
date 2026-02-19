@@ -380,6 +380,22 @@ namespace UORespawnApp.Scripts.Services
                         Utility.LoadRegionSpawnData();
                         var totalRegionSpawns = Utility.RegionSpawns.Values.Sum(list => list.Count);
                         Logger.Info($"[Startup Step 3/7] Loaded {totalRegionSpawns} region spawn configurations across all maps");
+
+                        // Clean up invalid/fake region names (wrapped in try-catch to not block loading)
+                        try
+                        {
+                            var (corrected, removed) = RegionSpawnCleanupUtility.CleanupRegionSpawns();
+                            if (corrected > 0 || removed > 0)
+                            {
+                                Logger.Info($"[Startup Step 3/7] Region cleanup: {corrected} names corrected, {removed} invalid regions removed");
+                                // Save the cleaned data
+                                BinarySerializationService.SaveRegionSpawns();
+                            }
+                        }
+                        catch (Exception cleanupEx)
+                        {
+                            Logger.Warning($"[Startup Step 3/7] Region cleanup skipped due to error: {cleanupEx.Message}");
+                        }
                     }
                     catch (Exception ex)
                     {
