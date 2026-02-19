@@ -138,6 +138,10 @@
     <!-- Imported: User-imported packs (empty on publish) -->
     <!-- Backup: Original ZIPs for reset functionality + folders for Git repo -->
     <ItemGroup>
+      <!-- Exclude PACKS folder from MAUI asset processing (prevents "outside app bundle" warnings) -->
+      <MauiAsset Remove="Data\PACKS\**\*" />
+      <Content Remove="Data\PACKS\**\*" />
+
       <!-- Include Backup ZIPs (for reset functionality and release builds) -->
       <None Include="Data\PACKS\Backup\*.zip" Condition="Exists('Data\PACKS\Backup\')">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -146,12 +150,10 @@
       <!-- This copies DefaultPack folder from Backup so it can be extracted to Approved -->
       <None Include="Data\PACKS\Backup\**\*.*" Exclude="Data\PACKS\Backup\*.zip;Data\PACKS\Backup\.gitkeep">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        <Link>Data\PACKS\Backup\%(RecursiveDir)%(Filename)%(Extension)</Link>
       </None>
       <!-- Include Created folder contents (for user-created packs) -->
       <None Include="Data\PACKS\Created\**\*.*" Exclude="Data\PACKS\Created\.gitkeep" Condition="Exists('Data\PACKS\Created\')">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        <Link>Data\PACKS\Created\%(RecursiveDir)%(Filename)%(Extension)</Link>
       </None>
       <!-- Preserve empty folder structure -->
       <None Include="Data\PACKS\Approved\.gitkeep" Condition="Exists('Data\PACKS\Approved\.gitkeep')">
