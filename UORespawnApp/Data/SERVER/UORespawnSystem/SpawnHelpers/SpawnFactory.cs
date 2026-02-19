@@ -22,7 +22,7 @@ namespace Server.Custom.UORespawnSystem.SpawnHelpers
         {
             if (SpawnStats == null) SpawnStats = new List<(DateTime, string, string, Point2D, Point2D, string)>();
 
-            if (SpawnStats?.Count > 1000)
+            if (SpawnStats?.Count > UORespawnSettings.MAX_STAT_SIZE)
             {
                 SpawnStats.RemoveAt(0);
             }
@@ -36,7 +36,14 @@ namespace Server.Custom.UORespawnSystem.SpawnHelpers
         {
             if (region != null && region.IsPartOf(typeof(TownRegion)))
             {
-                return Utility.RandomList<string>("Bird", "Cat", "Dog", "TownNPC");
+                if (isWater)
+                {
+                    return Utility.RandomList<string>("Dolphin", "BullFrog");
+                }
+                else
+                {
+                    return Utility.RandomList<string>("Bird", "Cat", "Dog", "TownNPC");
+                }
             }
 
             string spawn;
@@ -46,7 +53,7 @@ namespace Server.Custom.UORespawnSystem.SpawnHelpers
             // Box
             spawn = BoxSpawner.TryBoxSpawn(map, location, isWater);
 
-            if (!string.IsNullOrEmpty(spawn) && _Roll > 0.5)
+            if (!string.IsNullOrEmpty(spawn) && _Roll > UORespawnSettings.CHANCE_UNCOMMON)
             {
                 return spawn;
             }
@@ -55,7 +62,7 @@ namespace Server.Custom.UORespawnSystem.SpawnHelpers
 
             spawn = RegionSpawner.TryRegionSpawn(map, region, location, isWater);
 
-            if (!string.IsNullOrEmpty(spawn) && _Roll > 0.5)
+            if (!string.IsNullOrEmpty(spawn) && _Roll > UORespawnSettings.CHANCE_UNCOMMON)
             {
                 return spawn;
             }

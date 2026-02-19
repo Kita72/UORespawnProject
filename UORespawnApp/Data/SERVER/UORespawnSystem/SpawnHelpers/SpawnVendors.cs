@@ -101,31 +101,45 @@ namespace Server.Custom.UORespawnSystem.SpawnHelpers
             }   
         }
 
-        internal static void TrySpawnVendors()
+        internal static void TrySpawnVendors(bool isLoaded)
         {
-            if (SignLocations.Count > 0 && UORespawnSettings.ENABLE_VENDOR_SPAWN)
+            if (SignLocations.Count == 0) return;
+
+            if (UORespawnSettings.ENABLE_VENDOR_SPAWN)
             {
-                int count = 0;
-
-                foreach (Map map in Map.Maps)
+                if (!isLoaded)
                 {
-                    if (map != null)
-                    {
-                        if (SignLocations.ContainsKey(map.MapID) && SignLocations[map.MapID]?.Count > 0)
-                        {
-                            foreach (var entity in SignLocations[map.MapID])
-                            {
-                                entity.Spawn(map);
+                    int count = 0;
 
-                                count++;
+                    foreach (Map map in Map.Maps)
+                    {
+                        if (map != null)
+                        {
+                            if (SignLocations.ContainsKey(map.MapID) && SignLocations[map.MapID]?.Count > 0)
+                            {
+                                foreach (var entity in SignLocations[map.MapID])
+                                {
+                                    entity.Spawn(map);
+
+                                    count++;
+                                }
                             }
                         }
                     }
+
+                    AddVendorSpawn();
+
+                    UORespawnUtility.SendConsoleMsg(ConsoleColor.Yellow, $"{count} Signs Spawned with Vendors!");
                 }
+            }
+            else
+            {
+                if (isLoaded)
+                {
+                    CleanUpVendors();
 
-                AddVendorSpawn();
-
-                UORespawnUtility.SendConsoleMsg(ConsoleColor.Yellow, $"{count} Signs Spawned with Vendors!");
+                    UORespawnUtility.SendConsoleMsg(ConsoleColor.Yellow, "Removed All Vendors!");
+                }
             }
         }
 
@@ -165,7 +179,7 @@ namespace Server.Custom.UORespawnSystem.SpawnHelpers
             }
         }
 
-        internal static void LoadVendorSpawn()
+        internal static bool LoadVendorSpawn()
         {
             if (File.Exists(VendorSpawnFile))
             {
@@ -176,6 +190,8 @@ namespace Server.Custom.UORespawnSystem.SpawnHelpers
                     VendorSpawnList.Add(Int32.Parse(line.Split(' ').First()));
                 }
             }
+
+            return VendorSpawnList.Count() > 0;
         }
 
         internal static List<BaseCreature> GetVendors(SignType sign)

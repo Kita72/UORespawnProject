@@ -60,12 +60,7 @@ namespace Server.Custom.UORespawnSystem.SpawnUtility
 
             HasStarted = true;
 
-            SpawnVendors.LoadVendorSpawn();
-
-            if (SpawnVendors.VendorSpawnList.Count == 0)
-            {
-                SpawnVendors.TrySpawnVendors();
-            }
+            SpawnVendors.TrySpawnVendors(SpawnVendors.LoadVendorSpawn());
         }
 
         private static void EventSink_MobileDeleted(MobileDeletedEventArgs e)

@@ -56,6 +56,7 @@ namespace Server.Custom.UORespawnSystem
         internal static int MAX_RECYCLE_TOTAL { get; set; } = 50000; // Max total recycled mobs
         internal static int MAX_SPAWN_CHECKS { get; set; } = 5; // Max mobs checked when searching
         internal static int MAX_QUEUE_SIZE { get; set; } = 5; // Max mobs qued
+        internal static int MAX_STAT_SIZE { get; set; } = 1000; // Max stat points for stats data / heatmap in editor!
 
         internal static void UpdateStats(double mod)
         {
