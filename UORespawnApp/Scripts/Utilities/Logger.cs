@@ -3,7 +3,8 @@ using UORespawnApp.Scripts.Services;
 namespace UORespawnApp.Scripts.Utilities;
 
 /// <summary>
-/// Simple file-based logger that writes to daily log files in the app's Data directory.
+/// Simple file-based logger that writes to session log files in the app's Data directory.
+/// Each app session starts with a fresh log file (overwrites previous session's log).
 /// Thread-safe and performance-optimized with lazy initialization.
 /// Also sends entries to DebugService for in-app visualization when debug mode is enabled.
 /// </summary>
@@ -12,7 +13,6 @@ public static class Logger
     private static readonly string LogDirectory;
     private static readonly Lock _lock = new();
     private static string? _currentLogFile;
-    private static DateTime _currentLogDate;
     private static bool _initialized = false;
 
     /// <summary>
@@ -25,7 +25,6 @@ public static class Logger
     {
         // Store logs in the Data/Logs folder alongside spawn files and maps
         LogDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data", "Logs");
-        _currentLogDate = DateTime.Today;
     }
 
     private static void EnsureInitialized()
@@ -39,13 +38,18 @@ public static class Logger
             try
             {
                 Directory.CreateDirectory(LogDirectory);
-                _currentLogFile = GetLogFilePath(DateTime.Today);
+
+                // Use a single session log file (overwritten each launch)
+                _currentLogFile = Path.Combine(LogDirectory, "uor_spawn_session.log");
+
+                // Overwrite the log file for fresh session (not append)
+                File.WriteAllText(_currentLogFile, "");
 
                 // Defer cleanup to background task to avoid blocking startup
                 Task.Run(() => CleanupOldLogs());
 
                 _initialized = true;
-                Write("INFO", "=== Application Started ===");
+                Write("INFO", "=== Application Session Started ===");
             }
             catch
             {
@@ -100,22 +104,8 @@ public static class Logger
     {
         try
         {
-            // Check if we need to roll over to a new log file (new day)
-            if (DateTime.Today != _currentLogDate)
-            {
-                lock (_lock)
-                {
-                    if (DateTime.Today != _currentLogDate) // Double-check inside lock
-                    {
-                        _currentLogDate = DateTime.Today;
-                        _currentLogFile = GetLogFilePath(DateTime.Today);
-                        Info("=== New Day - Log Rolled Over ===");
-                    }
-                }
-            }
-
             var logEntry = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] [{level,-5}] {message}";
-            
+
             lock (_lock)
             {
                 File.AppendAllText(_currentLogFile!, logEntry + Environment.NewLine);
@@ -124,29 +114,22 @@ public static class Logger
         catch
         {
             // Silent fail - never crash the app because of logging
-            // We could optionally write to Debug output here
         }
-    }
-
-    private static string GetLogFilePath(DateTime date)
-    {
-        return Path.Combine(LogDirectory, $"uor_spawn_{date:yyyy-MM-dd}.log");
     }
 
     private static void CleanupOldLogs()
     {
         try
         {
-            var cutoffDate = DateTime.Today.AddDays(-7);
-            var logFiles = Directory.GetFiles(LogDirectory, "uor_spawn_*.log");
-            
-            foreach (var file in logFiles)
+            // Clean up any old daily log files (legacy format)
+            var oldLogFiles = Directory.GetFiles(LogDirectory, "uor_spawn_????-??-??.log");
+            foreach (var file in oldLogFiles)
             {
-                var fileInfo = new FileInfo(file);
-                if (fileInfo.LastWriteTime < cutoffDate)
+                try
                 {
                     File.Delete(file);
                 }
+                catch { }
             }
         }
         catch

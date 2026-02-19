@@ -15,25 +15,29 @@
     </div>
     
     @if (!IsCollapsed)
-    {
-        <div class="debug-toolbar">
-            <button class="debug-btn" @onclick="AddMark" title="Add mark to log">
-                <span class="bi bi-bookmark-plus"></span>
-            </button>
-            <button class="debug-btn" @onclick="StartTest" title="Start test marker">
-                <span class="bi bi-play-fill"></span>
-            </button>
-            <button class="debug-btn" @onclick="EndTest" title="End test marker">
-                <span class="bi bi-stop-fill"></span>
-            </button>
-            <div class="toolbar-divider"></div>
-            <button class="debug-btn" @onclick="CopyLog" title="Copy log to clipboard">
-                <span class="bi bi-clipboard"></span>
-            </button>
-            <button class="debug-btn" @onclick="ClearLog" title="Clear log">
-                <span class="bi bi-trash"></span>
-            </button>
-        </div>
+            {
+                <div class="debug-toolbar">
+                    <button class="debug-btn" @onclick="AddMark" title="Add mark to log">
+                        <span class="bi bi-bookmark-plus"></span>
+                    </button>
+                    <button class="debug-btn" @onclick="StartTest" title="Start test marker">
+                        <span class="bi bi-play-fill"></span>
+                    </button>
+                    <button class="debug-btn" @onclick="EndTest" title="End test marker">
+                        <span class="bi bi-stop-fill"></span>
+                    </button>
+                    <div class="toolbar-divider"></div>
+                    <button class="debug-btn" @onclick="CopyLog" title="Copy log to clipboard">
+                        <span class="bi bi-clipboard"></span>
+                    </button>
+                    <button class="debug-btn" @onclick="ClearLog" title="Clear log">
+                        <span class="bi bi-trash"></span>
+                    </button>
+                    <div class="toolbar-spacer"></div>
+                    <button class="debug-btn debug-btn-close" @onclick="CloseDebugPanel" title="Close debug panel">
+                        <span class="bi bi-x-lg"></span>
+                    </button>
+                </div>
         
         <div class="debug-stats">
             <span class="stat-item stat-info">INFO: @GetCount(DebugLogLevel.Info)</span>
@@ -141,6 +145,13 @@
     private void ClearLog()
     {
         DebugService.Clear();
+    }
+
+    private void CloseDebugPanel()
+    {
+        // Disable debug mode which will hide the panel
+        DebugService.SetEnabled(false);
+        Settings.IsDebugMode = false;
     }
 
     private int GetCount(DebugLogLevel level)

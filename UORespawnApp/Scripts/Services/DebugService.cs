@@ -82,14 +82,14 @@ public class DebugService
     }
 
     /// <summary>
-    /// Load existing log entries from today's log file into the debug panel
+    /// Load existing log entries from the session log file into the debug panel
     /// </summary>
     private void LoadExistingLogEntries()
     {
         try
         {
             var logDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data", "Logs");
-            var logFile = Path.Combine(logDirectory, $"uor_spawn_{DateTime.Today:yyyy-MM-dd}.log");
+            var logFile = Path.Combine(logDirectory, "uor_spawn_session.log");
 
             if (!File.Exists(logFile)) return;
 

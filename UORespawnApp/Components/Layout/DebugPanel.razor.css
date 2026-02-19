@@ -87,6 +87,21 @@
     margin: 0 4px;
 }
 
+.toolbar-spacer {
+    flex: 1;
+}
+
+.debug-btn-close {
+    background: rgba(243, 139, 168, 0.15);
+    border-color: rgba(243, 139, 168, 0.3);
+    color: #f38ba8;
+}
+
+.debug-btn-close:hover {
+    background: rgba(243, 139, 168, 0.3);
+    border-color: #f38ba8;
+}
+
 /* Stats bar */
 .debug-stats {
     background: #181825;
