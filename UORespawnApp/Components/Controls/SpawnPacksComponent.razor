@@ -21,24 +21,31 @@
         <div class="col-xl-7">
             <div class="card map-card mb-2">
                 <div class="card-header">
-                    <div class="pack-toggle-container">
-                        <button class="pack-toggle-btn @(currentView == PackView.Approved ? "active" : "")" @onclick="() => SetPackView(PackView.Approved)">
-                            <span class="bi bi-patch-check me-1"></span>Approved
-                        </button>
-                        <button class="pack-toggle-btn @(currentView == PackView.Created ? "active" : "")" @onclick="() => SetPackView(PackView.Created)">
-                            <span class="bi bi-pencil-square me-1"></span>Created
-                            @if (CreatedPacks.Count > 0)
-                            {
-                                <span class="badge bg-secondary ms-1">@CreatedPacks.Count</span>
-                            }
-                        </button>
-                        <button class="pack-toggle-btn @(currentView == PackView.Imported ? "active" : "")" @onclick="() => SetPackView(PackView.Imported)">
-                            <span class="bi bi-cloud-download me-1"></span>Imported
-                            @if (ImportedPacks.Count > 0)
-                            {
-                                <span class="badge bg-secondary ms-1">@ImportedPacks.Count</span>
-                            }
-                        </button>
+                    <div class="pack-header-container">
+                        <div class="pack-toggle-container">
+                            <button class="pack-toggle-btn @(currentView == PackView.Approved ? "active" : "")" @onclick="() => SetPackView(PackView.Approved)">
+                                <span class="bi bi-patch-check me-1"></span>Approved
+                            </button>
+                            <button class="pack-toggle-btn @(currentView == PackView.Created ? "active" : "")" @onclick="() => SetPackView(PackView.Created)">
+                                <span class="bi bi-pencil-square me-1"></span>Created
+                                @if (CreatedPacks.Count > 0)
+                                {
+                                    <span class="badge bg-secondary ms-1">@CreatedPacks.Count</span>
+                                }
+                            </button>
+                            <button class="pack-toggle-btn @(currentView == PackView.Imported ? "active" : "")" @onclick="() => SetPackView(PackView.Imported)">
+                                <span class="bi bi-cloud-download me-1"></span>Imported
+                                @if (ImportedPacks.Count > 0)
+                                {
+                                    <span class="badge bg-secondary ms-1">@ImportedPacks.Count</span>
+                                }
+                            </button>
+                        </div>
+                        <div class="pack-loaded-indicator">
+                            <span class="bi bi-check-circle-fill text-success me-1"></span>
+                            <span class="loaded-label">Loaded:</span>
+                            <span class="loaded-pack-name">@Settings.CurrentPackName</span>
+                        </div>
                     </div>
                 </div>
                 <div class="card-body">

@@ -1,3 +1,4 @@
+using System.IO.Compression;
 using UORespawnApp.Scripts.Constants;
 using UORespawnApp.Scripts.Utilities;
 
@@ -388,8 +389,12 @@ namespace UORespawnApp.Scripts.Services
                             if (corrected > 0 || removed > 0)
                             {
                                 Logger.Info($"[Startup Step 3/7] Region cleanup: {corrected} names corrected, {removed} invalid regions removed");
-                                // Save the cleaned data
+
+                                // Save the cleaned data to all locations
                                 BinarySerializationService.SaveRegionSpawns();
+
+                                // ALSO save to Backup folder so next launch starts with clean data
+                                SyncCleanedDataToBackup();
                             }
                         }
                         catch (Exception cleanupEx)
@@ -410,6 +415,79 @@ namespace UORespawnApp.Scripts.Services
             catch (Exception ex)
             {
                 Logger.Error("[Startup Step 3/7] Error loading region spawn data", ex);
+            }
+        }
+
+        /// <summary>
+        /// After cleanup, sync the cleaned region spawn data back to the Backup folder.
+        /// This ensures next launch starts with clean data (cleanup only runs once).
+        /// </summary>
+        private void SyncCleanedDataToBackup()
+        {
+            try
+            {
+                var currentPackName = Settings.CurrentPackName;
+                if (string.IsNullOrEmpty(currentPackName))
+                {
+                    Logger.Warning("[Cleanup] No current pack name set - skipping backup sync");
+                    return;
+                }
+
+                // Find the backup folder for this pack
+                var backupPackFolder = Path.Combine(PathConstants.PacksBackupPath, currentPackName);
+                if (!Directory.Exists(backupPackFolder))
+                {
+                    Logger.Warning($"[Cleanup] Backup folder not found: {backupPackFolder}");
+                    return;
+                }
+
+                // Get the source file (just saved to LocalDataPath)
+                var sourceFile = PathConstants.GetLocalFilePath(PathConstants.REGION_FILENAME);
+                if (!File.Exists(sourceFile))
+                {
+                    Logger.Warning($"[Cleanup] Source file not found: {sourceFile}");
+                    return;
+                }
+
+                // Copy to backup folder
+                var destFile = Path.Combine(backupPackFolder, PathConstants.REGION_FILENAME);
+                File.Copy(sourceFile, destFile, overwrite: true);
+                Logger.Info($"[Cleanup] Synced cleaned data to Backup: {destFile}");
+
+                // Also update the ZIP if it exists (so published builds get clean data)
+                var zipPath = Path.Combine(PathConstants.PacksBackupPath, $"{currentPackName}.zip");
+                if (File.Exists(zipPath))
+                {
+                    UpdateZipWithCleanedData(zipPath, sourceFile, PathConstants.REGION_FILENAME);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("[Cleanup] Error syncing cleaned data to backup", ex);
+            }
+        }
+
+        /// <summary>
+        /// Updates a ZIP file with the cleaned region spawn data.
+        /// </summary>
+        private void UpdateZipWithCleanedData(string zipPath, string sourceFile, string entryName)
+        {
+            try
+            {
+                using var archive = System.IO.Compression.ZipFile.Open(zipPath, System.IO.Compression.ZipArchiveMode.Update);
+
+                // Remove existing entry if present
+                var existingEntry = archive.GetEntry(entryName);
+                existingEntry?.Delete();
+
+                // Add updated file
+                archive.CreateEntryFromFile(sourceFile, entryName);
+
+                Logger.Info($"[Cleanup] Updated ZIP with cleaned data: {zipPath}");
+            }
+            catch (Exception ex)
+            {
+                Logger.Warning($"[Cleanup] Could not update ZIP file: {ex.Message}");
             }
         }
 

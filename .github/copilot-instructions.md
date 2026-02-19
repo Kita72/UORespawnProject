@@ -1,7 +1,12 @@
 # Copilot Instructions
 
 ## Project Overview
-UORespawn is a professional spawn management system for Ultima Online servers running ServUO. Built with .NET 10 MAUI Blazor, it provides a cross-platform editor (Windows/macOS) for creating and managing creature spawns.
+UORespawn is a professional spawn management system for Ultima Online servers running ServUO. Built with .NET 10 MAUI Blazor Hybrid, it provides a **desktop-only** editor (Windows/macOS) for creating and managing creature spawns.
+
+**Platform Support: Desktop Only (Windows, macOS)**
+- We do NOT support mobile platforms (iOS, Android)
+- We do NOT support web deployment
+- Blazor Hybrid is used for its UI benefits, not cross-platform mobile/web capabilities
 
 ## Architecture
 

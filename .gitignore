@@ -12,12 +12,7 @@
 *.user
 *.userosscache
 *.sln.docstates
-
-# User-specific files
 *.userprefs
-*.suo
-*.user
-*.sln.docstates
 
 # Build results
 [Dd]ebug/
@@ -30,10 +25,6 @@ x86/
 [Aa][Rr][Mm]/
 [Aa][Rr][Mm]64/
 bld/
-[Bb]in/
-[Oo]bj/
-[Ll]og/
-[Ll]ogs/
 
 # MAUI Specific
 *.binlog
@@ -89,12 +80,6 @@ _ReSharper*/
 .idea/
 *.sln.iml
 
-# User-specific files
-*.suo
-*.user
-*.userosscache
-*.sln.docstates
-
 # Auto Generated Files
 AutoGen*.cs
 Generated_Code/
@@ -111,9 +96,8 @@ artifacts/
 # ASP.NET Scaffolding
 ScaffoldingReadMe.txt
 
-# Backup & Report files
+# Backup & Report files (Visual Studio upgrade reports, NOT our PACKS/Backup)
 _UpgradeReport_Files/
-Backup*/
 UpgradeLog*.XML
 UpgradeLog*.htm
 ServiceFabricBackup/
@@ -137,13 +121,9 @@ FakesAssemblies/
 .ntvs_analysis.dat
 node_modules/
 
-# Visual Studio 6 build log
+# Visual Studio 6 (legacy)
 *.plg
-
-# Visual Studio 6 workspace options file
 *.opt
-
-# Visual Studio 6 auto-generated workspace file (contains which files were open etc.)
 *.vbw
 
 # LightSwitch generated files
@@ -169,41 +149,48 @@ __pycache__/
 tools/**
 !tools/packages.config
 
-# User Data Files (DO NOT COMMIT USER DATA)
-UORespawnApp/Data/UOR_Spawn.csv
-UORespawnApp/Data/UOR_WorldSpawn.csv
-UORespawnApp/Data/UOR_StaticSpawn.csv
-UORespawnApp/Data/UOR_SpawnSettings.csv
-UORespawnApp/Data/UOR_XMLSpawners.csv
-UORespawnApp/Data/UOR_SpawnerList_Custom.txt
-UORespawnApp/Data/UOR_StaticList_Custom.txt
-
-# Map backups
-*.bmp.backup
-
 # Publish Profiles
 *.pubxml
 *.pubxml.user
 *.azurePubxml
-
-# Web publish settings
 **/PublishProfiles/
 
-# Package Files
+# Package/Archive Files (overridden below for specific files)
 *.zip
 *.7z
 *.rar
 *.tar
 *.gz
 
-# Except default resource files
-!UORespawnApp/Data/Map*.bmp
-!UORespawnApp/Resources/Raw/UOR_SpawnerList.txt
-!UORespawnApp/Resources/Raw/UOR_StaticList.txt
+# Map backups
+*.bmp.backup
 
-# Server-side SpawnSystem folder is included for distribution
-# It is excluded from build in .csproj but tracked in git
-!UORespawnApp/SpawnSystem/**
+# ==================== UORRESPAWN USER DATA ====================
+# These are USER-SPECIFIC working files that should NOT be committed.
+# Each user has their own spawn data in UOR_DATA folder.
+
+# Binary spawn data files (.bin) - user's active spawn data
+UORespawnApp/Data/UOR_DATA/
+
+# Imported packs folder - user downloads/imports these
+UORespawnApp/Data/PACKS/Imported/
+!UORespawnApp/Data/PACKS/Imported/.gitkeep
+
+# Approved packs folder - unpacked working copies
+UORespawnApp/Data/PACKS/Approved/
+!UORespawnApp/Data/PACKS/Approved/.gitkeep
+
+# ==================== UORRESPAWN TRACKED FILES ====================
+# These files ARE tracked and required for the project to work.
+
+# Map images (bundled with app)
+!UORespawnApp/Data/MAPS/Map*.bmp
+
+# Region list (source of truth for region validation)
+!UORespawnApp/Resources/Raw/UOR_RegionList.txt
+
+# Spawner list (for XML spawner overlay display)
+!UORespawnApp/Resources/Raw/UOR_SpawnerList.txt
 
 # ==================== SERVER SCRIPTS ====================
 # The SERVER folder contains ServUO scripts that must be tracked for:
@@ -213,18 +200,18 @@ UORespawnApp/Data/UOR_StaticList_Custom.txt
 # Track the server scripts ZIP for app distribution (overrides *.zip rule)
 !UORespawnApp/Data/SERVER/UORespawnSystem.zip
 
-# ==================== SPAWN PACKS ====================
+# ==================== SPAWN PACKS (DefaultPack) ====================
 # The PACKS/Backup folder contains the DefaultPack which MUST be tracked
 # so users cloning the repo can build and have working spawn data.
+#
+# Structure:
+#   Backup/DefaultPack/     → Git repo (source files, diffable)
+#   Backup/DefaultPack.zip  → App distribution (for release builds)
 
-# Track the Backup folder structure (override the generic Backup*/ rule above)
+# Track the Backup folder and DefaultPack contents
 !UORespawnApp/Data/PACKS/Backup/
 !UORespawnApp/Data/PACKS/Backup/.gitkeep
-
-# Track the DefaultPack folder and all its contents
 !UORespawnApp/Data/PACKS/Backup/DefaultPack/
 !UORespawnApp/Data/PACKS/Backup/DefaultPack/**
-
-# Track the DefaultPack.zip for app distribution
 !UORespawnApp/Data/PACKS/Backup/DefaultPack.zip
 

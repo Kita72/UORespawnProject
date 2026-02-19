@@ -54,11 +54,54 @@
 }
 
 /* Toggle buttons for Approved/Imported */
+.pack-header-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
 .pack-toggle-container {
     display: flex;
-    justify-content: center;
     gap: 8px;
     padding: 4px;
+}
+
+.pack-loaded-indicator {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    background: rgba(40, 167, 69, 0.1);
+    border: 1px solid rgba(40, 167, 69, 0.3);
+    border-radius: 6px;
+    font-size: 0.85rem;
+}
+
+.pack-loaded-indicator .loaded-label {
+    color: #888;
+}
+
+.pack-loaded-indicator .loaded-pack-name {
+    color: goldenrod;
+    font-weight: 600;
+}
+
+@media (max-width: 768px) {
+    .pack-header-container {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .pack-toggle-container {
+        justify-content: center;
+    }
+
+    .pack-loaded-indicator {
+        width: 100%;
+        justify-content: center;
+    }
 }
 
 .pack-toggle-btn {
