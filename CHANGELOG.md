@@ -5,6 +5,33 @@ All notable changes to UORespawn will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0.5] - 2026-02-19
+
+### Added
+- Vendor Spawn support with server-side integration
+- Vendor Spawn toggle in Settings page
+- Debug Log functionality with per-session logging
+- Region Cleaner utility for spawn pack maintenance
+- Reload support for Vendors in ServUO
+
+### Changed
+- Settings page polished and reorganized
+- Server and Client version synchronization updated
+- Default Spawn Pack cleaned and updated with missing spawns
+- Bumped Settings version for new Vendor Spawn configuration
+
+### Fixed
+- Regions List loading corrected
+- Region Spawn issues resolved
+- JSON warning messages from MAUI when handling Spawn Packs
+- Compatibility with .NET 10 MAUI update
+- Default Pack Regions functionality
+- Spawn Pack loading reliability (hot fix)
+
+### Technical
+- Server-side refactoring for Vendor Spawns
+- Improved Debug Log session management
+
 ## [2.0.0.4] - 2026-02-17
 
 ### Added
