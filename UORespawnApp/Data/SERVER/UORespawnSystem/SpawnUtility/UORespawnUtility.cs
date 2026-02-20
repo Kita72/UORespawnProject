@@ -466,6 +466,22 @@ namespace Server.Custom.UORespawnSystem.SpawnUtility
             }
         }
 
+        internal static bool IsValidRegionName(string name)
+        {
+            if (!string.IsNullOrEmpty(name))
+            {
+                if (name.ToLower().EndsWith(" quest")) return false;
+
+                if (name.ToLower().EndsWith(" skill")) return false;
+
+                if (name.ToLower().StartsWith("khaldun ")) return false;
+
+                return true;
+            }
+
+            return false;
+        }
+
         /// <summary>
         /// Send a console message with color-based routing
         /// - Blue/Green/Cyan = Console only (system messages)

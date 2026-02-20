@@ -71,8 +71,6 @@ namespace Server.Custom.UORespawnSystem
 
             SubscribeEvents();
 
-            //RegisterConsoleCloseHandler();
-
             SpawnVendors.LoadAllSigns();
 
             StartTimer();

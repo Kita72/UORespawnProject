@@ -4,6 +4,7 @@ using System.Linq;
 using System.Collections.Generic;
 
 using Server.Custom.UORespawnSystem.Entities;
+using Server.Custom.UORespawnSystem.SpawnHelpers;
 
 namespace Server.Custom.UORespawnSystem.SpawnUtility
 {
@@ -37,6 +38,15 @@ namespace Server.Custom.UORespawnSystem.SpawnUtility
         internal static void ReLoadSpawns()
         {
             LoadSpawns("Reloading");
+
+            try
+            {
+                SpawnVendors.TrySpawnVendors(SpawnVendors.LoadVendorSpawn());
+            }
+            catch
+            {
+                UORespawnUtility.SendConsoleMsg(ConsoleColor.Red, "Vendor ReLoaded Failed!");
+            }
         }
 
         #region Binary Loading Methods

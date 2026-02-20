@@ -185,13 +185,24 @@ namespace Server.Custom.UORespawnSystem.Commands
                 string[] areaParts;
                 string location;
 
+                int lastMap = 0;
+                int moonGate = 0;
+
                 for (int i = 0; i < Region.Regions.Count; i++)
                 {
                     name = Region.Regions[i].Name;
                     map = Region.Regions[i].Map;
                     area = Region.Regions[i].Area;
 
-                    if (!string.IsNullOrEmpty(name))
+                    // Clean off bad regions from end of regions.xml
+                    if (map.MapID != lastMap)
+                    {
+                        if (map.MapID > lastMap) lastMap++;
+
+                        if (map.MapID < lastMap) continue;
+                    }
+
+                    if (!string.IsNullOrEmpty(name) && UORespawnUtility.IsValidRegionName(name))
                     {
                         for (int j = 0; j < area.Length; j++)
                         {
