@@ -18,7 +18,7 @@ namespace UORespawnApp.Scripts.Services
             private const int BOX_SPAWN_VERSION = 1;
             private const int TILE_SPAWN_VERSION = 1;
             private const int REGION_SPAWN_VERSION = 1;
-            private const int VENDOR_SPAWN_VERSION = 3; // v3: Per-location VendorEntity (IsSign, SignType, Facing, Location, VendorList)
+            private const int VENDOR_SPAWN_VERSION = 1; 
 
         #region Active Pack Sync Helper
 

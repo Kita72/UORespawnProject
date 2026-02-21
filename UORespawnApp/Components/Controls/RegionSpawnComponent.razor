@@ -98,18 +98,22 @@
                 <div class="card-body p-2 spawn-list-body">
                     @{
                         var regions = GetRegionsForCurrentMap();
+                        var sortedRegions = regions.OrderBy(r => r.Name).ToList();
+                        var cardIndex = 0;
                     }
-                    @if (regions.Any())
+                    @if (sortedRegions.Any())
                     {
-                        @foreach (var region in regions.OrderBy(r => r.Name))
+                        @foreach (var region in sortedRegions)
                         {
+                            cardIndex++;
                             var entity = GetRegionEntity(region.Name);
                             var isSelected = selectedRegion != null && selectedRegion.Name == region.Name;
-                            
+
                             <div class="spawn-item @(isSelected ? "selected" : "")" @onclick="() => SelectRegion(region)">
                                 <div class="d-flex align-items-center justify-content-between">
-                                    <div class="flex-grow-1">
-                                        <strong title="@region.Name">@region.Name</strong>
+                                    <div class="flex-grow-1 d-flex align-items-center">
+                                        <span class="card-index me-2">@cardIndex</span>
+                                        <strong title="@region.Name">@(isSelected ? region.Name : FormatRegionName(region.Name))</strong>
                                     </div>
                                     <div class="d-flex align-items-center gap-2">
                                         @if (entity != null && entity.GetTotalSpawnCount() > 0)
@@ -906,10 +910,28 @@
     {
         return RegionListUtility.GetRegionsForMap(ViewService.CurrentMapId);
     }
-    
+
     private int GetRegionCount()
     {
         return GetRegionsForCurrentMap().Count;
+    }
+
+    /// <summary>
+    /// Truncates region names to max 12 characters for compact card display.
+    /// Full name shown when card is selected (handled in markup).
+    /// </summary>
+    private string FormatRegionName(string name)
+    {
+        if (string.IsNullOrEmpty(name))
+            return name;
+
+        // Max 12 characters when card is not focused
+        if (name.Length > 12)
+        {
+            return name[..9] + "...";
+        }
+
+        return name;
     }
 
     private int? GetDisplayedRegionIndex()

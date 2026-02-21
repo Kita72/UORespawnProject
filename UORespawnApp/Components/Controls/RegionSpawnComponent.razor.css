@@ -211,6 +211,40 @@ body.dark-theme .spawn-item.selected {
     box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
 }
 
+/* Card index number */
+.card-index {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 4px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    color: #6c757d;
+    background-color: rgba(0, 0, 0, 0.05);
+    border-radius: 4px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.spawn-item.selected .card-index {
+    color: #667eea;
+    background-color: rgba(102, 126, 234, 0.15);
+    border-color: rgba(102, 126, 234, 0.3);
+}
+
+body.dark-theme .card-index {
+    color: #999;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+body.dark-theme .spawn-item.selected .card-index {
+    color: goldenrod;
+    background-color: rgba(255, 193, 7, 0.15);
+    border-color: rgba(255, 193, 7, 0.3);
+}
+
 body.dark-theme .spawn-item .text-muted {
     color: #999 !important;
 }
