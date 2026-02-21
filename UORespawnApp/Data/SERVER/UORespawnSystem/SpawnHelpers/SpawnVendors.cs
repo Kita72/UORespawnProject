@@ -1,25 +1,38 @@
 using System;
 using System.IO;
-using System.Collections.Generic;
-using Server.Items;
-using Server.Mobiles;
-using Server.Custom.UORespawnSystem.Entities;
-using Server.Custom.UORespawnSystem.Mobiles;
-using Server.Custom.UORespawnSystem.SpawnUtility;
-using Server.Engines.Quests.Naturalist;
-using Server.Engines.Quests;
 using System.Text;
 using System.Linq;
+using System.Collections.Generic;
+
+using Server.Items;
+using Server.Mobiles;
+using Server.Custom.UORespawnSystem.Mobiles;
+using Server.Custom.UORespawnSystem.SpawnUtility;
 
 namespace Server.Custom.UORespawnSystem.SpawnHelpers
 {
     internal static class SpawnVendors
     {
-        private static readonly Dictionary<int, List<VendorEntity>> SignLocations = new Dictionary<int, List<VendorEntity>>();
+        private static Dictionary<int, List<(SignType, SignFacing, Point3D)>> SignLocations;
 
-        internal static readonly List<int> VendorSpawnList = new List<int>();
+        private static Dictionary<int, List<(SignType, SignFacing, Point3D)>> HiveLocations;
 
+        internal static List<int> VendorSpawnList;
+
+        private static readonly string SignFile = Path.Combine(UORespawnSettings.UOR_DATA, "UOR_SignData.txt");
+        private static readonly string HiveFile = Path.Combine(UORespawnSettings.UOR_DATA, "UOR_HiveData.txt");
         private static readonly string VendorSpawnFile = Path.Combine(UORespawnSettings.UOR_DATA, "UOR_VendorSpawn.txt");
+
+        internal static void VendorLoadInitialize()
+        {
+            SignLocations = new Dictionary<int, List<(SignType, SignFacing, Point3D)>>();
+            HiveLocations = new Dictionary<int, List<(SignType, SignFacing, Point3D)>>();
+            VendorSpawnList = new List<int>();
+
+            LoadAllSigns();
+
+            LoadAllHives();
+        }
 
         internal static void LoadAllSigns()
         {
@@ -29,25 +42,60 @@ namespace Server.Custom.UORespawnSystem.SpawnHelpers
             {
                 if (map != null && map != Map.Internal && !SignLocations.ContainsKey(map.MapID))
                 {
-                    SignLocations[map.MapID] = new List<VendorEntity>();
+                    SignLocations[map.MapID] = new List<(SignType, SignFacing, Point3D)>();
                 }
             }
 
             int count = 0;
 
-            foreach (var item in World.Items.Values)
+            if (File.Exists(SignFile))
             {
-                if (item is Sign sign)
+                var lines = File.ReadLines(SignFile);
+
+                if (lines != null)
                 {
-                    var signType = GetSignType(sign);
-
-                    if (ValidateSign(signType))
+                    foreach (var line in lines)
                     {
-                        SignLocations[sign.Map.MapID].Add(new VendorEntity(signType, GetFacing(sign), sign.Location));
+                        if (string.IsNullOrWhiteSpace(line)) continue;
 
-                        count++;
+                        var value = line.Split(':');
+
+                        if (value.Length >= 6)
+                        {
+                            int mapId = Int32.Parse(value[0]);
+                            SignType signType = (SignType)Enum.Parse(typeof(SignType), value[1]);
+                            SignFacing facing = (SignFacing)Enum.Parse(typeof(SignFacing), value[2]);
+                            int x = Int32.Parse(value[3]);
+                            int y = Int32.Parse(value[4]);
+                            int z = Int32.Parse(value[5]);
+
+                            if (SignLocations.ContainsKey(mapId))
+                            {
+                                SignLocations[mapId].Add((signType, facing, new Point3D(x, y, z)));
+                                count++;
+                            }
+                        }
                     }
                 }
+            }
+            else
+            {
+                foreach (var item in World.Items.Values)
+                {
+                    if (item is Sign sign)
+                    {
+                        var signType = GetSignType(sign);
+
+                        if (ValidateSign(signType))
+                        {
+                            SignLocations[sign.Map.MapID].Add((signType, GetFacing(sign), sign.Location));
+
+                            count++;
+                        }
+                    }
+                }
+
+                SaveAllSigns();
             }
 
             UORespawnUtility.SendConsoleMsg(ConsoleColor.Green, $"{count} Signs Loaded!");
@@ -75,8 +123,6 @@ namespace Server.Custom.UORespawnSystem.SpawnHelpers
                 case SignType.MetalPostB: return false;
                 case SignType.MetalPostA: return false;
                 case SignType.MetalPost: return false;
-                case SignType.WoodenSign: return false;
-                case SignType.BrassSign: return false;
             }
 
             return true;
@@ -101,27 +147,125 @@ namespace Server.Custom.UORespawnSystem.SpawnHelpers
             }   
         }
 
+        private static void SaveAllSigns()
+        {
+            SB.Clear();
+
+            foreach (var kvp in SignLocations)
+            {
+                int mapId = kvp.Key;
+
+                foreach (var entity in kvp.Value)
+                {
+                    SB.AppendLine($"{mapId}:{entity.Item1}:{entity.Item2}:{entity.Item3.X}:{entity.Item3.Y}:{entity.Item3.Z}");
+                }
+            }
+
+            File.WriteAllText(SignFile, SB.ToString());
+        }
+
+        public static void LoadAllHives()
+        {
+            HiveLocations.Clear();
+
+            foreach (Map map in Map.Maps)
+            {
+                if (map != null && map != Map.Internal && !HiveLocations.ContainsKey(map.MapID))
+                {
+                    HiveLocations[map.MapID] = new List<(SignType, SignFacing, Point3D)>();
+                }
+            }
+
+            int hiveCount = 0;
+
+            if (File.Exists(HiveFile))
+            {
+                var lines = File.ReadLines(HiveFile);
+
+                if (lines != null)
+                {
+                    foreach (var line in lines)
+                    {
+                        if (string.IsNullOrWhiteSpace(line)) continue;
+
+                        var value = line.Split(':');
+
+                        if (value.Length >= 4)
+                        {
+                            int mapId = Int32.Parse(value[0]);
+                            int x = Int32.Parse(value[1]);
+                            int y = Int32.Parse(value[2]);
+                            int z = Int32.Parse(value[3]);
+
+                            if (HiveLocations.ContainsKey(mapId))
+                            {
+                                HiveLocations[mapId].Add((SignType.MetalPost, SignFacing.North, new Point3D(x, y, z)));
+
+                                hiveCount++;
+                            }
+                        }
+                    }
+                }
+            }
+            else
+            {
+                var hiveList = UORespawnUtility.GetStaticLocationsList("beehive");
+
+                if (hiveList != null && hiveList.Count > 0)
+                {
+                    foreach (var hive in hiveList)
+                    {
+                        HiveLocations[hive.Item1].Add((SignType.MetalPost, SignFacing.North, hive.Item2));
+                    }
+                }
+
+                SaveAllHives();
+            }
+
+            UORespawnUtility.SendConsoleMsg(ConsoleColor.Green, $"{hiveCount} Hives Loaded!");
+        }
+
+        private static void SaveAllHives()
+        {
+            SB.Clear();
+
+            foreach (var kvp in HiveLocations)
+            {
+                int mapId = kvp.Key;
+
+                foreach (var entity in kvp.Value)
+                {
+                    SB.AppendLine($"{mapId}:{entity.Item3.X}:{entity.Item3.Y}:{entity.Item3.Z}");
+                }
+            }
+
+            File.WriteAllText(HiveFile, SB.ToString());
+        }
+
         internal static void TrySpawnVendors(bool isLoaded)
         {
-            if (SignLocations.Count == 0) return;
+            var vendorsData = UORespawnDataBase.VendorSpawns;
+
+            if (vendorsData.Count == 0) return;
 
             if (UORespawnSettings.ENABLE_VENDOR_SPAWN)
             {
                 if (!isLoaded)
                 {
-                    int count = 0;
+                    int signCount = 0;
+                    int hiveCount = 0;
 
                     foreach (Map map in Map.Maps)
                     {
                         if (map != null)
                         {
-                            if (SignLocations.ContainsKey(map.MapID) && SignLocations[map.MapID]?.Count > 0)
+                            if (vendorsData.ContainsKey(map) && vendorsData[map]?.Count > 0)
                             {
-                                foreach (var entity in SignLocations[map.MapID])
+                                foreach (var entity in vendorsData[map])
                                 {
                                     entity.Spawn(map);
 
-                                    count++;
+                                    signCount++;
                                 }
                             }
                         }
@@ -129,7 +273,8 @@ namespace Server.Custom.UORespawnSystem.SpawnHelpers
 
                     AddVendorSpawn();
 
-                    UORespawnUtility.SendConsoleMsg(ConsoleColor.Yellow, $"{count} Signs Spawned with Vendors!");
+                    UORespawnUtility.SendConsoleMsg(ConsoleColor.Yellow, $"{signCount} Signs Spawned with Vendors!");
+                    UORespawnUtility.SendConsoleMsg(ConsoleColor.Yellow, $"{hiveCount} Hives Spawned with Vendors!");
                 }
             }
             else
@@ -143,8 +288,10 @@ namespace Server.Custom.UORespawnSystem.SpawnHelpers
             }
         }
 
-        internal static void CleanUpVendors()
+        internal static int CleanUpVendors()
         {
+            int count = 0;
+
             if (VendorSpawnList.Count > 0)
             {
                 for (int i = 0; i < VendorSpawnList.Count; i++)
@@ -154,12 +301,21 @@ namespace Server.Custom.UORespawnSystem.SpawnHelpers
                         if (!bc.Deleted)
                         {
                             bc.Delete();
+
+                            count++;
                         }
                     }
                 }
 
                 VendorSpawnList.Clear();
             }
+
+            if (File.Exists(VendorSpawnFile))
+            {
+                File.Delete(VendorSpawnFile);
+            }
+
+            return count;
         }
 
         private static readonly StringBuilder SB = new StringBuilder();
@@ -191,15 +347,47 @@ namespace Server.Custom.UORespawnSystem.SpawnHelpers
                 }
             }
 
-            return VendorSpawnList.Count() > 0;
+            return VendorSpawnList.Count > 0;
         }
 
-        internal static List<BaseCreature> GetVendors(SignType sign)
+        internal static void ToggleVendorWorking()
         {
+            Mobile m;
+
+            for (int i = 0; i < VendorSpawnList.Count; i++)
+            {
+                if (World.Mobiles.ContainsKey(VendorSpawnList[i]))
+                {
+                    m = World.Mobiles[VendorSpawnList[i]];
+
+                    if (m != null)
+                    {
+                        if (UORespawnSettings.ENABLE_VENDOR_NIGHT && m is BaseVendor bv)
+                        {
+                            bv.Hidden = SpawnTimeInfo.IsNight(bv);
+
+                            bv.CantWalk = bv.Hidden;
+                        }
+                        else
+                        {
+                            NPCUtility.CheckNightDress(m);
+                        }
+                    }
+                }
+            }
+        }
+
+        internal static List<BaseCreature> GetVendors(SignType sign, bool isSign)
+        {
+            if (!isSign)
+            {
+                return new List<BaseCreature> { new Beekeeper(), new Farmer(), new TownNPC() };
+            }
+
             switch (sign)
             {
                 // Vendors
-                case SignType.Library:      return new List<BaseCreature> { new KeeperOfChivalry(), new Mapmaker(), new Naturalist(), new TownNPC() };
+                case SignType.Library:      return new List<BaseCreature> { new KeeperOfChivalry(), new Mapmaker(), new TownNPC() };
                 case SignType.Bakery:       return new List<BaseCreature> { new Baker(), new Cook(), new Beekeeper(), new TownNPC() };
                 case SignType.Tailor:       return new List<BaseCreature> { new Furtrader(), new LeatherWorker(), new Tailor(), new Tanner(), new Weaver(), new TownNPC() };
                 case SignType.Tinker:       return new List<BaseCreature> { new Glassblower(), new GolemCrafter(), new Tinker() };
@@ -213,7 +401,7 @@ namespace Server.Custom.UORespawnSystem.SpawnHelpers
                 case SignType.Stables:      return new List<BaseCreature> { new AnimalTrainer(), new Veterinarian(), new TownNPC() };
                 case SignType.BarberShop:   return new List<BaseCreature> { new HairStylist(), new Noble(), new TownNPC() };
                 case SignType.Bard:         return new List<BaseCreature> { new Bard(), new Actor(), new TownNPC() };
-                case SignType.Fletcher:     return new List<BaseCreature> { new Bowyer(), new Huntsman(), new TownNPC() };
+                case SignType.Fletcher:     return new List<BaseCreature> { new Bowyer(), new TownNPC() };
                 case SignType.Armourer:     return new List<BaseCreature> { new Armorer(), new Weaponsmith(), new TownNPC() };
                 case SignType.Jeweler:      return new List<BaseCreature> { new Jeweler(), new Glassblower(), new TownNPC() };
                 case SignType.Tavern:       return new List<BaseCreature> { new Barkeeper(), new Cook(), new TavernKeeper(), new TownNPC() };
@@ -221,7 +409,7 @@ namespace Server.Custom.UORespawnSystem.SpawnHelpers
                 case SignType.Blacksmith:   return new List<BaseCreature> { new Blacksmith(), new IronWorker(), new TownNPC() };
                 case SignType.Painter:      return new List<BaseCreature> { new Artist(), new HireBeggar(), new TownNPC() };
                 case SignType.Provisioner:  return new List<BaseCreature> { new Cobbler(), new Provisioner(), new TownNPC() };
-                case SignType.Bowyer:       return new List<BaseCreature> { new Bowyer(), new Huntsman(), new TownNPC() };
+                case SignType.Bowyer:       return new List<BaseCreature> { new Bowyer(), new TownNPC() };
                 // Guild Masters
                 case SignType.ArmamentsGuild:       return new List<BaseCreature> { new BlacksmithGuildmaster(), new Tinker(), new TownNPC() };
                 case SignType.ArmourersGuild:       return new List<BaseCreature> { new BlacksmithGuildmaster(), new Armorer(), new TownNPC() };
@@ -237,14 +425,14 @@ namespace Server.Custom.UORespawnSystem.SpawnHelpers
                 case SignType.SorcerersGuild:       return new List<BaseCreature> { new MageGuildmaster(), new Mage(), new TownNPC() };
                 case SignType.IllusionistGuild:     return new List<BaseCreature> { new MageGuildmaster(), new Mage(), new TownNPC() };
                 case SignType.MinersGuild:          return new List<BaseCreature> { new MinerGuildmaster(), new Miner(), new TownNPC() };
-                case SignType.ArchersGuild:         return new List<BaseCreature> { new RangerGuildmaster(), new Huntsman(), new TownNPC() };
+                case SignType.ArchersGuild:         return new List<BaseCreature> { new RangerGuildmaster(), new Bowyer(), new TownNPC() };
                 case SignType.SeamensGuild:         return new List<BaseCreature> { new FisherGuildmaster(), new Fisherman(), new TownNPC() };
                 case SignType.FishermensGuild:      return new List<BaseCreature> { new FisherGuildmaster(), new Fisherman(), new TownNPC() };
                 case SignType.SailorsGuild:         return new List<BaseCreature> { new FisherGuildmaster(), new Mapmaker(), new TownNPC() };
                 case SignType.ShipwrightsGuild:     return new List<BaseCreature> { new MerchantGuildmaster(), new Shipwright(), new TownNPC() };
                 case SignType.TailorsGuild:         return new List<BaseCreature> { new TailorGuildmaster(), new Tailor(), new TownNPC() };
                 case SignType.ThievesGuild:         return new List<BaseCreature> { new ThiefGuildmaster(), new Thief(), new TownNPC() };
-                case SignType.RoguesGuild:          return new List<BaseCreature> { new ThiefGuildmaster(), new Huntsman(), new TownNPC() };
+                case SignType.RoguesGuild:          return new List<BaseCreature> { new ThiefGuildmaster(), new Thief(), new TownNPC() };
                 case SignType.AssassinsGuild:       return new List<BaseCreature> { new ThiefGuildmaster(), new Thief(), new TownNPC() };
                 case SignType.TinkersGuild:         return new List<BaseCreature> { new TinkerGuildmaster(), new Tinker(), new TownNPC() };
                 case SignType.WarriorsGuild:        return new List<BaseCreature> { new WarriorGuildmaster(), new HireFighter(), new TownNPC() };
@@ -255,7 +443,7 @@ namespace Server.Custom.UORespawnSystem.SpawnHelpers
                 case SignType.Bank:     return new List<BaseCreature> { new Banker(), new Minter(), new TownNPC() };
                 case SignType.Theatre:  return new List<BaseCreature> { new Actor(), new Noble(), new Bard() };
 
-                default: return new List<BaseCreature> { new Healer(), new Noble(), new TownNPC() };
+                default: return UORespawnSettings.ENABLE_VENDOR_EXTRA ? new List<BaseCreature> { new TownNPC(), new TownNPC() } : new List<BaseCreature>();
             }
         }
     }

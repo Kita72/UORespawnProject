@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Text;
 using System.Linq;
 using System.Reflection;
 using System.Collections.Generic;
@@ -10,8 +11,6 @@ using Server.Custom.UORespawnSystem.Mobiles;
 using Server.Custom.UORespawnSystem.Gumps;
 using Server.Custom.UORespawnSystem.Services;
 using Server.Custom.UORespawnSystem.SpawnUtility;
-using System.Text;
-using System.CodeDom;
 
 namespace Server.Custom.UORespawnSystem.Commands
 {
@@ -27,6 +26,7 @@ namespace Server.Custom.UORespawnSystem.Commands
             CommandSystem.Register("GenRespawnList", AccessLevel.Administrator, new CommandEventHandler(GenSpawnList_OnCommand));
             CommandSystem.Register("GenRegionList", AccessLevel.Administrator, new CommandEventHandler(GenRegionList_OnCommand));
             CommandSystem.Register("GenSpawnerList", AccessLevel.Administrator, new CommandEventHandler(GenSpawnerList_OnCommand));
+            CommandSystem.Register("GenVendorList", AccessLevel.Administrator, new CommandEventHandler(GenVendorList_OnCommand));
             CommandSystem.Register("ReloadRespawn", AccessLevel.Administrator, new CommandEventHandler(ReloadSpawn_OnCommand));
             CommandSystem.Register("PushRespawnStats", AccessLevel.Administrator, new CommandEventHandler(PushRespawnStats_OnCommand));
             CommandSystem.Register("SpawnMetrics", AccessLevel.Administrator, new CommandEventHandler(SpawnMetrics_OnCommand));
@@ -39,9 +39,6 @@ namespace Server.Custom.UORespawnSystem.Commands
             // NEW: Recycle system commands
             CommandSystem.Register("SpawnRecycleStats", AccessLevel.GameMaster, new CommandEventHandler(SpawnRecycleStats_OnCommand));
             CommandSystem.Register("ClearRecycle", AccessLevel.Administrator, new CommandEventHandler(ClearRecycle_OnCommand));
-
-            // NEW: Binary save commands (placeholder - Editor handles saving)
-            CommandSystem.Register("SaveSpawnBinary", AccessLevel.Administrator, new CommandEventHandler(SaveSpawnBinary_OnCommand));
         }
 
         // SpawnAdmin - Opens the admin GUI
@@ -186,7 +183,6 @@ namespace Server.Custom.UORespawnSystem.Commands
                 string location;
 
                 int lastMap = 0;
-                int moonGate = 0;
 
                 for (int i = 0; i < Region.Regions.Count; i++)
                 {
@@ -278,6 +274,85 @@ namespace Server.Custom.UORespawnSystem.Commands
             {
                 e.Mobile.SendMessage("No Spawners Found!");
             }
+        }
+
+        // GenVendorList
+        [Usage("GenVendorList")]
+        [Description("UORespawn: Generate Vendor List")]
+        private static void GenVendorList_OnCommand(CommandEventArgs e)
+        {
+            StringBuilder sb = new StringBuilder();
+
+            // Vendors
+            sb.AppendLine(nameof(Alchemist));
+            sb.AppendLine(nameof(AnimalTrainer));
+            sb.AppendLine(nameof(Architect));
+            sb.AppendLine(nameof(Armorer));
+            sb.AppendLine(nameof(Baker));
+            sb.AppendLine(nameof(Banker));
+            sb.AppendLine(nameof(Bard));
+            sb.AppendLine(nameof(Barkeeper));
+            sb.AppendLine(nameof(Beekeeper));
+            sb.AppendLine(nameof(Blacksmith));
+            sb.AppendLine(nameof(Bowyer));
+            sb.AppendLine(nameof(Butcher));
+            sb.AppendLine(nameof(Carpenter));
+            sb.AppendLine(nameof(Cobbler));
+            sb.AppendLine(nameof(Cook));
+            sb.AppendLine(nameof(CustomHairstylist));
+            sb.AppendLine(nameof(Farmer));
+            sb.AppendLine(nameof(Fisherman));
+            sb.AppendLine(nameof(Furtrader));
+            sb.AppendLine(nameof(Gardener));
+            sb.AppendLine(nameof(Glassblower));
+            sb.AppendLine(nameof(GolemCrafter));
+            sb.AppendLine(nameof(HairStylist));
+            sb.AppendLine(nameof(Healer));
+            sb.AppendLine(nameof(Herbalist));
+            sb.AppendLine(nameof(InnKeeper));
+            sb.AppendLine(nameof(IronWorker));
+            sb.AppendLine(nameof(Jeweler));
+            sb.AppendLine(nameof(LeatherWorker));
+            sb.AppendLine(nameof(Mage));
+            sb.AppendLine(nameof(Mapmaker));
+            sb.AppendLine(nameof(Miner));
+            sb.AppendLine(nameof(Monk));
+            sb.AppendLine(nameof(Mystic));
+            sb.AppendLine(nameof(Necromancer));
+            sb.AppendLine(nameof(Provisioner));
+            sb.AppendLine(nameof(Rancher));
+            sb.AppendLine(nameof(Ranger));
+            sb.AppendLine(nameof(RealEstateBroker));
+            sb.AppendLine(nameof(Scribe));
+            sb.AppendLine(nameof(Shipwright));
+            sb.AppendLine(nameof(StoneCrafter));
+            sb.AppendLine(nameof(Tailor));
+            sb.AppendLine(nameof(Tanner));
+            sb.AppendLine(nameof(TavernKeeper));
+            sb.AppendLine(nameof(Thief));
+            sb.AppendLine(nameof(Tinker));
+            sb.AppendLine(nameof(Veterinarian));
+            sb.AppendLine(nameof(Waiter));
+            sb.AppendLine(nameof(Weaponsmith));
+            sb.AppendLine(nameof(Weaver));
+
+            // Guildmasters
+            sb.AppendLine(nameof(BardGuildmaster));
+            sb.AppendLine(nameof(BlacksmithGuildmaster));
+            sb.AppendLine(nameof(FisherGuildmaster));
+            sb.AppendLine(nameof(HealerGuildmaster));
+            sb.AppendLine(nameof(MageGuildmaster));
+            sb.AppendLine(nameof(MerchantGuildmaster));
+            sb.AppendLine(nameof(MinerGuildmaster));
+            sb.AppendLine(nameof(RangerGuildmaster));
+            sb.AppendLine(nameof(TailorGuildmaster));
+            sb.AppendLine(nameof(ThiefGuildmaster));
+            sb.AppendLine(nameof(TinkerGuildmaster));
+            sb.AppendLine(nameof(WarriorGuildmaster));
+
+            File.WriteAllText(Path.Combine(UORespawnSettings.UOR_DATA, "UOR_VendorList.txt"), sb.ToString());
+
+            e.Mobile.SendMessage($"Vendor List Generated! ({sb.Length} vendors)");
         }
 
         // ReloadRespawn
@@ -390,7 +465,7 @@ namespace Server.Custom.UORespawnSystem.Commands
                 from.SendMessage(0x35, "Reloading UORespawn settings...");
 
                 // Reload settings from Binary
-                UORespawnDataBase.LoadSpawns();
+                UORespawnDataBase.ReLoadSpawns();
 
                 from.SendMessage(0x35, "═══════════════════════════════════════════");
                 from.SendMessage(0x59, "UORespawn settings reloaded successfully!");
@@ -586,40 +661,6 @@ namespace Server.Custom.UORespawnSystem.Commands
             {
                 from.SendMessage(0x22, $"Error clearing recycle pool: {ex.Message}");
                 UORespawnUtility.SendConsoleMsg(ConsoleColor.Red, $"ERROR: ClearRecycle command failed - {ex.Message}");
-            }
-        }
-
-        // SaveSpawnBinary - Placeholder command (Editor handles saving)
-        [Usage("SaveSpawnBinary")]
-        [Description("PLACEHOLDER: Binary save must be done from Editor. Future feature for in-game editing.")]
-        public static void SaveSpawnBinary_OnCommand(CommandEventArgs e)
-        {
-            Mobile from = e.Mobile;
-
-            try
-            {
-                from.SendMessage(0x35, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-                from.SendMessage(0x59, "Binary Save Command");
-                from.SendMessage(0x35, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-
-                from.SendMessage(0x48, "Binary save is not implemented on the server.");
-                from.SendMessage(0x48, "Use the Spawn Editor to create and save .bin files.");
-                from.SendMessage(0x48, "Server loads binary data automatically on startup.");
-
-                from.SendMessage(0x35, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-                from.SendMessage(0x59, "TODO: In-game editing feature coming soon!");
-                from.SendMessage(0x35, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-
-                // Call placeholder methods (they just log warnings)
-                UORespawnDataBase.SaveTileSpawnData();
-                UORespawnDataBase.SaveRegionSpawnData();
-                UORespawnDataBase.SaveBoxSpawnData();
-                UORespawnSettings.SaveSpawnSettingsData();
-            }
-            catch (Exception ex)
-            {
-                from.SendMessage(0x22, $"Error: {ex.Message}");
-                UORespawnUtility.SendConsoleMsg(ConsoleColor.Red, $"ERROR: SaveSpawnBinary command failed - {ex.Message}");
             }
         }
 

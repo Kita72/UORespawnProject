@@ -38,7 +38,7 @@ namespace UORespawnApp.Scripts.Utilities
         /// Box spawn data indexed by MapId
         /// Each map contains a list of BoxSpawnEntity objects
         /// </summary>
-        internal static Dictionary<int, List<BoxSpawnEntity>> BoxSpawns { get; private set; } = new();
+        internal static Dictionary<int, List<BoxSpawnEntity>> BoxSpawns { get; private set; } = [];
 
         /// <summary>
         /// Initialize Box Spawns dictionary with empty lists for each map (0-5)
@@ -47,7 +47,7 @@ namespace UORespawnApp.Scripts.Utilities
         {
             for (int i = 0; i <= 5; i++)
             {
-                BoxSpawns[i] = new List<BoxSpawnEntity>();
+                BoxSpawns[i] = [];
             }
         }
 
@@ -56,6 +56,7 @@ namespace UORespawnApp.Scripts.Utilities
             if (!BoxSpawns.TryGetValue(map, out List<BoxSpawnEntity>? value))
             {
                 value = [];
+
                 BoxSpawns[map] = value;
             }
 
@@ -83,12 +84,13 @@ namespace UORespawnApp.Scripts.Utilities
         /// <summary>
         /// Load box spawn data using binary deserialization (ServUO-style BinaryReader)
         /// </summary>
-        internal static void LoadSpawnData()
+        internal static void LoadBoxSpawnData()
         {
             try
             {
                 BoxSpawns.Clear();
-                InitializeBoxSpawns(); // Ensure maps 0-5 exist even if file is empty/missing
+
+                InitializeBoxSpawns();
 
                 BinarySerializationService.LoadBoxSpawns();
             }
@@ -106,7 +108,7 @@ namespace UORespawnApp.Scripts.Utilities
         /// Tile spawn data indexed by MapId
         /// Each map contains a list of TileSpawnEntity objects
         /// </summary>
-        internal static Dictionary<int, List<TileSpawnEntity>> TileSpawns { get; private set; } = new();
+        internal static Dictionary<int, List<TileSpawnEntity>> TileSpawns { get; private set; } = [];
 
         /// <summary>
         /// Initialize Tile Spawns dictionary with empty lists for each map (0-5)
@@ -115,7 +117,7 @@ namespace UORespawnApp.Scripts.Utilities
         {
             for (int i = 0; i <= 5; i++)
             {
-                TileSpawns[i] = new List<TileSpawnEntity>();
+                TileSpawns[i] = [];
             }
         }
 
@@ -142,7 +144,8 @@ namespace UORespawnApp.Scripts.Utilities
             try
             {
                 TileSpawns.Clear();
-                InitializeTileSpawns(); // Ensure maps 0-5 exist even if file is empty/missing
+
+                InitializeTileSpawns();
 
                 BinarySerializationService.LoadTileSpawns();
             }
@@ -160,7 +163,7 @@ namespace UORespawnApp.Scripts.Utilities
         /// Region spawn data indexed by MapId
         /// Each map contains a list of RegionSpawnEntity objects
         /// </summary>
-        internal static Dictionary<int, List<RegionSpawnEntity>> RegionSpawns { get; private set; } = new();
+        internal static Dictionary<int, List<RegionSpawnEntity>> RegionSpawns { get; private set; } = [];
 
         /// <summary>
         /// Initialize Region Spawns dictionary with empty lists for each map (0-5)
@@ -169,7 +172,7 @@ namespace UORespawnApp.Scripts.Utilities
         {
             for (int i = 0; i <= 5; i++)
             {
-                RegionSpawns[i] = new List<RegionSpawnEntity>();
+                RegionSpawns[i] = [];
             }
         }
 
@@ -196,7 +199,8 @@ namespace UORespawnApp.Scripts.Utilities
             try
             {
                 RegionSpawns.Clear();
-                InitializeRegionSpawns(); // Ensure maps 0-5 exist even if file is empty/missing
+
+                InitializeRegionSpawns();
 
                 BinarySerializationService.LoadRegionSpawns();
             }
@@ -270,10 +274,12 @@ namespace UORespawnApp.Scripts.Utilities
                 try
                 {
                     var fullPath = MapUtility.GetMapImagePath(SESSION.Current_Map);
+
                     if (File.Exists(fullPath))
                     {
                         var bytes = File.ReadAllBytes(fullPath);
                         var base64 = Convert.ToBase64String(bytes);
+
                         return $"data:image/bmp;base64,{base64}";
                     }
                 }

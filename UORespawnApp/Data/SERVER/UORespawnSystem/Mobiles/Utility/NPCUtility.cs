@@ -18,6 +18,27 @@ namespace Server.Custom.UORespawnSystem.Mobiles
 
     internal static class NPCUtility
     {
+        internal static void CheckNightDress(Mobile m)
+        {
+            if (SpawnTimeInfo.IsNight(m))
+            {
+                if (Utility.RandomBool())
+                {
+                    m.EquipItem(new Lantern() { Burning = true });
+                }
+                else
+                {
+                    m.EquipItem(new Torch() { Burning = true });
+                }
+            }
+            else
+            {
+                m.FindItemOnLayer(Layer.OneHanded)?.Delete();
+
+                m.FindItemOnLayer(Layer.TwoHanded)?.Delete();
+            }
+        }
+
         internal static void SetDress(BaseCreature bc, NPCTypes npcType)
         {
             bool canEquip = true;

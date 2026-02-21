@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Server.Custom.UORespawnSystem.Enums;
@@ -8,6 +9,25 @@ namespace Server.Custom.UORespawnSystem.SpawnHelpers
     internal static class SpawnTimeInfo
     {
         private static readonly List<int> nightLabels = new List<int>() { 1042957, 1042950, 1042951, 1042952 };
+
+        private static Timer _CheckClockTimer;
+
+        public static void Initialize()
+        {
+            _CheckClockTimer = Timer.DelayCall(
+                TimeSpan.FromSeconds(UORespawnSettings.CHECK_TIME_INTERVAL),
+                TimeSpan.FromSeconds(UORespawnSettings.CHECK_TIME_INTERVAL),
+                OnTimerTick);
+        }
+
+        private static void OnTimerTick()
+        {
+            if (_CheckClockTimer != null)
+            {
+                // Toggle Day/Night
+                SpawnVendors.ToggleVendorWorking();
+            }
+        }
 
         internal static bool IsNight(Mobile from)
         {

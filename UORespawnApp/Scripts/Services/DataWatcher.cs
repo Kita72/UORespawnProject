@@ -21,6 +21,7 @@ namespace UORespawnApp
             if (!IsSupported)
             {
                 _watcher = null;
+
                 Logger.Warning("DataWatcher not supported on this platform (requires Windows or macOS)");
                 return;
             }
@@ -39,11 +40,13 @@ namespace UORespawnApp
                     };
 
                     SetupWatcher();
+
                     Logger.Info($"DataWatcher started for: {Settings.ServUODataFolder}");
                 }
                 catch (Exception ex)
                 {
                     Logger.Warning($"DataWatcher failed to start: {ex.Message}");
+
                     _watcher?.Dispose();
                     _watcher = null;
                 }
@@ -51,6 +54,7 @@ namespace UORespawnApp
             else
             {
                 _watcher = null;
+
                 Logger.Warning("DataWatcher not started - No ServUO folder configured");
             }
         }
@@ -111,13 +115,15 @@ namespace UORespawnApp
             }
         }
 
-        private async Task ReloadBestiary()
+        private static async Task ReloadBestiary()
         {
             try
             {
                 // Clear existing list to force reload with server-generated data
                 BestiarySpawnUtility.ClearSpawnList();
+
                 await BestiarySpawnUtility.LoadSpawnList();
+
                 Logger.Info("Bestiary reloaded from server");
             }
             catch (Exception ex)
@@ -126,13 +132,15 @@ namespace UORespawnApp
             }
         }
 
-        private async Task ReloadRegionList()
+        private static async Task ReloadRegionList()
         {
             try
             {
                 // Clear existing region data to force reload with server-generated data
                 RegionDataUtility.ClearRegionData();
+
                 await RegionDataUtility.EnsureLoadedAsync();
+
                 Logger.Info("Region list reloaded from server");
             }
             catch (Exception ex)
@@ -151,6 +159,7 @@ namespace UORespawnApp
                 _watcher.Changed -= OnChanged;
                 _watcher.Created -= OnChanged;
                 _watcher.Dispose();
+
                 Logger.Info("DataWatcher stopped");
             }
         }

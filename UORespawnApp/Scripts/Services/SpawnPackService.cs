@@ -333,7 +333,7 @@ namespace UORespawnApp.Scripts.Services
                     Logger.Info("[SpawnPack] Reloading data into memory...");
                     // Load the pack data into memory
                     Utility.LoadSettings();
-                    Utility.LoadSpawnData();
+                    Utility.LoadBoxSpawnData();
                     Utility.LoadTileSpawnData();
                     Utility.LoadRegionSpawnData();
 

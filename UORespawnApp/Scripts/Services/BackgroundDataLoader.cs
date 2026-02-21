@@ -50,6 +50,7 @@ namespace UORespawnApp.Scripts.Services
             try
             {
                 var packName = Settings.CurrentPackName;
+
                 if (string.IsNullOrEmpty(packName))
                 {
                     Logger.Info("No current pack name set - active pack path not initialized");
@@ -62,6 +63,7 @@ namespace UORespawnApp.Scripts.Services
                 var importedPath = Path.Combine(PathConstants.PacksImportedPath, packName);
 
                 string? packFolder = null;
+
                 if (Directory.Exists(approvedPath))
                 {
                     packFolder = approvedPath;
@@ -83,9 +85,11 @@ namespace UORespawnApp.Scripts.Services
 
                 // Resolve the actual data path (might be in UOR_DATA subfolder)
                 var dataPath = ResolvePackDataPath(packFolder);
+
                 if (dataPath != null)
                 {
                     PathConstants.ActivePackDataPath = dataPath;
+
                     Logger.Info($"Active pack path initialized: {dataPath}");
                 }
 
@@ -105,7 +109,7 @@ namespace UORespawnApp.Scripts.Services
         /// Note: We check for SPAWN files specifically (Box, Tile, Region), not Settings,
         /// because Settings may have been created by LoadSettingsAsync before this runs.
         /// </summary>
-        private void ApplyPackIfLocalDataEmpty(string packFolder, string? packDataPath)
+        private static void ApplyPackIfLocalDataEmpty(string packFolder, string? packDataPath)
         {
             try
             {
@@ -127,6 +131,7 @@ namespace UORespawnApp.Scripts.Services
 
                 // Check if pack has spawn files to copy
                 bool packHasSpawnData = spawnFiles.Any(file => File.Exists(Path.Combine(sourcePath, file)));
+
                 if (!packHasSpawnData)
                 {
                     Logger.Warning($"Pack has no spawn data files to apply: {sourcePath}");
@@ -143,10 +148,12 @@ namespace UORespawnApp.Scripts.Services
                 foreach (var fileName in allDataFiles)
                 {
                     var sourceFile = Path.Combine(sourcePath, fileName);
+
                     if (File.Exists(sourceFile))
                     {
                         var destFile = Path.Combine(localDataPath, fileName);
                         File.Copy(sourceFile, destFile, overwrite: true);
+
                         Logger.Info($"  Copied: {fileName}");
                     }
                     else
@@ -177,6 +184,7 @@ namespace UORespawnApp.Scripts.Services
             }
 
             var nestedPath = Path.Combine(packFolder, PathConstants.UOR_DATA_SUBFOLDER);
+
             if (Directory.Exists(nestedPath) && dataFiles.Any(file => File.Exists(Path.Combine(nestedPath, file))))
             {
                 return nestedPath;
@@ -199,6 +207,7 @@ namespace UORespawnApp.Scripts.Services
 
             _isLoading = true;
             CompletedSteps = 0;
+
             Logger.Info("Starting background data loading...");
 
             var startTime = DateTime.Now;
@@ -212,7 +221,7 @@ namespace UORespawnApp.Scripts.Services
 
                 // Step 0.5: Ensure approved packs are unpacked from Backup folder
                 // This MUST happen BEFORE InitializeActivePackPath so the pack exists in Approved
-                await EnsureApprovedPacksUnpackedAsync();
+                await BackgroundDataLoader.EnsureApprovedPacksUnpackedAsync();
 
                 // Initialize active pack path from saved CurrentPackName setting
                 // Now the pack will exist in Approved (either from Backup ZIP or folder)
@@ -241,6 +250,7 @@ namespace UORespawnApp.Scripts.Services
 
                 _isComplete = true;
                 var elapsed = DateTime.Now - startTime;
+
                 Logger.Info($"Background data loading completed in {elapsed.TotalSeconds:F2} seconds");
                 
                 AllDataLoaded?.Invoke(this, EventArgs.Empty);
@@ -263,16 +273,19 @@ namespace UORespawnApp.Scripts.Services
         ///   Backup/DefaultPack.zip  → Approved/DefaultPack/ (for releases)
         ///   Backup/DefaultPack/     → Approved/DefaultPack/ (for Git repo/dev)
         /// </summary>
-        private async Task EnsureApprovedPacksUnpackedAsync()
+        private static async Task EnsureApprovedPacksUnpackedAsync()
         {
             Logger.Info("[Startup] Ensuring approved packs are unpacked from Backup...");
+
             try
             {
                 await Task.Run(() =>
                 {
                     var packService = new SpawnPackService();
+
                     packService.UnpackApprovedPacks();
                 });
+
                 Logger.Info("[Startup] Approved packs unpacked successfully");
             }
             catch (Exception ex)
@@ -284,6 +297,7 @@ namespace UORespawnApp.Scripts.Services
         private async Task LoadSettingsAsync()
         {
             Logger.Info("[Startup Step 0/7] Loading settings...");
+
             try
             {
                 await Task.Run(() =>
@@ -291,10 +305,12 @@ namespace UORespawnApp.Scripts.Services
                     try
                     {
                         Utility.LoadSettings();
+
                         Logger.Info("[Startup Step 0/7] Settings loaded from binary file (or defaults if file missing)");
 
                         // Always save settings to ensure binary file exists (creates file if missing)
                         Utility.SaveSettings();
+
                         Logger.Info($"[Startup Step 0/7] Current pack: {Settings.CurrentPackName}");
                     }
                     catch (Exception ex)
@@ -314,14 +330,17 @@ namespace UORespawnApp.Scripts.Services
         private async Task LoadBoxSpawnDataAsync()
         {
             Logger.Info("[Startup Step 1/7] Loading box spawn data...");
+
             try
             {
                 await Task.Run(() =>
                 {
                     try
                     {
-                        Utility.LoadSpawnData();
+                        Utility.LoadBoxSpawnData();
+
                         var totalSpawns = Utility.BoxSpawns.Values.Sum(list => list.Count);
+
                         Logger.Info($"[Startup Step 1/7] Loaded {totalSpawns} spawn boxes across all maps");
                     }
                     catch (Exception ex)
@@ -343,6 +362,7 @@ namespace UORespawnApp.Scripts.Services
         private async Task LoadTileSpawnDataAsync()
         {
             Logger.Info("[Startup Step 2/7] Loading tile spawn data...");
+
             try
             {
                 await Task.Run(() =>
@@ -350,7 +370,9 @@ namespace UORespawnApp.Scripts.Services
                     try
                     {
                         Utility.LoadTileSpawnData();
+
                         var totalTileSpawns = Utility.TileSpawns.Values.Sum(list => list.Count);
+
                         Logger.Info($"[Startup Step 2/7] Loaded {totalTileSpawns} tile spawn configurations across all maps");
                     }
                     catch (Exception ex)
@@ -372,6 +394,7 @@ namespace UORespawnApp.Scripts.Services
         private async Task LoadRegionSpawnDataAsync()
         {
             Logger.Info("[Startup Step 3/7] Loading region spawn data...");
+
             try
             {
                 await Task.Run(() =>
@@ -379,13 +402,16 @@ namespace UORespawnApp.Scripts.Services
                     try
                     {
                         Utility.LoadRegionSpawnData();
+
                         var totalRegionSpawns = Utility.RegionSpawns.Values.Sum(list => list.Count);
+
                         Logger.Info($"[Startup Step 3/7] Loaded {totalRegionSpawns} region spawn configurations across all maps");
 
                         // Clean up invalid/fake region names (wrapped in try-catch to not block loading)
                         try
                         {
                             var (corrected, removed) = RegionSpawnCleanupUtility.CleanupRegionSpawns();
+
                             if (corrected > 0 || removed > 0)
                             {
                                 Logger.Info($"[Startup Step 3/7] Region cleanup: {corrected} names corrected, {removed} invalid regions removed");
@@ -422,11 +448,12 @@ namespace UORespawnApp.Scripts.Services
         /// After cleanup, sync the cleaned region spawn data back to the Backup folder.
         /// This ensures next launch starts with clean data (cleanup only runs once).
         /// </summary>
-        private void SyncCleanedDataToBackup()
+        private static void SyncCleanedDataToBackup()
         {
             try
             {
                 var currentPackName = Settings.CurrentPackName;
+
                 if (string.IsNullOrEmpty(currentPackName))
                 {
                     Logger.Warning("[Cleanup] No current pack name set - skipping backup sync");
@@ -435,6 +462,7 @@ namespace UORespawnApp.Scripts.Services
 
                 // Find the backup folder for this pack
                 var backupPackFolder = Path.Combine(PathConstants.PacksBackupPath, currentPackName);
+
                 if (!Directory.Exists(backupPackFolder))
                 {
                     Logger.Warning($"[Cleanup] Backup folder not found: {backupPackFolder}");
@@ -443,6 +471,7 @@ namespace UORespawnApp.Scripts.Services
 
                 // Get the source file (just saved to LocalDataPath)
                 var sourceFile = PathConstants.GetLocalFilePath(PathConstants.REGION_FILENAME);
+
                 if (!File.Exists(sourceFile))
                 {
                     Logger.Warning($"[Cleanup] Source file not found: {sourceFile}");
@@ -451,11 +480,14 @@ namespace UORespawnApp.Scripts.Services
 
                 // Copy to backup folder
                 var destFile = Path.Combine(backupPackFolder, PathConstants.REGION_FILENAME);
+
                 File.Copy(sourceFile, destFile, overwrite: true);
+
                 Logger.Info($"[Cleanup] Synced cleaned data to Backup: {destFile}");
 
                 // Also update the ZIP if it exists (so published builds get clean data)
                 var zipPath = Path.Combine(PathConstants.PacksBackupPath, $"{currentPackName}.zip");
+
                 if (File.Exists(zipPath))
                 {
                     UpdateZipWithCleanedData(zipPath, sourceFile, PathConstants.REGION_FILENAME);
@@ -470,11 +502,11 @@ namespace UORespawnApp.Scripts.Services
         /// <summary>
         /// Updates a ZIP file with the cleaned region spawn data.
         /// </summary>
-        private void UpdateZipWithCleanedData(string zipPath, string sourceFile, string entryName)
+        private static void UpdateZipWithCleanedData(string zipPath, string sourceFile, string entryName)
         {
             try
             {
-                using var archive = System.IO.Compression.ZipFile.Open(zipPath, System.IO.Compression.ZipArchiveMode.Update);
+                using var archive = ZipFile.Open(zipPath, ZipArchiveMode.Update);
 
                 // Remove existing entry if present
                 var existingEntry = archive.GetEntry(entryName);
@@ -494,6 +526,7 @@ namespace UORespawnApp.Scripts.Services
         private async Task LoadBestiaryAsync()
         {
             Logger.Info("[Startup Step 4/7] Loading bestiary...");
+
             try
             {
                 await BestiarySpawnUtility.LoadSpawnList();
@@ -501,6 +534,7 @@ namespace UORespawnApp.Scripts.Services
                 IsBestiaryLoaded = true;
                 CompletedSteps++;
                 BestiaryLoaded?.Invoke(this, EventArgs.Empty);
+
                 Logger.Info($"[Startup Step 4/7] Loaded {BestiarySpawnUtility.BestiaryNameList?.Count ?? 0} creatures in bestiary");
             }
             catch (Exception ex)
@@ -615,9 +649,10 @@ namespace UORespawnApp.Scripts.Services
             {
                 Logger.Info("Reloading spawn data due to server file changes...");
                 
-                // Reload spawn data from CSV files
-                await Task.Run(() => Utility.LoadSpawnData());
-                
+                await Task.Run(() => Utility.LoadBoxSpawnData());
+                await Task.Run(() => Utility.LoadRegionSpawnData());
+                await Task.Run(() => Utility.LoadTileSpawnData());
+
                 Logger.Info("Spawn data reloaded successfully");
             }
             catch (Exception ex)

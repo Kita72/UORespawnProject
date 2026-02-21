@@ -71,7 +71,7 @@ namespace Server.Custom.UORespawnSystem
 
             SubscribeEvents();
 
-            SpawnVendors.LoadAllSigns();
+            SpawnVendors.VendorLoadInitialize();
 
             StartTimer();
 
@@ -217,13 +217,11 @@ namespace Server.Custom.UORespawnSystem
         private static void EventSink_Shutdown(ShutdownEventArgs e)
         {
             SpawnDebugService.FlushToFile("Server shutdown");
-            //ClearAllSpawns();
         }
 
         private static void EventSink_Crashed(CrashedEventArgs e)
         {
             SpawnDebugService.FlushToFile("Server crash");
-            //ClearAllSpawns();
         }
 
         internal static void AddPlayer(PlayerMobile pm)
@@ -574,12 +572,12 @@ namespace Server.Custom.UORespawnSystem
                 // 4. Record metrics
                 SpawnMetricsService.RecordCleanup(deletedCount, recycledCount, reason);
 
-                // 5. Log results
+                // 5. Clean Vendors
+                deletedCount += SpawnVendors.CleanUpVendors();
+
+                // 6. Log results
                 UORespawnUtility.SendConsoleMsg(ConsoleColor.Yellow,
                     $"CLEANUP COMPLETE: Deleted {deletedCount} active + {recycledCount} recycled = {deletedCount + recycledCount} total spawns");
-
-                // 6. Clean Vendors
-                SpawnVendors.CleanUpVendors();
 
                 return returnCount ? deletedCount : 0;
             }

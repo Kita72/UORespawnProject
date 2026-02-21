@@ -3,8 +3,8 @@ using System.IO;
 using System.Linq;
 using System.Collections.Generic;
 
+using Server.Items;
 using Server.Custom.UORespawnSystem.Entities;
-using Server.Custom.UORespawnSystem.SpawnHelpers;
 
 namespace Server.Custom.UORespawnSystem.SpawnUtility
 {
@@ -14,10 +14,12 @@ namespace Server.Custom.UORespawnSystem.SpawnUtility
         private static readonly string BoxSpawnFile = Path.Combine(UORespawnSettings.UOR_DATA, "UOR_BoxSpawn.bin");
         private static readonly string RegionSpawnFile = Path.Combine(UORespawnSettings.UOR_DATA, "UOR_RegionSpawn.bin");
         private static readonly string TileSpawnFile = Path.Combine(UORespawnSettings.UOR_DATA, "UOR_TileSpawn.bin");
+        private static readonly string VendorSpawnFile = Path.Combine(UORespawnSettings.UOR_DATA, "UOR_VendorSpawn.bin");
 
         internal static Dictionary<Map, List<BoxEntity>> BoxSpawns { get; private set; }
         internal static Dictionary<Map, List<RegionEntity>> RegionSpawns { get; private set; }
         internal static Dictionary<Map, List<TileEntity>> TileSpawns { get; private set; }
+        internal static Dictionary<Map, List<VendorEntity>> VendorSpawns { get; private set; }
 
         internal static void LoadSpawns(string message = "Loading")
         {
@@ -26,27 +28,22 @@ namespace Server.Custom.UORespawnSystem.SpawnUtility
             BoxSpawns = new Dictionary<Map, List<BoxEntity>>();
             RegionSpawns = new Dictionary<Map, List<RegionEntity>>();
             TileSpawns = new Dictionary<Map, List<TileEntity>>();
+            VendorSpawns = new Dictionary<Map, List<VendorEntity>>();
 
             LoadSettingsData();
             LoadBoxSpawnData();
             LoadRegionSpawnData();
             LoadTileSpawnData();
+            LoadVendorSpawnData();
 
             UORespawnUtility.SendConsoleMsg(ConsoleColor.Green, "Spawn Loaded...");
         }
 
         internal static void ReLoadSpawns()
         {
-            LoadSpawns("Reloading");
+            UORespawnCore.ClearAllSpawns();
 
-            try
-            {
-                SpawnVendors.TrySpawnVendors(SpawnVendors.LoadVendorSpawn());
-            }
-            catch
-            {
-                UORespawnUtility.SendConsoleMsg(ConsoleColor.Red, "Vendor ReLoaded Failed!");
-            }
+            LoadSpawns("Reloading");
         }
 
         #region Binary Loading Methods
@@ -145,7 +142,7 @@ namespace Server.Custom.UORespawnSystem.SpawnUtility
                 }
 
                 UORespawnUtility.SendConsoleMsg(ConsoleColor.Green,
-                    $"Tile Spawn: Loaded {totalTiles} tile(s) across {mapCount} map(s)");
+                    $"Tile Spawn: Loaded {totalTiles} tiles across {mapCount} maps");
             }
             catch (Exception ex)
             {
@@ -275,7 +272,7 @@ namespace Server.Custom.UORespawnSystem.SpawnUtility
                 }
 
                 UORespawnUtility.SendConsoleMsg(ConsoleColor.Green,
-                    $"Region Spawn: Loaded {totalRegions} region(s) across {mapCount} map(s)");
+                    $"Region Spawn: Loaded {totalRegions} regions across {mapCount} maps");
             }
             catch (Exception ex)
             {
@@ -389,16 +386,19 @@ namespace Server.Custom.UORespawnSystem.SpawnUtility
                         {
                             UORespawnUtility.SendConsoleMsg(ConsoleColor.Yellow,
                                 $"WARNING: Invalid map ID {mapId} in BoxSpawn binary - Skipping {boxCount} boxes");
+
                             for (int b = 0; b < boxCount; b++)
                                 SkipBoxEntity(reader);
                             continue;
                         }
 
                         Map map = Map.Maps[mapId];
+
                         if (map == null)
                         {
                             UORespawnUtility.SendConsoleMsg(ConsoleColor.Yellow,
                                 $"WARNING: Map ID {mapId} is null in BoxSpawn binary - Skipping");
+
                             for (int b = 0; b < boxCount; b++)
                                 SkipBoxEntity(reader);
                             continue;
@@ -432,7 +432,7 @@ namespace Server.Custom.UORespawnSystem.SpawnUtility
                 }
 
                 UORespawnUtility.SendConsoleMsg(ConsoleColor.Green,
-                    $"Box Spawn: Loaded {totalBoxes} box(es) across {mapCount} map(s)");
+                    $"Box Spawn: Loaded {totalBoxes} boxes across {mapCount} maps");
             }
             catch (Exception ex)
             {
@@ -490,6 +490,148 @@ namespace Server.Custom.UORespawnSystem.SpawnUtility
             SkipStringList(reader); // RareSpawns
         }
 
+        /// <summary>
+        /// Load vendor spawn data using BinaryReader (matches App format)
+        /// Format: Version(int), VersionString, MapCount, then per map: MapId, MapName, VendorCount,
+        ///         then per vendor: IsSign(bool), SignType(int), SignFacing(int), X, Y, Z, VendorList
+        /// </summary>
+        internal static void LoadVendorSpawnData()
+        {
+            try
+            {
+                if (!File.Exists(VendorSpawnFile))
+                {
+                    UORespawnUtility.SendConsoleMsg(ConsoleColor.Red,
+                        "ERROR: VendorSpawn binary not found - Use Editor to create UOR_VendorSpawn.bin");
+                    return;
+                }
+
+                int totalVendors = 0;
+                int mapCount = 0;
+
+                using (BinaryReader reader = new BinaryReader(File.Open(VendorSpawnFile, FileMode.Open, FileAccess.Read)))
+                {
+                    int fileVersion = reader.ReadInt32();
+                    string versionString = reader.ReadString();
+
+                    if (string.IsNullOrWhiteSpace(versionString))
+                    {
+                        UORespawnUtility.SendConsoleMsg(ConsoleColor.Yellow, "WARNING: VendorSpawn binary has no version info");
+                    }
+
+                    mapCount = reader.ReadInt32();
+
+                    for (int m = 0; m < mapCount; m++)
+                    {
+                        int mapId = reader.ReadInt32();
+                        string mapName = reader.ReadString();
+                        int vendorCount = reader.ReadInt32();
+
+                        // Validate map ID
+                        if (mapId < 0 || mapId >= Map.Maps.Length)
+                        {
+                            UORespawnUtility.SendConsoleMsg(ConsoleColor.Yellow,
+                                $"WARNING: Invalid map ID {mapId} in VendorSpawn binary - Skipping {vendorCount} vendors");
+
+                            for (int v = 0; v < vendorCount; v++)
+                                SkipVendorEntity(reader);
+                            continue;
+                        }
+
+                        Map map = Map.Maps[mapId];
+
+                        if (map == null)
+                        {
+                            UORespawnUtility.SendConsoleMsg(ConsoleColor.Yellow,
+                                $"WARNING: Map ID {mapId} is null in VendorSpawn binary - Skipping");
+
+                            for (int v = 0; v < vendorCount; v++)
+                                SkipVendorEntity(reader);
+                            continue;
+                        }
+
+                        // Initialize list for this map
+                        if (!VendorSpawns.ContainsKey(map))
+                        {
+                            VendorSpawns[map] = new List<VendorEntity>();
+                        }
+
+                        for (int v = 0; v < vendorCount; v++)
+                        {
+                            VendorEntity entity = ReadVendorEntity(reader);
+                            if (entity != null)
+                            {
+                                VendorSpawns[map].Add(entity);
+                                totalVendors++;
+                            }
+                        }
+                    }
+                }
+
+                // Ensure all maps have entries (even if empty)
+                foreach (Map map in Map.Maps)
+                {
+                    if (map != null && !VendorSpawns.ContainsKey(map))
+                    {
+                        VendorSpawns[map] = new List<VendorEntity>();
+                    }
+                }
+
+                UORespawnUtility.SendConsoleMsg(ConsoleColor.Green,
+                    $"Vendor Spawn: Loaded {totalVendors} vendor locations across {mapCount} maps");
+            }
+            catch (Exception ex)
+            {
+                UORespawnUtility.SendConsoleMsg(ConsoleColor.Red,
+                    $"ERROR: Failed to load VendorSpawn binary - {ex.Message}");
+            }
+        }
+
+        private static VendorEntity ReadVendorEntity(BinaryReader reader)
+        {
+            bool isSign = reader.ReadBoolean();
+            SignType signType = (SignType)reader.ReadInt32();
+            SignFacing signFacing = (SignFacing)reader.ReadInt32();
+
+            int x = reader.ReadInt32();
+            int y = reader.ReadInt32();
+            int z = reader.ReadInt32();
+
+            Point3D location = new Point3D(x, y, z);
+
+            List<string> vendorList = ReadStringList(reader);
+
+            VendorEntity entity;
+
+            if (isSign)
+            {
+                entity = new VendorEntity(signType, signFacing, location);
+            }
+            else
+            {
+                entity = new VendorEntity(location);
+            }
+
+            // Add vendors from the list
+            foreach (string vendor in vendorList)
+            {
+                entity.AddVendor(vendor);
+            }
+
+            return entity;
+        }
+
+        private static void SkipVendorEntity(BinaryReader reader)
+        {
+            reader.ReadBoolean(); // IsSign
+            reader.ReadInt32();   // SignType
+            reader.ReadInt32();   // SignFacing
+            reader.ReadInt32();   // X
+            reader.ReadInt32();   // Y
+            reader.ReadInt32();   // Z
+            SkipStringList(reader); // VendorList
+        }
+
         #endregion
 
         #region Binary Reader Helper Methods
@@ -514,44 +656,11 @@ namespace Server.Custom.UORespawnSystem.SpawnUtility
         private static void SkipStringList(BinaryReader reader)
         {
             int count = reader.ReadInt32();
+
             for (int i = 0; i < count; i++)
             {
                 reader.ReadString();
             }
-        }
-
-        #endregion
-
-        #region Binary Save Methods (Placeholders - Editor handles saving)
-
-        /// <summary>
-        /// Placeholder: Binary save should be done from Editor
-        /// TODO: Future feature for in-game editing
-        /// </summary>
-        internal static void SaveTileSpawnData()
-        {
-            UORespawnUtility.SendConsoleMsg(ConsoleColor.Yellow, "WARNING: Not implemented!");
-            // TODO: Implement when in-game editing feature is added
-        }
-
-        /// <summary>
-        /// Placeholder: Binary save should be done from Editor
-        /// TODO: Future feature for in-game editing
-        /// </summary>
-        internal static void SaveRegionSpawnData()
-        {
-            UORespawnUtility.SendConsoleMsg(ConsoleColor.Yellow, "WARNING: Not implemented!");
-            // TODO: Implement when in-game editing feature is added
-        }
-
-        /// <summary>
-        /// Placeholder: Binary save should be done from Editor
-        /// TODO: Future feature for in-game editing
-        /// </summary>
-        internal static void SaveBoxSpawnData()
-        {
-            UORespawnUtility.SendConsoleMsg(ConsoleColor.Yellow, "WARNING: Not implemented!");
-            // TODO: Implement when in-game editing feature is added
         }
 
         #endregion

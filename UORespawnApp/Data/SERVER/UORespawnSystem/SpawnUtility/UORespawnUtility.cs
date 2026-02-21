@@ -1,18 +1,20 @@
 using System;
 using System.IO;
 using System.Reflection;
+using System.Collections;
 using System.Collections.Generic;
 
 using Server.Mobiles;
 using Server.Commands;
+using Server.Targeting;
+
 using Server.Custom.UORespawnSystem.Mobiles;
 using Server.Custom.UORespawnSystem.Services;
 using Server.Custom.UORespawnSystem.SpawnHelpers;
-
-using CPA = Server.CommandPropertyAttribute;
 using Server.Custom.UORespawnSystem.Interfaces;
 using Server.Custom.UORespawnSystem.Enums;
-using System.Collections;
+
+using CPA = Server.CommandPropertyAttribute;
 
 namespace Server.Custom.UORespawnSystem.SpawnUtility
 {
@@ -98,7 +100,6 @@ namespace Server.Custom.UORespawnSystem.SpawnUtility
             {
                 do
                 {
-
                     if (attempts++ > UORespawnSettings.MAX_SPAWN_CHECKS)
                     {
                         isGoodSpawn = false;
@@ -299,7 +300,7 @@ namespace Server.Custom.UORespawnSystem.SpawnUtility
         /// <summary>
         /// Create a new spawn
         /// </summary>
-        internal static Mobile CreateSpawn(string spawnName)
+        internal static Mobile CreateSpawn(string spawnName, bool isTracked = true)
         {
             string parsedName = Spawner.ParseType(spawnName);
 
@@ -317,7 +318,10 @@ namespace Server.Custom.UORespawnSystem.SpawnUtility
                 mob = Build(mob_Type, CommandSystem.Split(mob_Type.Name)) as Mobile;
 
                 // Track Spawned
-                UORespawnTracker.AddTrackedSpawn(mob.Serial.Value);
+                if (isTracked)
+                {
+                    UORespawnTracker.AddTrackedSpawn(mob.Serial.Value);
+                }
             }
             catch (Exception ex)
             {
@@ -433,6 +437,45 @@ namespace Server.Custom.UORespawnSystem.SpawnUtility
             return null;
         }
 
+        internal static List<(int, Point3D)> GetStaticLocationsList(string name)
+        {
+            List<(int, Point3D)> locations = new List<(int, Point3D)>();
+
+            StaticTarget staticTarg;
+
+            StaticTile[] targ;
+
+            Point3D loc;
+
+            for (int l = 0; l < 6; l++)
+            {
+                for (int i = 0; i < Map.Maps[l].Width; i++)
+                {
+                    for (int j = 0; j < Map.Maps[l].Width; j++)
+                    {
+                        targ = Map.Trammel.Tiles.GetStaticTiles(i, j);
+
+                        if (targ.Length > 0)
+                        {
+                            for (int k = 0; k < targ.Length; k++)
+                            {
+                                loc = new Point3D(i, j, targ[k].Z);
+
+                                staticTarg = new StaticTarget(loc, targ[k].ID);
+
+                                if (staticTarg.Name == name)
+                                {
+                                    locations.Add((l, loc));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            return locations;
+        }
+
         internal static void CleanUpOldFiles(string folderPath, int days = 7)
         {
             try
@@ -489,26 +532,14 @@ namespace Server.Custom.UORespawnSystem.SpawnUtility
         /// </summary>
         internal static void SendConsoleMsg(ConsoleColor color, string message)
         {
-            // Determine if this is a system message (console only) or debug message (buffered)
-            bool isSystemMessage = IsSystemColor(color);
-
-            if (isSystemMessage)
+            if (IsSystemColor(color))
             {
-                // System messages always go to console only
                 Console.ForegroundColor = color;
                 Console.WriteLine($"[UORespawn]: {message}");
                 Console.ResetColor();
             }
-            else
-            {
-                // Debug/Error messages go to console always
-                Console.ForegroundColor = color;
-                Console.WriteLine($"[UORespawn]: {message}");
-                Console.ResetColor();
 
-                // AND buffer to file if debug enabled
-                SpawnDebugService.BufferDebugMessage(color, message);
-            }
+            SpawnDebugService.BufferDebugMessage(color, message);
         }
 
         /// <summary>

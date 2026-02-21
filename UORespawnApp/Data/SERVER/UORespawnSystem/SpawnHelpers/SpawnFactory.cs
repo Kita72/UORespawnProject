@@ -53,13 +53,12 @@ namespace Server.Custom.UORespawnSystem.SpawnHelpers
             // Box
             spawn = BoxSpawner.TryBoxSpawn(map, location, isWater);
 
-            if (!string.IsNullOrEmpty(spawn) && _Roll > UORespawnSettings.CHANCE_UNCOMMON)
+            if (!string.IsNullOrEmpty(spawn) && _Roll > UORespawnSettings.CHANCE_RARE)
             {
                 return spawn;
             }
 
             // Region
-
             spawn = RegionSpawner.TryRegionSpawn(map, region, location, isWater);
 
             if (!string.IsNullOrEmpty(spawn) && _Roll > UORespawnSettings.CHANCE_UNCOMMON)
@@ -70,7 +69,7 @@ namespace Server.Custom.UORespawnSystem.SpawnHelpers
             // Tile
             spawn = TileSpawner.TryTileSpawn(map, location, isWater);
 
-            if (!string.IsNullOrEmpty(spawn))
+            if (!string.IsNullOrEmpty(spawn)) // 100% Chance!
             {
                 return spawn;
             }

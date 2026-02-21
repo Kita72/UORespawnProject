@@ -101,7 +101,7 @@ namespace Server.Custom.UORespawnSystem.Services
             {
                 lock (_logLock)
                 {
-                    using (StreamWriter writer = new StreamWriter(LOG_FILE, append: true))
+                    using (StreamWriter writer = new StreamWriter(LOG_FILE, append: false))
                     {
                         // Write header
                         writer.WriteLine("════════════════════════════════════════════════════════");
