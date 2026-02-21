@@ -11,6 +11,7 @@ using Server.Custom.UORespawnSystem.Mobiles;
 using Server.Custom.UORespawnSystem.Gumps;
 using Server.Custom.UORespawnSystem.Services;
 using Server.Custom.UORespawnSystem.SpawnUtility;
+using Server.Engines.Doom;
 
 namespace Server.Custom.UORespawnSystem.Commands
 {
@@ -23,7 +24,7 @@ namespace Server.Custom.UORespawnSystem.Commands
             CommandSystem.Register("DebugRespawn", AccessLevel.Administrator, new CommandEventHandler(ToggleDebug_OnCommand));
             CommandSystem.Register("TrackRespawn", AccessLevel.Administrator, new CommandEventHandler(TrackRespawn_OnCommand));
             CommandSystem.Register("ClearRespawn", AccessLevel.Administrator, new CommandEventHandler(ClearRespawn_OnCommand));
-            CommandSystem.Register("GenRespawnList", AccessLevel.Administrator, new CommandEventHandler(GenSpawnList_OnCommand));
+            CommandSystem.Register("GenBestiaryList", AccessLevel.Administrator, new CommandEventHandler(GenSpawnList_OnCommand));
             CommandSystem.Register("GenRegionList", AccessLevel.Administrator, new CommandEventHandler(GenRegionList_OnCommand));
             CommandSystem.Register("GenSpawnerList", AccessLevel.Administrator, new CommandEventHandler(GenSpawnerList_OnCommand));
             CommandSystem.Register("GenVendorList", AccessLevel.Administrator, new CommandEventHandler(GenVendorList_OnCommand));
@@ -115,8 +116,8 @@ namespace Server.Custom.UORespawnSystem.Commands
             UORespawnUtility.SendConsoleMsg(ConsoleColor.Yellow, $"{e.Mobile.Name} cleared all spawns - Deleted: {deletedCount} mobs");
         }
 
-        // GenRespawnList
-        [Usage("GenRespawnList")]
+        // GenBestiaryList
+        [Usage("GenBestiaryList")]
         [Description("UORespawn: Gen Bestiary List")]
         public static void GenSpawnList_OnCommand(CommandEventArgs e)
         {
@@ -129,11 +130,13 @@ namespace Server.Custom.UORespawnSystem.Commands
             {
                 var allTypes = Assembly.GetExecutingAssembly().GetTypes();
 
-                var types = allTypes.Where(t => IsValidSpawn(t, type)).ToList();
+                var types = allTypes.Where(t => IsValidSpawn(t, type)).Select(t => t.Name).ToList();
+
+                types.Sort();
 
                 if (types.Count > 0)
                 {
-                    File.WriteAllLines(filePath, types.Select(t => t.Name).ToList());
+                    File.WriteAllLines(filePath, types);
                 }
             }
             catch (Exception ex)
@@ -143,7 +146,7 @@ namespace Server.Custom.UORespawnSystem.Commands
                 return;
             }
 
-            m.SendMessage("List Generated!");
+            m.SendMessage("Bestiary List Generated!");
         }
 
         private static bool IsValidSpawn(Type t, Type type)
@@ -151,6 +154,8 @@ namespace Server.Custom.UORespawnSystem.Commands
             if (t.Name == nameof(RiftMob) || t.Name == nameof(PlaceHolder)) { return false; }
 
             if (t.Name.EndsWith("EffectNPC") || t.Name == nameof(AmbushNPC)) { return true; }
+
+            if (t.Name == nameof(GameMaster) || t.Name.StartsWith("Summoned")) { return false; }
 
             if (t.IsClass)
             {
@@ -352,7 +357,7 @@ namespace Server.Custom.UORespawnSystem.Commands
 
             File.WriteAllText(Path.Combine(UORespawnSettings.UOR_DATA, "UOR_VendorList.txt"), sb.ToString());
 
-            e.Mobile.SendMessage($"Vendor List Generated! ({sb.Length} vendors)");
+            e.Mobile.SendMessage("Vendor List Generated!)");
         }
 
         // ReloadRespawn
