@@ -6,49 +6,38 @@
 <div class="update-section">
     @if (isChecking)
     {
-        <div class="update-checking">
-            <div class="spinner-border spinner-border-sm text-light me-2" role="status">
-                <span class="visually-hidden">Checking...</span>
+        <button class="btn btn-outline-secondary btn-sm w-100" disabled>
+            <div class="d-flex align-items-center justify-content-center">
+                <div class="spinner-border spinner-border-sm me-2" role="status">
+                    <span class="visually-hidden">Checking...</span>
+                </div>
+                <span>Checking...</span>
             </div>
-            <small class="text-light">Checking for updates...</small>
-        </div>
+        </button>
     }
     else if (updateInfo?.HasUpdate == true)
     {
-        <button class="btn btn-warning btn-sm w-100 mb-2" @onclick="OpenReleases">
+        <button class="btn btn-warning btn-sm w-100 update-available" @onclick="OpenReleases">
             <span class="bi bi-arrow-up-circle-fill me-1"></span>
-            Update Available!
-            <div class="small">v@(updateInfo.LatestVersion)</div>
+            Update: v@(updateInfo.LatestVersion)
+            <span class="current-version">(current: v@(UpdateChecker.CurrentVersion))</span>
         </button>
-        <div class="version-text">
-            Current: v@(UpdateChecker.CurrentVersion)
-        </div>
     }
     else if (!string.IsNullOrEmpty(updateInfo?.ErrorMessage))
     {
-        <button class="btn btn-outline-secondary btn-sm w-100 mb-2" @onclick="CheckForUpdates" disabled="@(isChecking)">
+        <button class="btn btn-outline-secondary btn-sm w-100" @onclick="CheckForUpdates">
             <span class="bi bi-exclamation-triangle me-1"></span>
-            Check Failed
-        </button>
-        <div class="version-text">
             v@(UpdateChecker.CurrentVersion)
-            <button class="btn btn-link btn-sm p-0 ms-2" @onclick="CheckForUpdates" title="Retry check">
-                <span class="bi bi-arrow-clockwise"></span>
-            </button>
-        </div>
+            <span class="bi bi-arrow-clockwise ms-2" title="Retry check"></span>
+        </button>
     }
     else
     {
-        <button class="btn btn-success btn-sm w-100 mb-2" @onclick="OpenReleases">
+        <button class="btn btn-success btn-sm w-100" @onclick="OpenReleases" title="Click for releases, or use refresh to check">
             <span class="bi bi-check-circle-fill me-1"></span>
-            Up to Date
-        </button>
-        <div class="version-text">
             v@(UpdateChecker.CurrentVersion)
-            <button class="btn btn-link btn-sm p-0 ms-2" @onclick="CheckForUpdates" title="Check for updates">
-                <span class="bi bi-arrow-clockwise"></span>
-            </button>
-        </div>
+            <span class="bi bi-arrow-clockwise ms-2 refresh-icon" @onclick:stopPropagation="true" @onclick="CheckForUpdates" title="Check for updates"></span>
+        </button>
     }
 </div>
 

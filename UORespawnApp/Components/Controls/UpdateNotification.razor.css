@@ -4,37 +4,36 @@
     margin-top: auto;
 }
 
-.update-checking {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 10px;
-}
-
-.version-text {
-    text-align: center;
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 0.85rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.version-text .btn-link {
-    color: rgba(255, 255, 255, 0.5);
-    text-decoration: none;
-    font-size: 0.85rem;
-}
-
-.version-text .btn-link:hover {
-    color: rgba(255, 255, 255, 0.9);
-}
-
 .update-section .btn {
     font-size: 0.85rem;
 }
 
-.update-section .btn-warning {
+.update-section .btn-success {
+    background-color: #198754;
+    border-color: #198754;
+}
+
+.update-section .btn-success:hover {
+    background-color: #157347;
+    border-color: #146c43;
+}
+
+.update-section .refresh-icon {
+    opacity: 0.7;
+    cursor: pointer;
+}
+
+.update-section .refresh-icon:hover {
+    opacity: 1;
+}
+
+.update-section .current-version {
+    display: block;
+    font-size: 0.75rem;
+    opacity: 0.8;
+}
+
+.update-section .btn-warning.update-available {
     animation: pulse 2s infinite;
 }
 
