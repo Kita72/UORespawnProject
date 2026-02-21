@@ -1,0 +1,1623 @@
+@using Microsoft.JSInterop
+@using Microsoft.Maui.Graphics
+@using System.Text.Json
+@using UORespawnApp.Scripts.Utilities
+@using UORespawnApp.Scripts.Entities
+@using UORespawnApp.Scripts.Services
+@using UORespawnApp.Scripts.Enums
+@using UORespawnApp.Scripts.Helpers
+@inject IJSRuntime JS
+@inject ViewService ViewService
+@inject ToastService ToastService
+@implements IDisposable
+
+<div class="container-fluid p-3">
+    <div class="row">
+        <div class="col-lg-9">
+            <div class="alert alert-dark mb-2 d-flex justify-content-between align-items-center" style="width:800px;">
+                <div>
+                    <span class="bi bi-shop me-1" style="color: goldenrod;"></span><strong style="color: goldenrod;">Vendor Spawn</strong> | @MapUtility.GetMapName(ViewService.CurrentMapId) | Size: @imageDim | Mouse: (@mouseWorldX, @mouseWorldY)
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="bi bi-info-circle" style="color: #6c757d; cursor: help;" title="Configure vendor spawns for shop signs and hive locations. Click a marker on the map or card to edit vendors."></span>
+                    <span class="badge bg-light text-dark" title="Total vendors assigned">@GetTotalVendorCount() Vendors</span>
+                    <button class="btn btn-sm @(zoomLevel == 2.0 ? "btn-primary" : "btn-outline-primary")" @onclick="ToggleZoom" title="Toggle Zoom (1x / 2x)">
+                        <span class="bi bi-zoom-@(zoomLevel == 2.0 ? "in" : "out")"></span> @(zoomLevel == 1.0 ? "1x" : "2x")
+                    </button>
+                </div>
+            </div>
+            <div style="position:relative; overflow:hidden; width:800px; height:600px; background:#1a1a1a; border:1px solid #333;" 
+                 tabindex="0" 
+                 @onkeydown="OnKeyDown"
+                 @onkeyup="OnKeyUp"
+                 @onmouseenter="OnMapMouseEnter"
+                 @ref="mapContainerRef">
+                <img id="vendorMapImg" src="@imageSrc" 
+                     style="position:absolute; left:0; top:0; image-rendering:pixelated; transform-origin: top left; transform: scale(@(zoomLevel.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)));"
+                     @onload="OnImageLoaded" />
+                <canvas id="vendorMapCanvas" width="800" height="600"
+                        style="position:absolute; top:0; left:0; cursor:pointer;"
+                        @onmousedown="OnMouseDown"
+                        @onmousemove="OnMouseMove"
+                        @onmouseup="OnMouseUp"
+                        @onmouseleave="OnMouseLeave"
+                        @oncontextmenu:preventDefault />
+            </div>
+            <div class="card mt-2 shadow-sm" style="width:800px;">
+                <div class="card-body py-2">
+                    <small class="text-muted">
+                        <strong>Controls:</strong> Left-Click Sign/Hive = Select | Right-Drag = Pan Map | Arrow Keys/WASD = Pan Map
+                    </small>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 right-column-container" style="padding-left:15px;">
+            <!-- Mini Map - Collapsible -->
+            <div class="card shadow-sm mb-3 map-card">
+                <div class="card-header dark-header text-center d-flex justify-content-between align-items-center">
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="ResetView" title="Reset View & Zoom" style="width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center;">
+                        <span class="bi bi-arrow-counterclockwise"></span>
+                    </button>
+                    <span style="color: goldenrod;"><span class="bi bi-map me-1"></span>Mini Map</span>
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="ToggleMiniMap" title="@(showMiniMap ? "Collapse Mini Map" : "Expand Mini Map")" style="width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center;">
+                        <span class="bi @(showMiniMap ? "bi-list" : "bi-chevron-down")"></span>
+                    </button>
+                </div>
+                @if (showMiniMap)
+                {
+                    <div class="card-body p-2 minimap-body" @key="@("minimap-body")">
+                        <canvas id="vendorMiniMapCanvas" width="250" height="188"
+                                style="cursor:pointer; border:1px solid #333; display:block; image-rendering:pixelated; width: 100%; height: auto;"
+                                @onclick="OnMiniMapClick" />
+                        <div class="d-flex gap-2 mt-2">
+                            <button class="btn btn-sm w-50 @(ViewService.ShowXMLSpawners ? "btn-success" : "btn-danger")" 
+                                    @onclick="ToggleXMLSpawners" title="Toggle XML Spawners">
+                                <span class="bi bi-gear-fill"></span> XML
+                            </button>
+                            <button class="btn btn-sm w-50 @(ViewService.ShowServerSpawns ? "btn-success" : "btn-danger")" 
+                                    @onclick="ToggleServerSpawns" title="Toggle Server Spawns">
+                                <span class="bi bi-bullseye"></span> Spawns
+                            </button>
+                        </div>
+                    </div>
+                }
+            </div>
+            
+            <!-- Vendor Spawn List - Flex to fill remaining space -->
+            <div class="card shadow-sm map-card spawn-list-container">
+                <div class="card-header dark-header text-center spawn-list-header">
+                    <span style="color: goldenrod;"><span class="bi bi-shop me-1"></span>Sign Types</span>
+                    <input type="number" 
+                           class="spawn-search-input" 
+                           value="@GetDisplayedSignTypeIndex()" 
+                           @oninput="HandleSignTypeIndexInput"
+                           min="1" 
+                           max="@GetSignTypeCount()" 
+                           placeholder="@(GetSignTypeCount() == 0 ? "" : "#")" 
+                           title="Jump to sign type by list position" />
+                    <span style="color: goldenrod;">/ @GetSignTypeCount()</span>
+                </div>
+                <div class="card-body p-2 spawn-list-body">
+                    @{
+                        var signTypes = GetSignTypesForCurrentMap();
+                        var sortedSignTypes = signTypes.OrderBy(s => s.SignType.ToString()).ToList();
+                        var cardIndex = 0;
+                    }
+                    @if (sortedSignTypes.Any())
+                    {
+                        @foreach (var signTypeGroup in sortedSignTypes)
+                        {
+                            cardIndex++;
+                            var isSelected = selectedSignType == signTypeGroup.SignType;
+                            var locationCount = signTypeGroup.SignType == SignTypes.MetalPost 
+                                ? signTypeGroup.HiveLocations.Count 
+                                : signTypeGroup.Locations.Count;
+                            var totalVendorCount = GetTotalVendorCountForSignType(signTypeGroup.SignType);
+                            var locationsWithVendors = GetLocationsWithVendorsCount(signTypeGroup.SignType);
+                            var iconInfo = GetSignTypeIconInfo(signTypeGroup.SignType);
+
+                            <div class="spawn-item @(isSelected ? "selected" : "")" @onclick="() => SelectSignType(signTypeGroup)">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <div class="flex-grow-1 d-flex align-items-center">
+                                        <span class="card-index me-2">@cardIndex</span>
+                                        <strong title="@signTypeGroup.SignType.ToString()">
+                                            <span class="bi @iconInfo.iconClass me-1" style="color: @iconInfo.color;"></span>
+                                            @FormatSignTypeName(signTypeGroup.SignType)
+                                        </strong>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        @if (locationsWithVendors > 0)
+                                        {
+                                            <span class="badge bg-success" title="@locationsWithVendors of @locationCount locations have vendors">@locationsWithVendors/@locationCount</span>
+                                            <button class="btn btn-warning" style="padding: 2px 6px; font-size: 0.7rem;" @onclick="() => ClearSignTypeVendors(signTypeGroup.SignType)" @onclick:stopPropagation="true" title="Clear All Vendors for this Sign Type">
+                                                <span class="bi bi-arrow-clockwise"></span>
+                                            </button>
+                                        }
+                                    </div>
+                                </div>
+
+                                @if (isSelected)
+                                {
+                                    <div class="spawn-controls mt-2">
+                                        <!-- Add to All Locations button -->
+                                        <div class="mb-2">
+                                            <button class="btn btn-sm btn-outline-success w-100" 
+                                                    @onclick="() => OpenBulkAddModal(signTypeGroup)" 
+                                                    @onclick:stopPropagation="true" 
+                                                    title="Add vendors to ALL locations of this sign type at once">
+                                                <i class="bi bi-people-fill me-1"></i>Add to All @locationCount Locations
+                                            </button>
+                                        </div>
+
+                                        <!-- Locations List with per-location vendor editing -->
+                                        <div class="locations-list mt-2">
+                                            <small class="text-muted d-block mb-1"><span class="bi bi-geo-alt me-1"></span>Locations (@locationCount):</small>
+                                            @if (signTypeGroup.SignType == SignTypes.MetalPost)
+                                            {
+                                                @foreach (var loc in signTypeGroup.HiveLocations)
+                                                {
+                                                    var isFocused = selectedMarkerX == loc.X && selectedMarkerY == loc.Y;
+                                                    var locVendorCount = GetVendorCountForLocation(SignTypes.MetalPost, loc.X, loc.Y, loc.Z);
+                                                    <div class="location-item small @(isFocused ? "focused" : "")" 
+                                                         @onclick="() => SelectAndJumpToHiveLocation(loc)" 
+                                                         @onclick:stopPropagation="true" 
+                                                         title="Click to select location">
+                                                        <div class="d-flex align-items-center justify-content-between w-100">
+                                                            <span>
+                                                                <span class="bi bi-hexagon-fill text-warning me-1"></span>(@loc.X, @loc.Y)
+                                                                @if (locVendorCount > 0)
+                                                                {
+                                                                    <span class="badge bg-info ms-1" style="font-size: 0.65rem;">@locVendorCount</span>
+                                                                }
+                                                            </span>
+                                                            @if (isFocused)
+                                                            {
+                                                                <button class="btn btn-sm btn-primary" style="padding: 1px 6px; font-size: 0.65rem;" 
+                                                                        @onclick="() => OpenVendorModalForHive(loc)" 
+                                                                        @onclick:stopPropagation="true" 
+                                                                        title="Edit vendors for this location">
+                                                                    <i class="bi bi-person-plus-fill"></i>
+                                                                </button>
+                                                            }
+                                                        </div>
+                                                    </div>
+                                                }
+                                            }
+                                            else
+                                            {
+                                                @foreach (var loc in signTypeGroup.Locations)
+                                                {
+                                                    var isFocused = selectedMarkerX == loc.X && selectedMarkerY == loc.Y;
+                                                    var locVendorCount = GetVendorCountForLocation(loc.SignType, loc.X, loc.Y, loc.Z);
+                                                    <div class="location-item small @(isFocused ? "focused" : "")" 
+                                                         @onclick="() => SelectAndJumpToSignLocation(loc)" 
+                                                         @onclick:stopPropagation="true" 
+                                                         title="Click to select location">
+                                                        <div class="d-flex align-items-center justify-content-between w-100">
+                                                            <span>
+                                                                <span class="bi bi-geo-alt-fill text-info me-1"></span>(@loc.X, @loc.Y)
+                                                                @if (locVendorCount > 0)
+                                                                {
+                                                                    <span class="badge bg-info ms-1" style="font-size: 0.65rem;">@locVendorCount</span>
+                                                                }
+                                                            </span>
+                                                            @if (isFocused)
+                                                            {
+                                                                <button class="btn btn-sm btn-primary" style="padding: 1px 6px; font-size: 0.65rem;" 
+                                                                        @onclick="() => OpenVendorModalForSign(loc)" 
+                                                                        @onclick:stopPropagation="true" 
+                                                                        title="Edit vendors for this location">
+                                                                    <i class="bi bi-person-plus-fill"></i>
+                                                                </button>
+                                                            }
+                                                        </div>
+                                                    </div>
+                                                }
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="text-center text-muted py-3">
+                            <small>No sign/hive data loaded for this map</small>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<SpawnCategoryModal IsVisible="@showModal"
+                    CategoryName="@GetModalCategoryName()"
+                    SpawnTypeName="Vendors"
+                    SourceListName="Vendor Types"
+                    CurrentSpawns="@currentVendorList"
+                    SourceList="@(VendorListUtility.VendorNameList ?? new List<string>())"
+                    OnClose="@CloseModal"
+                    OnSave="@SaveModal" />
+
+@code {
+    private string imageSrc = "";
+    private string imageDim = "Loading...";
+    private double panX = 0;
+    private double panY = 0;
+    private int mouseWorldX = 0;
+    private int mouseWorldY = 0;
+    
+    private bool isPanning = false;
+    
+    private int imgWidth = 0;
+    private int imgHeight = 0;
+    
+    private ElementReference mapContainerRef;
+    
+    // Zoom level (1.0 = actual size, 2.0 = 2x zoomed in)
+    private double zoomLevel = 1.0;
+    
+    // Store last position AND zoom for each map (static so it persists across component instances)
+    private static Dictionary<int, (double panX, double panY, double zoom)> mapPositions = new();
+    
+    // Track which map we're currently viewing
+    private int currentMapTracked = 0;
+    
+    // Mini map collapse
+    private bool showMiniMap = true;
+
+    // Sign type selection
+    private SignTypes? selectedSignType = null;
+
+    // Selected marker position (for highlighting specific marker on map AND for per-location editing)
+    private int? selectedMarkerX = null;
+    private int? selectedMarkerY = null;
+    private int? selectedMarkerZ = null;
+    private bool selectedIsHive = false;
+
+    // Sign type search index (1-based position in sorted list)
+    private int? signTypeSearchIndex = null;
+
+    // Modal state - per-location or bulk add mode
+    private bool showModal = false;
+    private bool isBulkAddMode = false; // true = adding to ALL locations of a sign type
+    private SignTypes currentSignType = SignTypes.MetalPost;
+    private FacingTypes currentFacing = FacingTypes.North;
+    private Point3D currentLocation = new();
+    private bool currentIsHive = false;
+    private List<string> currentVendorList = new();
+
+    // Sign type group for UI display
+    private class SignTypeGroup
+    {
+        public SignTypes SignType { get; set; }
+        public List<SignLocation> Locations { get; set; } = new();
+        public List<HiveLocation> HiveLocations { get; set; } = new();
+    }
+
+    protected override void OnInitialized()
+    {
+        imageSrc = Utility.GetMapImagePath();
+
+        if (string.IsNullOrEmpty(imageSrc))
+        {
+            Logger.Warning("No map image available for current map");
+        }
+
+        if (Utility.SESSION != null)
+        {
+            currentMapTracked = Utility.SESSION.Current_Map;
+        }
+
+        ViewService.OnViewChanged += OnViewChanged;
+        ViewService.OnXMLSpawnersChanged += HandleXMLSpawnersChanged;
+        ViewService.OnServerSpawnsChanged += HandleServerSpawnsChanged;
+    }
+
+    private async void HandleXMLSpawnersChanged()
+    {
+        await InvokeAsync(async () =>
+        {
+            if (ViewService.ShowXMLSpawners)
+            {
+                var xmlSpawners = SpawnerListUtility.GetSpawnersForMap(ViewService.CurrentMapId);
+                if (xmlSpawners.Count > 0)
+                {
+                    var options = new System.Text.Json.JsonSerializerOptions 
+                    { 
+                        PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+                        WriteIndented = false 
+                    };
+                    var json = System.Text.Json.JsonSerializer.Serialize(xmlSpawners, options);
+                    await JS.InvokeVoidAsync("eval", $"window.mapModule.showXMLSpawners({json})");
+                }
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("eval", "window.mapModule.hideXMLSpawners()");
+            }
+            StateHasChanged();
+        });
+    }
+
+    private async void HandleServerSpawnsChanged()
+    {
+        await InvokeAsync(async () =>
+        {
+            if (ViewService.ShowServerSpawns && MapDisplayUtility.HasSpawnData)
+            {
+                var spawnData = MapDisplayUtility.GetSpawnDataForMap(ViewService.CurrentMapId);
+                if (spawnData.Count > 0)
+                {
+                    var options = new System.Text.Json.JsonSerializerOptions 
+                    { 
+                        PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+                        WriteIndented = false 
+                    };
+                    var json = System.Text.Json.JsonSerializer.Serialize(spawnData, options);
+                    await JS.InvokeVoidAsync("eval", $"window.mapModule.showServerSpawns({json})");
+                }
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("eval", "window.mapModule.hideServerSpawns()");
+            }
+            StateHasChanged();
+        });
+    }
+
+    private void OnViewChanged()
+    {
+        // Save current position AND zoom for the OLD map (the one we're leaving)
+        if (imgWidth > 0)
+        {
+            mapPositions[currentMapTracked] = (panX, panY, zoomLevel);
+            Logger.Info($"Saved position and zoom for map {currentMapTracked}: ({panX:F0}, {panY:F0}) @ {zoomLevel}x");
+        }
+
+        // Update to track the NEW map
+        if (Utility.SESSION != null)
+        {
+            currentMapTracked = Utility.SESSION.Current_Map;
+            Logger.Info($"Switching to map: {currentMapTracked}");
+        }
+
+        // Restore position AND zoom for the NEW map IMMEDIATELY
+        if (mapPositions.TryGetValue(currentMapTracked, out var savedPos))
+        {
+            panX = savedPos.panX;
+            panY = savedPos.panY;
+            zoomLevel = savedPos.zoom;
+            Logger.Info($"Pre-loaded position and zoom for map {currentMapTracked}: ({panX:F0}, {panY:F0}) @ {zoomLevel}x");
+        }
+        else
+        {
+            panX = 0;
+            panY = 0;
+            zoomLevel = 1.0;
+            Logger.Info($"New map {currentMapTracked}, defaulting to (0, 0) @ 1x zoom");
+        }
+
+        imageSrc = Utility.GetMapImagePath();
+        selectedSignType = null;
+        mouseWorldX = 0;
+        mouseWorldY = 0;
+        imgWidth = 0;
+        imgHeight = 0;
+        imageDim = "Loading...";
+        InvokeAsync(StateHasChanged);
+    }
+    
+    private async Task OnImageLoaded()
+    {
+        await Task.Delay(100);
+        try
+        {
+            var result = await JS.InvokeAsync<string>("eval", @"
+                (function() {
+                    const img = document.getElementById('vendorMapImg');
+                    if (img && img.naturalWidth > 0) {
+                        return img.naturalWidth + ',' + img.naturalHeight;
+                    }
+                    return '';
+                })()
+            ");
+            
+            if (!string.IsNullOrEmpty(result))
+            {
+                var parts = result.Split(',');
+                if (int.TryParse(parts[0], out int w) && int.TryParse(parts[1], out int h))
+                {
+                    imgWidth = w;
+                    imgHeight = h;
+                    imageDim = $"{w}x{h}";
+                    
+                    // Restore saved position AND zoom for THIS map
+                    if (mapPositions.TryGetValue(currentMapTracked, out var savedPos))
+                    {
+                        panX = savedPos.panX;
+                        panY = savedPos.panY;
+                        zoomLevel = savedPos.zoom;
+                        Logger.Info($"Restored position and zoom for map {currentMapTracked}: ({panX:F0}, {panY:F0}) @ {zoomLevel}x");
+                    }
+                    else
+                    {
+                        panX = 0;
+                        panY = 0;
+                        zoomLevel = 1.0;
+                        Logger.Info($"First visit to map {currentMapTracked}, starting at (0, 0) @ 1x");
+                    }
+
+                    // Initialize map module with custom canvas/img IDs
+                    await JS.InvokeVoidAsync("eval", $"window.mapModule.init({w}, {h}, 'vendorMapCanvas', 'vendorMapImg')");
+
+                    // Set zoom level BEFORE any coordinate calculations
+                    await JS.InvokeVoidAsync("eval", $"window.mapModule.setZoomLevel({zoomLevel.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)})");
+
+                    await InitializeMiniMap();
+
+                    // Apply pan position AFTER zoom is set
+                    await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
+
+                    await RenderVendorMarkers();
+
+                    // Re-apply XML spawners if toggle is ON
+                    if (ViewService.ShowXMLSpawners)
+                    {
+                        var xmlSpawners = SpawnerListUtility.GetSpawnersForMap(ViewService.CurrentMapId);
+                        if (xmlSpawners.Count > 0)
+                        {
+                            var options = new System.Text.Json.JsonSerializerOptions 
+                            { 
+                                PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+                                WriteIndented = false 
+                            };
+                            var json = System.Text.Json.JsonSerializer.Serialize(xmlSpawners, options);
+                            await JS.InvokeVoidAsync("eval", $"window.mapModule.showXMLSpawners({json})");
+                        }
+                    }
+
+                    // Re-apply server spawns if toggle is ON
+                    if (ViewService.ShowServerSpawns && MapDisplayUtility.HasSpawnData)
+                    {
+                        var spawnData = MapDisplayUtility.GetSpawnDataForMap(ViewService.CurrentMapId);
+                        if (spawnData.Count > 0)
+                        {
+                            var options = new System.Text.Json.JsonSerializerOptions 
+                            { 
+                                PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+                                WriteIndented = false 
+                            };
+                            var json = System.Text.Json.JsonSerializer.Serialize(spawnData, options);
+                            await JS.InvokeVoidAsync("eval", $"window.mapModule.showServerSpawns({json})");
+                        }
+                    }
+
+                    StateHasChanged();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Image load error", ex);
+            imageDim = "Error loading image";
+        }
+    }
+    
+    private async Task InitializeMiniMap()
+    {
+        if (!showMiniMap) return;
+
+        try
+        {
+            await JS.InvokeVoidAsync("eval", $@"
+                (function() {{
+                    const miniCanvas = document.getElementById('vendorMiniMapCanvas');
+                    const mainImg = document.getElementById('vendorMapImg');
+                    if (!miniCanvas || !mainImg) return;
+
+                    const ctx = miniCanvas.getContext('2d');
+                    const canvasWidth = 250;
+                    const canvasHeight = 188;
+
+                    const imageAspect = {imgWidth} / {imgHeight};
+                    const canvasAspect = canvasWidth / canvasHeight;
+
+                    let drawWidth, drawHeight, offsetX, offsetY;
+
+                    if (imageAspect > canvasAspect) {{
+                        drawWidth = canvasWidth;
+                        drawHeight = canvasWidth / imageAspect;
+                        offsetX = 0;
+                        offsetY = (canvasHeight - drawHeight) / 2;
+                    }} else {{
+                        drawWidth = canvasHeight * imageAspect;
+                        drawHeight = canvasHeight;
+                        offsetX = (canvasWidth - drawWidth) / 2;
+                        offsetY = 0;
+                    }}
+
+                    window.vendorMiniMapDimensions = {{
+                        canvasWidth: canvasWidth,
+                        canvasHeight: canvasHeight,
+                        drawWidth: drawWidth,
+                        drawHeight: drawHeight,
+                        offsetX: offsetX,
+                        offsetY: offsetY,
+                        imageWidth: {imgWidth},
+                        imageHeight: {imgHeight}
+                    }};
+
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+                    ctx.drawImage(mainImg, 0, 0, {imgWidth}, {imgHeight}, offsetX, offsetY, drawWidth, drawHeight);
+                }})()
+            ");
+
+            await UpdateMiniMapViewport();
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Mini map init error", ex);
+        }
+    }
+    
+    private async Task UpdateMiniMapViewport()
+    {
+        if (!showMiniMap) return;
+
+        try
+        {
+            double viewportWidthWorld = 800.0 / zoomLevel;
+            double viewportHeightWorld = 600.0 / zoomLevel;
+
+            double viewportWorldX = -panX / zoomLevel;
+            double viewportWorldY = -panY / zoomLevel;
+
+            await JS.InvokeVoidAsync("eval", $@"
+                (function() {{
+                    const miniCanvas = document.getElementById('vendorMiniMapCanvas');
+                    const mainImg = document.getElementById('vendorMapImg');
+                    if (!miniCanvas || !mainImg || !window.vendorMiniMapDimensions) return;
+
+                    const ctx = miniCanvas.getContext('2d');
+                    const dims = window.vendorMiniMapDimensions;
+
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(0, 0, dims.canvasWidth, dims.canvasHeight);
+
+                    ctx.drawImage(mainImg, 0, 0, dims.imageWidth, dims.imageHeight, 
+                                  dims.offsetX, dims.offsetY, dims.drawWidth, dims.drawHeight);
+
+                    const miniMapScaleX = dims.drawWidth / dims.imageWidth;
+                    const miniMapScaleY = dims.drawHeight / dims.imageHeight;
+
+                    const miniX = dims.offsetX + ({viewportWorldX} * miniMapScaleX);
+                    const miniY = dims.offsetY + ({viewportWorldY} * miniMapScaleY);
+                    const miniW = {viewportWidthWorld} * miniMapScaleX;
+                    const miniH = {viewportHeightWorld} * miniMapScaleY;
+
+                    ctx.strokeStyle = '#00FF00';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(miniX, miniY, miniW, miniH);
+                }})()
+            ");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Update mini map viewport error", ex);
+        }
+    }
+    
+    private async Task RenderVendorMarkers()
+    {
+        try
+        {
+            var signs = SignDataUtility.GetSignsForMap(ViewService.CurrentMapId);
+            var hives = HiveDataUtility.GetHivesForMap(ViewService.CurrentMapId);
+
+            var markers = new List<object>();
+
+            // Add sign markers - vendor status is per location
+            foreach (var sign in signs)
+            {
+                var hasVendors = HasVendorsForLocation(sign.SignType, sign.X, sign.Y, sign.Z);
+                var vendorCount = GetVendorCountForLocation(sign.SignType, sign.X, sign.Y, sign.Z);
+                var isThisMarkerSelected = selectedSignType == sign.SignType 
+                    && selectedMarkerX == sign.X 
+                    && selectedMarkerY == sign.Y;
+                markers.Add(new
+                {
+                    x = sign.X,
+                    y = sign.Y,
+                    z = sign.Z,
+                    type = "sign",
+                    signType = sign.SignType.ToString(),
+                    facing = sign.Facing.ToString(),
+                    hasVendors = hasVendors,
+                    vendorCount = vendorCount,
+                    isSelected = selectedSignType == sign.SignType,
+                    isFocused = isThisMarkerSelected
+                });
+            }
+
+            // Add hive markers (MetalPost/Misc) - vendor status is per location
+            foreach (var hive in hives)
+            {
+                var hasVendors = HasVendorsForLocation(SignTypes.MetalPost, hive.X, hive.Y, hive.Z);
+                var vendorCount = GetVendorCountForLocation(SignTypes.MetalPost, hive.X, hive.Y, hive.Z);
+                var isThisMarkerSelected = selectedSignType == SignTypes.MetalPost 
+                    && selectedMarkerX == hive.X 
+                    && selectedMarkerY == hive.Y;
+                markers.Add(new
+                {
+                    x = hive.X,
+                    y = hive.Y,
+                    z = hive.Z,
+                    type = "hive",
+                    signType = "MetalPost",
+                    facing = "North",
+                    hasVendors = hasVendors,
+                    vendorCount = vendorCount,
+                    isSelected = selectedSignType == SignTypes.MetalPost,
+                    isFocused = isThisMarkerSelected
+                });
+            }
+
+            var options = new JsonSerializerOptions 
+            { 
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                WriteIndented = false 
+            };
+            var json = JsonSerializer.Serialize(markers, options);
+            var selectedName = selectedSignType?.ToString() ?? "";
+
+            await JS.InvokeVoidAsync("eval", $"window.mapModule.showVendorMarkers({json}, '{selectedName}')");
+            Logger.Info($"Rendered {markers.Count} vendor markers ({signs.Count} signs, {hives.Count} hives)");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Error rendering vendor markers", ex);
+        }
+    }
+    
+    // ===================== MAP CONTROLS =====================
+    
+    private async Task ToggleZoom()
+    {
+        double centerWorldX = (-panX / zoomLevel) + (800.0 / 2.0 / zoomLevel);
+        double centerWorldY = (-panY / zoomLevel) + (600.0 / 2.0 / zoomLevel);
+
+        double oldZoom = zoomLevel;
+        zoomLevel = zoomLevel == 2.0 ? 1.0 : 2.0;
+
+        panX = -(centerWorldX * zoomLevel) + 400;
+        panY = -(centerWorldY * zoomLevel) + 300;
+
+        await JS.InvokeVoidAsync("eval", $"window.mapModule.setZoomLevel({zoomLevel.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)})");
+        await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
+
+        mapPositions[currentMapTracked] = (panX, panY, zoomLevel);
+
+        await RenderVendorMarkers();
+        await UpdateMiniMapViewport();
+
+        StateHasChanged();
+    }
+    
+    private async Task ResetView()
+    {
+        panX = 0;
+        panY = 0;
+        zoomLevel = 1.0;
+        await JS.InvokeVoidAsync("eval", $"window.mapModule.setZoomLevel(1.0)");
+        await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan(0, 0)");
+        await UpdateMiniMapViewport();
+        await RenderVendorMarkers();
+        StateHasChanged();
+    }
+    
+    private async Task ToggleMiniMap()
+    {
+        showMiniMap = !showMiniMap;
+        StateHasChanged();
+
+        if (showMiniMap && imgWidth > 0 && imgHeight > 0)
+        {
+            await Task.Delay(50);
+            await InitializeMiniMap();
+        }
+    }
+    
+    // ===================== MOUSE EVENTS =====================
+    
+    private async Task OnMouseDown(MouseEventArgs e)
+    {
+        if (e.Button == 0) // Left-click for marker selection
+        {
+            var coords = await JS.InvokeAsync<int[]>("eval", $"window.mapModule.getWorldCoordinates({e.OffsetX}, {e.OffsetY})");
+            if (coords.Length == 2)
+            {
+                mouseWorldX = coords[0];
+                mouseWorldY = coords[1];
+
+                // Find closest marker to click - returns SignType and the marker's actual coordinates
+                var clickedMarker = FindClosestMarkerWithCoords(mouseWorldX, mouseWorldY);
+                if (clickedMarker != null)
+                {
+                    // Select the sign type but DON'T jump to a different location
+                    // Stay centered on the marker that was clicked
+                    await SelectSignTypeAtPosition(clickedMarker.Value.signType, clickedMarker.Value.x, clickedMarker.Value.y, clickedMarker.Value.z, clickedMarker.Value.isHive);
+                }
+            }
+        }
+        else if (e.Button == 2) // Right-click for panning
+        {
+            isPanning = true;
+            await JS.InvokeVoidAsync("eval", $"window.mapModule.startPanning({e.OffsetX}, {e.OffsetY})");
+        }
+    }
+    
+    private async Task OnMouseMove(MouseEventArgs e)
+    {
+        var coords = await JS.InvokeAsync<int[]>("eval", $"window.mapModule.getWorldCoordinates({e.OffsetX}, {e.OffsetY})");
+        if (coords.Length == 2)
+        {
+            mouseWorldX = coords[0];
+            mouseWorldY = coords[1];
+            StateHasChanged();
+
+            // Update vendor marker hover
+            await JS.InvokeVoidAsync("eval", $"window.mapModule.updateVendorMarkerHover({e.OffsetX}, {e.OffsetY})");
+
+            // Update XML spawner hover
+            if (ViewService.ShowXMLSpawners)
+            {
+                await JS.InvokeVoidAsync("eval", $"window.mapModule.updateXmlSpawnerHover({e.OffsetX}, {e.OffsetY})");
+            }
+
+            // Update server spawn hover
+            if (ViewService.ShowServerSpawns)
+            {
+                await JS.InvokeVoidAsync("eval", $"window.mapModule.updateServerSpawnHover({e.OffsetX}, {e.OffsetY})");
+            }
+        }
+
+        if (isPanning)
+        {
+            await JS.InvokeVoidAsync("eval", $"window.mapModule.updatePanning({e.OffsetX}, {e.OffsetY})");
+
+            var panCoords = await JS.InvokeAsync<double[]>("eval", "window.mapModule.getPan()");
+            if (panCoords.Length == 2)
+            {
+                panX = panCoords[0];
+                panY = panCoords[1];
+            }
+
+            await UpdateMiniMapViewport();
+        }
+    }
+    
+    private void OnMouseUp(MouseEventArgs e)
+    {
+        if (e.Button == 2)
+        {
+            isPanning = false;
+        }
+    }
+    
+    private async Task OnMouseLeave(MouseEventArgs e)
+    {
+        isPanning = false;
+        await JS.InvokeVoidAsync("eval", "window.mapModule.clearVendorMarkerHover()");
+
+        if (ViewService.ShowXMLSpawners)
+        {
+            await JS.InvokeVoidAsync("eval", "window.mapModule.clearXmlSpawnerHover()");
+        }
+
+        if (ViewService.ShowServerSpawns)
+        {
+            await JS.InvokeVoidAsync("eval", "window.mapModule.clearServerSpawnHover()");
+        }
+    }
+    
+    private async Task OnMiniMapClick(MouseEventArgs e)
+    {
+        var clickX = e.OffsetX;
+        var clickY = e.OffsetY;
+        
+        var worldX = (clickX / 250.0) * imgWidth;
+        var worldY = (clickY / 188.0) * imgHeight;
+        
+        panX = -(worldX * zoomLevel) + 400;
+        panY = -(worldY * zoomLevel) + 300;
+        
+        await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
+        await UpdateMiniMapViewport();
+        await RenderVendorMarkers();
+        StateHasChanged();
+    }
+    
+    // ===================== KEYBOARD EVENTS =====================
+    
+    private void OnMapMouseEnter(MouseEventArgs e)
+    {
+        mapContainerRef.FocusAsync();
+    }
+    
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        var key = e.Key.ToLower();
+        if (key == "w" || key == "a" || key == "s" || key == "d" ||
+            key == "arrowup" || key == "arrowdown" || key == "arrowleft" || key == "arrowright")
+        {
+            await JS.InvokeVoidAsync("eval", $"window.mapModule.addKey('{key}')");
+        }
+    }
+
+    private async Task OnKeyUp(KeyboardEventArgs e)
+    {
+        var key = e.Key.ToLower();
+        await JS.InvokeVoidAsync("eval", $"window.mapModule.removeKey('{key}')");
+
+        try
+        {
+            var result = await JS.InvokeAsync<string>("eval", "JSON.stringify(window.mapModule.getPanPosition())");
+            if (!string.IsNullOrEmpty(result))
+            {
+                var pos = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, double>>(result);
+                if (pos != null)
+                {
+                    panX = pos["x"];
+                    panY = pos["y"];
+                    mapPositions[currentMapTracked] = (panX, panY, zoomLevel);
+                    await UpdateMiniMapViewport();
+                    StateHasChanged();
+                }
+            }
+        }
+        catch { }
+    }
+    
+    // ===================== SIGN TYPE DATA =====================
+    
+    private List<SignTypeGroup> GetSignTypesForCurrentMap()
+    {
+        var groups = new Dictionary<SignTypes, SignTypeGroup>();
+        
+        // Add sign locations
+        var signs = SignDataUtility.GetSignsForMap(ViewService.CurrentMapId);
+        foreach (var sign in signs)
+        {
+            if (!groups.TryGetValue(sign.SignType, out var group))
+            {
+                group = new SignTypeGroup { SignType = sign.SignType };
+                groups[sign.SignType] = group;
+            }
+            group.Locations.Add(sign);
+        }
+
+        // Add hive locations as MetalPost
+        var hives = HiveDataUtility.GetHivesForMap(ViewService.CurrentMapId);
+        if (hives.Count > 0)
+        {
+            if (!groups.TryGetValue(SignTypes.MetalPost, out var hiveGroup))
+            {
+                hiveGroup = new SignTypeGroup { SignType = SignTypes.MetalPost };
+                groups[SignTypes.MetalPost] = hiveGroup;
+            }
+            hiveGroup.HiveLocations.AddRange(hives);
+        }
+
+        return groups.Values.ToList();
+    }
+    
+    private int GetSignTypeCount()
+    {
+        return GetSignTypesForCurrentMap().Count;
+    }
+
+    private int? GetDisplayedSignTypeIndex()
+    {
+        if (GetSignTypeCount() == 0) return 0;
+
+        if (signTypeSearchIndex.HasValue) return signTypeSearchIndex;
+
+        if (selectedSignType != null)
+        {
+            var signTypes = GetSignTypesForCurrentMap().OrderBy(s => s.SignType.ToString()).ToList();
+            var index = signTypes.FindIndex(s => s.SignType == selectedSignType);
+            return index >= 0 ? index + 1 : null;
+        }
+
+        return null;
+    }
+
+    private async Task HandleSignTypeIndexInput(ChangeEventArgs e)
+    {
+        int maxCount = GetSignTypeCount();
+        if (maxCount == 0)
+        {
+            signTypeSearchIndex = null;
+            return;
+        }
+
+        if (int.TryParse(e.Value?.ToString(), out int value))
+        {
+            signTypeSearchIndex = value;
+        }
+        else
+        {
+            signTypeSearchIndex = null;
+        }
+
+        if (signTypeSearchIndex.HasValue)
+        {
+            if (signTypeSearchIndex.Value > maxCount)
+            {
+                signTypeSearchIndex = maxCount;
+            }
+            else if (signTypeSearchIndex.Value < 1)
+            {
+                signTypeSearchIndex = 1;
+            }
+
+            var signTypes = GetSignTypesForCurrentMap().OrderBy(s => s.SignType.ToString()).ToList();
+            if (signTypeSearchIndex.Value >= 1 && signTypeSearchIndex.Value <= signTypes.Count)
+            {
+                var target = signTypes[signTypeSearchIndex.Value - 1];
+                await SelectSignType(target);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Gets total vendor count across all locations for a sign type.
+    /// </summary>
+    private int GetTotalVendorCountForSignType(SignTypes signType)
+    {
+        if (!Utility.VendorSpawns.TryGetValue(ViewService.CurrentMapId, out var vendors))
+            return 0;
+
+        return vendors.Where(v => v.Sign == signType).Sum(v => v.VendorList.Count);
+    }
+
+    /// <summary>
+    /// Gets count of locations that have at least one vendor assigned.
+    /// </summary>
+    private int GetLocationsWithVendorsCount(SignTypes signType)
+    {
+        if (!Utility.VendorSpawns.TryGetValue(ViewService.CurrentMapId, out var vendors))
+            return 0;
+
+        return vendors.Count(v => v.Sign == signType && v.VendorList.Count > 0);
+    }
+
+    /// <summary>
+    /// Gets vendor count for a specific location.
+    /// </summary>
+    private int GetVendorCountForLocation(SignTypes signType, int x, int y, int z)
+    {
+        if (!Utility.VendorSpawns.TryGetValue(ViewService.CurrentMapId, out var vendors))
+            return 0;
+
+        var vendor = vendors.FirstOrDefault(v => v.Sign == signType && v.Location.X == x && v.Location.Y == y && v.Location.Z == z);
+        return vendor?.VendorList.Count ?? 0;
+    }
+
+    /// <summary>
+    /// Checks if a specific location has any vendors assigned (for map marker highlighting).
+    /// </summary>
+    private bool HasVendorsForLocation(SignTypes signType, int x, int y, int z)
+    {
+        return GetVendorCountForLocation(signType, x, y, z) > 0;
+    }
+
+    private int GetTotalVendorCount()
+    {
+        if (!Utility.VendorSpawns.TryGetValue(ViewService.CurrentMapId, out var vendors))
+            return 0;
+
+        return vendors.Sum(v => v.VendorList.Count);
+    }
+
+    private async Task SelectSignType(SignTypeGroup group)
+    {
+        selectedSignType = group.SignType;
+
+        // Track selected marker position for highlighting (first location)
+        if (group.SignType == SignTypes.MetalPost && group.HiveLocations.Count > 0)
+        {
+            var firstHive = group.HiveLocations[0];
+            selectedMarkerX = firstHive.X;
+            selectedMarkerY = firstHive.Y;
+            selectedMarkerZ = firstHive.Z;
+            selectedIsHive = true;
+            await RenderVendorMarkers();
+            await JumpToLocation(firstHive.X, firstHive.Y);
+        }
+        else if (group.Locations.Count > 0)
+        {
+            var firstSign = group.Locations[0];
+            selectedMarkerX = firstSign.X;
+            selectedMarkerY = firstSign.Y;
+            selectedMarkerZ = firstSign.Z;
+            selectedIsHive = false;
+            await RenderVendorMarkers();
+            await JumpToLocation(firstSign.X, firstSign.Y);
+        }
+        else
+        {
+            selectedMarkerX = null;
+            selectedMarkerY = null;
+            selectedMarkerZ = null;
+            selectedIsHive = false;
+            await RenderVendorMarkers();
+        }
+
+        StateHasChanged();
+
+        await Task.Delay(150);
+        await ScrollToSelectedSignType();
+    }
+
+    /// <summary>
+    /// Selects a sign type but centers on the specific position (for map marker clicks).
+    /// Does NOT jump to first location - stays on the clicked marker.
+    /// </summary>
+    private async Task SelectSignTypeAtPosition(SignTypes signType, int x, int y, int z, bool isHive)
+    {
+        selectedSignType = signType;
+
+        // Track selected marker position for highlighting
+        selectedMarkerX = x;
+        selectedMarkerY = y;
+        selectedMarkerZ = z;
+        selectedIsHive = isHive;
+
+        await RenderVendorMarkers();
+
+        // Center on the clicked marker position, not first in list
+        await JumpToLocation(x, y);
+
+        StateHasChanged();
+
+        await Task.Delay(150);
+        await ScrollToSelectedSignType();
+    }
+
+    private async Task JumpToLocation(int x, int y)
+    {
+        try
+        {
+            double newPanX = -(x * zoomLevel) + 400;
+            double newPanY = -(y * zoomLevel) + 300;
+
+            panX = newPanX;
+            panY = newPanY;
+
+            mapPositions[currentMapTracked] = (panX, panY, zoomLevel);
+
+            await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
+            await UpdateMiniMapViewport();
+
+            Logger.Info($"Jumped to location ({x}, {y})");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"Error jumping to location ({x}, {y})", ex);
+        }
+    }
+
+    /// <summary>
+    /// Selects a hive location from the card's location list and jumps to it.
+    /// </summary>
+    private async Task SelectAndJumpToHiveLocation(HiveLocation loc)
+    {
+        selectedMarkerX = loc.X;
+        selectedMarkerY = loc.Y;
+        selectedMarkerZ = loc.Z;
+        selectedIsHive = true;
+
+        await RenderVendorMarkers();
+        await JumpToLocation(loc.X, loc.Y);
+
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Selects a sign location from the card's location list and jumps to it.
+    /// </summary>
+    private async Task SelectAndJumpToSignLocation(SignLocation loc)
+    {
+        selectedMarkerX = loc.X;
+        selectedMarkerY = loc.Y;
+        selectedMarkerZ = loc.Z;
+        selectedIsHive = false;
+
+        await RenderVendorMarkers();
+        await JumpToLocation(loc.X, loc.Y);
+
+        StateHasChanged();
+    }
+
+    private async Task ScrollToSelectedSignType()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("eval", @"
+                (function() {
+                    const selected = document.querySelector('.spawn-item.selected');
+                    if (selected) {
+                        selected.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                })()
+            ");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Scroll to sign type error", ex);
+        }
+    }
+
+    /// <summary>
+    /// Finds the closest marker to click coordinates and returns its SignType, position, and whether it's a hive.
+    /// This allows centering on the actual clicked marker, not first in list.
+    /// </summary>
+    private (SignTypes signType, int x, int y, int z, bool isHive)? FindClosestMarkerWithCoords(int worldX, int worldY)
+    {
+        const int clickRadius = 20;
+        (SignTypes signType, int x, int y, int z, bool isHive)? closest = null;
+        double closestDistance = double.MaxValue;
+
+        var signs = SignDataUtility.GetSignsForMap(ViewService.CurrentMapId);
+        foreach (var sign in signs)
+        {
+            var distance = Math.Sqrt(Math.Pow(sign.X - worldX, 2) + Math.Pow(sign.Y - worldY, 2));
+            if (distance < clickRadius && distance < closestDistance)
+            {
+                closestDistance = distance;
+                closest = (sign.SignType, sign.X, sign.Y, sign.Z, false);
+            }
+        }
+
+        var hives = HiveDataUtility.GetHivesForMap(ViewService.CurrentMapId);
+        foreach (var hive in hives)
+        {
+            var distance = Math.Sqrt(Math.Pow(hive.X - worldX, 2) + Math.Pow(hive.Y - worldY, 2));
+            if (distance < clickRadius && distance < closestDistance)
+            {
+                closestDistance = distance;
+                closest = (SignTypes.MetalPost, hive.X, hive.Y, hive.Z, true);
+            }
+        }
+
+        return closest;
+    }
+
+    private SignTypes? FindClosestMarker(int worldX, int worldY)
+    {
+        const int clickRadius = 20;
+        SignTypes? closestType = null;
+        double closestDistance = double.MaxValue;
+
+        var signs = SignDataUtility.GetSignsForMap(ViewService.CurrentMapId);
+        foreach (var sign in signs)
+        {
+            var distance = Math.Sqrt(Math.Pow(sign.X - worldX, 2) + Math.Pow(sign.Y - worldY, 2));
+            if (distance < clickRadius && distance < closestDistance)
+            {
+                closestDistance = distance;
+                closestType = sign.SignType;
+            }
+        }
+
+        var hives = HiveDataUtility.GetHivesForMap(ViewService.CurrentMapId);
+        foreach (var hive in hives)
+        {
+            var distance = Math.Sqrt(Math.Pow(hive.X - worldX, 2) + Math.Pow(hive.Y - worldY, 2));
+            if (distance < clickRadius && distance < closestDistance)
+            {
+                closestDistance = distance;
+                closestType = SignTypes.MetalPost;
+            }
+        }
+
+        return closestType;
+    }
+
+    private SignTypeGroup GetSignTypeGroup(SignTypes signType)
+    {
+        var groups = GetSignTypesForCurrentMap();
+        return groups.FirstOrDefault(g => g.SignType == signType) ?? new SignTypeGroup { SignType = signType };
+    }
+
+    private async Task ClearSignTypeVendors(SignTypes signType)
+    {
+        if (!Utility.VendorSpawns.TryGetValue(ViewService.CurrentMapId, out var vendors))
+            return;
+
+        vendors.RemoveAll(v => v.Sign == signType);
+
+        Utility.SaveVendorSpawnData();
+        Logger.Info($"Cleared all vendors for sign type '{signType}' and auto-saved");
+
+        await RenderVendorMarkers();
+        StateHasChanged();
+    }
+
+    private string FormatSignTypeName(SignTypes signType)
+    {
+        // MetalPost is used for Hives (beekeepers)
+        if (signType == SignTypes.MetalPost)
+        {
+            return "Hives";
+        }
+        // Convert CamelCase to spaced name, e.g., "TownHall" -> "Town Hall"
+        var name = signType.ToString();
+        return System.Text.RegularExpressions.Regex.Replace(name, "(?<!^)([A-Z])", " $1");
+    }
+
+    /// <summary>
+    /// Gets the Bootstrap icon class and color for a sign type.
+    /// Matches the icon categories used in map.js for consistency.
+    /// </summary>
+    private (string iconClass, string color) GetSignTypeIconInfo(SignTypes signType)
+    {
+        var name = signType.ToString();
+
+        // Hives (MetalPost)
+        if (signType == SignTypes.MetalPost)
+            return ("bi-hexagon-fill", "#FFD700"); // Gold yellow
+
+        // Guild signs
+        if (name.EndsWith("Guild"))
+            return ("bi-shield-fill", "#9B59B6"); // Purple
+
+        // Wooden sign
+        if (signType == SignTypes.WoodenSign)
+            return ("bi-signpost-split-fill", "#8B4513"); // Saddle brown
+
+        // Brass sign
+        if (signType == SignTypes.BrassSign)
+            return ("bi-card-heading", "#DAA520"); // Goldenrod
+
+        // Food/drink establishments
+        if (signType == SignTypes.Bakery || signType == SignTypes.Butcher || 
+            signType == SignTypes.Tavern || signType == SignTypes.Inn)
+            return ("bi-cup-hot-fill", "#E67E22"); // Orange
+
+        // Magic shops
+        if (signType == SignTypes.Mage || signType == SignTypes.ReagentShop)
+            return ("bi-stars", "#8E44AD"); // Deep purple
+
+        // Weapon/armor shops
+        if (signType == SignTypes.Blacksmith || signType == SignTypes.Armourer || 
+            signType == SignTypes.Fletcher || signType == SignTypes.Bowyer)
+            return ("bi-hammer", "#C0392B"); // Dark red
+
+        // Service shops
+        if (signType == SignTypes.Bank || signType == SignTypes.Healer || 
+            signType == SignTypes.Stables)
+            return ("bi-plus-circle-fill", "#27AE60"); // Green
+
+        // Craft shops
+        if (signType == SignTypes.Tailor || signType == SignTypes.Tinker || 
+            signType == SignTypes.Woodworker || signType == SignTypes.Jeweler || 
+            signType == SignTypes.Painter)
+            return ("bi-gear-fill", "#3498DB"); // Blue
+
+        // Default shop icon
+        return ("bi-shop", "#17A2B8"); // Cyan
+    }
+
+    // ===================== MODAL HANDLING =====================
+
+    /// <summary>
+    /// Opens the vendor modal for a specific sign location.
+    /// </summary>
+    private void OpenVendorModalForSign(SignLocation loc)
+    {
+        currentSignType = loc.SignType;
+        currentFacing = loc.Facing;
+        currentLocation = new Point3D { X = loc.X, Y = loc.Y, Z = loc.Z };
+        currentIsHive = false;
+
+        LoadVendorListForCurrentLocation();
+
+        isBulkAddMode = false;
+        showModal = true;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Opens the vendor modal for a specific hive location.
+    /// </summary>
+    private void OpenVendorModalForHive(HiveLocation loc)
+    {
+        currentSignType = SignTypes.MetalPost;
+        currentFacing = FacingTypes.North;
+        currentLocation = new Point3D { X = loc.X, Y = loc.Y, Z = loc.Z };
+        currentIsHive = true;
+
+        LoadVendorListForCurrentLocation();
+
+        isBulkAddMode = false;
+        showModal = true;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Opens the vendor modal in bulk add mode - vendors selected will be added to ALL locations.
+    /// </summary>
+    private void OpenBulkAddModal(SignTypeGroup group)
+    {
+        currentSignType = group.SignType;
+        currentIsHive = group.SignType == SignTypes.MetalPost;
+
+        // Start with empty list - user selects what to ADD to all locations
+        currentVendorList = new List<string>();
+
+        isBulkAddMode = true;
+        showModal = true;
+        StateHasChanged();
+    }
+
+    private void LoadVendorListForCurrentLocation()
+    {
+        if (Utility.VendorSpawns.TryGetValue(ViewService.CurrentMapId, out var vendors))
+        {
+            var vendorEntity = vendors.FirstOrDefault(v => 
+                v.Sign == currentSignType && 
+                v.Location.X == currentLocation.X && 
+                v.Location.Y == currentLocation.Y && 
+                v.Location.Z == currentLocation.Z);
+            currentVendorList = vendorEntity != null 
+                ? new List<string>(vendorEntity.VendorList) 
+                : new List<string>();
+        }
+        else
+        {
+            currentVendorList = new List<string>();
+        }
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+        isBulkAddMode = false;
+        StateHasChanged();
+    }
+
+    private async void SaveModal()
+    {
+        if (isBulkAddMode)
+        {
+            await SaveBulkAddModal();
+            return;
+        }
+
+        if (!Utility.VendorSpawns.TryGetValue(ViewService.CurrentMapId, out var vendors))
+        {
+            vendors = new List<VendorEntity>();
+            Utility.VendorSpawns[ViewService.CurrentMapId] = vendors;
+        }
+
+        // Remove existing vendor entity for this specific location
+        vendors.RemoveAll(v => 
+            v.Sign == currentSignType && 
+            v.Location.X == currentLocation.X && 
+            v.Location.Y == currentLocation.Y && 
+            v.Location.Z == currentLocation.Z);
+
+        // Create vendor entity for this specific location
+        if (currentVendorList.Count > 0)
+        {
+            VendorEntity vendorEntity;
+            if (currentIsHive)
+            {
+                vendorEntity = new VendorEntity(currentLocation);
+            }
+            else
+            {
+                vendorEntity = new VendorEntity(currentSignType, currentFacing, currentLocation);
+            }
+
+            vendorEntity.MapId = ViewService.CurrentMapId;
+            vendorEntity.SetVendors(new List<string>(currentVendorList));
+            vendors.Add(vendorEntity);
+        }
+
+        Utility.SaveVendorSpawnData();
+        Logger.Info($"Saved {currentVendorList.Count} vendors for location ({currentLocation.X}, {currentLocation.Y}, {currentLocation.Z})");
+
+        CloseModal();
+        await RenderVendorMarkers();
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Saves vendors in bulk mode - adds selected vendors to ALL locations of the sign type.
+    /// Does not replace existing vendors, just adds to each location.
+    /// </summary>
+    private async Task SaveBulkAddModal()
+    {
+        if (currentVendorList.Count == 0)
+        {
+            CloseModal();
+            return;
+        }
+
+        if (!Utility.VendorSpawns.TryGetValue(ViewService.CurrentMapId, out var vendors))
+        {
+            vendors = new List<VendorEntity>();
+            Utility.VendorSpawns[ViewService.CurrentMapId] = vendors;
+        }
+
+        int locationsUpdated = 0;
+
+        if (currentSignType == SignTypes.MetalPost)
+        {
+            // Add to all hive locations
+            var hives = HiveDataUtility.GetHivesForMap(ViewService.CurrentMapId);
+            foreach (var hive in hives)
+            {
+                var location = new Point3D { X = hive.X, Y = hive.Y, Z = hive.Z };
+                var existingEntity = vendors.FirstOrDefault(v => 
+                    v.Sign == SignTypes.MetalPost && 
+                    v.Location.X == location.X && 
+                    v.Location.Y == location.Y && 
+                    v.Location.Z == location.Z);
+
+                if (existingEntity != null)
+                {
+                    // Add vendors to existing entity
+                    foreach (var vendor in currentVendorList)
+                    {
+                        existingEntity.AddVendor(vendor);
+                    }
+                }
+                else
+                {
+                    // Create new entity with the vendors
+                    var newEntity = new VendorEntity(location)
+                    {
+                        MapId = ViewService.CurrentMapId
+                    };
+                    newEntity.SetVendors(new List<string>(currentVendorList));
+                    vendors.Add(newEntity);
+                }
+                locationsUpdated++;
+            }
+        }
+        else
+        {
+            // Add to all sign locations of this type
+            var signs = SignDataUtility.GetSignsForMap(ViewService.CurrentMapId)
+                .Where(s => s.SignType == currentSignType)
+                .ToList();
+
+            foreach (var sign in signs)
+            {
+                var location = new Point3D { X = sign.X, Y = sign.Y, Z = sign.Z };
+                var existingEntity = vendors.FirstOrDefault(v => 
+                    v.Sign == currentSignType && 
+                    v.Location.X == location.X && 
+                    v.Location.Y == location.Y && 
+                    v.Location.Z == location.Z);
+
+                if (existingEntity != null)
+                {
+                    // Add vendors to existing entity
+                    foreach (var vendor in currentVendorList)
+                    {
+                        existingEntity.AddVendor(vendor);
+                    }
+                }
+                else
+                {
+                    // Create new entity with the vendors
+                    var newEntity = new VendorEntity(currentSignType, sign.Facing, location)
+                    {
+                        MapId = ViewService.CurrentMapId
+                    };
+                    newEntity.SetVendors(new List<string>(currentVendorList));
+                    vendors.Add(newEntity);
+                }
+                locationsUpdated++;
+            }
+        }
+
+        Utility.SaveVendorSpawnData();
+        var typeName = FormatSignTypeName(currentSignType);
+        Logger.Info($"Bulk added {currentVendorList.Count} vendor(s) to {locationsUpdated} {typeName} locations");
+
+        CloseModal();
+        await RenderVendorMarkers();
+        StateHasChanged();
+    }
+
+    private string GetModalCategoryName()
+    {
+        var typeName = FormatSignTypeName(currentSignType);
+        if (isBulkAddMode)
+        {
+            var locationCount = GetLocationCountForSignType(currentSignType);
+            return $"{typeName} (All {locationCount} Locations)";
+        }
+        return $"{typeName} &#64; ({currentLocation.X}, {currentLocation.Y})";
+    }
+
+    private int GetLocationCountForSignType(SignTypes signType)
+    {
+        if (signType == SignTypes.MetalPost)
+        {
+            return HiveDataUtility.GetHivesForMap(ViewService.CurrentMapId).Count;
+        }
+        return SignDataUtility.GetSignsForMap(ViewService.CurrentMapId)
+            .Count(s => s.SignType == signType);
+    }
+
+    private async Task ToggleXMLSpawners()
+    {
+        ViewService.ToggleXMLSpawners();
+
+        if (ViewService.ShowXMLSpawners)
+        {
+            var xmlSpawners = SpawnerListUtility.GetSpawnersForMap(ViewService.CurrentMapId);
+            if (xmlSpawners.Count > 0)
+            {
+                var options = new System.Text.Json.JsonSerializerOptions 
+                { 
+                    PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+                    WriteIndented = false 
+                };
+                var json = System.Text.Json.JsonSerializer.Serialize(xmlSpawners, options);
+                await JS.InvokeVoidAsync("eval", $"window.mapModule.showXMLSpawners({json})");
+            }
+        }
+        else
+        {
+            await JS.InvokeVoidAsync("eval", "window.mapModule.hideXMLSpawners()");
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task ToggleServerSpawns()
+    {
+        ViewService.ToggleServerSpawns();
+
+        if (ViewService.ShowServerSpawns && MapDisplayUtility.HasSpawnData)
+        {
+            var spawnData = MapDisplayUtility.GetSpawnDataForMap(ViewService.CurrentMapId);
+            if (spawnData.Count > 0)
+            {
+                var options = new System.Text.Json.JsonSerializerOptions 
+                { 
+                    PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+                    WriteIndented = false 
+                };
+                var json = System.Text.Json.JsonSerializer.Serialize(spawnData, options);
+                await JS.InvokeVoidAsync("eval", $"window.mapModule.showServerSpawns({json})");
+            }
+        }
+        else
+        {
+            await JS.InvokeVoidAsync("eval", "window.mapModule.hideServerSpawns()");
+        }
+
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        ViewService.OnViewChanged -= OnViewChanged;
+        ViewService.OnXMLSpawnersChanged -= HandleXMLSpawnersChanged;
+        ViewService.OnServerSpawnsChanged -= HandleServerSpawnsChanged;
+    }
+}

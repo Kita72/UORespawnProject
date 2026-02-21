@@ -25,6 +25,10 @@ else if (ViewService.CurrentView == "boxspawn" || ViewService.CurrentView == "ma
 {
     <BoxSpawnComponent @key="ViewService.CurrentMapId.ToString()" />
 }
+else if (ViewService.CurrentView == "vendorspawn")
+{
+    <VendorSpawnComponent @key="ViewService.CurrentMapId.ToString()" />
+}
 else if (ViewService.CurrentView == "tilespawn" || ViewService.CurrentView == "worldspawn") // Support both old/new
 {
     <TileSpawnComponent @key="ViewService.CurrentMapId.ToString()" />

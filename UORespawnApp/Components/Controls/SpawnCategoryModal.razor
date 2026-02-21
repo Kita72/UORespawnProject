@@ -34,19 +34,17 @@
                             {
                                 @foreach (var entry in GetFilteredList())
                                 {
-                                    var isAdded = CurrentSpawns.Contains(entry);
-                                    <div class="available-item @(isAdded ? "already-added" : "")" 
+                                    var count = CurrentSpawns.Count(s => s == entry);
+                                    var hasAny = count > 0;
+                                    <div class="available-item @(hasAny ? "already-added" : "")" 
                                          @onclick="() => SelectEntry(entry)"
-                                         title="@(isAdded ? "Already added" : "Click to add")">
+                                         title="Click to add another">
                                         <span class="entry-name">@entry</span>
-                                        @if (isAdded)
+                                        @if (hasAny)
                                         {
-                                            <span class="bi bi-check-circle-fill text-success"></span>
+                                            <span class="badge bg-success me-1" style="font-size: 0.7rem;">@count</span>
                                         }
-                                        else
-                                        {
-                                            <span class="bi bi-plus-circle add-icon"></span>
-                                        }
+                                        <span class="bi bi-plus-circle add-icon"></span>
                                     </div>
                                 }
                             }
@@ -170,13 +168,7 @@
     
     private void SelectEntry(string entry)
     {
-        // Don't add if already in list
-        if (CurrentSpawns.Contains(entry))
-        {
-            return;
-        }
-        
-        
+        // Allow duplicates - e.g., 3 Beekeepers at one hive
         CurrentSpawns.Add(entry);
         Logger.Info($"Added {entry} to {CategoryName} {SpawnTypeName}");
         StateHasChanged();

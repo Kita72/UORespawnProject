@@ -54,6 +54,15 @@ serverSpawnDwellTimer: null,
 serverSpawnDwellDelay: 500, // milliseconds to wait before showing tooltip
 serverSpawnFlashAnimationId: null, // Animation frame ID for spawn dot flashing
 
+// Vendor marker state
+vendorMarkers: null,
+selectedVendorSignType: '',
+hoveredVendorMarkerIdx: -1,
+vendorMarkerTooltipVisible: false,
+vendorMarkerTooltipMousePos: { x: 0, y: 0 },
+vendorMarkerDwellTimer: null,
+vendorMarkerDwellDelay: 500, // milliseconds to wait before showing tooltip
+
 // Settings from C#
 boxColor: '#8B0000',
 boxLineSize: 2,
@@ -95,6 +104,15 @@ panAnimationId: null,
         if (this.xmlSpawnerDwellTimer) {
             clearTimeout(this.xmlSpawnerDwellTimer);
             this.xmlSpawnerDwellTimer = null;
+        }
+        // Reset vendor marker state
+        this.vendorMarkers = null;
+        this.selectedVendorSignType = '';
+        this.hoveredVendorMarkerIdx = -1;
+        this.vendorMarkerTooltipVisible = false;
+        if (this.vendorMarkerDwellTimer) {
+            clearTimeout(this.vendorMarkerDwellTimer);
+            this.vendorMarkerDwellTimer = null;
         }
 
         console.log(`? Map initialized: ${imgWidth}x${imgHeight} at ${this.scale}x scale, viewport: ${this.viewportWidth}x${this.viewportHeight}`);
@@ -754,7 +772,182 @@ panAnimationId: null,
                 });
             }
         }
-        
+
+        // Draw vendor markers (sign/hive locations)
+        // Sort markers so focused/selected render last (on top)
+        if (this.vendorMarkers && Array.isArray(this.vendorMarkers)) {
+            // Create indexed array for sorting while preserving original indices
+            const sortedMarkers = this.vendorMarkers.map((marker, idx) => ({ marker, idx }))
+                .filter(item => item.marker)
+                .sort((a, b) => {
+                    const aFocused = a.marker.isFocused === true;
+                    const bFocused = b.marker.isFocused === true;
+                    const aSelected = a.marker.signType === this.selectedVendorSignType;
+                    const bSelected = b.marker.signType === this.selectedVendorSignType;
+                    const aHovered = this.hoveredVendorMarkerIdx === a.idx;
+                    const bHovered = this.hoveredVendorMarkerIdx === b.idx;
+
+                    // Priority: focused > hovered > selected > normal
+                    const aPriority = aFocused ? 3 : (aHovered ? 2 : (aSelected ? 1 : 0));
+                    const bPriority = bFocused ? 3 : (bHovered ? 2 : (bSelected ? 1 : 0));
+                    return aPriority - bPriority;
+                });
+
+            sortedMarkers.forEach(({ marker, idx }) => {
+                const screenPos = this.worldToScreen(marker.x, marker.y);
+                const isHovered = this.hoveredVendorMarkerIdx === idx;
+                const isSelected = marker.signType === this.selectedVendorSignType;
+                const isFocused = marker.isFocused === true;
+                const isHive = marker.type === 'hive';
+                const hasVendors = marker.hasVendors;
+                const signType = marker.signType || '';
+
+                // Get icon category and color for this sign type
+                const iconInfo = this.getVendorIconInfo(signType, isHive, hasVendors, isFocused);
+
+                // Base size - focused marker is larger
+                const baseSize = isHive ? 7 : 6;
+                const size = isFocused ? baseSize + 4 : (isHovered ? baseSize + 3 : (isSelected ? baseSize + 2 : baseSize));
+
+                // Draw pulsing outer ring for focused marker
+                if (isFocused) {
+                    this.ctx.strokeStyle = '#FF4500';
+                    this.ctx.lineWidth = 3;
+                    this.ctx.globalAlpha = 0.8;
+                    this.ctx.beginPath();
+                    this.ctx.arc(screenPos.x, screenPos.y, size + 8, 0, 2 * Math.PI);
+                    this.ctx.stroke();
+
+                    // Inner glow
+                    this.ctx.fillStyle = '#FF4500';
+                    this.ctx.globalAlpha = 0.25;
+                    this.ctx.beginPath();
+                    this.ctx.arc(screenPos.x, screenPos.y, size + 8, 0, 2 * Math.PI);
+                    this.ctx.fill();
+                }
+                // Draw outer glow for selected/hovered
+                else if (isSelected || isHovered) {
+                    this.ctx.fillStyle = isHovered ? '#FFD700' : iconInfo.color;
+                    this.ctx.globalAlpha = 0.3;
+                    this.ctx.beginPath();
+                    this.ctx.arc(screenPos.x, screenPos.y, size + 6, 0, 2 * Math.PI);
+                    this.ctx.fill();
+                }
+
+                // Draw white border (thicker for focused)
+                this.ctx.fillStyle = '#FFFFFF';
+                this.ctx.globalAlpha = isFocused ? 1.0 : (isHovered ? 1.0 : 0.8);
+                this.ctx.beginPath();
+                this.ctx.arc(screenPos.x, screenPos.y, size + (isFocused ? 3 : 2), 0, 2 * Math.PI);
+                this.ctx.fill();
+
+                // Draw colored center
+                this.ctx.fillStyle = isFocused ? '#FF4500' : iconInfo.color;
+                this.ctx.globalAlpha = 1.0;
+                this.ctx.beginPath();
+                this.ctx.arc(screenPos.x, screenPos.y, size, 0, 2 * Math.PI);
+                this.ctx.fill();
+
+                // Draw the appropriate icon
+                this.drawVendorIcon(screenPos.x, screenPos.y, size, iconInfo.icon, isFocused);
+
+                // Draw vendor count badge if has vendors
+                if (hasVendors && marker.vendorCount > 0) {
+                    const badgeX = screenPos.x + size;
+                    const badgeY = screenPos.y - size;
+                    const badgeRadius = 6;
+
+                    // Badge background
+                    this.ctx.fillStyle = '#DC3545';
+                    this.ctx.beginPath();
+                    this.ctx.arc(badgeX, badgeY, badgeRadius, 0, 2 * Math.PI);
+                    this.ctx.fill();
+
+                    // Badge text
+                    this.ctx.fillStyle = '#FFFFFF';
+                    this.ctx.font = 'bold 8px Arial';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.textBaseline = 'middle';
+                    this.ctx.fillText(marker.vendorCount.toString(), badgeX, badgeY);
+                }
+
+                this.ctx.globalAlpha = 1.0;
+            });
+
+            // Draw tooltip for hovered vendor marker
+            if (this.vendorMarkerTooltipVisible && this.hoveredVendorMarkerIdx >= 0 && this.hoveredVendorMarkerIdx < this.vendorMarkers.length) {
+                const marker = this.vendorMarkers[this.hoveredVendorMarkerIdx];
+                const mouseX = this.vendorMarkerTooltipMousePos.x;
+                const mouseY = this.vendorMarkerTooltipMousePos.y;
+
+                // Tooltip content
+                const isHive = marker.type === 'hive';
+                const typeName = isHive ? 'Hive (Beekeeper)' : marker.signType;
+                const lines = [
+                    typeName,
+                    `Location: (${marker.x}, ${marker.y})`,
+                    `Facing: ${marker.facing}`
+                ];
+
+                if (marker.hasVendors) {
+                    lines.push(`Vendors: ${marker.vendorCount}`);
+                } else {
+                    lines.push(`No vendors assigned`);
+                }
+
+                // Measure text for sizing
+                this.ctx.font = 'bold 12px Arial';
+                let maxWidth = 0;
+                lines.forEach(line => {
+                    const width = this.ctx.measureText(line).width;
+                    if (width > maxWidth) maxWidth = width;
+                });
+
+                const padding = 8;
+                const lineHeight = 16;
+                const boxWidth = maxWidth + padding * 2;
+                const boxHeight = lines.length * lineHeight + padding * 2;
+
+                // Position tooltip near mouse
+                let tooltipX = mouseX + 15;
+                let tooltipY = mouseY + 15;
+
+                if (tooltipX + boxWidth > this.viewportWidth) {
+                    tooltipX = mouseX - boxWidth - 10;
+                }
+                if (tooltipY + boxHeight > this.viewportHeight) {
+                    tooltipY = mouseY - boxHeight - 10;
+                }
+
+                // Draw tooltip background
+                const borderColor = isHive ? '#FFC107' : '#17A2B8';
+                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+                this.ctx.strokeStyle = borderColor;
+                this.ctx.lineWidth = 2;
+                this.ctx.beginPath();
+                this.ctx.roundRect(tooltipX, tooltipY, boxWidth, boxHeight, 5);
+                this.ctx.fill();
+                this.ctx.stroke();
+
+                // Draw tooltip text
+                this.ctx.font = 'bold 12px Arial';
+                this.ctx.textAlign = 'left';
+                this.ctx.textBaseline = 'top';
+                lines.forEach((line, i) => {
+                    if (i === 0) {
+                        this.ctx.fillStyle = borderColor; // Type name in marker color
+                    } else if (line.includes('Vendors:')) {
+                        this.ctx.fillStyle = '#28A745'; // Vendor count in green
+                    } else if (line === 'No vendors assigned') {
+                        this.ctx.fillStyle = '#6C757D'; // Gray for no vendors
+                    } else {
+                        this.ctx.fillStyle = '#FFFFFF'; // Content in white
+                    }
+                    this.ctx.fillText(line, tooltipX + padding, tooltipY + padding + i * lineHeight);
+                });
+            }
+        }
+
         // Draw existing spawn boxes
         if (this.currentSpawns && Array.isArray(this.currentSpawns)) {
             this.currentSpawns.forEach((spawn, idx) => {
@@ -1060,6 +1253,338 @@ panAnimationId: null,
             this.serverSpawnTooltipVisible = false;
             this.redrawAll();
         }
+    },
+
+    // Vendor icon info helper - returns color and icon type based on sign type
+    getVendorIconInfo: function(signType, isHive, hasVendors, isFocused) {
+        // Default values
+        let color = '#17A2B8'; // Cyan
+        let icon = 'sign';
+
+        if (isHive) {
+            color = '#FFD700'; // Gold yellow for hives
+            icon = 'beehive';
+        } else {
+            // Categorize sign types
+            const guilds = ['ArmamentsGuild', 'ArmourersGuild', 'BlacksmithsGuild', 'WeaponsGuild', 
+                           'BardicGuild', 'BartersGuild', 'ProvisionersGuild', 'TradersGuild',
+                           'CooksGuild', 'HealersGuild', 'MagesGuild', 'SorcerersGuild', 
+                           'IllusionistGuild', 'MinersGuild', 'ArchersGuild', 'SeamensGuild',
+                           'FishermensGuild', 'SailorsGuild', 'ShipwrightsGuild', 'TailorsGuild',
+                           'ThievesGuild', 'RoguesGuild', 'AssassinsGuild', 'TinkersGuild',
+                           'WarriorsGuild', 'CavalryGuild', 'FightersGuild', 'MerchantsGuild'];
+
+            const foodShops = ['Bakery', 'Butcher', 'Tavern', 'Inn'];
+            const magicShops = ['Mage', 'ReagentShop'];
+            const weaponShops = ['Blacksmith', 'Armourer', 'Fletcher', 'Bowyer'];
+            const serviceShops = ['Bank', 'Healer', 'Stables'];
+            const craftShops = ['Tailor', 'Tinker', 'Woodworker', 'Jeweler', 'Painter'];
+            const woodenSigns = ['WoodenSign'];
+            const brassSigns = ['BrassSign'];
+
+            if (guilds.includes(signType)) {
+                color = '#9B59B6'; // Purple for guilds
+                icon = 'guild';
+            } else if (woodenSigns.includes(signType)) {
+                color = '#8B4513'; // Saddle brown for wooden
+                icon = 'wooden';
+            } else if (brassSigns.includes(signType)) {
+                color = '#DAA520'; // Goldenrod for brass
+                icon = 'brass';
+            } else if (foodShops.includes(signType)) {
+                color = '#E67E22'; // Orange for food
+                icon = 'food';
+            } else if (magicShops.includes(signType)) {
+                color = '#8E44AD'; // Deep purple for magic
+                icon = 'magic';
+            } else if (weaponShops.includes(signType)) {
+                color = '#C0392B'; // Dark red for weapons
+                icon = 'weapon';
+            } else if (serviceShops.includes(signType)) {
+                color = '#27AE60'; // Green for services
+                icon = 'service';
+            } else if (craftShops.includes(signType)) {
+                color = '#3498DB'; // Blue for crafts
+                icon = 'craft';
+            } else {
+                // Default shops (Theatre, Library, Shipwright, BarberShop, Bard, Customs, Provisioner)
+                color = '#17A2B8'; // Cyan
+                icon = 'shop';
+            }
+        }
+
+        // Override color if has vendors (but keep icon)
+        if (hasVendors && !isFocused) {
+            color = '#28A745'; // Green when has vendors
+        }
+
+        return { color, icon };
+    },
+
+    // Draw vendor icon based on type
+    drawVendorIcon: function(x, y, size, iconType, isFocused) {
+        const strokeColor = isFocused ? '#FFFFFF' : '#000000';
+        const lineWidth = isFocused ? 1.5 : 1;
+        this.ctx.strokeStyle = strokeColor;
+        this.ctx.fillStyle = strokeColor;
+        this.ctx.lineWidth = lineWidth;
+        const s = size * 0.55;
+
+        switch (iconType) {
+            case 'beehive':
+                // Hexagonal beehive shape with honey cells
+                this.ctx.beginPath();
+                for (let i = 0; i < 6; i++) {
+                    const angle = (Math.PI / 3) * i - Math.PI / 2;
+                    const px = x + s * Math.cos(angle);
+                    const py = y + s * Math.sin(angle);
+                    if (i === 0) this.ctx.moveTo(px, py);
+                    else this.ctx.lineTo(px, py);
+                }
+                this.ctx.closePath();
+                this.ctx.stroke();
+                // Inner dot for honey
+                this.ctx.beginPath();
+                this.ctx.arc(x, y, s * 0.25, 0, 2 * Math.PI);
+                this.ctx.fill();
+                break;
+
+            case 'guild':
+                // Shield/banner shape for guilds
+                this.ctx.beginPath();
+                this.ctx.moveTo(x - s * 0.6, y - s * 0.7);
+                this.ctx.lineTo(x + s * 0.6, y - s * 0.7);
+                this.ctx.lineTo(x + s * 0.6, y + s * 0.2);
+                this.ctx.lineTo(x, y + s * 0.8);
+                this.ctx.lineTo(x - s * 0.6, y + s * 0.2);
+                this.ctx.closePath();
+                this.ctx.stroke();
+                break;
+
+            case 'wooden':
+                // Wooden plank sign
+                this.ctx.lineWidth = lineWidth * 1.5;
+                // Horizontal plank
+                this.ctx.beginPath();
+                this.ctx.moveTo(x - s * 0.8, y - s * 0.2);
+                this.ctx.lineTo(x + s * 0.8, y - s * 0.2);
+                this.ctx.lineTo(x + s * 0.8, y + s * 0.3);
+                this.ctx.lineTo(x - s * 0.8, y + s * 0.3);
+                this.ctx.closePath();
+                this.ctx.stroke();
+                // Post
+                this.ctx.beginPath();
+                this.ctx.moveTo(x, y + s * 0.3);
+                this.ctx.lineTo(x, y + s * 0.9);
+                this.ctx.stroke();
+                break;
+
+            case 'brass':
+                // Oval brass sign
+                this.ctx.lineWidth = lineWidth * 1.5;
+                this.ctx.beginPath();
+                this.ctx.ellipse(x, y - s * 0.1, s * 0.7, s * 0.45, 0, 0, 2 * Math.PI);
+                this.ctx.stroke();
+                // Post
+                this.ctx.beginPath();
+                this.ctx.moveTo(x, y + s * 0.35);
+                this.ctx.lineTo(x, y + s * 0.9);
+                this.ctx.stroke();
+                break;
+
+            case 'food':
+                // Mug/cup shape for food/drink
+                this.ctx.beginPath();
+                // Cup body
+                this.ctx.moveTo(x - s * 0.5, y - s * 0.5);
+                this.ctx.lineTo(x - s * 0.4, y + s * 0.5);
+                this.ctx.lineTo(x + s * 0.4, y + s * 0.5);
+                this.ctx.lineTo(x + s * 0.5, y - s * 0.5);
+                this.ctx.stroke();
+                // Handle
+                this.ctx.beginPath();
+                this.ctx.arc(x + s * 0.65, y, s * 0.25, -Math.PI / 2, Math.PI / 2);
+                this.ctx.stroke();
+                break;
+
+            case 'magic':
+                // Star shape for magic
+                this.ctx.beginPath();
+                for (let i = 0; i < 5; i++) {
+                    const outerAngle = (Math.PI * 2 / 5) * i - Math.PI / 2;
+                    const innerAngle = outerAngle + Math.PI / 5;
+                    const outerX = x + s * 0.8 * Math.cos(outerAngle);
+                    const outerY = y + s * 0.8 * Math.sin(outerAngle);
+                    const innerX = x + s * 0.35 * Math.cos(innerAngle);
+                    const innerY = y + s * 0.35 * Math.sin(innerAngle);
+                    if (i === 0) this.ctx.moveTo(outerX, outerY);
+                    else this.ctx.lineTo(outerX, outerY);
+                    this.ctx.lineTo(innerX, innerY);
+                }
+                this.ctx.closePath();
+                this.ctx.stroke();
+                break;
+
+            case 'weapon':
+                // Crossed swords
+                this.ctx.lineWidth = lineWidth * 1.2;
+                // Sword 1
+                this.ctx.beginPath();
+                this.ctx.moveTo(x - s * 0.7, y - s * 0.7);
+                this.ctx.lineTo(x + s * 0.7, y + s * 0.7);
+                this.ctx.stroke();
+                // Sword 2
+                this.ctx.beginPath();
+                this.ctx.moveTo(x + s * 0.7, y - s * 0.7);
+                this.ctx.lineTo(x - s * 0.7, y + s * 0.7);
+                this.ctx.stroke();
+                break;
+
+            case 'service':
+                // Plus/cross for services (healer style)
+                this.ctx.lineWidth = lineWidth * 1.5;
+                this.ctx.beginPath();
+                this.ctx.moveTo(x, y - s * 0.7);
+                this.ctx.lineTo(x, y + s * 0.7);
+                this.ctx.stroke();
+                this.ctx.beginPath();
+                this.ctx.moveTo(x - s * 0.7, y);
+                this.ctx.lineTo(x + s * 0.7, y);
+                this.ctx.stroke();
+                break;
+
+            case 'craft':
+                // Gear/cog for crafts
+                const teeth = 6;
+                const innerR = s * 0.35;
+                const outerR = s * 0.65;
+                this.ctx.beginPath();
+                for (let i = 0; i < teeth * 2; i++) {
+                    const angle = (Math.PI / teeth) * i;
+                    const r = i % 2 === 0 ? outerR : innerR;
+                    const px = x + r * Math.cos(angle);
+                    const py = y + r * Math.sin(angle);
+                    if (i === 0) this.ctx.moveTo(px, py);
+                    else this.ctx.lineTo(px, py);
+                }
+                this.ctx.closePath();
+                this.ctx.stroke();
+                // Center hole
+                this.ctx.beginPath();
+                this.ctx.arc(x, y, s * 0.15, 0, 2 * Math.PI);
+                this.ctx.stroke();
+                break;
+
+            case 'shop':
+            case 'sign':
+            default:
+                // Default signpost
+                this.ctx.lineWidth = lineWidth * 1.2;
+                // Post
+                this.ctx.beginPath();
+                this.ctx.moveTo(x, y - s * 0.7);
+                this.ctx.lineTo(x, y + s * 0.8);
+                this.ctx.stroke();
+                // Sign board
+                this.ctx.beginPath();
+                this.ctx.moveTo(x - s * 0.7, y - s * 0.5);
+                this.ctx.lineTo(x + s * 0.7, y - s * 0.5);
+                this.ctx.lineTo(x + s * 0.7, y + s * 0.1);
+                this.ctx.lineTo(x - s * 0.7, y + s * 0.1);
+                this.ctx.closePath();
+                this.ctx.stroke();
+                break;
+        }
+    },
+
+    // Vendor Marker methods
+    showVendorMarkers: function(markers, selectedSignType) {
+        console.log(`🏪 Showing ${markers.length} vendor markers, selected: ${selectedSignType}`);
+        this.vendorMarkers = markers;
+        this.selectedVendorSignType = selectedSignType || '';
+        this.hoveredVendorMarkerIdx = -1;
+        this.vendorMarkerTooltipVisible = false;
+        if (this.vendorMarkerDwellTimer) {
+            clearTimeout(this.vendorMarkerDwellTimer);
+            this.vendorMarkerDwellTimer = null;
+        }
+        this.redrawAll();
+    },
+
+    hideVendorMarkers: function() {
+        console.log(`🏪 Hiding vendor markers`);
+        this.vendorMarkers = null;
+        this.hoveredVendorMarkerIdx = -1;
+        this.vendorMarkerTooltipVisible = false;
+        if (this.vendorMarkerDwellTimer) {
+            clearTimeout(this.vendorMarkerDwellTimer);
+            this.vendorMarkerDwellTimer = null;
+        }
+        this.redrawAll();
+    },
+
+    updateVendorMarkerHover: function(screenX, screenY) {
+        const worldPos = this.screenToWorld(screenX, screenY);
+        const newIdx = this.findVendorMarkerAt(worldPos.x, worldPos.y);
+
+        // Clear existing dwell timer
+        if (this.vendorMarkerDwellTimer) {
+            clearTimeout(this.vendorMarkerDwellTimer);
+            this.vendorMarkerDwellTimer = null;
+        }
+
+        // If mouse moved to a different marker or off markers
+        if (newIdx !== this.hoveredVendorMarkerIdx) {
+            this.hoveredVendorMarkerIdx = newIdx;
+            this.vendorMarkerTooltipVisible = false;
+            this.redrawAll();
+        }
+
+        // If hovering over a marker, start dwell timer
+        if (newIdx >= 0) {
+            this.vendorMarkerTooltipMousePos = { x: screenX, y: screenY };
+            this.vendorMarkerDwellTimer = setTimeout(() => {
+                if (this.hoveredVendorMarkerIdx === newIdx) {
+                    this.vendorMarkerTooltipVisible = true;
+                    this.redrawAll();
+                }
+            }, this.vendorMarkerDwellDelay);
+        }
+    },
+
+    clearVendorMarkerHover: function() {
+        if (this.vendorMarkerDwellTimer) {
+            clearTimeout(this.vendorMarkerDwellTimer);
+            this.vendorMarkerDwellTimer = null;
+        }
+        if (this.hoveredVendorMarkerIdx >= 0 || this.vendorMarkerTooltipVisible) {
+            this.hoveredVendorMarkerIdx = -1;
+            this.vendorMarkerTooltipVisible = false;
+            this.redrawAll();
+        }
+    },
+
+    findVendorMarkerAt: function(worldX, worldY) {
+        if (!this.vendorMarkers || !Array.isArray(this.vendorMarkers)) {
+            return -1;
+        }
+
+        const clickRadius = 15; // Detection radius in world units
+
+        for (let i = 0; i < this.vendorMarkers.length; i++) {
+            const marker = this.vendorMarkers[i];
+            if (!marker) continue;
+
+            const dx = worldX - marker.x;
+            const dy = worldY - marker.y;
+            const distSquared = dx * dx + dy * dy;
+
+            if (distSquared <= clickRadius * clickRadius) {
+                return i;
+            }
+        }
+
+        return -1;
     },
 
     // Smooth keyboard panning functions

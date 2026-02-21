@@ -249,12 +249,30 @@
                     </h6>
 
                     <div class="row justify-content-center">
-                        <div class="col-md-6 text-center">
+                        <div class="col-md-4 text-center">
                             <div class="form-check form-switch d-inline-block text-start mb-3">
                                 <input class="form-check-input" type="checkbox" @bind="Settings.EnableVendorSpawn" id="vendorSpawn" style="transform: scale(1.2);">
                                 <label class="form-check-label" for="vendorSpawn" style="font-size: 1.05rem;">
                                     @(Settings.EnableVendorSpawn ? "Enabled" : "Disabled")
                                     <InfoIcon Text="Master toggle for the vendor spawn system" />
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <div class="form-check form-switch d-inline-block text-start mb-3">
+                                <input class="form-check-input" type="checkbox" @bind="Settings.EnableVendorNight" id="vendorNight">
+                                <label class="form-check-label" for="vendorNight">
+                                    Night Sleep
+                                    <InfoIcon Text="When enabled, vendors 'sleep' at night - players won't find vendors out during night hours. Disable for 24/7 vendors." />
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <div class="form-check form-switch d-inline-block text-start mb-3">
+                                <input class="form-check-input" type="checkbox" @bind="Settings.EnableVendorExtra" id="vendorExtra">
+                                <label class="form-check-label" for="vendorExtra">
+                                    Extra Townsfolk
+                                    <InfoIcon Text="When enabled, extra TownNPCs spawn alongside vendors to boost town population and make it look like there are shoppers." />
                                 </label>
                             </div>
                         </div>

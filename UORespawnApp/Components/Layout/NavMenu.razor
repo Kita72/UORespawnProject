@@ -48,7 +48,12 @@
                 }
             </select>
         </div>
-        
+
+        <div class="nav-item px-3">
+            <button class="nav-link btn btn-link @GetActiveClass("vendorspawn")" @onclick="ShowVendorSpawn">
+                <span class="bi bi-shop-nav-menu" aria-hidden="true"></span> Vendor Spawn
+            </button>
+        </div>
         <div class="nav-item px-3">
             <button class="nav-link btn btn-link @GetActiveClass("boxspawn")" @onclick="ShowBoxSpawn">
                 <span class="bi bi-map-fill-nav-menu" aria-hidden="true"></span> Box Spawn
@@ -109,6 +114,7 @@
     }
 
     private void ShowHome() => ViewService.SetView("home");
+    private void ShowVendorSpawn() => ViewService.SetView("vendorspawn");
     private void ShowBoxSpawn() => ViewService.SetView("boxspawn");
     private void ShowRegionSpawn() => ViewService.SetView("regionspawn");
     private void ShowWorldSpawn() => ViewService.SetView("tilespawn");

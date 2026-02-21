@@ -1,0 +1,178 @@
+/* Vendor Spawn Component Styles */
+
+/* Card index number */
+.card-index {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 4px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    color: #6c757d;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.spawn-item.selected .card-index {
+    color: goldenrod;
+    background-color: rgba(255, 193, 7, 0.15);
+    border-color: rgba(255, 193, 7, 0.3);
+}
+
+/* Location item in card */
+.location-item {
+    padding: 2px 6px;
+    margin: 2px 0;
+    border-radius: 3px;
+    background-color: rgba(23, 162, 184, 0.1);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    border: 1px solid transparent;
+}
+
+.location-item:hover {
+    background-color: rgba(23, 162, 184, 0.3);
+}
+
+/* Focused location item - the one currently selected on the map */
+.location-item.focused {
+    background-color: rgba(255, 69, 0, 0.25);
+    border-color: rgba(255, 69, 0, 0.6);
+    box-shadow: 0 0 6px rgba(255, 69, 0, 0.4);
+}
+
+.location-item.focused:hover {
+    background-color: rgba(255, 69, 0, 0.35);
+}
+
+/* Locations list container - scrollable for all locations */
+.locations-list {
+    max-height: 150px;
+    overflow-y: auto;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: 8px;
+}
+
+/* Sign type card selected state */
+.spawn-item.selected .locations-list {
+    border-top-color: rgba(255, 193, 7, 0.3);
+}
+
+/* Sign type icon colors */
+.spawn-item .bi-signpost-2-fill {
+    color: #17a2b8;
+}
+
+.spawn-item .bi-hexagon-fill {
+    color: #ffc107;
+}
+
+.spawn-item.selected .bi-signpost-2-fill,
+.spawn-item.selected .bi-hexagon-fill {
+    filter: brightness(1.2);
+}
+
+/* Right column container - flex to fill space */
+.right-column-container {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 150px);
+    min-height: 500px;
+}
+
+/* Map card (fixed height) */
+.map-card {
+    flex-shrink: 0;
+}
+
+/* Spawn list container (fills remaining space) */
+.spawn-list-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.spawn-list-header {
+    flex-shrink: 0;
+}
+
+.spawn-list-body {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+/* Spawn item styling */
+.spawn-item {
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.spawn-item:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 193, 7, 0.3);
+}
+
+.spawn-item.selected {
+    background-color: rgba(255, 193, 7, 0.15);
+    border-color: rgba(255, 193, 7, 0.5);
+}
+
+/* Spawn controls inside selected card */
+.spawn-controls {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Mini map body */
+.minimap-body {
+    background-color: rgba(0, 0, 0, 0.2);
+}
+
+/* Dark header styling */
+.dark-header {
+    background-color: rgba(0, 0, 0, 0.3);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 8px 12px;
+}
+
+/* Spawn search input */
+.spawn-search-input {
+    width: 50px;
+    height: 24px;
+    font-size: 0.75rem;
+    text-align: center;
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    color: inherit;
+    margin: 0 4px;
+}
+
+.spawn-search-input:focus {
+    outline: none;
+    border-color: rgba(255, 193, 7, 0.5);
+    background-color: rgba(255, 255, 255, 0.15);
+}
+
+/* Remove spinner arrows from number input */
+.spawn-search-input::-webkit-outer-spin-button,
+.spawn-search-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.spawn-search-input[type=number] {
+    -moz-appearance: textfield;
+}

@@ -30,6 +30,7 @@ namespace UORespawnApp.Scripts.Utilities
             InitializeBoxSpawns(); 
             InitializeTileSpawns(); 
             InitializeRegionSpawns();
+            InitializeVendorSpawns();
         }
 
         #region Box Spawn Data
@@ -207,6 +208,61 @@ namespace UORespawnApp.Scripts.Utilities
             catch (Exception ex)
             {
                 Logger.Error("Error loading region spawn data", ex);
+            }
+        }
+
+        #endregion
+
+        #region Vendor Spawn Data
+
+        /// <summary>
+        /// Vendor spawn data indexed by MapId
+        /// Each map contains a list of VendorEntity objects
+        /// </summary>
+        internal static Dictionary<int, List<VendorEntity>> VendorSpawns { get; private set; } = [];
+
+        /// <summary>
+        /// Initialize Vendor Spawns dictionary with empty lists for each map (0-5)
+        /// </summary>
+        internal static void InitializeVendorSpawns()
+        {
+            for (int i = 0; i <= 5; i++)
+            {
+                VendorSpawns[i] = [];
+            }
+        }
+
+        /// <summary>
+        /// Save vendor spawn data using binary serialization (ServUO-style BinaryWriter)
+        /// </summary>
+        internal static void SaveVendorSpawnData()
+        {
+            try
+            {
+                BinarySerializationService.SaveVendorSpawns();
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error saving vendor spawn data", ex);
+            }
+        }
+
+        /// <summary>
+        /// Load vendor spawn data using binary deserialization (ServUO-style BinaryReader)
+        /// </summary>
+        internal static void LoadVendorSpawnData()
+        {
+            try
+            {
+                VendorSpawns.Clear();
+
+                InitializeVendorSpawns();
+
+                BinarySerializationService.LoadVendorSpawns();
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error loading vendor spawn data", ex);
             }
         }
 

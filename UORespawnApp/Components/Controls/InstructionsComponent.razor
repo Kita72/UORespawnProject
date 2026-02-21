@@ -34,18 +34,19 @@
                                 <li><a href="#map-editor" class="text-decoration-none">2. Box Spawn Editor</a></li>
                                 <li><a href="#region-spawn" class="text-decoration-none">3. Region Spawn System</a></li>
                                 <li><a href="#world-spawn" class="text-decoration-none">4. Tile Spawn System</a></li>
-                                <li><a href="#spawn-packs" class="text-decoration-none">5. Spawn Packs</a></li>
-                                <li><a href="#settings" class="text-decoration-none">6. Settings & Configuration</a></li>
+                                <li><a href="#vendor-spawn" class="text-decoration-none">5. Vendor Spawn Editor</a></li>
+                                <li><a href="#spawn-packs" class="text-decoration-none">6. Spawn Packs</a></li>
+                                <li><a href="#settings" class="text-decoration-none">7. Settings & Configuration</a></li>
                             </ul>
                         </div>
                         <div class="col-md-6">
                             <ul class="list-unstyled mb-0">
-                                <li><a href="#maps" class="text-decoration-none">7. Maps</a></li>
-                                <li><a href="#server-integration" class="text-decoration-none">8. Server Integration</a></li>
-                                <li><a href="#admin-gui" class="text-decoration-none">9. Admin GUI & Commands</a></li>
-                                <li><a href="#tips" class="text-decoration-none">10. Tips & Best Practices</a></li>
-                                <li><a href="#debug-mode" class="text-decoration-none">11. Debug Mode</a></li>
-                                <li><a href="#support" class="text-decoration-none">12. Support & Resources</a></li>
+                                <li><a href="#maps" class="text-decoration-none">8. Maps</a></li>
+                                <li><a href="#server-integration" class="text-decoration-none">9. Server Integration</a></li>
+                                <li><a href="#admin-gui" class="text-decoration-none">10. Admin GUI & Commands</a></li>
+                                <li><a href="#tips" class="text-decoration-none">11. Tips & Best Practices</a></li>
+                                <li><a href="#debug-mode" class="text-decoration-none">12. Debug Mode</a></li>
+                                <li><a href="#support" class="text-decoration-none">13. Support & Resources</a></li>
                             </ul>
                         </div>
                     </div>
@@ -310,10 +311,116 @@
                 </div>
             </div>
 
-            <!-- 5. Spawn Packs -->
+            <!-- 5. Vendor Spawn Editor -->
+            <div class="card map-card mb-4" id="vendor-spawn">
+                <div class="card-header">
+                    <strong><span class="bi bi-shop"></span> 5. Vendor Spawn Editor</strong>
+                </div>
+                <div class="card-body">
+                    <h6 class="text-primary"><span class="bi bi-gear-wide-connected me-2"></span>How It Works</h6>
+                    <p>
+                        The Vendor Spawn Editor allows you to configure which vendors spawn at each shop sign and hive location.
+                        Unlike creature spawns that use proximity detection, vendor spawns are tied to <strong>specific sign/hive locations</strong>.
+                        The server reads your configuration and places vendors appropriately.
+                    </p>
+
+                    <h6 class="text-primary mt-4"><span class="bi bi-signpost me-2"></span>Sign Types & Hives</h6>
+                    <p>The editor organizes locations by <strong>sign type</strong>:</p>
+                    <ul>
+                        <li><strong>Shop Signs:</strong> Bakery, Blacksmith, Tailor, Mage, Healer, Bank, Tavern, and many more</li>
+                        <li><strong>Guild Signs:</strong> Fighter's Guild, Mage's Guild, Thieves' Guild, etc.</li>
+                        <li><strong>Hives (Metal Posts):</strong> Beekeeping locations that spawn Beekeepers</li>
+                    </ul>
+
+                    <h6 class="text-primary mt-4"><span class="bi bi-card-list me-2"></span>Using the Vendor Spawn Page</h6>
+                    <ol>
+                        <li>Click <strong>"Vendor Spawn"</strong> in the left navigation</li>
+                        <li>Select your map from the dropdown</li>
+                        <li>Browse <strong>Sign Type cards</strong> in the right panel - each card groups all locations of that type</li>
+                        <li>Click a card to expand it and see all locations</li>
+                        <li>Click a <strong>specific location</strong> in the list to focus it (highlights on map)</li>
+                        <li>Click the <span class="bi bi-person-plus-fill"></span> button on the focused location to open the vendor modal</li>
+                        <li>Search and add vendors from the vendor list - <strong>duplicates allowed!</strong> (e.g., 3 Beekeepers at one hive)</li>
+                        <li>Click <strong>Save</strong> to save vendors for that location</li>
+                    </ol>
+
+                    <h6 class="text-primary mt-4"><span class="bi bi-map me-2"></span>Map Features</h6>
+                    <ul>
+                        <li><strong>Sign Markers:</strong> Each sign location is shown with a custom icon based on its type</li>
+                        <li><strong>Hive Markers:</strong> Beehive locations shown with hexagon icons</li>
+                        <li><strong>Green Glow:</strong> Locations with vendors assigned get a green highlight</li>
+                        <li><strong>Gold Highlight:</strong> Currently focused/selected location</li>
+                        <li><strong>Click Markers:</strong> Click any marker on the map to select it and its sign type</li>
+                    </ul>
+
+                    <h6 class="text-primary mt-4"><span class="bi bi-people-fill me-2"></span>Add to All Locations (Bulk Add)</h6>
+                    <p>
+                        Need the same vendors at every location of a sign type? Use the <strong>Add to All</strong> button:
+                    </p>
+                    <ol>
+                        <li>Click a sign type card to expand it</li>
+                        <li>Click the <strong>"Add to All X Locations"</strong> button at the top of the locations list</li>
+                        <li>Select vendors in the modal - these will be <strong>added</strong> to every location</li>
+                        <li>Click Save - vendors are added to all locations at once!</li>
+                    </ol>
+                    <p class="small text-muted">
+                        <span class="bi bi-info-circle me-1"></span>Bulk add doesn't replace existing vendors - it adds to them. 
+                        If a location already has a Baker, adding "Cook" via bulk add gives it both Baker and Cook.
+                    </p>
+
+                    <h6 class="text-primary mt-4"><span class="bi bi-person-lines-fill me-2"></span>Per-Location Vendors</h6>
+                    <p>
+                        Each location has its own vendor list. This allows fine-grained control:
+                    </p>
+                    <ul>
+                        <li>Britain's main bakery might have 2 Bakers and 1 Cook</li>
+                        <li>A small village bakery might have just 1 Baker</li>
+                        <li>One hive could have 3 Beekeepers while another has 1</li>
+                    </ul>
+
+                    <h6 class="text-primary mt-4"><span class="bi bi-list-check me-2"></span>Example Setup</h6>
+                    <p><strong>Bakery Sign &#64; Britain (1456, 1632):</strong></p>
+                    <ul>
+                        <li>Baker (x2)</li>
+                        <li>Cook</li>
+                    </ul>
+                    <p><strong>Hive &#64; Yew (542, 982):</strong></p>
+                    <ul>
+                        <li>Beekeeper (x3)</li>
+                    </ul>
+
+                    <h6 class="text-primary mt-4"><span class="bi bi-badge-cc me-2"></span>Card Badge System</h6>
+                    <p>Each sign type card shows a badge indicating how many locations have vendors:</p>
+                    <ul>
+                        <li><span class="badge bg-success">3/19</span> = 3 out of 19 Bakery locations have vendors configured</li>
+                        <li>The <span class="bi bi-arrow-clockwise text-warning"></span> button clears all vendors for that sign type</li>
+                    </ul>
+
+                    <div class="alert alert-info mt-3">
+                        <span class="bi bi-lightbulb"></span> <strong>Tip:</strong> Use the mini-map to quickly navigate 
+                        between towns. The XML and Spawns toggles work here too, so you can see existing XML spawners 
+                        while configuring vendor spawns.
+                    </div>
+
+                    <div class="alert alert-success mt-3">
+                        <span class="bi bi-lightning-charge"></span> <strong>Quick Setup Workflow:</strong>
+                        <ol class="mb-0 mt-2">
+                            <li>Use <strong>Add to All</strong> to set base vendors for each sign type (e.g., Baker for all Bakeries)</li>
+                            <li>Then customize specific locations that need more/different vendors</li>
+                        </ol>
+                    </div>
+
+                    <div class="alert alert-warning mt-3">
+                        <span class="bi bi-exclamation-triangle"></span> <strong>Note:</strong> Sign and hive location data 
+                        comes from your server. Generate it using <code>[GenSignList</code> and <code>[GenHiveList</code> commands.
+                    </div>
+                </div>
+            </div>
+
+            <!-- 6. Spawn Packs -->
             <div class="card map-card mb-4" id="spawn-packs">
                 <div class="card-header">
-                    <strong><span class="bi bi-boxes"></span> 5. Spawn Packs</strong>
+                    <strong><span class="bi bi-boxes"></span> 6. Spawn Packs</strong>
                 </div>
                 <div class="card-body">
                     <h6 class="text-primary"><span class="bi bi-question-circle me-2"></span>What are Spawn Packs?</h6>
@@ -454,10 +561,10 @@
                 </div>
             </div>
 
-            <!-- 6. Settings & Configuration -->
+            <!-- 7. Settings & Configuration -->
             <div class="card map-card mb-4" id="settings">
                 <div class="card-header">
-                    <strong><span class="bi bi-gear"></span> 6. Settings & Configuration</strong>
+                    <strong><span class="bi bi-gear"></span> 7. Settings & Configuration</strong>
                 </div>
                 <div class="card-body">
                     <h6 class="text-primary"><span class="bi bi-sliders me-2"></span>Spawn Settings</h6>
@@ -512,19 +619,26 @@
                         <li>Use <code>[SpawnReload</code> in-game to apply the change</li>
                     </ol>
 
+                    <p><strong>Additional Vendor Options:</strong></p>
+                    <ul>
+                        <li><strong>Night Sleep:</strong> When enabled, vendors "sleep" at night - players won't find vendors out during night hours. 
+                            Disable this for 24/7 vendor availability. Great for shards wanting realism!</li>
+                        <li><strong>Extra Townsfolk:</strong> When enabled, extra TownNPCs spawn alongside vendors to boost town population and 
+                            make it look like there are shoppers walking around. Adds life and activity to your towns!</li>
+                    </ul>
+
                     <div class="alert alert-info mt-3">
                         <span class="bi bi-lightbulb"></span> <strong>Tip:</strong> Vendor Spawn handles approximately 
                         90% of standard town vendor placement automatically! This saves significant time compared to 
                         manually placing each vendor with XML spawners.
                     </div>
 
-                    <div class="alert alert-secondary mt-3">
-                        <span class="bi bi-tools"></span> <strong>Coming Soon:</strong>
-                        <ul class="mb-0 mt-2">
-                            <li>Customizable vendor lists per sign type</li>
-                            <li>Support for edge cases (e.g., Beekeepers using Beehives as markers)</li>
-                            <li>Vendor density and spawn rate controls</li>
-                        </ul>
+                    <div class="alert alert-success mt-3">
+                        <span class="bi bi-check-circle"></span> <strong>Vendor Spawn Editor Available!</strong>
+                        <p class="mb-0 mt-2">
+                            Use the <strong>Vendor Spawn</strong> page to customize vendor lists per location. 
+                            See <a href="#vendor-spawn" class="alert-link">Section 5: Vendor Spawn Editor</a> for details.
+                        </p>
                     </div>
 
                     <h6 class="text-primary mt-4"><span class="bi bi-palette me-2"></span>Spawn Box Appearance</h6>
@@ -598,10 +712,10 @@
                 </div>
             </div>
 
-            <!-- 7. Maps -->
+            <!-- 8. Maps -->
             <div class="card map-card mb-4" id="maps">
                 <div class="card-header">
-                    <strong><span class="bi bi-map"></span> 7. Maps</strong>
+                    <strong><span class="bi bi-map"></span> 8. Maps</strong>
                 </div>
                 <div class="card-body">
                     <h6 class="text-primary"><span class="bi bi-collection me-2"></span>Default Maps</h6>
@@ -656,10 +770,10 @@
                 </div>
             </div>
 
-            <!-- 8. Server Integration -->
+            <!-- 9. Server Integration -->
             <div class="card map-card mb-4" id="server-integration">
                 <div class="card-header">
-                    <strong><span class="bi bi-server"></span> 8. Server Integration</strong>
+                    <strong><span class="bi bi-server"></span> 9. Server Integration</strong>
                 </div>
                 <div class="card-body">
                     <h6 class="text-primary"><span class="bi bi-gear-wide-connected me-2"></span>How UORespawn v2.0 Works</h6>
@@ -802,10 +916,10 @@
                 </div>
             </div>
 
-            <!-- 9. Admin GUI & Commands -->
+            <!-- 10. Admin GUI & Commands -->
             <div class="card map-card mb-4" id="admin-gui">
                 <div class="card-header">
-                    <strong><span class="bi bi-terminal"></span> 9. Admin GUI & Commands</strong>
+                    <strong><span class="bi bi-terminal"></span> 10. Admin GUI & Commands</strong>
                 </div>
                 <div class="card-body">
                     <h6 class="text-primary"><span class="bi bi-window me-2"></span>Professional Admin Control Panel</h6>
@@ -868,10 +982,10 @@
                 </div>
             </div>
 
-            <!-- 10. Tips & Best Practices -->
+            <!-- 11. Tips & Best Practices -->
             <div class="card map-card mb-4" id="tips">
                 <div class="card-header">
-                    <strong><span class="bi bi-star"></span> 10. Tips & Best Practices</strong>
+                    <strong><span class="bi bi-star"></span> 11. Tips & Best Practices</strong>
                 </div>
                 <div class="card-body">
                     <h6 class="text-primary"><span class="bi bi-box-arrow-in-down me-2"></span>Box Spawn Tips</h6>
@@ -926,10 +1040,10 @@
                 </div>
             </div>
 
-            <!-- 11. Debug Mode -->
+            <!-- 12. Debug Mode -->
             <div class="card map-card mb-4" id="debug-mode">
                 <div class="card-header">
-                    <strong><span class="bi bi-bug"></span> 11. Debug Mode</strong>
+                    <strong><span class="bi bi-bug"></span> 12. Debug Mode</strong>
                 </div>
                 <div class="card-body">
                     <h6 class="text-primary"><span class="bi bi-question-circle me-2"></span>What is Debug Mode?</h6>
@@ -1003,10 +1117,10 @@
                 </div>
             </div>
 
-            <!-- 12. Support & Resources -->
+            <!-- 13. Support & Resources -->
             <div class="card map-card mb-4" id="support">
                 <div class="card-header">
-                    <strong><span class="bi bi-question-circle"></span> 12. Support & Resources</strong>
+                    <strong><span class="bi bi-question-circle"></span> 13. Support & Resources</strong>
                 </div>
                 <div class="card-body">
                     <h6 class="text-primary"><span class="bi bi-life-preserver me-2"></span>Need Help?</h6>

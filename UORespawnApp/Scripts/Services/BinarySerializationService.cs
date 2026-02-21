@@ -1,5 +1,7 @@
 using UORespawnApp.Scripts.Constants;
 using UORespawnApp.Scripts.Entities;
+using UORespawnApp.Scripts.Enums;
+using UORespawnApp.Scripts.Helpers;
 using UORespawnApp.Scripts.Utilities;
 
 namespace UORespawnApp.Scripts.Services
@@ -12,10 +14,11 @@ namespace UORespawnApp.Scripts.Services
     public static class BinarySerializationService
     {
         // Current file format versions
-        private const int SETTINGS_VERSION = 2;
-        private const int BOX_SPAWN_VERSION = 1;
-        private const int TILE_SPAWN_VERSION = 1;
-        private const int REGION_SPAWN_VERSION = 1;
+            private const int SETTINGS_VERSION = 3; // v3: Added EnableVendorNight, EnableVendorExtra
+            private const int BOX_SPAWN_VERSION = 1;
+            private const int TILE_SPAWN_VERSION = 1;
+            private const int REGION_SPAWN_VERSION = 1;
+            private const int VENDOR_SPAWN_VERSION = 3; // v3: Per-location VendorEntity (IsSign, SignType, Facing, Location, VendorList)
 
         #region Active Pack Sync Helper
 
@@ -117,6 +120,8 @@ namespace UORespawnApp.Scripts.Services
             writer.Write(Settings.EnableRiftSpawn);
             writer.Write(Settings.EnableDebugSpawn);
             writer.Write(Settings.EnableVendorSpawn);
+            writer.Write(Settings.EnableVendorNight);
+            writer.Write(Settings.EnableVendorExtra);
         }
 
         /// <summary>
@@ -175,9 +180,15 @@ namespace UORespawnApp.Scripts.Services
             Settings.EnableRiftSpawn = reader.ReadBoolean();
             Settings.EnableDebugSpawn = reader.ReadBoolean();
 
-            if (version > 1)
+            if (version >= 2)
             {
                 Settings.EnableVendorSpawn = reader.ReadBoolean();
+            }
+
+            if (version >= 3)
+            {
+                Settings.EnableVendorNight = reader.ReadBoolean();
+                Settings.EnableVendorExtra = reader.ReadBoolean();
             }
         }
 
@@ -711,6 +722,185 @@ namespace UORespawnApp.Scripts.Services
             };
 
             return region;
+        }
+
+        #endregion
+
+        #region Vendor Spawn Save/Load
+
+        /// <summary>
+        /// Save vendor spawn data to binary file using BinaryWriter.
+        /// Format: Per map, per sign type -> vendor list (blueprint).
+        /// </summary>
+        public static void SaveVendorSpawns()
+        {
+            try
+            {
+                var localPath = PathConstants.GetLocalFilePath(PathConstants.VENDOR_FILENAME);
+
+                int count = WriteVendorSpawns(localPath);
+
+                Logger.Info($"Vendor spawns saved to: {localPath} ({count} sign types with vendors)");
+
+                // Sync to server if linked
+                var serverPath = PathConstants.ServerDataPath;
+
+                if (serverPath != null)
+                {
+                    var serverFilePath = PathConstants.GetServerFilePath(PathConstants.VENDOR_FILENAME);
+
+                    if (serverFilePath != null)
+                    {
+                        WriteVendorSpawns(serverFilePath);
+
+                        Logger.Info($"Vendor spawns synced to server: {serverFilePath}");
+                    }
+                }
+
+                // Sync to active approved pack if set
+                SyncFileToActivePack(localPath, PathConstants.VENDOR_FILENAME);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error saving vendor spawns", ex);
+            }
+        }
+
+        /// <summary>
+        /// Load vendor spawn data from binary file using BinaryReader
+        /// </summary>
+        public static void LoadVendorSpawns()
+        {
+            var localPath = PathConstants.GetLocalFilePath(PathConstants.VENDOR_FILENAME);
+
+            if (!File.Exists(localPath))
+            {
+                Logger.Info("No vendor spawn file found, using empty data");
+                return;
+            }
+
+            int totalVendors = ReadVendorSpawns(localPath);
+
+            Logger.Info($"Loaded {totalVendors} sign types with vendors from {localPath}");
+        }
+
+        private static int WriteVendorSpawns(string filePath)
+        {
+            using var writer = new BinaryWriter(File.Open(filePath, FileMode.Create));
+
+            // Write version info (bump to version 2 for new simplified format)
+            writer.Write(VENDOR_SPAWN_VERSION);
+            writer.Write(Utility.Version);
+
+            // Write map count (always 6: maps 0-5)
+            writer.Write(Utility.VendorSpawns.Count);
+
+            int totalCount = 0;
+
+            foreach (var kvp in Utility.VendorSpawns)
+            {
+                int mapId = kvp.Key;
+                var vendors = kvp.Value;
+
+                // Write map header
+                writer.Write(mapId);
+                writer.Write(MapUtility.GetMapName(mapId));
+                writer.Write(vendors.Count);
+
+                // Write each vendor entity (SignType + VendorList blueprint)
+                foreach (var vendor in vendors)
+                {
+                    WriteVendorEntity(writer, vendor);
+                    totalCount++;
+                }
+            }
+
+            return totalCount;
+        }
+
+        private static int ReadVendorSpawns(string filePath)
+        {
+            using var reader = new BinaryReader(File.Open(filePath, FileMode.Open));
+
+            // Read and validate version
+            int version = reader.ReadInt32();
+            string versionString = reader.ReadString();
+
+            if (version > VENDOR_SPAWN_VERSION)
+            {
+                Logger.Warning($"Vendor spawn file version {version} is newer than supported {VENDOR_SPAWN_VERSION}");
+            }
+
+            int mapCount = reader.ReadInt32();
+            int totalVendors = 0;
+
+            for (int m = 0; m < mapCount; m++)
+            {
+                int mapId = reader.ReadInt32();
+                string mapName = reader.ReadString(); // Read but don't use (we derive from MapUtility)
+                int vendorCount = reader.ReadInt32();
+
+                if (!Utility.VendorSpawns.TryGetValue(mapId, out List<VendorEntity>? value))
+                {
+                    value = [];
+
+                    Utility.VendorSpawns[mapId] = value;
+                }
+
+                for (int v = 0; v < vendorCount; v++)
+                {
+                    var vendor = ReadVendorEntity(reader, mapId);
+                    value.Add(vendor);
+                    totalVendors++;
+                }
+            }
+
+            return totalVendors;
+        }
+
+        private static void WriteVendorEntity(BinaryWriter writer, VendorEntity vendor)
+        {
+            // Write location-identifying data
+            writer.Write(vendor.IsSign);
+            writer.Write((int)vendor.Sign);
+            writer.Write((int)vendor.Facing);
+
+            // Write location
+            writer.Write(vendor.Location.X);
+            writer.Write(vendor.Location.Y);
+            writer.Write(vendor.Location.Z);
+
+            // Write vendor list for this location
+            WriteStringList(writer, vendor.VendorList);
+        }
+
+        private static VendorEntity ReadVendorEntity(BinaryReader reader, int mapId)
+        {
+            var isSign = reader.ReadBoolean();
+            var signType = (SignTypes)reader.ReadInt32();
+            var facing = (FacingTypes)reader.ReadInt32();
+
+            var x = reader.ReadInt32();
+            var y = reader.ReadInt32();
+            var z = reader.ReadInt32();
+            var location = new Point3D { X = x, Y = y, Z = z };
+
+            var vendorList = ReadStringList(reader);
+
+            VendorEntity vendor;
+            if (isSign)
+            {
+                vendor = new VendorEntity(signType, facing, location);
+            }
+            else
+            {
+                vendor = new VendorEntity(location);
+            }
+
+            vendor.MapId = mapId;
+            vendor.SetVendors(vendorList);
+
+            return vendor;
         }
 
         #endregion

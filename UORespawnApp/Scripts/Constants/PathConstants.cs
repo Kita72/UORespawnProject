@@ -110,6 +110,12 @@ namespace UORespawnApp.Scripts.Constants
         /// </summary>
         public const string REGION_FILENAME = "UOR_RegionSpawn.bin";
 
+        /// <summary>
+        /// Vendor spawn binary file
+        /// Contains: vendor spawn assignments for sign/hive locations
+        /// </summary>
+        public const string VENDOR_FILENAME = "UOR_VendorSpawn.bin";
+
         // ==================== TEXT FILE NAMES (.txt) ====================
         // Server generates these files, editor copies and reads them
         

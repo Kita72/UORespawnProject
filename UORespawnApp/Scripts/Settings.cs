@@ -175,6 +175,26 @@ namespace UORespawnApp
             set => Preferences.Set("EnableVendorSpawn", value);
         }
 
+        /// <summary>
+        /// Whether vendors "sleep" at night (disabled = vendors out 24/7).
+        /// When enabled, players won't find vendors out at night hours.
+        /// </summary>
+        public static bool EnableVendorNight
+        {
+            get => Preferences.Get("EnableVendorNight", false);
+            set => Preferences.Set("EnableVendorNight", value);
+        }
+
+        /// <summary>
+        /// Whether extra town NPCs spawn alongside vendors.
+        /// Adds general TownNPC to boost town population and make it look like shoppers.
+        /// </summary>
+        public static bool EnableVendorExtra
+        {
+            get => Preferences.Get("EnableVendorExtra", false);
+            set => Preferences.Set("EnableVendorExtra", value);
+        }
+
         public static int MaxMobs
         {
             get => Preferences.Get("MaxMobs", 15);

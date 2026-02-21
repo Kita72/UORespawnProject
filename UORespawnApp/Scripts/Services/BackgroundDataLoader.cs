@@ -20,6 +20,7 @@ namespace UORespawnApp.Scripts.Services
         public bool IsBoxSpawnDataLoaded { get; private set; }
         public bool IsTileSpawnDataLoaded { get; private set; }
         public bool IsRegionSpawnDataLoaded { get; private set; }
+        public bool IsVendorSpawnDataLoaded { get; private set; }
         public bool IsXMLSpawnerListLoaded { get; private set; }
         public bool IsMapFilesCopied { get; private set; }
         public bool IsDataWatcherStarted { get; private set; }
@@ -29,7 +30,7 @@ namespace UORespawnApp.Scripts.Services
         public bool IsComplete => _isComplete;
 
         // Progress tracking
-        public const int TotalSteps = 11;
+        public const int TotalSteps = 12;
         public int CompletedSteps { get; private set; }
         public double ProgressPercentage => (double)CompletedSteps / TotalSteps * 100;
 
@@ -39,6 +40,7 @@ namespace UORespawnApp.Scripts.Services
         public event EventHandler? BoxSpawnDataLoaded;
         public event EventHandler? TileSpawnDataLoaded;
         public event EventHandler? RegionSpawnDataLoaded;
+        public event EventHandler? VendorSpawnDataLoaded;
         public event EventHandler? AllDataLoaded;
 
         private DataWatcher? _dataWatcher;
@@ -239,25 +241,28 @@ namespace UORespawnApp.Scripts.Services
                 // Step 3: Load Region Spawn Data (Binary)
                 await LoadRegionSpawnDataAsync();
 
-                // Step 4: Load Bestiary (creature list from server-generated text file)
+                // Step 4: Load Vendor Spawn Data (Binary)
+                await LoadVendorSpawnDataAsync();
+
+                // Step 5: Load Bestiary (creature list from server-generated text file)
                 await LoadBestiaryAsync();
 
-                // Step 5: Load Vendor List (vendor names from server-generated text file)
+                // Step 6: Load Vendor List (vendor names from server-generated text file)
                 await LoadVendorListAsync();
 
-                // Step 6: Load Sign Data (shop sign locations for vendor spawning)
+                // Step 7: Load Sign Data (shop sign locations for vendor spawning)
                 await LoadSignDataAsync();
 
-                // Step 7: Load Hive Data (bee hive locations for beekeeper spawning)
+                // Step 8: Load Hive Data (bee hive locations for beekeeper spawning)
                 await LoadHiveDataAsync();
 
-                // Step 8: Load XML Spawner List
+                // Step 9: Load XML Spawner List
                 await LoadXMLSpawnerListAsync();
 
-                // Step 9: Verify Map Files exist in Data/MAPS
+                // Step 10: Verify Map Files exist in Data/MAPS
                 await CopyMapFilesAsync();
 
-                // Step 10: Start DataWatcher (LAST - after all data is loaded)
+                // Step 11: Start DataWatcher (LAST - after all data is loaded)
                 await StartDataWatcherAsync();
 
                 _isComplete = true;
@@ -405,7 +410,7 @@ namespace UORespawnApp.Scripts.Services
 
         private async Task LoadRegionSpawnDataAsync()
         {
-            Logger.Info("[Startup Step 3/7] Loading region spawn data...");
+            Logger.Info("[Startup Step 3/12] Loading region spawn data...");
 
             try
             {
@@ -417,11 +422,11 @@ namespace UORespawnApp.Scripts.Services
 
                         var totalRegionSpawns = Utility.RegionSpawns.Values.Sum(list => list.Count);
 
-                        Logger.Info($"[Startup Step 3/7] Loaded {totalRegionSpawns} region spawn configurations across all maps");
+                        Logger.Info($"[Startup Step 3/12] Loaded {totalRegionSpawns} region spawn configurations across all maps");
                     }
                     catch (Exception ex)
                     {
-                        Logger.Error("[Startup Step 3/7] LoadRegionSpawnData failed", ex);
+                        Logger.Error("[Startup Step 3/12] LoadRegionSpawnData failed", ex);
                     }
                 });
 
@@ -431,13 +436,45 @@ namespace UORespawnApp.Scripts.Services
             }
             catch (Exception ex)
             {
-                Logger.Error("[Startup Step 3/7] Error loading region spawn data", ex);
+                Logger.Error("[Startup Step 3/12] Error loading region spawn data", ex);
+            }
+        }
+
+        private async Task LoadVendorSpawnDataAsync()
+        {
+            Logger.Info("[Startup Step 4/12] Loading vendor spawn data...");
+
+            try
+            {
+                await Task.Run(() =>
+                {
+                    try
+                    {
+                        Utility.LoadVendorSpawnData();
+
+                        var totalVendorSpawns = Utility.VendorSpawns.Values.Sum(list => list.Count);
+
+                        Logger.Info($"[Startup Step 4/12] Loaded {totalVendorSpawns} vendor spawn configurations across all maps");
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Error("[Startup Step 4/12] LoadVendorSpawnData failed", ex);
+                    }
+                });
+
+                IsVendorSpawnDataLoaded = true;
+                CompletedSteps++;
+                VendorSpawnDataLoaded?.Invoke(this, EventArgs.Empty);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("[Startup Step 4/12] Error loading vendor spawn data", ex);
             }
         }
 
         private async Task LoadBestiaryAsync()
         {
-            Logger.Info("[Startup Step 4/10] Loading bestiary...");
+            Logger.Info("[Startup Step 5/12] Loading bestiary...");
 
             try
             {
@@ -447,11 +484,11 @@ namespace UORespawnApp.Scripts.Services
                 CompletedSteps++;
                 BestiaryLoaded?.Invoke(this, EventArgs.Empty);
 
-                Logger.Info($"[Startup Step 4/10] Loaded {BestiaryListUtility.BestiaryNameList?.Count ?? 0} creatures in bestiary");
+                Logger.Info($"[Startup Step 5/12] Loaded {BestiaryListUtility.BestiaryNameList?.Count ?? 0} creatures in bestiary");
             }
             catch (Exception ex)
             {
-                Logger.Error("[Startup Step 4/10] LoadBestiaryList failed", ex);
+                Logger.Error("[Startup Step 5/12] LoadBestiaryList failed", ex);
             }
         }
 
