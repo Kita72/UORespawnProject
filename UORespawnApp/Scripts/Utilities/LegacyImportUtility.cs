@@ -1,7 +1,6 @@
-using UORespawnApp.Scripts.Utilities;
 using UORespawnApp.Scripts.Entities;
 
-namespace UORespawnApp
+namespace UORespawnApp.Scripts.Utilities
 {
     /// <summary>
     /// Utility for importing legacy UORespawn v1.0 CSV data to v2.0 format

@@ -193,7 +193,7 @@
                     SpawnTypeName="Spawns"
                     SourceListName="Bestiary"
                     CurrentSpawns="@currentCategorySpawns"
-                    SourceList="@(BestiarySpawnUtility.BestiaryNameList ?? new List<string>())"
+                    SourceList="@(BestiaryListUtility.BestiaryNameList ?? new List<string>())"
                     OnClose="@CloseModal"
                     OnSave="@SaveModal" />
 

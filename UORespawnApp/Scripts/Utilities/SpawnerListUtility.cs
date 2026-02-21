@@ -1,8 +1,6 @@
-using UORespawnApp.Scripts.Utilities;
-
-namespace UORespawnApp
+namespace UORespawnApp.Scripts.Utilities
 {
-    internal static class XMLSpawnUtility
+    internal static class SpawnerListUtility
     {
         internal static readonly string SpawnersFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", "Raw", "UOR_SpawnerList.txt");
 

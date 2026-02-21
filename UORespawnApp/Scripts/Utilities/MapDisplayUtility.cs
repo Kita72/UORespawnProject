@@ -1,6 +1,4 @@
-﻿using UORespawnApp.Scripts.Utilities;
-
-namespace UORespawnApp
+﻿namespace UORespawnApp.Scripts.Utilities
 {
     internal static class MapDisplayUtility
     {

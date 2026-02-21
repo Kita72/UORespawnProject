@@ -82,33 +82,53 @@
         <MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
     </ItemGroup>
 
-    <ItemGroup>
-      <MauiAsset Remove="Resources\Raw\growl.wav" />
-      <MauiAsset Remove="Resources\Raw\UOR_SpawnerList.txt" />
-		<MauiAsset Remove="Resources\Raw\UOR_RegionList.txt" />
-    </ItemGroup>
+	<ItemGroup>
+	  <MauiAsset Remove="Resources\Raw\growl.wav" />
+	  <MauiAsset Remove="Resources\Raw\UOR_SpawnerList.txt" />
+	  <MauiAsset Remove="Resources\Raw\UOR_RegionList.txt" />
+	  <MauiAsset Remove="Resources\Raw\UOR_BestiaryList.txt" />
+	  <MauiAsset Remove="Resources\Raw\UOR_VendorList.txt" />
+	  <MauiAsset Remove="Resources\Raw\UOR_SignData.txt" />
+	  <MauiAsset Remove="Resources\Raw\UOR_HiveData.txt" />
+	</ItemGroup>
 
-    <ItemGroup>
-      <None Remove="Resources\Raw\growl.wav" />
-      <None Remove="Resources\Raw\UOR_SpawnerList.txt" />
-		<None Remove="Resources\Raw\UOR_RegionList.txt" />
-    </ItemGroup>
+	<ItemGroup>
+	  <None Remove="Resources\Raw\growl.wav" />
+	  <None Remove="Resources\Raw\UOR_SpawnerList.txt" />
+	  <None Remove="Resources\Raw\UOR_RegionList.txt" />
+	  <None Remove="Resources\Raw\UOR_BestiaryList.txt" />
+	  <None Remove="Resources\Raw\UOR_VendorList.txt" />
+	  <None Remove="Resources\Raw\UOR_SignData.txt" />
+	  <None Remove="Resources\Raw\UOR_HiveData.txt" />
+	</ItemGroup>
 
-    <ItemGroup>
-      <Content Include="Resources\Images\splash.png">
-        <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
-        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-      </Content>
-      <Content Include="Resources\Raw\growl.wav">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </Content>
-      <Content Include="Resources\Raw\UOR_SpawnerList.txt">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </Content>
-		<Content Include="Resources\Raw\UOR_RegionList.txt">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</Content>
-    </ItemGroup>
+	<ItemGroup>
+	  <Content Include="Resources\Images\splash.png">
+		<ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+		<CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+	  </Content>
+	  <Content Include="Resources\Raw\growl.wav">
+		<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </Content>
+	  <Content Include="Resources\Raw\UOR_SpawnerList.txt">
+		<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </Content>
+	  <Content Include="Resources\Raw\UOR_RegionList.txt">
+		<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </Content>
+	  <Content Include="Resources\Raw\UOR_BestiaryList.txt">
+		<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </Content>
+	  <Content Include="Resources\Raw\UOR_VendorList.txt">
+		<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </Content>
+	  <Content Include="Resources\Raw\UOR_SignData.txt">
+		<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </Content>
+	  <Content Include="Resources\Raw\UOR_HiveData.txt">
+		<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </Content>
+	</ItemGroup>
 
     <ItemGroup>
         <PackageReference Include="Microsoft.Maui.Controls" Version="10.0.41" />

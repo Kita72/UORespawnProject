@@ -15,6 +15,9 @@ namespace UORespawnApp.Scripts.Services
 
         // Loading state flags
         public bool IsBestiaryLoaded { get; private set; }
+        public bool IsVendorListLoaded { get; private set; }
+        public bool IsSignDataLoaded { get; private set; }
+        public bool IsHiveDataLoaded { get; private set; }
         public bool IsBoxSpawnDataLoaded { get; private set; }
         public bool IsTileSpawnDataLoaded { get; private set; }
         public bool IsRegionSpawnDataLoaded { get; private set; }
@@ -27,12 +30,13 @@ namespace UORespawnApp.Scripts.Services
         public bool IsComplete => _isComplete;
 
         // Progress tracking
-        public const int TotalSteps = 8;
+        public const int TotalSteps = 11;
         public int CompletedSteps { get; private set; }
         public double ProgressPercentage => (double)CompletedSteps / TotalSteps * 100;
 
         // Events for components to subscribe to
         public event EventHandler? BestiaryLoaded;
+        public event EventHandler? VendorListLoaded;
         public event EventHandler? BoxSpawnDataLoaded;
         public event EventHandler? TileSpawnDataLoaded;
         public event EventHandler? RegionSpawnDataLoaded;
@@ -239,13 +243,22 @@ namespace UORespawnApp.Scripts.Services
                 // Step 4: Load Bestiary (creature list from server-generated text file)
                 await LoadBestiaryAsync();
 
-                // Step 5: Load XML Spawner List
+                // Step 5: Load Vendor List (vendor names from server-generated text file)
+                await LoadVendorListAsync();
+
+                // Step 6: Load Sign Data (shop sign locations for vendor spawning)
+                await LoadSignDataAsync();
+
+                // Step 7: Load Hive Data (bee hive locations for beekeeper spawning)
+                await LoadHiveDataAsync();
+
+                // Step 8: Load XML Spawner List
                 await LoadXMLSpawnerListAsync();
 
-                // Step 6: Verify Map Files exist in Data/MAPS
+                // Step 9: Verify Map Files exist in Data/MAPS
                 await CopyMapFilesAsync();
 
-                // Step 7: Start DataWatcher (LAST - after all data is loaded)
+                // Step 10: Start DataWatcher (LAST - after all data is loaded)
                 await StartDataWatcherAsync();
 
                 _isComplete = true;
@@ -410,7 +423,7 @@ namespace UORespawnApp.Scripts.Services
                         // Clean up invalid/fake region names (wrapped in try-catch to not block loading)
                         try
                         {
-                            var (corrected, removed) = RegionSpawnCleanupUtility.CleanupRegionSpawns();
+                            var (corrected, removed) = RegionListUtility.CleanupRegionSpawns();
 
                             if (corrected > 0 || removed > 0)
                             {
@@ -525,54 +538,112 @@ namespace UORespawnApp.Scripts.Services
 
         private async Task LoadBestiaryAsync()
         {
-            Logger.Info("[Startup Step 4/7] Loading bestiary...");
+            Logger.Info("[Startup Step 4/10] Loading bestiary...");
 
             try
             {
-                await BestiarySpawnUtility.LoadSpawnList();
+                await BestiaryListUtility.LoadSpawnList();
 
                 IsBestiaryLoaded = true;
                 CompletedSteps++;
                 BestiaryLoaded?.Invoke(this, EventArgs.Empty);
 
-                Logger.Info($"[Startup Step 4/7] Loaded {BestiarySpawnUtility.BestiaryNameList?.Count ?? 0} creatures in bestiary");
+                Logger.Info($"[Startup Step 4/10] Loaded {BestiaryListUtility.BestiaryNameList?.Count ?? 0} creatures in bestiary");
             }
             catch (Exception ex)
             {
-                Logger.Error("[Startup Step 4/7] LoadSpawnList (bestiary) failed", ex);
+                Logger.Error("[Startup Step 4/10] LoadSpawnList (bestiary) failed", ex);
+            }
+        }
+
+        private async Task LoadVendorListAsync()
+        {
+            Logger.Info("[Startup Step 5/10] Loading vendor list...");
+
+            try
+            {
+                await VendorListUtility.LoadVendorList();
+
+                IsVendorListLoaded = true;
+                CompletedSteps++;
+                VendorListLoaded?.Invoke(this, EventArgs.Empty);
+
+                Logger.Info($"[Startup Step 5/10] Loaded {VendorListUtility.VendorNameList?.Count ?? 0} vendors in vendor list");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("[Startup Step 5/10] LoadVendorList failed", ex);
+            }
+        }
+
+        private async Task LoadSignDataAsync()
+        {
+            Logger.Info("[Startup Step 6/10] Loading sign data...");
+
+            try
+            {
+                await SignDataUtility.EnsureLoadedAsync();
+
+                IsSignDataLoaded = true;
+                CompletedSteps++;
+
+                Logger.Info($"[Startup Step 6/10] Loaded {SignDataUtility.GetTotalSignCount()} sign locations");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("[Startup Step 6/10] LoadSignData failed", ex);
+            }
+        }
+
+        private async Task LoadHiveDataAsync()
+        {
+            Logger.Info("[Startup Step 7/10] Loading hive data...");
+
+            try
+            {
+                await HiveDataUtility.EnsureLoadedAsync();
+
+                IsHiveDataLoaded = true;
+                CompletedSteps++;
+
+                Logger.Info($"[Startup Step 7/10] Loaded {HiveDataUtility.GetTotalHiveCount()} hive locations");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("[Startup Step 7/10] LoadHiveData failed", ex);
             }
         }
 
         private async Task LoadXMLSpawnerListAsync()
         {
-            Logger.Info("[Startup Step 5/7] Loading XML spawner list...");
+            Logger.Info("[Startup Step 8/10] Loading XML spawner list...");
             try
             {
                 await Task.Run(() =>
                 {
                     try
                     {
-                        XMLSpawnUtility.LoadSpawnerList();
+                        SpawnerListUtility.LoadSpawnerList();
                     }
                     catch (Exception ex)
                     {
-                        Logger.Error("[Startup Step 5/7] LoadSpawnerList failed", ex);
+                        Logger.Error("[Startup Step 8/10] LoadSpawnerList failed", ex);
                     }
                 });
 
                 IsXMLSpawnerListLoaded = true;
                 CompletedSteps++;
-                Logger.Info($"[Startup Step 5/7] XML spawner list loaded");
+                Logger.Info($"[Startup Step 8/10] XML spawner list loaded");
             }
             catch (Exception ex)
             {
-                Logger.Error("[Startup Step 5/7] Error loading XML spawner list", ex);
+                Logger.Error("[Startup Step 8/10] Error loading XML spawner list", ex);
             }
         }
 
         private async Task CopyMapFilesAsync()
         {
-            Logger.Info("[Startup Step 6/7] Checking map files...");
+            Logger.Info("[Startup Step 9/10] Checking map files...");
             try
             {
                 await Task.Run(() =>
@@ -589,11 +660,11 @@ namespace UORespawnApp.Scripts.Services
                     var mapFiles = Directory.GetFiles(mapsPath, "Map*.bmp");
                     if (mapFiles.Length > 0)
                     {
-                        Logger.Info($"[Startup Step 6/7] Found {mapFiles.Length} map files in Data/MAPS");
+                        Logger.Info($"[Startup Step 9/10] Found {mapFiles.Length} map files in Data/MAPS");
                     }
                     else
                     {
-                        Logger.Warning("[Startup Step 6/7] No map files found in Data/MAPS - maps may not display correctly");
+                        Logger.Warning("[Startup Step 9/10] No map files found in Data/MAPS - maps may not display correctly");
                     }
                 });
 
@@ -602,13 +673,13 @@ namespace UORespawnApp.Scripts.Services
             }
             catch (Exception ex)
             {
-                Logger.Error("[Startup Step 6/7] Error checking map files", ex);
+                Logger.Error("[Startup Step 9/10] Error checking map files", ex);
             }
         }
 
         private async Task StartDataWatcherAsync()
         {
-            Logger.Info("[Startup Step 7/7] Starting DataWatcher...");
+            Logger.Info("[Startup Step 10/10] Starting DataWatcher...");
             try
             {
                 // DataWatcher starts LAST to avoid false change events during initial loading
@@ -623,11 +694,11 @@ namespace UORespawnApp.Scripts.Services
                             _ = ReloadDataAsync();
                         });
 
-                        Logger.Info("[Startup Step 7/7] DataWatcher started successfully");
+                        Logger.Info("[Startup Step 10/10] DataWatcher started successfully");
                     }
                     catch (Exception ex)
                     {
-                        Logger.Warning($"[Startup Step 7/7] DataWatcher failed to start: {ex.Message}");
+                        Logger.Warning($"[Startup Step 10/10] DataWatcher failed to start: {ex.Message}");
                     }
                 });
 

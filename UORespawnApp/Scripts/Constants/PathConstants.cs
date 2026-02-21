@@ -134,6 +134,26 @@ namespace UORespawnApp.Scripts.Constants
         /// </summary>
         public const string SPAWNER_LIST_FILENAME = "UOR_SpawnerList.txt";
 
+        /// <summary>
+        /// Vendor list text file (server-generated)
+        /// Contains: List of all valid vendor class names for spawning
+        /// </summary>
+        public const string VENDOR_LIST_FILENAME = "UOR_VendorList.txt";
+
+        /// <summary>
+        /// Sign data text file (server-generated)
+        /// Format: MapID:SignType:FacingType:X:Y:Z
+        /// Contains vendor shop sign locations for vendor spawning
+        /// </summary>
+        public const string SIGN_DATA_FILENAME = "UOR_SignData.txt";
+
+        /// <summary>
+        /// Hive data text file (server-generated)
+        /// Format: MapID:X:Y:Z
+        /// Contains bee hive locations for beekeeper vendor spawning
+        /// </summary>
+        public const string HIVE_DATA_FILENAME = "UOR_HiveData.txt";
+
         // ==================== LEGACY CSV FILE NAMES ====================
         // Old v1.0 format - only used for one-time import
         
@@ -467,7 +487,63 @@ namespace UORespawnApp.Scripts.Constants
         {
             return fileName.Equals(SPAWNER_LIST_FILENAME, StringComparison.OrdinalIgnoreCase);
         }
-        
+
+        /// <summary>
+        /// Check if a filename is a vendor list file
+        /// </summary>
+        public static bool IsVendorListFile(string fileName)
+        {
+            return fileName.Equals(VENDOR_LIST_FILENAME, StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// Check if a filename is a sign data file
+        /// </summary>
+        public static bool IsSignDataFile(string fileName)
+        {
+            return fileName.Equals(SIGN_DATA_FILENAME, StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// Check if a filename is a hive data file
+        /// </summary>
+        public static bool IsHiveDataFile(string fileName)
+        {
+            return fileName.Equals(HIVE_DATA_FILENAME, StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// Get the full path to the bestiary file in Resources/Raw
+        /// </summary>
+        public static string GetBestiaryFilePath()
+        {
+            return Path.Combine(ResourcesRawPath, BESTIARY_FILENAME);
+        }
+
+        /// <summary>
+        /// Get the full path to the vendor list file in Resources/Raw
+        /// </summary>
+        public static string GetVendorListFilePath()
+        {
+            return Path.Combine(ResourcesRawPath, VENDOR_LIST_FILENAME);
+        }
+
+        /// <summary>
+        /// Get the full path to the sign data file in Resources/Raw
+        /// </summary>
+        public static string GetSignDataFilePath()
+        {
+            return Path.Combine(ResourcesRawPath, SIGN_DATA_FILENAME);
+        }
+
+        /// <summary>
+        /// Get the full path to the hive data file in Resources/Raw
+        /// </summary>
+        public static string GetHiveDataFilePath()
+        {
+            return Path.Combine(ResourcesRawPath, HIVE_DATA_FILENAME);
+        }
+
         /// <summary>
         /// Get the full local path for a binary file
         /// </summary>

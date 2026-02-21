@@ -399,21 +399,11 @@
             <div class="card map-card mb-3">
                 <div class="card-header text-center">
                     <span class="text-primary" style="font-size: 1.25rem;"><span class="bi bi-book me-2"></span>Bestiary (@GetSpawnCount() Creatures)</span>
-                    @if (IsCustomBestiary())
-                    {
-                        <span class="badge bg-info ms-2" style="vertical-align: middle;">Custom</span>
-                    }
-                    <InfoIcon Text="Manage the list of creatures available for spawning. Add custom creatures or reset to default ServUO bestiary." />
+                    <InfoIcon Text="View the list of valid creature names from the server. This list is read-only and updated automatically when linked to a server." />
                 </div>
                 <div class="card-body">
-                    <div class="input-group mb-2">
-                        <input type="text" class="form-control" placeholder="Add new creature..." @bind="newCreatureName" @onkeypress="HandleKeyPress" />
-                        <button class="btn btn-success" @onclick="AddCreature" disabled="@string.IsNullOrWhiteSpace(newCreatureName)">
-                            <span class="bi bi-plus-lg"></span> Add
-                        </button>
-                    </div>
-
                     <div class="input-group mb-3">
+                        <span class="input-group-text"><span class="bi bi-search"></span></span>
                         <input type="text" class="form-control" placeholder="Search creatures..." @bind="searchText" @bind:event="oninput" />
                         <button class="btn btn-outline-secondary" @onclick="ClearSearch">
                             <span class="bi bi-x-lg"></span>
@@ -437,9 +427,6 @@
                             {
                                 <div class="bestiary-item @(selectedSpawn == spawn ? "selected" : "")" @onclick="() => SelectSpawn(spawn)">
                                     <span class="spawn-name">@spawn</span>
-                                    <button class="btn btn-sm btn-danger" @onclick="() => RemoveCreature(spawn)" @onclick:stopPropagation="true">
-                                        <span class="bi bi-trash"></span>
-                                    </button>
                                 </div>
                             }
                         }
@@ -452,17 +439,59 @@
                         else
                         {
                             <div class="alert alert-warning mb-0">
-                                No creatures in bestiary. Add some to get started!
+                                No creatures in bestiary. Link to a server to load the creature list.
                             </div>
                         }
                     </div>
+                </div>
+            </div>
 
-                    <div class="mt-3 text-center">
-                        @if (IsCustomBestiary())
+            <!-- Vendor List -->
+            <div class="card map-card mb-3">
+                <div class="card-header text-center">
+                    <span class="text-primary" style="font-size: 1.25rem;"><span class="bi bi-shop me-2"></span>Vendor List (@GetVendorCount() Vendors)</span>
+                    <InfoIcon Text="View the list of valid vendor names from the server. This list is read-only and used for vendor spawning." />
+                </div>
+                <div class="card-body">
+                    <div class="input-group mb-3">
+                        <span class="input-group-text"><span class="bi bi-search"></span></span>
+                        <input type="text" class="form-control" placeholder="Search vendors..." @bind="vendorSearchText" @bind:event="oninput" />
+                        <button class="btn btn-outline-secondary" @onclick="ClearVendorSearch">
+                            <span class="bi bi-x-lg"></span>
+                        </button>
+                    </div>
+
+                    <div class="bestiary-list">
+                        @if (!BackgroundLoader.IsVendorListLoaded)
                         {
-                            <button class="btn btn-outline-warning btn-sm" @onclick="ResetBestiary">
-                                <span class="bi bi-arrow-counterclockwise"></span> Reset
-                            </button>
+                            <div class="text-center py-4">
+                                <div class="spinner-border text-primary mb-3" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="text-muted mb-0">Loading vendor list...</p>
+                                <small class="text-muted">@GetVendorCount() vendors</small>
+                            </div>
+                        }
+                        else if (GetFilteredVendors().Any())
+                        {
+                            @foreach (var vendor in GetFilteredVendors())
+                            {
+                                <div class="bestiary-item @(selectedVendor == vendor ? "selected" : "")" @onclick="() => SelectVendor(vendor)">
+                                    <span class="spawn-name">@vendor</span>
+                                </div>
+                            }
+                        }
+                        else if (!string.IsNullOrEmpty(vendorSearchText))
+                        {
+                            <div class="alert alert-info mb-0">
+                                No vendors found matching "@vendorSearchText"
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="alert alert-warning mb-0">
+                                No vendors in list. Link to a server to load the vendor list.
+                            </div>
                         }
                     </div>
                 </div>
@@ -623,7 +652,6 @@
                                     <li>All Region Spawn data</li>
                                     <li>All Tile Spawn data</li>
                                     <li>Spawn settings</li>
-                                    <li>Custom bestiary (if any)</li>
                                 </ul>
 
                                 @if (ServerSetupUtility.IsServerConfigured(Settings.ServUODataFolder))
@@ -680,7 +708,6 @@
 @code {
 private string searchText = "";
 private string? selectedSpawn = null;
-private string newCreatureName = "";
 private string selectedMapToReplace = "";
 private string mapUploadMessage = "";
 private bool mapUploadSuccess = false;
@@ -704,30 +731,38 @@ private bool cleanServerOnReset = false;
 
     protected override async Task OnInitializedAsync()
     {
-        // Subscribe to bestiary loaded event
+        // Subscribe to bestiary and vendor list loaded events
         BackgroundLoader.BestiaryLoaded += OnBestiaryLoaded;
-        
+        BackgroundLoader.VendorListLoaded += OnVendorListLoaded;
+
         // Initialize box color hex from settings
         var color = Settings.BoxColor;
         boxColorHex = $"#{(int)(color.Red * 255):X2}{(int)(color.Green * 255):X2}{(int)(color.Blue * 255):X2}";
-        
+
         // If bestiary is already loaded, trigger state update
-        if (BackgroundLoader.IsBestiaryLoaded)
+        if (BackgroundLoader.IsBestiaryLoaded || BackgroundLoader.IsVendorListLoaded)
         {
             StateHasChanged();
         }
     }
-    
+
     private void OnBestiaryLoaded(object? sender, EventArgs e)
     {
         // Refresh UI when bestiary finishes loading
         InvokeAsync(StateHasChanged);
     }
-    
+
+    private void OnVendorListLoaded(object? sender, EventArgs e)
+    {
+        // Refresh UI when vendor list finishes loading
+        InvokeAsync(StateHasChanged);
+    }
+
     public void Dispose()
     {
         // Unsubscribe from events
         BackgroundLoader.BestiaryLoaded -= OnBestiaryLoaded;
+        BackgroundLoader.VendorListLoaded -= OnVendorListLoaded;
 
         // Auto-save settings when leaving the page (using binary serialization)
         try
@@ -761,24 +796,24 @@ private bool cleanServerOnReset = false;
     
     private List<string> GetFilteredSpawns()
     {
-        if (BestiarySpawnUtility.BestiaryNameList == null)
+        if (BestiaryListUtility.BestiaryNameList == null)
         {
             return new List<string>();
         }
         
         if (string.IsNullOrEmpty(searchText))
         {
-            return BestiarySpawnUtility.BestiaryNameList;
+            return BestiaryListUtility.BestiaryNameList;
         }
         
-        return BestiarySpawnUtility.BestiaryNameList
+        return BestiaryListUtility.BestiaryNameList
             .Where(s => s.Contains(searchText, StringComparison.OrdinalIgnoreCase))
             .ToList();
     }
     
     private int GetSpawnCount()
     {
-        return BestiarySpawnUtility.BestiaryNameList?.Count ?? 0;
+        return BestiaryListUtility.BestiaryNameList?.Count ?? 0;
     }
     
     private void SelectSpawn(string spawn)
@@ -790,53 +825,41 @@ private bool cleanServerOnReset = false;
     {
         searchText = "";
     }
-    
-    private bool IsCustomBestiary()
+
+    // Vendor list state
+    private string vendorSearchText = "";
+    private string? selectedVendor = null;
+
+    private List<string> GetFilteredVendors()
     {
-        return File.Exists(BestiarySpawnUtility.CustomBestiaryFile);
-    }
-    
-    private async Task AddCreature()
-    {
-        if (!string.IsNullOrWhiteSpace(newCreatureName))
+        if (VendorListUtility.VendorNameList == null)
         {
-            BestiarySpawnUtility.AddCreatureToBestiary(newCreatureName);
-            await BestiarySpawnUtility.SaveCustomBestiary();
-            newCreatureName = "";
-            StateHasChanged();
+            return new List<string>();
         }
-    }
-    
-    private async Task RemoveCreature(string creature)
-    {
-        BestiarySpawnUtility.RemoveCreatureFromBestiary(creature);
-        await BestiarySpawnUtility.SaveCustomBestiary();
-        
-        if (selectedSpawn == creature)
+
+        if (string.IsNullOrEmpty(vendorSearchText))
         {
-            selectedSpawn = null;
+            return VendorListUtility.VendorNameList;
         }
-        
-        StateHasChanged();
+
+        return VendorListUtility.VendorNameList
+            .Where(v => v.Contains(vendorSearchText, StringComparison.OrdinalIgnoreCase))
+            .ToList();
     }
-    
-    private async Task ResetBestiary()
+
+    private int GetVendorCount()
     {
-        var success = await BestiarySpawnUtility.ResetToDefaultBestiary();
-        if (success)
-        {
-            selectedSpawn = null;
-            searchText = "";
-            StateHasChanged();
-        }
+        return VendorListUtility.VendorNameList?.Count ?? 0;
     }
-    
-    private void HandleKeyPress(KeyboardEventArgs e)
+
+    private void SelectVendor(string vendor)
     {
-        if (e.Key == "Enter" && !string.IsNullOrWhiteSpace(newCreatureName))
-        {
-            _ = AddCreature();
-        }
+        selectedVendor = vendor;
+    }
+
+    private void ClearVendorSearch()
+    {
+        vendorSearchText = "";
     }
 
     private async Task BrowseServUOFolder()
@@ -1823,8 +1846,9 @@ private bool cleanServerOnReset = false;
             // 4. Reset settings to defaults
             ResetToDefaults();
 
-            // 5. Reset bestiary to default
-            await BestiarySpawnUtility.ResetToDefaultBestiary();
+            // 5. Reload bestiary from default file
+            BestiaryListUtility.ClearSpawnList();
+            await BestiaryListUtility.LoadSpawnList();
 
             Logger.Info("Complete tool reset finished successfully");
             HideCompleteResetModal();

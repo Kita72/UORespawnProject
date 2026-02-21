@@ -235,7 +235,7 @@
                     SpawnTypeName="Spawns"
                     SourceListName="Bestiary"
                     CurrentSpawns="@currentCategorySpawns"
-                    SourceList="@(BestiarySpawnUtility.BestiaryNameList ?? new List<string>())"
+                    SourceList="@(BestiaryListUtility.BestiaryNameList ?? new List<string>())"
                     OnClose="@CloseCategoryModal"
                     OnSave="@SaveCategoryModal" />
 
@@ -358,7 +358,7 @@ private int? spawnSearchId = null;
         {
             if (ViewService.ShowXMLSpawners)
             {
-                var xmlSpawners = XMLSpawnUtility.GetSpawnersForMap(ViewService.CurrentMapId);
+                var xmlSpawners = SpawnerListUtility.GetSpawnersForMap(ViewService.CurrentMapId);
                 if (xmlSpawners.Count > 0)
                 {
                     var options = new System.Text.Json.JsonSerializerOptions 
@@ -461,7 +461,7 @@ private int? spawnSearchId = null;
                     // Re-apply XML spawners if toggle is ON
                     if (ViewService.ShowXMLSpawners)
                     {
-                        var xmlSpawners = XMLSpawnUtility.GetSpawnersForMap(ViewService.CurrentMapId);
+                        var xmlSpawners = SpawnerListUtility.GetSpawnersForMap(ViewService.CurrentMapId);
                         if (xmlSpawners.Count > 0)
                         {
                             var options = new System.Text.Json.JsonSerializerOptions 
@@ -1023,7 +1023,7 @@ private int? spawnSearchId = null;
         if (ViewService.ShowXMLSpawners)
         {
             // Get XML spawners for current map
-            var xmlSpawners = XMLSpawnUtility.GetSpawnersForMap(ViewService.CurrentMapId);
+            var xmlSpawners = SpawnerListUtility.GetSpawnersForMap(ViewService.CurrentMapId);
             Logger.Info($"Showing {xmlSpawners.Count} XML spawners for {ViewService.CurrentMapId}");
 
             if (xmlSpawners.Count > 0)
@@ -1056,7 +1056,7 @@ private int? spawnSearchId = null;
     
     private int GetXMLSpawnerCount()
     {
-        return XMLSpawnUtility.GetSpawnersForMap(ViewService.CurrentMapId).Count;
+        return SpawnerListUtility.GetSpawnersForMap(ViewService.CurrentMapId).Count;
     }
     
     private async Task ToggleServerSpawns()

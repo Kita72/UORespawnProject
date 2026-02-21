@@ -236,7 +236,7 @@
                     SpawnTypeName="Spawns"
                     SourceListName="Bestiary"
                     CurrentSpawns="@currentCategorySpawns"
-                    SourceList="@(BestiarySpawnUtility.BestiaryNameList ?? new List<string>())"
+                    SourceList="@(BestiaryListUtility.BestiaryNameList ?? new List<string>())"
                     OnClose="@CloseModal"
                     OnSave="@SaveModal" />
 
@@ -306,7 +306,7 @@
         {
             if (ViewService.ShowXMLSpawners)
             {
-                var xmlSpawners = XMLSpawnUtility.GetSpawnersForMap(ViewService.CurrentMapId);
+                var xmlSpawners = SpawnerListUtility.GetSpawnersForMap(ViewService.CurrentMapId);
                 if (xmlSpawners.Count > 0)
                 {
                     var options = new System.Text.Json.JsonSerializerOptions 
@@ -451,7 +451,7 @@
                     // Re-apply XML spawners if toggle is ON
                     if (ViewService.ShowXMLSpawners)
                     {
-                        var xmlSpawners = XMLSpawnUtility.GetSpawnersForMap(ViewService.CurrentMapId);
+                        var xmlSpawners = SpawnerListUtility.GetSpawnersForMap(ViewService.CurrentMapId);
                         if (xmlSpawners.Count > 0)
                         {
                             var options = new System.Text.Json.JsonSerializerOptions 
@@ -1237,7 +1237,7 @@
         if (ViewService.ShowXMLSpawners)
         {
             Logger.Info($"Toggling ON XML spawners for {ViewService.CurrentMapId}");
-            var xmlSpawners = XMLSpawnUtility.GetSpawnersForMap(ViewService.CurrentMapId);
+            var xmlSpawners = SpawnerListUtility.GetSpawnersForMap(ViewService.CurrentMapId);
             if (xmlSpawners.Count > 0)
             {
                 var options = new System.Text.Json.JsonSerializerOptions 

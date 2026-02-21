@@ -7,7 +7,7 @@ namespace UORespawnApp.Scripts.Utilities
     /// Utility to clean up region spawn data by validating against UOR_RegionList.txt
     /// Removes any spawn regions that don't exist in the official region list
     /// </summary>
-    public static class RegionSpawnCleanupUtility
+    public static class RegionListUtility
     {
         /// <summary>
         /// Region name corrections: OldName -> CorrectName
