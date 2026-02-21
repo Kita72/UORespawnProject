@@ -1847,8 +1847,8 @@ private bool cleanServerOnReset = false;
             ResetToDefaults();
 
             // 5. Reload bestiary from default file
-            BestiaryListUtility.ClearSpawnList();
-            await BestiaryListUtility.LoadSpawnList();
+            BestiaryListUtility.ClearBestiaryList();
+            await BestiaryListUtility.LoadBestiaryList();
 
             Logger.Info("Complete tool reset finished successfully");
             HideCompleteResetModal();

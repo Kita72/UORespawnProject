@@ -743,11 +743,11 @@
                 mouseWorldX = coords[0];
                 mouseWorldY = coords[1];
 
-                var clickedRegion = RegionDataUtility.FindRegionAt(ViewService.CurrentMapId, mouseWorldX, mouseWorldY);
+                var clickedRegion = RegionListUtility.FindRegionAt(ViewService.CurrentMapId, mouseWorldX, mouseWorldY);
                 if (clickedRegion != null)
                 {
                     // Find which specific area was clicked
-                    var clickedAreaIndex = RegionDataUtility.FindAreaIndexAt(clickedRegion, mouseWorldX, mouseWorldY);
+                    var clickedAreaIndex = RegionListUtility.FindAreaIndexAt(clickedRegion, mouseWorldX, mouseWorldY);
                     await SelectRegion(clickedRegion, clickedAreaIndex);
                 }
             }
@@ -781,10 +781,10 @@
             }
 
             // Detect hovered region and area for visual feedback
-            var hoveredRegion = RegionDataUtility.FindRegionAt(ViewService.CurrentMapId, mouseWorldX, mouseWorldY);
+            var hoveredRegion = RegionListUtility.FindRegionAt(ViewService.CurrentMapId, mouseWorldX, mouseWorldY);
             if (hoveredRegion != null)
             {
-                var areaIndex = RegionDataUtility.FindAreaIndexAt(hoveredRegion, mouseWorldX, mouseWorldY);
+                var areaIndex = RegionListUtility.FindAreaIndexAt(hoveredRegion, mouseWorldX, mouseWorldY);
                 await JS.InvokeVoidAsync("eval", $"window.mapModule.setHoveredRegionArea('{hoveredRegion.Name.Replace("'", "\\'")}', {areaIndex})");
             }
             else
@@ -904,7 +904,7 @@
     
     private List<RegionInfo> GetRegionsForCurrentMap()
     {
-        return RegionDataUtility.GetRegionsForMap(ViewService.CurrentMapId);
+        return RegionListUtility.GetRegionsForMap(ViewService.CurrentMapId);
     }
     
     private int GetRegionCount()

@@ -153,9 +153,9 @@ namespace UORespawnApp
                 }
 
                 // Clear existing list to force reload with server-generated data
-                BestiaryListUtility.ClearSpawnList();
+                BestiaryListUtility.ClearBestiaryList();
 
-                await BestiaryListUtility.LoadSpawnList();
+                await BestiaryListUtility.LoadBestiaryList();
 
                 Logger.Info("Bestiary reloaded from server");
             }
@@ -170,9 +170,9 @@ namespace UORespawnApp
             try
             {
                 // Clear existing region data to force reload with server-generated data
-                RegionDataUtility.ClearRegionData();
+                RegionListUtility.ClearRegionData();
 
-                await RegionDataUtility.EnsureLoadedAsync();
+                await RegionListUtility.EnsureLoadedAsync();
 
                 Logger.Info("Region list reloaded from server");
             }

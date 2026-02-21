@@ -17,10 +17,10 @@ namespace UORespawnApp.Scripts.Utilities
         private static bool _isLoaded = false;
 
         /// <summary>
-        /// Clear spawn list to force reload from file.
+        /// Clear bestiary list to force reload from file.
         /// Called by DataWatcher when server updates the bestiary file.
         /// </summary>
-        internal static void ClearSpawnList()
+        internal static void ClearBestiaryList()
         {
             BestiaryNameList?.Clear();
             _isLoaded = false;
@@ -29,7 +29,7 @@ namespace UORespawnApp.Scripts.Utilities
         /// <summary>
         /// Load the bestiary from Resources/Raw/UOR_BestiaryList.txt
         /// </summary>
-        internal static async Task LoadSpawnList()
+        internal static async Task LoadBestiaryList()
         {
             if (_isLoaded && BestiaryNameList != null && BestiaryNameList.Count > 0)
             {

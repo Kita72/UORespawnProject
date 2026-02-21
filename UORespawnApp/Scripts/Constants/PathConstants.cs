@@ -521,6 +521,14 @@ namespace UORespawnApp.Scripts.Constants
         }
 
         /// <summary>
+        /// Get the full path to the region list file in Resources/Raw
+        /// </summary>
+        public static string GetRegionListFilePath()
+        {
+            return Path.Combine(ResourcesRawPath, REGION_LIST_FILENAME);
+        }
+
+        /// <summary>
         /// Get the full path to the vendor list file in Resources/Raw
         /// </summary>
         public static string GetVendorListFilePath()

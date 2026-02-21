@@ -1,4 +1,3 @@
-using System.IO.Compression;
 using UORespawnApp.Scripts.Constants;
 using UORespawnApp.Scripts.Utilities;
 
@@ -179,7 +178,7 @@ namespace UORespawnApp.Scripts.Services
         /// </summary>
         private static string? ResolvePackDataPath(string packFolder)
         {
-            string[] dataFiles = [PathConstants.SETTINGS_FILENAME, PathConstants.BOX_FILENAME, 
+            string[] dataFiles = [PathConstants.SETTINGS_FILENAME, PathConstants.BOX_FILENAME,
                                   PathConstants.TILE_FILENAME, PathConstants.REGION_FILENAME];
 
             if (dataFiles.Any(file => File.Exists(Path.Combine(packFolder, file))))
@@ -265,7 +264,7 @@ namespace UORespawnApp.Scripts.Services
                 var elapsed = DateTime.Now - startTime;
 
                 Logger.Info($"Background data loading completed in {elapsed.TotalSeconds:F2} seconds");
-                
+
                 AllDataLoaded?.Invoke(this, EventArgs.Empty);
             }
             catch (Exception ex)
@@ -419,27 +418,6 @@ namespace UORespawnApp.Scripts.Services
                         var totalRegionSpawns = Utility.RegionSpawns.Values.Sum(list => list.Count);
 
                         Logger.Info($"[Startup Step 3/7] Loaded {totalRegionSpawns} region spawn configurations across all maps");
-
-                        // Clean up invalid/fake region names (wrapped in try-catch to not block loading)
-                        try
-                        {
-                            var (corrected, removed) = RegionListUtility.CleanupRegionSpawns();
-
-                            if (corrected > 0 || removed > 0)
-                            {
-                                Logger.Info($"[Startup Step 3/7] Region cleanup: {corrected} names corrected, {removed} invalid regions removed");
-
-                                // Save the cleaned data to all locations
-                                BinarySerializationService.SaveRegionSpawns();
-
-                                // ALSO save to Backup folder so next launch starts with clean data
-                                SyncCleanedDataToBackup();
-                            }
-                        }
-                        catch (Exception cleanupEx)
-                        {
-                            Logger.Warning($"[Startup Step 3/7] Region cleanup skipped due to error: {cleanupEx.Message}");
-                        }
                     }
                     catch (Exception ex)
                     {
@@ -457,92 +435,13 @@ namespace UORespawnApp.Scripts.Services
             }
         }
 
-        /// <summary>
-        /// After cleanup, sync the cleaned region spawn data back to the Backup folder.
-        /// This ensures next launch starts with clean data (cleanup only runs once).
-        /// </summary>
-        private static void SyncCleanedDataToBackup()
-        {
-            try
-            {
-                var currentPackName = Settings.CurrentPackName;
-
-                if (string.IsNullOrEmpty(currentPackName))
-                {
-                    Logger.Warning("[Cleanup] No current pack name set - skipping backup sync");
-                    return;
-                }
-
-                // Find the backup folder for this pack
-                var backupPackFolder = Path.Combine(PathConstants.PacksBackupPath, currentPackName);
-
-                if (!Directory.Exists(backupPackFolder))
-                {
-                    Logger.Warning($"[Cleanup] Backup folder not found: {backupPackFolder}");
-                    return;
-                }
-
-                // Get the source file (just saved to LocalDataPath)
-                var sourceFile = PathConstants.GetLocalFilePath(PathConstants.REGION_FILENAME);
-
-                if (!File.Exists(sourceFile))
-                {
-                    Logger.Warning($"[Cleanup] Source file not found: {sourceFile}");
-                    return;
-                }
-
-                // Copy to backup folder
-                var destFile = Path.Combine(backupPackFolder, PathConstants.REGION_FILENAME);
-
-                File.Copy(sourceFile, destFile, overwrite: true);
-
-                Logger.Info($"[Cleanup] Synced cleaned data to Backup: {destFile}");
-
-                // Also update the ZIP if it exists (so published builds get clean data)
-                var zipPath = Path.Combine(PathConstants.PacksBackupPath, $"{currentPackName}.zip");
-
-                if (File.Exists(zipPath))
-                {
-                    UpdateZipWithCleanedData(zipPath, sourceFile, PathConstants.REGION_FILENAME);
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.Error("[Cleanup] Error syncing cleaned data to backup", ex);
-            }
-        }
-
-        /// <summary>
-        /// Updates a ZIP file with the cleaned region spawn data.
-        /// </summary>
-        private static void UpdateZipWithCleanedData(string zipPath, string sourceFile, string entryName)
-        {
-            try
-            {
-                using var archive = ZipFile.Open(zipPath, ZipArchiveMode.Update);
-
-                // Remove existing entry if present
-                var existingEntry = archive.GetEntry(entryName);
-                existingEntry?.Delete();
-
-                // Add updated file
-                archive.CreateEntryFromFile(sourceFile, entryName);
-
-                Logger.Info($"[Cleanup] Updated ZIP with cleaned data: {zipPath}");
-            }
-            catch (Exception ex)
-            {
-                Logger.Warning($"[Cleanup] Could not update ZIP file: {ex.Message}");
-            }
-        }
-
         private async Task LoadBestiaryAsync()
         {
             Logger.Info("[Startup Step 4/10] Loading bestiary...");
 
             try
             {
-                await BestiaryListUtility.LoadSpawnList();
+                await BestiaryListUtility.LoadBestiaryList();
 
                 IsBestiaryLoaded = true;
                 CompletedSteps++;
@@ -552,7 +451,7 @@ namespace UORespawnApp.Scripts.Services
             }
             catch (Exception ex)
             {
-                Logger.Error("[Startup Step 4/10] LoadSpawnList (bestiary) failed", ex);
+                Logger.Error("[Startup Step 4/10] LoadBestiaryList failed", ex);
             }
         }
 
@@ -651,6 +550,7 @@ namespace UORespawnApp.Scripts.Services
                     // Maps are now included in the build at Data/MAPS/ directly
                     // Just ensure the folder exists for user-added custom maps
                     var mapsPath = PathConstants.MapsPath;
+
                     if (!Directory.Exists(mapsPath))
                     {
                         Directory.CreateDirectory(mapsPath);
@@ -658,6 +558,7 @@ namespace UORespawnApp.Scripts.Services
 
                     // Log available maps
                     var mapFiles = Directory.GetFiles(mapsPath, "Map*.bmp");
+
                     if (mapFiles.Length > 0)
                     {
                         Logger.Info($"[Startup Step 9/10] Found {mapFiles.Length} map files in Data/MAPS");
@@ -719,7 +620,7 @@ namespace UORespawnApp.Scripts.Services
             try
             {
                 Logger.Info("Reloading spawn data due to server file changes...");
-                
+
                 await Task.Run(() => Utility.LoadBoxSpawnData());
                 await Task.Run(() => Utility.LoadRegionSpawnData());
                 await Task.Run(() => Utility.LoadTileSpawnData());

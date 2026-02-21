@@ -4,265 +4,270 @@ using UORespawnApp.Scripts.Entities;
 namespace UORespawnApp.Scripts.Utilities
 {
     /// <summary>
-    /// Utility to clean up region spawn data by validating against UOR_RegionList.txt
-    /// Removes any spawn regions that don't exist in the official region list
+    /// Utility for loading and managing region data from UOR_RegionList.txt
+    /// Regions are predefined areas from the server that can be assigned spawns.
+    /// The region list is server-generated and treated as the source of truth.
     /// </summary>
     public static class RegionListUtility
     {
-        /// <summary>
-        /// Region name corrections: OldName -> CorrectName
-        /// Applied BEFORE validation to fix typos/variations
-        /// </summary>
-        private static readonly Dictionary<string, string> NameCorrections = new(StringComparer.OrdinalIgnoreCase)
-        {
-            { "Scholar's Inn", "The Scholar's Inn" },
-            { "Lizardman's Huts", "Lizard Man's Huts" },
-            { "Gravewater Lake", "Gravewater Lake [Underwater]" },
-            { "Khaldun Camp Region", "Khaldun" },
-            { "Pormir Reg", "Pormir Harm" },
-        };
+        private static Dictionary<int, List<RegionInfo>>? _regionsByMap = null;
+        private static bool _isLoaded = false;
+
+        #region Region Data Access
 
         /// <summary>
-        /// Clean up all loaded region spawn data by validating against UOR_RegionList.txt
-        /// Returns the number of corrections made and regions removed
+        /// Get all regions for a specific map
         /// </summary>
-        public static (int corrected, int removed) CleanupRegionSpawns()
+        public static List<RegionInfo> GetRegionsForMap(int mapId)
         {
-            int totalCorrected = 0;
-            int totalRemoved = 0;
+            EnsureLoaded();
 
-            try
+            if (_regionsByMap != null && _regionsByMap.TryGetValue(mapId, out var regions))
             {
-                // Safety check - if no region spawns loaded, nothing to clean
-                if (Utility.RegionSpawns == null || Utility.RegionSpawns.Count == 0)
-                {
-                    Logger.Info("[Cleanup] No region spawns loaded - skipping cleanup");
-                    return (0, 0);
-                }
-
-                // Load valid region names DIRECTLY from UOR_RegionList.txt
-                var validRegionsByMap = LoadValidRegionsFromFile();
-
-                if (validRegionsByMap.Count == 0)
-                {
-                    Logger.Warning("[Cleanup] Failed to load UOR_RegionList.txt - cannot validate regions!");
-                    return (0, 0);
-                }
-
-                Logger.Info($"[Cleanup] Loaded {validRegionsByMap.Sum(kvp => kvp.Value.Count)} valid region names from UOR_RegionList.txt");
-
-                foreach (var mapEntry in Utility.RegionSpawns.ToList())
-                {
-                    int mapId = mapEntry.Key;
-                    var regions = mapEntry.Value;
-
-                    if (regions == null || regions.Count == 0)
-                        continue;
-
-                    // Get valid names for this map
-                    if (!validRegionsByMap.TryGetValue(mapId, out var validNames))
-                    {
-                        Logger.Warning($"[Cleanup] No valid regions defined for Map {mapId} in UOR_RegionList.txt");
-                        validNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                    }
-
-                    var toRemove = new List<RegionSpawnEntity>();
-
-                    foreach (var region in regions)
-                    {
-                        if (region == null || string.IsNullOrEmpty(region.Name))
-                            continue;
-
-                        string originalName = region.Name;
-
-                        // Step 1: Apply name corrections first
-                        if (NameCorrections.TryGetValue(region.Name, out var correctedName))
-                        {
-                            Logger.Info($"[Cleanup] Correcting region name: '{region.Name}' -> '{correctedName}' on Map {mapId}");
-                            region.Name = correctedName;
-                            totalCorrected++;
-                        }
-
-                        // Step 2: Validate against the authoritative region list
-                        if (!validNames.Contains(region.Name))
-                        {
-                            Logger.Warning($"[Cleanup] INVALID region '{originalName}' (corrected: '{region.Name}') not in UOR_RegionList.txt for Map {mapId} - REMOVING");
-                            toRemove.Add(region);
-                        }
-                    }
-
-                    // Remove invalid regions
-                    foreach (var region in toRemove)
-                    {
-                        regions.Remove(region);
-                        totalRemoved++;
-                    }
-                }
-
-                Logger.Info($"[Cleanup] Region spawn cleanup complete: {totalCorrected} corrected, {totalRemoved} removed");
-            }
-            catch (Exception ex)
-            {
-                Logger.Error("[Cleanup] Error during region spawn cleanup", ex);
+                return regions;
             }
 
-            return (totalCorrected, totalRemoved);
+            return [];
         }
 
         /// <summary>
-        /// Load valid region names DIRECTLY from UOR_RegionList.txt file
-        /// Returns Dictionary: MapId -> HashSet of valid region names (case-insensitive)
+        /// Get a specific region by name and map
         /// </summary>
-        private static Dictionary<int, HashSet<string>> LoadValidRegionsFromFile()
+        public static RegionInfo? GetRegion(int mapId, string regionName)
         {
-            var result = new Dictionary<int, HashSet<string>>();
+            EnsureLoaded();
+
+            var regions = GetRegionsForMap(mapId);
+
+            return regions.FirstOrDefault(r =>
+                r.Name.Equals(regionName, StringComparison.OrdinalIgnoreCase));
+        }
+
+        /// <summary>
+        /// Check if a point is within any region on a map
+        /// If multiple regions overlap at this point, returns the smallest one (by total area)
+        /// This allows selecting smaller regions that are inside larger regions
+        /// </summary>
+        public static RegionInfo? FindRegionAt(int mapId, int x, int y)
+        {
+            EnsureLoaded();
+
+            var regions = GetRegionsForMap(mapId);
+
+            // Find all regions that contain this point
+            var matchingRegions = regions.Where(r => r.Contains(x, y)).ToList();
+
+            if (matchingRegions.Count == 0)
+                return null;
+
+            // If only one match, return it
+            if (matchingRegions.Count == 1)
+                return matchingRegions[0];
+
+            // Multiple regions overlap - return the smallest one (prioritize smaller regions)
+            return matchingRegions.OrderBy(r => r.GetTotalArea()).First();
+        }
+
+        /// <summary>
+        /// Find which specific area (rectangle index) contains the point within a region
+        /// Returns -1 if not found
+        /// </summary>
+        public static int FindAreaIndexAt(RegionInfo region, int x, int y)
+        {
+            for (int i = 0; i < region.Rectangles.Count; i++)
+            {
+                var rect = region.Rectangles[i];
+
+                if (x >= rect.X && x < (rect.X + rect.Width) &&
+                    y >= rect.Y && y < (rect.Y + rect.Height))
+                {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
+        /// <summary>
+        /// Clear region data to force reload from server-generated file
+        /// </summary>
+        public static void ClearRegionData()
+        {
+            _regionsByMap?.Clear();
+            _isLoaded = false;
+        }
+
+        /// <summary>
+        /// Async version of EnsureLoaded for DataWatcher reload scenarios
+        /// </summary>
+        public static async Task EnsureLoadedAsync()
+        {
+            await Task.Run(() => EnsureLoaded());
+        }
+
+        /// <summary>
+        /// Load regions from UOR_RegionList.txt file
+        /// Groups rectangles by region name (same name = multiple rects for one region)
+        /// </summary>
+        private static void EnsureLoaded()
+        {
+            if (_isLoaded) return;
+
+            _regionsByMap = [];
 
             try
             {
-                // Try multiple paths to find the region list
-                string? filePath = FindRegionListFile();
+                // Load from Resources/Raw folder using PathConstants
+                var filePath = PathConstants.GetRegionListFilePath();
 
-                if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
+                if (!File.Exists(filePath))
                 {
-                    Logger.Warning("[Cleanup] UOR_RegionList.txt not found in any expected location");
-                    return result;
+                    Logger.Warning($"UOR_RegionList.txt not found at: {filePath}");
+
+                    _isLoaded = true;
+                    return;
                 }
 
-                Logger.Info($"[Cleanup] Loading region list from: {filePath}");
-
                 var lines = File.ReadAllLines(filePath);
-                int linesParsed = 0;
+
+                // Temporary dictionary to group rects by map and name
+                var tempRegions = new Dictionary<int, Dictionary<string, List<Rect>>>();
 
                 foreach (var line in lines)
                 {
                     if (string.IsNullOrWhiteSpace(line) || line.StartsWith('#'))
                         continue;
 
-                    // Parse format: MapID:RegionName:(X,Y,W,H)
                     var parsed = ParseRegionLine(line);
-                    if (parsed.HasValue)
-                    {
-                        var (mapId, regionName) = parsed.Value;
 
-                        if (!result.TryGetValue(mapId, out var regionSet))
+                    if (parsed != null)
+                    {
+                        var (mapId, name, rect) = parsed.Value;
+
+                        // Ensure map exists
+                        if (!tempRegions.TryGetValue(mapId, out Dictionary<string, List<Rect>>? value))
                         {
-                            regionSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                            result[mapId] = regionSet;
+                            value = new Dictionary<string, List<Rect>>(StringComparer.OrdinalIgnoreCase);
+                            tempRegions[mapId] = value;
                         }
 
-                        regionSet.Add(regionName);
-                        linesParsed++;
+                        // Ensure region name exists
+                        if (!value.TryGetValue(name, out List<Rect>? value1))
+                        {
+                            value1 = [];
+                            value[name] = value1;
+                        }
+
+                        value1.Add(rect);
                     }
                 }
 
-                Logger.Info($"[Cleanup] Parsed {linesParsed} region entries from {lines.Length} lines");
+                // Convert to RegionInfo list
+                foreach (var mapKvp in tempRegions)
+                {
+                    _regionsByMap[mapKvp.Key] = [];
+
+                    foreach (var regionKvp in mapKvp.Value)
+                    {
+                        _regionsByMap[mapKvp.Key].Add(new RegionInfo
+                        {
+                            Name = regionKvp.Key,
+                            MapId = mapKvp.Key,
+                            Rectangles = regionKvp.Value
+                        });
+                    }
+                }
+
+                var totalRegions = _regionsByMap.Values.Sum(list => list.Count);
+                var totalRects = _regionsByMap.Values.Sum(list => list.Sum(r => r.Rectangles.Count));
+
+                Logger.Info($"Loaded {totalRegions} unique regions with {totalRects} rectangles from UOR_RegionList.txt across {_regionsByMap.Count} maps");
+
+                _isLoaded = true;
             }
             catch (Exception ex)
             {
-                Logger.Error($"[Cleanup] Error loading UOR_RegionList.txt: {ex.Message}", ex);
+                Logger.Error("Error loading region list", ex);
+                _isLoaded = true; // Mark as loaded to prevent repeated attempts
             }
-
-            return result;
         }
 
         /// <summary>
-        /// Find the UOR_RegionList.txt file in expected locations
-        /// </summary>
-        private static string? FindRegionListFile()
-        {
-            var serverFolder = Settings.ServUODataFolder;
-
-            var possiblePaths = new[]
-            {
-                // Check in linked server's Data folder first (most authoritative)
-                !string.IsNullOrEmpty(serverFolder) ? Path.Combine(serverFolder, "UOR_RegionList.txt") : "",
-
-                // Check in app's local data folder
-                Path.Combine(PathConstants.LocalDataPath, "UOR_RegionList.txt"),
-
-                // Check in Resources/Raw (bundled with app)
-                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", "Raw", "UOR_RegionList.txt"),
-
-                // Alternative bundled location (MAUI on Windows)
-                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "UOR_RegionList.txt"),
-
-                // Debug/dev location
-                Path.Combine(Directory.GetCurrentDirectory(), "Resources", "Raw", "UOR_RegionList.txt"),
-            };
-
-            foreach (var path in possiblePaths)
-            {
-                if (!string.IsNullOrEmpty(path) && File.Exists(path))
-                {
-                    return path;
-                }
-            }
-
-            return null;
-        }
-
-        /// <summary>
-        /// Parse a single region line from UOR_RegionList.txt
+        /// Parse a single region line from the file
         /// Format: MapID:RegionName:(X,Y,W,H)
         /// Example: 0:Britain:(1416,1498,324,279)
-        /// Returns (mapId, regionName) or null if invalid
+        /// Returns (mapId, regionName, rect)
         /// </summary>
-        private static (int mapId, string name)? ParseRegionLine(string line)
+        private static (int mapId, string name, Rect rect)? ParseRegionLine(string line)
         {
             try
             {
-                // Split by colon - format is MapID:RegionName:(X,Y,W,H)
+                // Split by colon
                 var parts = line.Split(':');
                 if (parts.Length < 3)
                     return null;
 
-                // Parse MapID (first part)
+                // Parse MapID
                 if (!int.TryParse(parts[0], out int mapId))
                     return null;
 
                 // Parse Region Name (everything between first and last colon)
-                // This handles region names that might contain colons
                 var regionName = string.Join(":", parts.Skip(1).Take(parts.Length - 2));
 
-                if (string.IsNullOrWhiteSpace(regionName))
+                // Parse bounds (X,Y,W,H)
+                var boundsStr = parts[^1].Trim('(', ')');
+                var coords = boundsStr.Split(',');
+                if (coords.Length != 4)
                     return null;
 
-                return (mapId, regionName);
+                if (!int.TryParse(coords[0], out int x) ||
+                    !int.TryParse(coords[1], out int y) ||
+                    !int.TryParse(coords[2], out int width) ||
+                    !int.TryParse(coords[3], out int height))
+                {
+                    return null;
+                }
+
+                var rect = new Rect(x, y, width, height);
+                return (mapId, regionName, rect);
             }
-            catch
+            catch (Exception ex)
             {
+                Logger.Warning($"Failed to parse region line: {line} - {ex.Message}");
                 return null;
             }
         }
 
         /// <summary>
-        /// Check if a specific region name is valid for a given map
+        /// Reload regions from file (useful after updates)
         /// </summary>
-        public static bool IsValidRegion(int mapId, string regionName)
+        public static void Reload()
         {
-            var validRegions = LoadValidRegionsFromFile();
-
-            // Apply name correction first
-            string nameToCheck = regionName;
-            if (NameCorrections.TryGetValue(regionName, out var correctedName))
-            {
-                nameToCheck = correctedName;
-            }
-
-            if (validRegions.TryGetValue(mapId, out var validNames))
-            {
-                return validNames.Contains(nameToCheck);
-            }
-
-            return false;
+            _isLoaded = false;
+            _regionsByMap = null;
+            EnsureLoaded();
         }
 
         /// <summary>
-        /// Get the corrected name for a region (or the original if no correction needed)
+        /// Get unique region names for a map (for display/selection)
         /// </summary>
-        public static string GetCorrectedName(string regionName)
+        public static List<string> GetRegionNames(int mapId)
         {
-            return NameCorrections.TryGetValue(regionName, out var corrected) ? corrected : regionName;
+            var regions = GetRegionsForMap(mapId);
+            return [.. regions
+                .Select(r => r.Name)
+                .Distinct()
+                .OrderBy(n => n)];
         }
+
+        /// <summary>
+        /// Check if any regions are loaded
+        /// </summary>
+        public static bool HasRegions()
+        {
+            EnsureLoaded();
+            return _regionsByMap != null && _regionsByMap.Count != 0;
+        }
+
+        #endregion
     }
 }
