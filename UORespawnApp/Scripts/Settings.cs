@@ -1,3 +1,5 @@
+using UORespawnApp.Scripts.Utilities;
+
 namespace UORespawnApp
 {
     /// <summary>
@@ -7,7 +9,7 @@ namespace UORespawnApp
     ///    - All settings stored as key/value pairs
     ///    - Immediate persistence on every property set
     ///    - Used for editor-specific settings (UI appearance, server folder path, custom bestiary)
-    /// 
+    ///
     /// 2. BINARY SERIALIZATION (UOR_SpawnSettings.bin):
     ///    - Spawn-related settings saved to binary file via Utility.SaveSettings()
     ///    - Syncs to server folder when configured
@@ -33,6 +35,7 @@ namespace UORespawnApp
         // Cache for frequently accessed settings to avoid repeated Preferences.Get() calls
         private static string? _cachedServUODataFolder;
         private static string? _cachedCurrentPackName;
+        private static string? _cachedCurrentPackFolder;
         private static Color? _cachedBoxColor;
         private static double? _cachedBoxColorInc;
         private static int? _cachedBoxLineSize;
@@ -51,6 +54,7 @@ namespace UORespawnApp
         {
             _cachedServUODataFolder = Preferences.Get("ServUODataFolder", "");
             _cachedCurrentPackName = Preferences.Get("CurrentPackName", DefaultPackName);
+            _cachedCurrentPackFolder = Preferences.Get("CurrentPackFolder", "");
 
             var colorString = Preferences.Get("BoxColor", DefaultBoxColorHex);
             _cachedBoxColor = colorString == DefaultBoxColorHex 
@@ -72,8 +76,8 @@ namespace UORespawnApp
         }
 
         /// <summary>
-        /// The folder name of the currently loaded spawn pack.
-        /// Used to track which pack's data is in UOR_DATA and sync edits back to that pack.
+        /// The display name of the currently loaded spawn pack.
+        /// Shown in UI to identify which pack is active.
         /// Defaults to "DefaultPack" for first-time users.
         /// </summary>
         public static string CurrentPackName
@@ -83,6 +87,20 @@ namespace UORespawnApp
             {
                 _cachedCurrentPackName = value;
                 Preferences.Set("CurrentPackName", value);
+            }
+        }
+
+        /// <summary>
+        /// The folder path of the currently loaded spawn pack.
+        /// Used to track which pack's data is in UOR_DATA and sync edits back to that pack.
+        /// </summary>
+        public static string CurrentPackFolder
+        {
+            get => _cachedCurrentPackFolder ?? string.Empty;
+            set
+            {
+                _cachedCurrentPackFolder = value;
+                Preferences.Set("CurrentPackFolder", value);
             }
         }
 
@@ -302,6 +320,68 @@ namespace UORespawnApp
             else
                 favorites.Add(name);
             VendorFavorites = favorites;
+        }
+
+        /// <summary>
+        /// Clears ALL MAUI Preferences to factory defaults.
+        /// This is a complete reset - removes all stored settings including:
+        /// - ServUO link, current pack info
+        /// - All spawn chances and limits
+        /// - All feature flags
+        /// - All favorites
+        /// - UI appearance settings
+        /// Call this during a full app reset to ensure no corrupted data persists.
+        /// </summary>
+        public static void ClearAllPreferences()
+        {
+            // Use Preferences.Clear() to remove ALL preferences at once
+            Preferences.Clear();
+
+            // Reset the cache to default values
+            _cachedServUODataFolder = "";
+            _cachedCurrentPackName = DefaultPackName;
+            _cachedCurrentPackFolder = "";
+            _cachedBoxColor = DefaultBoxColor;
+            _cachedBoxColorInc = 0.3;
+            _cachedBoxLineSize = 2;
+
+            Logger.Info("All MAUI Preferences cleared to factory defaults");
+        }
+
+        /// <summary>
+        /// Resets spawn-related settings to defaults without clearing ServUO link or pack info.
+        /// Use this for a "soft reset" that preserves server configuration.
+        /// </summary>
+        public static void ResetSpawnSettingsToDefaults()
+        {
+            // Spawn limits
+            MaxMobs = 15;
+            MinRange = 10;
+            MaxRange = 50;
+            MaxCrowd = 1;
+
+            // Spawn chances
+            WaterChance = 0.5;
+            WeatherChance = 0.1;
+            TimedChance = 0.1;
+            CommonChance = 1.0;
+            UnCommonChance = 0.5;
+            RareChance = 0.1;
+
+            // Feature flags
+            IsScaleSpawn = false;
+            EnableRiftSpawn = false;
+            EnableDebugSpawn = false;
+            EnableVendorSpawn = false;
+            EnableVendorNight = false;
+            EnableVendorExtra = false;
+
+            // UI appearance
+            BoxColor = DefaultBoxColor;
+            BoxColorInc = 0.3;
+            BoxLineSize = 2;
+
+            Logger.Info("Spawn settings reset to defaults");
         }
     }
 }

@@ -5,6 +5,60 @@ All notable changes to UORespawn will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0.6] - 2026-02-20
+
+### Added
+- **Vendor Spawn Editor** - Full-featured page for configuring vendors at shop signs and hives
+  - Browse sign types (Bakery, Blacksmith, Tailor, etc.) organized as expandable cards
+  - Per-location vendor assignment with map visualization
+  - Bulk "Add to All Locations" feature for quick setup
+  - Vendor markers on map with green glow for configured locations
+  - Gold highlight for selected/focused location
+  - Badge system showing configured/total locations per sign type
+- **Bestiary Favorites** - Star creatures to add them to a quick-access favorites list
+  - Toggle between "All" and "Favorites" view in Settings bestiary browser
+  - Favorites persist across sessions and are saved with settings
+  - Starred items appear with yellow star icon
+- **Vendor Favorites** - Star vendors for quick access in vendor spawn modal
+  - Same functionality as Bestiary Favorites for vendor types
+- **Region map index numbers** - Each region displays its list index for quick identification
+  - Numbers dynamically sized based on region area
+  - Color changes based on selection state (gold selected, cyan hover, white normal)
+- **Region search by index** - Search input in region list header to jump to region by number
+- **Pack Dashboard enhanced stats** - Shows both entry counts and location counts
+  - Main value shows spawn entries (creatures/vendors)
+  - Sublabel shows location count (boxes, tiles, regions, signs)
+- **Dirty flag system** - Intelligent pack sync only when actual changes are made
+  - Prevents false "Modified" detection on Save All
+  - Reset button only appears when files actually differ from backup
+
+### Changed
+- **Vendor Spawn system** fully integrated with editor workflow
+  - Sign and hive data auto-loaded from server OUTPUT files
+  - Vendor spawn binary saved alongside other spawn types
+- **SpawnCategoryModal** updated to support favorites filtering
+  - Shows favorites section at top when available
+  - Favorites filtered to only show items in current source list
+- **Pack handling** improved with SRP (Single Responsibility Principle)
+  - All pack types (Approved, Created, Imported) use unified sync logic
+  - `ActivePackDataPath` works for any loaded pack type
+  - Dirty flag tracks actual data changes, not just saves
+- Documentation updated throughout Instructions page for new features
+- Deterministic binary serialization for consistent pack comparison
+
+### Fixed
+- **Reset button no longer appears** after "Save All" when no changes were made
+- Pack sync only triggers when spawn data is actually modified
+- Vendor spawn page correctly loads sign/hive data for selected map
+
+### Technical
+- `IsSpawnDataDirty` flag in `PathConstants` tracks actual data modifications
+- Dirty flag set at edit points (create/delete spawns, modal saves, trigger changes)
+- `SyncFileToActivePack` respects dirty flag to prevent false modifications
+- Sorted dictionary serialization (`OrderBy`) for deterministic output
+- `VendorSpawnComponent.razor` with full map integration and marker rendering
+- Favorites stored in `Settings.BestiaryFavorites` and `Settings.VendorFavorites` lists
+
 ## [2.0.0.5] - 2026-02-19
 
 ### Added

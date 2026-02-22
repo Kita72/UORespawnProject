@@ -23,7 +23,7 @@
 
 UORespawn is a modern .NET MAUI application that provides a comprehensive visual interface for creating and managing spawn systems in Ultima Online ServUO servers. It offers three complementary spawn methods to populate your world with creatures and NPCs.
 
-**Version:** 2.0.0.4  
+**Version:** 2.0.0.6  
 **Platform:** Windows, macOS  
 **Framework:** .NET 10 MAUI with Blazor  
 **License:** MIT
@@ -48,6 +48,8 @@ UORespawn is a modern .NET MAUI application that provides a comprehensive visual
 - Configure spawns for regions like "Britain", "Dungeon Despise", etc.
 - Automatic region boundary detection
 - Per-region creature assignments
+- **Map index numbers** displayed on regions for quick identification
+- Search regions by index number in the list header
 - Simplifies large area spawn management
 
 ### 🌍 Tile Spawn System
@@ -65,10 +67,23 @@ UORespawn is a modern .NET MAUI application that provides a comprehensive visual
 
 ### 🎨 Additional Features
 - **Spawn Packs** - Three-category system (Approved, Created, Imported) for managing spawn configurations
-- Pack Dashboard with detailed statistics
+- Pack Dashboard with detailed statistics (entry counts + location counts)
+- **Intelligent pack sync** - Only syncs changes when actual edits are made
+- **Approved pack reset** - Restore modified packs to original state
+- **Bestiary Favorites** - Star creatures for quick access in spawn modals
+- **Vendor Favorites** - Star vendors for quick access in vendor spawn editor
 - Dark theme UI
-- Custom map image replacement
+- Custom map image replacement (including custom maps beyond default 6)
 - Bestiary management (600+ creatures)
+
+### 🏪 Vendor Spawn Editor
+- Configure vendors at shop signs and hive locations
+- Browse by sign type (Bakery, Blacksmith, Tailor, Mage, Healer, etc.)
+- Per-location vendor assignment with map markers
+- **Bulk "Add to All"** - Add vendors to all locations of a sign type at once
+- Green glow markers for configured locations
+- Duplicates allowed (e.g., 3 Beekeepers at one hive)
+- Hive/Beehive support for Beekeeper spawning
 - Special NPCs (TownNPC, AmbushNPC, Effect NPCs)
 - Cross-platform (Windows and macOS)
 - Info icons for contextual help throughout

@@ -763,9 +763,11 @@
 @inject BackgroundDataLoader BackgroundLoader
 @inject ToastService ToastService
 @inject DebugService DebugService
+@inject SpawnPackService SpawnPackService
 @using System.IO.Compression
 @using UORespawnApp.Scripts.Constants
 @using UORespawnApp.Scripts.Utilities
+@using UORespawnApp.Scripts.Services
 @using UORespawnApp.Components.Controls
 @implements IDisposable
 
@@ -1799,38 +1801,10 @@ private bool showVendorFavorites = false;
 
     private void ResetToDefaults()
     {
-        // Reset all spawn settings to default values (matching Settings.cs defaults)
+        // Use the centralized reset method from Settings class
+        Settings.ResetSpawnSettingsToDefaults();
 
-        // Spawn Range & Count Settings
-        Settings.MaxMobs = 15;
-        Settings.MinRange = 10;
-        Settings.MaxRange = 50;
-        Settings.MaxCrowd = 1;
-
-        // Frequency Chances
-        Settings.CommonChance = 1.0;
-        Settings.UnCommonChance = 0.5;
-        Settings.RareChance = 0.1;
-
-        // Special Frequency Chances
-        Settings.WaterChance = 0.5;
-        Settings.WeatherChance = 0.1;
-        Settings.TimedChance = 0.1;
-
-        // Special Features
-        Settings.IsScaleSpawn = false;
-        Settings.EnableRiftSpawn = false;
-        Settings.EnableDebugSpawn = false;
-
-        // Vendor Spawn Settings
-        Settings.EnableVendorSpawn = false;
-        Settings.EnableVendorNight = false;
-        Settings.EnableVendorExtra = false;
-
-        // Reset box color to default dark red
-        Settings.BoxColor = Color.FromArgb("#8B0000");
-        Settings.BoxColorInc = 0.3;
-        Settings.BoxLineSize = 2;
+        // Update local UI state
         boxColorHex = "#8B0000";
 
         // Save to binary file immediately
@@ -1887,7 +1861,7 @@ private bool showVendorFavorites = false;
                 }
             }
 
-            // 2. Clean server if requested and linked
+            // 2. Clean server if requested and linked (before clearing preferences!)
             if (cleanServerOnReset && ServerSetupUtility.IsServerConfigured(Settings.ServUODataFolder))
             {
                 Logger.Info("Cleaning linked ServUO folder...");
@@ -1921,23 +1895,54 @@ private bool showVendorFavorites = false;
                         Logger.Warning($"Could not delete server data folder: {ex.Message}");
                     }
                 }
-
-                // Clear the server link
-                Settings.ServUODataFolder = "";
             }
 
-            // 3. Clear in-memory spawn data
+            // 3. Clear ALL MAUI Preferences - this removes ALL stored settings
+            // including ServUO link, current pack, all spawn settings, favorites, etc.
+            Settings.ClearAllPreferences();
+            boxColorHex = "#8B0000";  // Update local UI state
+            Logger.Info("All MAUI Preferences cleared");
+
+            // 4. Clear in-memory spawn data
             Utility.BoxSpawns.Clear();
             Utility.TileSpawns.Clear();
             Utility.RegionSpawns.Clear();
             Utility.InitializeSpawnDictionary();
 
-            // 4. Reset settings to defaults
-            ResetToDefaults();
+            // 5. Clear runtime path constants
+            PathConstants.ActivePackDataPath = null;
 
-            // 5. Reload bestiary from default file
+            // 6. Reload bestiary and vendor lists from default files
             BestiaryListUtility.ClearBestiaryList();
             await BestiaryListUtility.LoadBestiaryList();
+            VendorListUtility.ClearVendorList();
+            await VendorListUtility.LoadVendorList();
+
+            // 7. Load and apply the default spawn pack
+            // System rule: We should never be in a state without a pack loaded
+            Logger.Info("Loading default spawn pack...");
+            var approvedPacks = SpawnPackService.LoadApprovedPacks();
+            var defaultPack = approvedPacks.FirstOrDefault(p => p.Metadata.Name == "Default Spawn Pack")
+                           ?? approvedPacks.FirstOrDefault(); // Fallback to first approved pack
+
+            if (defaultPack != null)
+            {
+                var applied = SpawnPackService.ApplyPack(defaultPack);
+                if (applied)
+                {
+                    Settings.CurrentPackName = defaultPack.Metadata.Name;
+                    Settings.CurrentPackFolder = defaultPack.PackFolderPath ?? "";
+                    Logger.Info($"Applied default pack: {defaultPack.Metadata.Name}");
+                }
+                else
+                {
+                    Logger.Warning("Failed to apply default pack after reset");
+                }
+            }
+            else
+            {
+                Logger.Warning("No approved packs found after reset");
+            }
 
             Logger.Info("Complete tool reset finished successfully");
             HideCompleteResetModal();

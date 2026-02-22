@@ -55,6 +55,12 @@ namespace UORespawnApp.Scripts.Entities
     [Serializable]
     public class SpawnPackInfo
     {
+        /// <summary>
+        /// Runtime GUID for in-app tracking. Not persisted - assigned fresh on each load.
+        /// Used to uniquely identify packs within the current app session.
+        /// </summary>
+        public Guid RuntimeId { get; set; } = Guid.NewGuid();
+
         public SpawnPackMetadata Metadata { get; set; } = new();
         public SpawnPackStats Stats { get; set; } = new();
         public string PackFolderPath { get; set; } = string.Empty;

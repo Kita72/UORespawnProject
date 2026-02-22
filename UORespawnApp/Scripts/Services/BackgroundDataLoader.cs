@@ -46,7 +46,7 @@ namespace UORespawnApp.Scripts.Services
         private DataWatcher? _dataWatcher;
 
         /// <summary>
-        /// Initializes the active pack path from the saved CurrentPackName setting.
+        /// Initializes the ActivePackDataPath from Settings.CurrentPackFolder.
         /// Called on startup to ensure edits sync back to the correct pack folder.
         /// On first launch (no data files in LocalDataPath), applies the default pack.
         /// </summary>
@@ -54,37 +54,32 @@ namespace UORespawnApp.Scripts.Services
         {
             try
             {
-                var packName = Settings.CurrentPackName;
+                var packFolder = Settings.CurrentPackFolder;
 
-                if (string.IsNullOrEmpty(packName))
+                // If no pack folder is set, check if we have a legacy CurrentPackName (folder name only)
+                // This handles migration from old settings format
+                if (string.IsNullOrEmpty(packFolder))
                 {
-                    Logger.Info("No current pack name set - active pack path not initialized");
-                    return;
+                    var legacyPackName = Settings.CurrentPackName;
+                    if (!string.IsNullOrEmpty(legacyPackName) && legacyPackName != "DefaultPack")
+                    {
+                        // Try to find the pack folder by name in all pack directories
+                        var approvedPath = Path.Combine(PathConstants.PacksApprovedPath, legacyPackName);
+                        var createdPath = Path.Combine(PathConstants.PacksCreatedPath, legacyPackName);
+                        var importedPath = Path.Combine(PathConstants.PacksImportedPath, legacyPackName);
+
+                        if (Directory.Exists(approvedPath))
+                            packFolder = approvedPath;
+                        else if (Directory.Exists(createdPath))
+                            packFolder = createdPath;
+                        else if (Directory.Exists(importedPath))
+                            packFolder = importedPath;
+                    }
                 }
 
-                // Check approved packs first, then created, then imported
-                var approvedPath = Path.Combine(PathConstants.PacksApprovedPath, packName);
-                var createdPath = Path.Combine(PathConstants.PacksCreatedPath, packName);
-                var importedPath = Path.Combine(PathConstants.PacksImportedPath, packName);
-
-                string? packFolder = null;
-
-                if (Directory.Exists(approvedPath))
+                if (string.IsNullOrEmpty(packFolder) || !Directory.Exists(packFolder))
                 {
-                    packFolder = approvedPath;
-                }
-                else if (Directory.Exists(createdPath))
-                {
-                    packFolder = createdPath;
-                }
-                else if (Directory.Exists(importedPath))
-                {
-                    packFolder = importedPath;
-                }
-
-                if (packFolder == null)
-                {
-                    Logger.Warning($"Pack folder not found for '{packName}' - active pack path not set");
+                    Logger.Info("No valid pack folder set - active pack path not initialized");
                     return;
                 }
 

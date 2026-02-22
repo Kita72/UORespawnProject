@@ -179,13 +179,13 @@ namespace UORespawnApp.Scripts.Services
             Settings.MaxRange = reader.ReadInt32();
             Settings.MaxCrowd = reader.ReadInt32();
 
-            // Spawn chances
-            Settings.WaterChance = reader.ReadDouble();
-            Settings.WeatherChance = reader.ReadDouble();
-            Settings.TimedChance = reader.ReadDouble();
-            Settings.CommonChance = reader.ReadDouble();
-            Settings.UnCommonChance = reader.ReadDouble();
-            Settings.RareChance = reader.ReadDouble();
+            // Spawn chances - clamp to 0.0-1.0 and round to 1 decimal for clean display
+            Settings.WaterChance = ClampAndRound(reader.ReadDouble());
+            Settings.WeatherChance = ClampAndRound(reader.ReadDouble());
+            Settings.TimedChance = ClampAndRound(reader.ReadDouble());
+            Settings.CommonChance = ClampAndRound(reader.ReadDouble());
+            Settings.UnCommonChance = ClampAndRound(reader.ReadDouble());
+            Settings.RareChance = ClampAndRound(reader.ReadDouble());
 
             // Feature flags
             Settings.IsScaleSpawn = reader.ReadBoolean();
@@ -202,6 +202,18 @@ namespace UORespawnApp.Scripts.Services
                 Settings.EnableVendorNight = reader.ReadBoolean();
                 Settings.EnableVendorExtra = reader.ReadBoolean();
             }
+        }
+
+        /// <summary>
+        /// Clamps a double to 0.0-1.0 range and rounds to 1 decimal place.
+        /// This ensures clean display values like 0.1, 0.5, 1.0 instead of 0.92837456324.
+        /// </summary>
+        private static double ClampAndRound(double value)
+        {
+            // Clamp to valid range
+            value = Math.Max(0.0, Math.Min(1.0, value));
+            // Round to 1 decimal place
+            return Math.Round(value, 1);
         }
 
         #endregion

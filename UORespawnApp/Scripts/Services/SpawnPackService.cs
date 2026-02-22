@@ -1127,7 +1127,7 @@ namespace UORespawnApp.Scripts.Services
         /// Creates a new empty pack in the Created folder.
         /// Initializes with default empty spawn data files.
         /// </summary>
-        public (SpawnPackInfo? Pack, string? Error) CreateNewPack(string name, string? description = null)
+        public (SpawnPackInfo? Pack, string? Error) CreateNewPack(string name, string? description = null, string? author = null, string? imagePath = null)
         {
             if (string.IsNullOrWhiteSpace(name))
             {
@@ -1138,10 +1138,23 @@ namespace UORespawnApp.Scripts.Services
             {
                 Logger.Info($"[SpawnPack] Creating new pack: {name}");
 
-                // Generate unique ID using sanitized name + timestamp
+                // Generate folder name from sanitized pack name
+                // If folder already exists, append a number to make it unique
                 var sanitizedName = SanitizeFileName(name.Trim());
-                var packId = $"{sanitizedName}_{DateTime.Now:yyyyMMddHHmmss}";
-                var packFolder = Path.Combine(PathConstants.PacksCreatedPath, packId);
+                var packFolder = Path.Combine(PathConstants.PacksCreatedPath, sanitizedName);
+
+                // Handle duplicate folder names by appending a number
+                if (Directory.Exists(packFolder))
+                {
+                    var counter = 2;
+                    while (Directory.Exists($"{packFolder}_{counter}"))
+                    {
+                        counter++;
+                    }
+                    packFolder = $"{packFolder}_{counter}";
+                }
+
+                var packId = Path.GetFileName(packFolder);
 
                 // Create the pack folder
                 Directory.CreateDirectory(packFolder);
@@ -1150,12 +1163,24 @@ namespace UORespawnApp.Scripts.Services
                 // Create empty spawn data files with minimal structure
                 CreateEmptySpawnFiles(packFolder);
 
+                // Copy image file if provided
+                string? imageFileName = null;
+                if (!string.IsNullOrWhiteSpace(imagePath) && File.Exists(imagePath))
+                {
+                    imageFileName = $"preview{Path.GetExtension(imagePath)}";
+                    var destImagePath = Path.Combine(packFolder, imageFileName);
+                    File.Copy(imagePath, destImagePath, overwrite: true);
+                    Logger.Info($"[SpawnPack] Copied preview image: {imageFileName}");
+                }
+
                 // Create pack metadata
                 var metadata = new SpawnPackMetadata
                 {
                     Id = packId,
                     Name = name.Trim(),
+                    Author = author?.Trim() ?? string.Empty,
                     Description = description ?? string.Empty,
+                    ImageFileName = imageFileName ?? string.Empty,
                     Version = Utility.Version,
                     PublishedOn = DateTime.UtcNow,
                     IsApproved = false
@@ -1185,29 +1210,41 @@ namespace UORespawnApp.Scripts.Services
 
         /// <summary>
         /// Creates empty spawn data files for a new pack.
+        /// Uses default settings matching ResetToDefaults() in SettingsComponent.
         /// </summary>
         private void CreateEmptySpawnFiles(string packFolder)
         {
-            // Create empty settings file with defaults
+            // Create settings file with defaults matching ResetToDefaults()
+            // Format must match BinarySerializationService.WriteSettings exactly
             var settingsPath = Path.Combine(packFolder, PathConstants.SETTINGS_FILENAME);
             using (var writer = new BinaryWriter(File.Create(settingsPath)))
             {
-                // Version
-                writer.Write(1);
+                // Version header - must match BinarySerializationService.SETTINGS_VERSION (v3)
+                writer.Write(3);  // SETTINGS_VERSION v3: includes vendor night/extra
                 writer.Write(Utility.Version);
-                // Default settings values
-                writer.Write(0.05);  // WaterChance
-                writer.Write(0.05);  // WeatherChance
-                writer.Write(0.05);  // TimedChance
-                writer.Write(0.50);  // CommonChance
-                writer.Write(0.25);  // UncommonChance
-                writer.Write(0.10);  // RareChance
-                writer.Write(2);     // MinMobs
-                writer.Write(6);     // MaxMobs
-                writer.Write(30);    // MinSpawnTimer
-                writer.Write(120);   // MaxSpawnTimer
-                writer.Write(12);    // HomeRange
-                writer.Write(true);  // DebugMode (enabled for new packs)
+
+                // Basic spawn limits (ints) - matching ResetToDefaults
+                writer.Write(15);   // MaxMobs
+                writer.Write(10);   // MinRange  
+                writer.Write(50);   // MaxRange
+                writer.Write(1);    // MaxCrowd
+
+                // Spawn chances (doubles) - matching ResetToDefaults
+                // Using clean values with one decimal place (0.0 to 1.0)
+                writer.Write(0.5);  // WaterChance
+                writer.Write(0.1);  // WeatherChance
+                writer.Write(0.1);  // TimedChance
+                writer.Write(1.0);  // CommonChance
+                writer.Write(0.5);  // UnCommonChance
+                writer.Write(0.1);  // RareChance
+
+                // Feature flags (bools) - matching ResetToDefaults (all off)
+                writer.Write(false);  // IsScaleSpawn
+                writer.Write(false);  // EnableRiftSpawn
+                writer.Write(false);  // EnableDebugSpawn
+                writer.Write(false);  // EnableVendorSpawn
+                writer.Write(false);  // EnableVendorNight
+                writer.Write(false);  // EnableVendorExtra
             }
 
             // Create empty box spawn file

@@ -56,6 +56,11 @@ namespace UORespawnApp
         public event Action? OnServerSpawnsChanged;
 
         /// <summary>
+        /// Event raised when the active spawn pack changes
+        /// </summary>
+        public event Action? OnActivePackChanged;
+
+        /// <summary>
         /// Navigate to a different view
         /// </summary>
         /// <param name="view">View identifier to navigate to</param>
@@ -114,6 +119,7 @@ namespace UORespawnApp
             var previousPack = ActivePack?.Metadata.Name ?? "(none)";
             ActivePack = pack;
             Logger.Info($"[Pack] Active pack changed: {previousPack} → {pack?.Metadata.Name ?? "(none)"}");
+            OnActivePackChanged?.Invoke();
         }
     }
 }

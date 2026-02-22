@@ -2,6 +2,7 @@
 @inject ViewService ViewService
 @inject IJSRuntime JS
 @inject ToastService ToastService
+@implements IDisposable
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid" style="display: flex; justify-content: center; align-items: center;">
@@ -37,6 +38,11 @@
         </div>
 
         <div class="spawn-section">
+            <!-- Active Pack Header -->
+            <div class="active-pack-header">
+                <span class="pack-name" title="@Settings.CurrentPackName">@Settings.CurrentPackName</span>
+            </div>
+
             <div class="spawn-section-header px-3">
                 <div class="map-selector-row">
                     <span class="bi bi-globe-americas-nav-menu map-icon" aria-hidden="true"></span>
@@ -93,6 +99,16 @@
     private bool isDarkMode = true;
     private string themeIcon => isDarkMode ? "bi-sun-fill-nav-menu" : "bi-moon-fill-nav-menu";
     private string themeText => isDarkMode ? "Light Mode" : "Dark Mode";
+
+    protected override void OnInitialized()
+    {
+        ViewService.OnActivePackChanged += OnPackChanged;
+    }
+
+    private void OnPackChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -164,5 +180,10 @@
         }
 
         await Task.CompletedTask;
+    }
+
+    public void Dispose()
+    {
+        ViewService.OnActivePackChanged -= OnPackChanged;
     }
 }

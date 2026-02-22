@@ -283,6 +283,10 @@
                         <input class="form-control form-control-sm" @bind="importName" placeholder="Pack name (optional - uses zip name if empty)" />
                     </div>
                     <div class="mb-2">
+                        <label class="form-label small">Author</label>
+                        <input class="form-control form-control-sm" @bind="importAuthor" placeholder="Author name (optional)" />
+                    </div>
+                    <div class="mb-2">
                         <label class="form-label small">Description</label>
                         <textarea class="form-control form-control-sm" rows="2" @bind="importDescription" placeholder="Short summary (optional)"></textarea>
                     </div>
@@ -313,6 +317,40 @@
 
 <EcologyModal IsVisible="isEcologyModalVisible" OnClose="CloseEcologyModal" />
 
+<!-- Pack Info Modal (for non-default packs) -->
+@if (isPackInfoModalVisible && infoModalPack != null)
+{
+    <div class="modal fade show d-block spawn-pack-modal" tabindex="-1" style="background-color: rgba(0,0,0,0.6);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><span class="bi bi-info-circle me-2 text-info"></span>@infoModalPack.Metadata.Name</h5>
+                    <button type="button" class="btn-close" @onclick="ClosePackInfoModal"></button>
+                </div>
+                <div class="modal-body">
+                    @if (!string.IsNullOrWhiteSpace(infoModalPack.Metadata.Author))
+                    {
+                        <p class="text-muted small mb-2"><strong>Author:</strong> @infoModalPack.Metadata.Author</p>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(infoModalPack.Metadata.Description))
+                    {
+                        <div class="pack-description">
+                            @infoModalPack.Metadata.Description
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted fst-italic">No description provided for this pack.</p>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="ClosePackInfoModal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 <!-- Create Pack Modal -->
 @if (isCreateModalVisible)
 {
@@ -328,13 +366,27 @@
                         <p class="text-muted small mb-3">
                             Create a new empty spawn pack. You can then apply it and start building your spawn configuration from scratch.
                         </p>
-                        <div class="mb-3">
+                        <div class="mb-2">
                             <label class="form-label small">Pack Name <span class="text-warning">*</span></label>
                             <input class="form-control form-control-sm" @bind="createPackName" placeholder="Enter pack name..." />
                         </div>
-                        <div class="mb-3">
+                        <div class="mb-2">
+                            <label class="form-label small">Author</label>
+                            <input class="form-control form-control-sm" @bind="createPackAuthor" placeholder="Your name (optional)" />
+                        </div>
+                        <div class="mb-2">
                             <label class="form-label small">Description</label>
                             <textarea class="form-control form-control-sm" rows="2" @bind="createPackDescription" placeholder="Short summary (optional)"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small">Preview Image <span class="text-muted">(optional)</span></label>
+                            <button class="btn btn-outline-light btn-sm w-100" @onclick="PickCreateImage">
+                                <span class="bi bi-image me-2"></span>Choose Image
+                            </button>
+                            @if (!string.IsNullOrWhiteSpace(createImageName))
+                            {
+                                <small class="text-success d-block mt-1"><span class="bi bi-check-circle me-1"></span>@createImageName</small>
+                            }
                         </div>
                         <button class="btn btn-success w-100" @onclick="CreatePack" disabled="@(isCreating || string.IsNullOrWhiteSpace(createPackName))">
                             @if (isCreating)
@@ -373,6 +425,8 @@
     private bool isImportModalVisible;
     private bool isEcologyModalVisible;
     private bool isCreateModalVisible;
+    private bool isPackInfoModalVisible;
+    private SpawnPackInfo? infoModalPack;
     private PackView currentView = PackView.Approved;
 
     private string submissionName = string.Empty;
@@ -385,6 +439,7 @@
 
     private string importName = string.Empty;
     private string importDescription = string.Empty;
+    private string importAuthor = string.Empty;
     private string? importZipPath;
     private string? importZipName;
     private string? importImagePath;
@@ -397,6 +452,9 @@
     // Create pack modal state
     private string createPackName = string.Empty;
     private string createPackDescription = string.Empty;
+    private string createPackAuthor = string.Empty;
+    private string? createImagePath;
+    private string? createImageName;
     private string? createMessage;
     private bool createSuccess;
     private bool isCreating;
@@ -405,6 +463,52 @@
     {
         Logger.Info("[SpawnPacks] Component initialized");
         RefreshPacks();
+
+        // Auto-select the tab containing the currently loaded pack
+        SelectTabForLoadedPack();
+    }
+
+    /// <summary>
+    /// Automatically switches to the tab containing the currently loaded pack
+    /// and selects it for display in the dashboard.
+    /// </summary>
+    private void SelectTabForLoadedPack()
+    {
+        var currentPackFolder = Settings.CurrentPackFolder;
+        if (string.IsNullOrEmpty(currentPackFolder))
+        {
+            return;
+        }
+
+        // Check which category the loaded pack belongs to
+        var approvedPack = ApprovedPacks.FirstOrDefault(p => p.PackFolderPath == currentPackFolder);
+        if (approvedPack != null)
+        {
+            currentView = PackView.Approved;
+            SelectedPack = approvedPack;
+            Logger.Info($"[SpawnPacks] Auto-selected Approved tab for loaded pack: {approvedPack.Metadata.Name}");
+            return;
+        }
+
+        var createdPack = CreatedPacks.FirstOrDefault(p => p.PackFolderPath == currentPackFolder);
+        if (createdPack != null)
+        {
+            currentView = PackView.Created;
+            SelectedPack = createdPack;
+            Logger.Info($"[SpawnPacks] Auto-selected Created tab for loaded pack: {createdPack.Metadata.Name}");
+            return;
+        }
+
+        var importedPack = ImportedPacks.FirstOrDefault(p => p.PackFolderPath == currentPackFolder);
+        if (importedPack != null)
+        {
+            currentView = PackView.Imported;
+            SelectedPack = importedPack;
+            Logger.Info($"[SpawnPacks] Auto-selected Imported tab for loaded pack: {importedPack.Metadata.Name}");
+            return;
+        }
+
+        Logger.Info("[SpawnPacks] Loaded pack not found in any category, using default view");
     }
 
     private void RefreshPacks()
@@ -471,10 +575,10 @@
             // Track this as the active pack for syncing edits back
             ViewService.SetActivePack(pack);
 
-            // Get the pack folder name and save it for persistence across app restarts
-            var packFolderName = Path.GetFileName(pack.PackFolderPath);
-            Settings.CurrentPackName = packFolderName;
-            Logger.Info($"[SpawnPacks] Pack applied successfully, saved as CurrentPackName: {packFolderName}");
+            // Save the display name (for UI) and folder path (for file sync) separately
+            Settings.CurrentPackName = pack.Metadata.Name;
+            Settings.CurrentPackFolder = pack.PackFolderPath;
+            Logger.Info($"[SpawnPacks] Pack applied: Name='{pack.Metadata.Name}', Folder='{pack.PackFolderPath}'");
 
             // Set the active pack data path for file sync
             if (!string.IsNullOrEmpty(pack.PackFolderPath))
@@ -507,8 +611,7 @@
         }
 
         // Check if this is the currently loaded pack - can't delete what's in use
-        var packFolderName = Path.GetFileName(pack.PackFolderPath);
-        if (packFolderName == Settings.CurrentPackName)
+        if (pack.PackFolderPath == Settings.CurrentPackFolder)
         {
             Logger.Warning($"[SpawnPacks] Cannot delete currently loaded pack: {pack.Metadata.Name}");
             ToastService.ShowWarning("Cannot delete the currently loaded pack. Apply a different pack first.");
@@ -537,8 +640,7 @@
         Logger.Info($"[SpawnPacks] Delete requested for created pack: {pack.Metadata.Name}");
 
         // Check if this is the currently loaded pack - can't delete what's in use
-        var packFolderName = Path.GetFileName(pack.PackFolderPath);
-        if (packFolderName == Settings.CurrentPackName)
+        if (pack.PackFolderPath == Settings.CurrentPackFolder)
         {
             Logger.Warning($"[SpawnPacks] Cannot delete currently loaded pack: {pack.Metadata.Name}");
             ToastService.ShowWarning("Cannot delete the currently loaded pack. Apply a different pack first.");
@@ -600,7 +702,17 @@
 
     private Task ShowEcologyModal(SpawnPackInfo pack)
     {
-        isEcologyModalVisible = true;
+        // Default Spawn Pack shows the special ecology modal
+        if (pack.Metadata.Name == "Default Spawn Pack")
+        {
+            isEcologyModalVisible = true;
+        }
+        else
+        {
+            // Other packs show their description in a simple info modal
+            infoModalPack = pack;
+            isPackInfoModalVisible = true;
+        }
         return Task.CompletedTask;
     }
 
@@ -609,10 +721,19 @@
         isEcologyModalVisible = false;
     }
 
+    private void ClosePackInfoModal()
+    {
+        isPackInfoModalVisible = false;
+        infoModalPack = null;
+    }
+
     private void OpenCreateModal()
     {
         createPackName = string.Empty;
         createPackDescription = string.Empty;
+        createPackAuthor = string.Empty;
+        createImagePath = null;
+        createImageName = null;
         createMessage = string.Empty;
         createSuccess = false;
         isCreateModalVisible = true;
@@ -623,6 +744,38 @@
         isCreateModalVisible = false;
     }
 
+    private async Task PickCreateImage()
+    {
+        try
+        {
+            var imageTypes = new FilePickerFileType(new Dictionary<DevicePlatform, IEnumerable<string>>
+            {
+                { DevicePlatform.WinUI, new[] { ".png", ".jpg", ".jpeg" } },
+                { DevicePlatform.macOS, new[] { "png", "jpg", "jpeg" } },
+                { DevicePlatform.MacCatalyst, new[] { "png", "jpg", "jpeg" } }
+            });
+
+            var result = await FilePicker.Default.PickAsync(new PickOptions
+            {
+                PickerTitle = "Select Pack Image",
+                FileTypes = imageTypes
+            });
+
+            if (result != null)
+            {
+                createImagePath = result.FullPath;
+                createImageName = result.FileName;
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Error selecting spawn pack image", ex);
+            createMessage = "Unable to select image on this device.";
+            createSuccess = false;
+        }
+    }
+
     private async Task CreatePack()
     {
         isCreating = true;
@@ -631,7 +784,7 @@
 
         try
         {
-            var (pack, error) = SpawnPackService.CreateNewPack(createPackName, createPackDescription);
+            var (pack, error) = SpawnPackService.CreateNewPack(createPackName, createPackDescription, createPackAuthor, createImagePath);
 
             if (pack != null)
             {
@@ -706,6 +859,7 @@
     {
         importName = string.Empty;
         importDescription = string.Empty;
+        importAuthor = string.Empty;
         importZipPath = null;
         importZipName = null;
         importImagePath = null;
@@ -982,8 +1136,22 @@
                 return;
             }
 
-            var packId = $"{SanitizeFileName(packName)}_{DateTime.Now:yyyyMMddHHmmss}";
-            var packFolder = Path.Combine(PathConstants.PacksPath, packId);
+            // Generate folder name from sanitized pack name
+            // If folder already exists, append a number to make it unique
+            var sanitizedName = SanitizeFileName(packName);
+            var packFolder = Path.Combine(PathConstants.PacksImportedPath, sanitizedName);
+
+            if (Directory.Exists(packFolder))
+            {
+                var counter = 2;
+                while (Directory.Exists($"{packFolder}_{counter}"))
+                {
+                    counter++;
+                }
+                packFolder = $"{packFolder}_{counter}";
+            }
+
+            var packId = Path.GetFileName(packFolder);
             Directory.CreateDirectory(packFolder);
             Logger.Info($"[SpawnPacks] Extracting to: {packFolder}");
 
@@ -1001,6 +1169,7 @@
             {
                 Id = packId,
                 Name = packName,
+                Author = importAuthor?.Trim() ?? string.Empty,
                 Description = importDescription,
                 ImageFileName = savedImageName ?? string.Empty,
                 Version = Utility.Version,
