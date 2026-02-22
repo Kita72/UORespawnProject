@@ -9,9 +9,9 @@ namespace UORespawnApp.Scripts.Services
     /// <summary>
     /// Loads spawn packs from Data/PACKS and provides stats and apply workflows.
     /// Folder structure:
-    ///   Data/PACKS/Approved/  - Unpacked approved packs (ready to use)
+    ///   Data/PACKS/Approved/  - Approved packs (bundled, editable, not deletable)
     ///   Data/PACKS/Imported/  - User-imported packs
-    ///   Data/PACKS/Backup/    - Original ZIP files for approved packs (for reset)
+    ///   Data/PACKS/Created/   - User-created packs
     /// </summary>
     public class SpawnPackService
     {
@@ -26,47 +26,26 @@ namespace UORespawnApp.Scripts.Services
         ];
 
         /// <summary>
-        /// Files to check for modification (excludes Settings since those are user preferences).
-        /// Only spawn data changes should show the "modified" indicator.
-        /// </summary>
-        private static readonly string[] SpawnDataFilesForComparison =
-        [
-            PathConstants.BOX_FILENAME,
-            PathConstants.TILE_FILENAME,
-            PathConstants.REGION_FILENAME,
-            PathConstants.VENDOR_FILENAME
-        ];
-
-        /// <summary>
-        /// Unpacks approved pack ZIPs from Backup folder to Approved folder.
-        /// Also copies pack folders from Backup to Approved for repo/development scenarios.
-        /// Called on first launch to initialize approved packs.
-        /// 
-        /// Structure:
-        ///   Backup/DefaultPack.zip  → For releases (distributed in build)
-        ///   Backup/DefaultPack/     → For Git repo (source of truth, can't commit ZIPs)
-        ///   Approved/DefaultPack/   → Working copy (created from Backup on first launch)
+        /// Ensures approved packs exist in the Approved folder.
+        /// Extracts any ZIPs found directly in the Approved folder on first launch.
         /// </summary>
         public void UnpackApprovedPacks()
         {
-            var backupPath = PathConstants.PacksBackupPath;
             var approvedPath = PathConstants.PacksApprovedPath;
 
-            Logger.Info($"[UnpackApprovedPacks] Backup path: {backupPath}");
             Logger.Info($"[UnpackApprovedPacks] Approved path: {approvedPath}");
 
-            if (!Directory.Exists(backupPath))
+            if (!Directory.Exists(approvedPath))
             {
-                Logger.Warning($"[UnpackApprovedPacks] Backup path does not exist!");
+                Logger.Warning($"[UnpackApprovedPacks] Approved path does not exist!");
+                Directory.CreateDirectory(approvedPath);
                 return;
             }
 
-            // List what's in Backup for debugging
-            var zipFiles = Directory.GetFiles(backupPath, "*.zip");
-            var backupFolders = Directory.GetDirectories(backupPath);
-            Logger.Info($"[UnpackApprovedPacks] Found {zipFiles.Length} ZIPs, {backupFolders.Length} folders in Backup");
+            // Extract any ZIPs in Approved folder (for release builds)
+            var zipFiles = Directory.GetFiles(approvedPath, "*.zip");
+            Logger.Info($"[UnpackApprovedPacks] Found {zipFiles.Length} ZIPs in Approved");
 
-            // First: Extract any ZIPs to Approved (for release builds)
             foreach (var zipFile in zipFiles)
             {
                 try
@@ -93,47 +72,6 @@ namespace UORespawnApp.Scripts.Services
                     Logger.Error($"Error unpacking approved pack: {zipFile}", ex);
                 }
             }
-
-            // Second: Copy any folders from Backup to Approved (for repo/dev scenarios)
-            // This handles the case where Git repo has folders in Backup but no ZIPs
-            foreach (var backupFolder in backupFolders)
-            {
-                try
-                {
-                    var packName = Path.GetFileName(backupFolder);
-                    var approvedFolder = Path.Combine(approvedPath, packName);
-
-                    // Skip if already exists in Approved with .bin files
-                    if (Directory.Exists(approvedFolder) && Directory.GetFiles(approvedFolder, "*.bin").Length > 0)
-                    {
-                        Logger.Info($"[UnpackApprovedPacks] Folder {packName}: Already in Approved with .bin files, skipping");
-                        continue;
-                    }
-
-                    // Check if backup folder has .bin files (valid pack)
-                    var binFilesInBackup = Directory.GetFiles(backupFolder, "*.bin");
-                    if (binFilesInBackup.Length == 0)
-                    {
-                        Logger.Warning($"[UnpackApprovedPacks] Folder {packName}: No .bin files in Backup folder, skipping");
-                        Logger.Warning($"[UnpackApprovedPacks] Files in {backupFolder}: {string.Join(", ", Directory.GetFiles(backupFolder).Select(Path.GetFileName))}");
-                        continue;
-                    }
-
-                    // Copy entire folder to Approved
-                    Directory.CreateDirectory(approvedFolder);
-                    foreach (var file in Directory.GetFiles(backupFolder))
-                    {
-                        var destFile = Path.Combine(approvedFolder, Path.GetFileName(file));
-                        File.Copy(file, destFile, overwrite: true);
-                    }
-
-                    Logger.Info($"Copied approved pack from Backup folder: {packName} ({binFilesInBackup.Length} .bin files)");
-                }
-                catch (Exception ex)
-                {
-                    Logger.Error($"Error copying approved pack folder: {backupFolder}", ex);
-                }
-            }
         }
 
         /// <summary>
@@ -143,7 +81,7 @@ namespace UORespawnApp.Scripts.Services
         {
             Logger.Info("[SpawnPack] Loading approved packs...");
 
-            // Ensure approved packs are unpacked from Backup folder
+            // Ensure approved packs exist in Approved folder
             UnpackApprovedPacks();
 
             var packs = new List<SpawnPackInfo>();
@@ -158,12 +96,8 @@ namespace UORespawnApp.Scripts.Services
                     {
                         // Force IsApproved for packs in Approved folder
                         pack.Metadata.IsApproved = true;
-
-                        // Check if pack has been modified from backup
-                        pack.IsModified = IsPackModified(pack);
-
                         packs.Add(pack);
-                        Logger.Info($"[SpawnPack] Loaded approved pack: {pack.Metadata.Name} (Modified: {pack.IsModified})");
+                        Logger.Info($"[SpawnPack] Loaded approved pack: {pack.Metadata.Name}");
                     }
                 }
             }
@@ -807,283 +741,6 @@ namespace UORespawnApp.Scripts.Services
             catch (Exception ex)
             {
                 Logger.Error("Error reading vendor spawn pack stats", ex);
-            }
-        }
-
-        /// <summary>
-        /// Gets the backup ZIP path for an approved pack.
-        /// </summary>
-        public string? GetBackupZipPath(SpawnPackInfo pack)
-        {
-            if (pack == null || string.IsNullOrWhiteSpace(pack.PackFolderPath))
-            {
-                return null;
-            }
-
-            var packName = Path.GetFileName(pack.PackFolderPath);
-            var backupZipPath = Path.Combine(PathConstants.PacksBackupPath, $"{packName}.zip");
-
-            return File.Exists(backupZipPath) ? backupZipPath : null;
-        }
-
-        /// <summary>
-        /// Gets the backup folder path for an approved pack (for repo/dev scenarios).
-        /// </summary>
-        public string? GetBackupFolderPath(SpawnPackInfo pack)
-        {
-            if (pack == null || string.IsNullOrWhiteSpace(pack.PackFolderPath))
-            {
-                return null;
-            }
-
-            var packName = Path.GetFileName(pack.PackFolderPath);
-            var backupFolderPath = Path.Combine(PathConstants.PacksBackupPath, packName);
-
-            // Must exist and have .bin files to be valid
-            if (Directory.Exists(backupFolderPath) && Directory.GetFiles(backupFolderPath, "*.bin").Length > 0)
-            {
-                return backupFolderPath;
-            }
-
-            return null;
-        }
-
-        /// <summary>
-        /// Checks if an approved pack has a backup (ZIP or folder) available for reset.
-        /// </summary>
-        public bool HasBackup(SpawnPackInfo pack)
-        {
-            return GetBackupZipPath(pack) != null || GetBackupFolderPath(pack) != null;
-        }
-
-        /// <summary>
-        /// Checks if an approved pack has a backup ZIP available for reset.
-        /// </summary>
-        public bool HasBackupZip(SpawnPackInfo pack)
-        {
-            return GetBackupZipPath(pack) != null;
-        }
-
-        /// <summary>
-        /// Checks if an approved pack has been modified from its original backup.
-        /// Compares file sizes and checksums of data files against the backup (ZIP or folder).
-        /// </summary>
-        public bool IsPackModified(SpawnPackInfo pack)
-        {
-            if (pack == null || !pack.Metadata.IsApproved)
-            {
-                return false;
-            }
-
-            var backupZipPath = GetBackupZipPath(pack);
-            var backupFolderPath = GetBackupFolderPath(pack);
-
-            // Prefer ZIP for comparison, fall back to folder
-            if (backupZipPath != null)
-            {
-                return IsPackModifiedFromZip(pack, backupZipPath);
-            }
-            else if (backupFolderPath != null)
-            {
-                return IsPackModifiedFromFolder(pack, backupFolderPath);
-            }
-
-            return false; // No backup to compare against
-        }
-
-        /// <summary>
-        /// Compares pack against backup ZIP.
-        /// Only compares spawn data files (excludes Settings since those are user preferences).
-        /// </summary>
-        private bool IsPackModifiedFromZip(SpawnPackInfo pack, string backupZipPath)
-        {
-            try
-            {
-                var packDataPath = ResolvePackDataPath(pack.PackFolderPath) ?? pack.PackFolderPath;
-
-                using var archive = ZipFile.OpenRead(backupZipPath);
-                foreach (var entry in archive.Entries)
-                {
-                    // Only compare spawn data files, not settings
-                    if (!SpawnDataFilesForComparison.Contains(entry.Name, StringComparer.OrdinalIgnoreCase))
-                    {
-                        continue;
-                    }
-
-                    var currentFilePath = Path.Combine(packDataPath, entry.Name);
-                    if (!File.Exists(currentFilePath))
-                    {
-                        return true; // File missing = modified
-                    }
-
-                    // Compare file sizes first (fast check)
-                    var currentFileInfo = new FileInfo(currentFilePath);
-                    if (currentFileInfo.Length != entry.Length)
-                    {
-                        return true; // Size differs = modified
-                    }
-
-                    // Compare file contents (byte comparison)
-                    using var zipStream = entry.Open();
-                    using var memoryStream = new MemoryStream();
-                    zipStream.CopyTo(memoryStream);
-                    var zipBytes = memoryStream.ToArray();
-
-                    var currentBytes = File.ReadAllBytes(currentFilePath);
-                    if (!zipBytes.SequenceEqual(currentBytes))
-                    {
-                        return true; // Content differs = modified
-                    }
-                }
-
-                return false; // All files match
-            }
-            catch (Exception ex)
-            {
-                Logger.Error($"Error checking if pack is modified (ZIP): {pack.Metadata.Name}", ex);
-                return false; // On error, assume not modified
-            }
-        }
-
-        /// <summary>
-        /// Compares pack against backup folder.
-        /// Only compares spawn data files (excludes Settings since those are user preferences).
-        /// </summary>
-        private bool IsPackModifiedFromFolder(SpawnPackInfo pack, string backupFolderPath)
-        {
-            try
-            {
-                var packDataPath = ResolvePackDataPath(pack.PackFolderPath) ?? pack.PackFolderPath;
-
-                foreach (var fileName in SpawnDataFilesForComparison)
-                {
-                    var backupFilePath = Path.Combine(backupFolderPath, fileName);
-                    var currentFilePath = Path.Combine(packDataPath, fileName);
-
-                    // Skip if backup doesn't have this file
-                    if (!File.Exists(backupFilePath))
-                    {
-                        continue;
-                    }
-
-                    if (!File.Exists(currentFilePath))
-                    {
-                        return true; // File missing = modified
-                    }
-
-                    // Compare file sizes first (fast check)
-                    var backupFileInfo = new FileInfo(backupFilePath);
-                    var currentFileInfo = new FileInfo(currentFilePath);
-                    if (currentFileInfo.Length != backupFileInfo.Length)
-                    {
-                        return true; // Size differs = modified
-                    }
-
-                    // Compare file contents (byte comparison)
-                    var backupBytes = File.ReadAllBytes(backupFilePath);
-                    var currentBytes = File.ReadAllBytes(currentFilePath);
-                    if (!backupBytes.SequenceEqual(currentBytes))
-                    {
-                        return true; // Content differs = modified
-                    }
-                }
-
-                return false; // All files match
-            }
-            catch (Exception ex)
-            {
-                Logger.Error($"Error checking if pack is modified (folder): {pack.Metadata.Name}", ex);
-                return false; // On error, assume not modified
-            }
-        }
-
-        /// <summary>
-        /// Resets an approved pack from its backup (ZIP or folder) in the Backup folder.
-        /// Restores all data files to their original state.
-        /// </summary>
-        public (bool Success, string? Error) ResetPackFromBackup(SpawnPackInfo pack)
-        {
-            if (pack == null || string.IsNullOrWhiteSpace(pack.PackFolderPath))
-            {
-                return (false, "Pack not specified.");
-            }
-
-            if (!pack.Metadata.IsApproved)
-            {
-                return (false, "Only approved packs can be reset from backup.");
-            }
-
-            var backupZipPath = GetBackupZipPath(pack);
-            var backupFolderPath = GetBackupFolderPath(pack);
-
-            // Prefer ZIP for reset, fall back to folder
-            if (backupZipPath != null)
-            {
-                return ResetPackFromZip(pack, backupZipPath);
-            }
-            else if (backupFolderPath != null)
-            {
-                return ResetPackFromFolder(pack, backupFolderPath);
-            }
-
-            return (false, "No backup found for this pack.");
-        }
-
-        /// <summary>
-        /// Resets pack from backup ZIP.
-        /// </summary>
-        private (bool Success, string? Error) ResetPackFromZip(SpawnPackInfo pack, string backupZipPath)
-        {
-            try
-            {
-                var packDataPath = ResolvePackDataPath(pack.PackFolderPath) ?? pack.PackFolderPath;
-
-                using var archive = ZipFile.OpenRead(backupZipPath);
-                foreach (var entry in archive.Entries)
-                {
-                    if (PackDataFiles.Contains(entry.Name, StringComparer.OrdinalIgnoreCase))
-                    {
-                        var destinationPath = Path.Combine(packDataPath, entry.Name);
-                        entry.ExtractToFile(destinationPath, overwrite: true);
-                    }
-                }
-
-                Logger.Info($"Reset pack from backup ZIP: {pack.Metadata.Name}");
-                return (true, null);
-            }
-            catch (Exception ex)
-            {
-                Logger.Error($"Error resetting pack from backup ZIP: {pack.Metadata.Name}", ex);
-                return (false, $"Failed to reset: {ex.Message}");
-            }
-        }
-
-        /// <summary>
-        /// Resets pack from backup folder.
-        /// </summary>
-        private (bool Success, string? Error) ResetPackFromFolder(SpawnPackInfo pack, string backupFolderPath)
-        {
-            try
-            {
-                var packDataPath = ResolvePackDataPath(pack.PackFolderPath) ?? pack.PackFolderPath;
-
-                foreach (var fileName in PackDataFiles)
-                {
-                    var sourceFile = Path.Combine(backupFolderPath, fileName);
-                    if (File.Exists(sourceFile))
-                    {
-                        var destFile = Path.Combine(packDataPath, fileName);
-                        File.Copy(sourceFile, destFile, overwrite: true);
-                    }
-                }
-
-                Logger.Info($"Reset pack from backup folder: {pack.Metadata.Name}");
-                return (true, null);
-            }
-            catch (Exception ex)
-            {
-                Logger.Error($"Error resetting pack from backup folder: {pack.Metadata.Name}", ex);
-                return (false, $"Failed to reset: {ex.Message}");
             }
         }
 

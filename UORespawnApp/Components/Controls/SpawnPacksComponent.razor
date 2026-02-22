@@ -54,7 +54,7 @@
                         <div class="spawn-pack-grid">
                             @foreach (var pack in ApprovedPacks)
                             {
-                                <SpawnPackCard Pack="pack" OnSelect="SelectPack" OnApply="ApplyPack" OnInfo="ShowEcologyModal" OnReset="ResetPack" />
+                                <SpawnPackCard Pack="pack" OnSelect="SelectPack" OnApply="ApplyPack" OnInfo="ShowEcologyModal" />
                             }
                         </div>
                         @if (ApprovedPacks.Count == 0)
@@ -659,42 +659,6 @@
         {
             Logger.Error($"[SpawnPacks] Failed to delete created pack: {pack.Metadata.Name} - {error}");
             ToastService.ShowError(error ?? "Unable to delete spawn pack.");
-        }
-
-        return Task.CompletedTask;
-    }
-
-    private Task ResetPack(SpawnPackInfo pack)
-    {
-        Logger.Info($"[SpawnPacks] Reset requested for pack: {pack.Metadata.Name}");
-
-        // Safety check - only reset approved packs
-        if (!pack.Metadata.IsApproved)
-        {
-            Logger.Warning($"[SpawnPacks] Cannot reset non-approved pack: {pack.Metadata.Name}");
-            return Task.CompletedTask;
-        }
-
-        var (success, error) = SpawnPackService.ResetPackFromBackup(pack);
-        if (success)
-        {
-            Logger.Info($"[SpawnPacks] Pack reset from backup: {pack.Metadata.Name}");
-
-            // Re-apply the reset pack to sync UOR_DATA with the restored pack data
-            SpawnPackService.ApplyPack(pack);
-
-            // Keep active pack path pointing to this pack (still loaded, just reset)
-            PathConstants.ActivePackDataPath = SpawnPackService.GetPackDataPath(pack);
-            ViewService.SetActivePack(pack);
-            Logger.Info($"[SpawnPacks] Pack re-applied after reset, path: {PathConstants.ActivePackDataPath}");
-
-            RefreshPacks();
-            StateHasChanged();
-        }
-        else
-        {
-            Logger.Warning($"[SpawnPacks] Reset failed for pack: {pack.Metadata.Name} - {error}");
-            ToastService.ShowWarning(error ?? "Unable to reset pack to default.");
         }
 
         return Task.CompletedTask;

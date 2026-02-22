@@ -66,11 +66,5 @@ namespace UORespawnApp.Scripts.Entities
         public string PackFolderPath { get; set; } = string.Empty;
         public bool IsFavorite { get; set; }
         public bool IsLiked { get; set; }
-
-        /// <summary>
-        /// Indicates if an approved pack has been modified from its original backup.
-        /// Only applicable for approved packs with a backup zip available.
-        /// </summary>
-        public bool IsModified { get; set; }
     }
 }

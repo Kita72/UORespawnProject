@@ -1,4 +1,5 @@
 ﻿using UORespawnApp.Scripts.Constants;
+using UORespawnApp.Scripts.Services;
 using UORespawnApp.Scripts.Utilities;
 
 namespace UORespawnApp
@@ -240,7 +241,12 @@ namespace UORespawnApp
 
                 await SignDataUtility.EnsureLoadedAsync();
 
-                Logger.Info("Sign data reloaded from server");
+                Logger.Info($"Sign data reloaded from server ({SignDataUtility.GetTotalSignCount()} locations)");
+
+                // Sync all packs to remove vendor spawns for locations that no longer exist
+                var syncService = new SpawnPackSyncService();
+                await syncService.SyncAllPacksAsync();
+                Logger.Info("Spawn packs synced after sign data update");
             }
             catch (Exception ex)
             {
@@ -274,7 +280,12 @@ namespace UORespawnApp
 
                 await HiveDataUtility.EnsureLoadedAsync();
 
-                Logger.Info("Hive data reloaded from server");
+                Logger.Info($"Hive data reloaded from server ({HiveDataUtility.GetTotalHiveCount()} locations)");
+
+                // Sync all packs to remove vendor spawns for locations that no longer exist
+                var syncService = new SpawnPackSyncService();
+                await syncService.SyncAllPacksAsync();
+                Logger.Info("Spawn packs synced after hive data update");
             }
             catch (Exception ex)
             {

@@ -521,6 +521,13 @@ namespace UORespawnApp.Scripts.Services
 
             try
             {
+                // If server is linked, copy sign data from OUTPUT to Resources/Raw BEFORE loading
+                // This ensures we have the latest server-generated data
+                await SyncSignDataFromServerAsync();
+
+                // Clear any previously loaded data to force fresh load
+                SignDataUtility.ClearSignData();
+
                 await SignDataUtility.EnsureLoadedAsync();
 
                 IsSignDataLoaded = true;
@@ -534,12 +541,59 @@ namespace UORespawnApp.Scripts.Services
             }
         }
 
+        /// <summary>
+        /// Copies sign data from server OUTPUT folder to Resources/Raw if server is linked.
+        /// This ensures we always load the latest server-generated sign data on startup.
+        /// </summary>
+        private static async Task SyncSignDataFromServerAsync()
+        {
+            try
+            {
+                var serverOutputPath = PathConstants.ServerOutputPath;
+                if (string.IsNullOrEmpty(serverOutputPath))
+                {
+                    Logger.Info("[SignSync] No server linked - using local sign data");
+                    return;
+                }
+
+                var serverSignPath = Path.Combine(serverOutputPath, PathConstants.SIGN_DATA_FILENAME);
+                if (!File.Exists(serverSignPath))
+                {
+                    Logger.Warning($"[SignSync] Server sign data file not found at: {serverSignPath}");
+                    return;
+                }
+
+                var localSignPath = PathConstants.GetSignDataFilePath();
+
+                // Ensure Resources/Raw directory exists
+                var rawDir = Path.GetDirectoryName(localSignPath);
+                if (!string.IsNullOrEmpty(rawDir) && !Directory.Exists(rawDir))
+                {
+                    Directory.CreateDirectory(rawDir);
+                }
+
+                await Task.Run(() => File.Copy(serverSignPath, localSignPath, overwrite: true));
+                Logger.Info($"[SignSync] Copied sign data from server OUTPUT to: {localSignPath}");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("[SignSync] Error syncing sign data from server", ex);
+            }
+        }
+
         private async Task LoadHiveDataAsync()
         {
             Logger.Info("[Startup Step 7/10] Loading hive data...");
 
             try
             {
+                // If server is linked, copy hive data from OUTPUT to Resources/Raw BEFORE loading
+                // This ensures we have the latest server-generated data
+                await SyncHiveDataFromServerAsync();
+
+                // Clear any previously loaded data to force fresh load
+                HiveDataUtility.ClearHiveData();
+
                 await HiveDataUtility.EnsureLoadedAsync();
 
                 IsHiveDataLoaded = true;
@@ -550,6 +604,46 @@ namespace UORespawnApp.Scripts.Services
             catch (Exception ex)
             {
                 Logger.Error("[Startup Step 7/10] LoadHiveData failed", ex);
+            }
+        }
+
+        /// <summary>
+        /// Copies hive data from server OUTPUT folder to Resources/Raw if server is linked.
+        /// This ensures we always load the latest server-generated hive data on startup.
+        /// </summary>
+        private static async Task SyncHiveDataFromServerAsync()
+        {
+            try
+            {
+                var serverOutputPath = PathConstants.ServerOutputPath;
+                if (string.IsNullOrEmpty(serverOutputPath))
+                {
+                    Logger.Info("[HiveSync] No server linked - using local hive data");
+                    return;
+                }
+
+                var serverHivePath = Path.Combine(serverOutputPath, PathConstants.HIVE_DATA_FILENAME);
+                if (!File.Exists(serverHivePath))
+                {
+                    Logger.Warning($"[HiveSync] Server hive data file not found at: {serverHivePath}");
+                    return;
+                }
+
+                var localHivePath = PathConstants.GetHiveDataFilePath();
+
+                // Ensure Resources/Raw directory exists
+                var rawDir = Path.GetDirectoryName(localHivePath);
+                if (!string.IsNullOrEmpty(rawDir) && !Directory.Exists(rawDir))
+                {
+                    Directory.CreateDirectory(rawDir);
+                }
+
+                await Task.Run(() => File.Copy(serverHivePath, localHivePath, overwrite: true));
+                Logger.Info($"[HiveSync] Copied hive data from server OUTPUT to: {localHivePath}");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("[HiveSync] Error syncing hive data from server", ex);
             }
         }
 
@@ -692,6 +786,44 @@ namespace UORespawnApp.Scripts.Services
             catch (Exception ex)
             {
                 Logger.Error("Error reloading data", ex);
+            }
+        }
+
+        /// <summary>
+        /// Forces reload of all vendor-related reference data from server.
+        /// Call this when server sign/hive data changes and you need the editor to pick up the changes.
+        /// This will:
+        /// 1. Copy sign/hive data from server OUTPUT to Resources/Raw
+        /// 2. Clear and reload SignDataUtility and HiveDataUtility
+        /// 3. Sync all packs to remove invalid vendor locations
+        /// </summary>
+        public static async Task ForceReloadVendorReferenceDataAsync()
+        {
+            try
+            {
+                Logger.Info("[ForceReload] Forcing reload of vendor reference data...");
+
+                // Copy fresh data from server
+                await SyncSignDataFromServerAsync();
+                await SyncHiveDataFromServerAsync();
+
+                // Clear and reload utilities
+                SignDataUtility.ClearSignData();
+                HiveDataUtility.ClearHiveData();
+                await SignDataUtility.EnsureLoadedAsync();
+                await HiveDataUtility.EnsureLoadedAsync();
+
+                Logger.Info($"[ForceReload] Loaded {SignDataUtility.GetTotalSignCount()} signs, {HiveDataUtility.GetTotalHiveCount()} hives");
+
+                // Sync all packs to remove invalid vendor locations
+                var syncService = new SpawnPackSyncService();
+                await syncService.SyncAllPacksAsync();
+
+                Logger.Info("[ForceReload] Vendor reference data reload complete");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("[ForceReload] Error reloading vendor reference data", ex);
             }
         }
 

@@ -176,9 +176,9 @@ UORespawnApp/Data/UOR_DATA/
 UORespawnApp/Data/PACKS/Imported/
 !UORespawnApp/Data/PACKS/Imported/.gitkeep
 
-# Approved packs folder - unpacked working copies
-UORespawnApp/Data/PACKS/Approved/
-!UORespawnApp/Data/PACKS/Approved/.gitkeep
+# Created packs folder - user creates these
+UORespawnApp/Data/PACKS/Created/
+!UORespawnApp/Data/PACKS/Created/.gitkeep
 
 # ==================== UORRESPAWN TRACKED FILES ====================
 # These files ARE tracked and required for the project to work.
@@ -200,18 +200,18 @@ UORespawnApp/Data/PACKS/Approved/
 # Track the server scripts ZIP for app distribution (overrides *.zip rule)
 !UORespawnApp/Data/SERVER/UORespawnSystem.zip
 
-# ==================== SPAWN PACKS (DefaultPack) ====================
-# The PACKS/Backup folder contains the DefaultPack which MUST be tracked
+# ==================== SPAWN PACKS (Approved) ====================
+# The PACKS/Approved folder contains bundled packs (like DefaultPack) that MUST be tracked
 # so users cloning the repo can build and have working spawn data.
 #
 # Structure:
-#   Backup/DefaultPack/     → Git repo (source files, diffable)
-#   Backup/DefaultPack.zip  → App distribution (for release builds)
+#   Approved/DefaultPack/     → Git repo (source files, diffable)
+#   Approved/DefaultPack.zip  → App distribution (for release builds)
 
-# Track the Backup folder and DefaultPack contents
-!UORespawnApp/Data/PACKS/Backup/
-!UORespawnApp/Data/PACKS/Backup/.gitkeep
-!UORespawnApp/Data/PACKS/Backup/DefaultPack/
-!UORespawnApp/Data/PACKS/Backup/DefaultPack/**
-!UORespawnApp/Data/PACKS/Backup/DefaultPack.zip
+# Track the Approved folder and DefaultPack contents
+!UORespawnApp/Data/PACKS/Approved/
+!UORespawnApp/Data/PACKS/Approved/.gitkeep
+!UORespawnApp/Data/PACKS/Approved/DefaultPack/
+!UORespawnApp/Data/PACKS/Approved/DefaultPack/**
+!UORespawnApp/Data/PACKS/Approved/DefaultPack.zip
 

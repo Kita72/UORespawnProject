@@ -72,12 +72,12 @@ namespace UORespawnApp.Scripts.Constants
 
         /// <summary>
         /// Packs subfolder in Data folder (contains spawn pack data)
-        /// Structure: Data/PACKS/Approved/, Data/PACKS/Imported/, Data/PACKS/Backup/
+        /// Structure: Data/PACKS/Approved/, Data/PACKS/Imported/, Data/PACKS/Created/
         /// </summary>
         public const string PACKS_SUBFOLDER = "PACKS";
 
         /// <summary>
-        /// Approved packs subfolder - contains unpacked approved packs ready to use
+        /// Approved packs subfolder - contains bundled packs that cannot be deleted
         /// </summary>
         public const string PACKS_APPROVED_SUBFOLDER = "Approved";
 
@@ -90,12 +90,6 @@ namespace UORespawnApp.Scripts.Constants
         /// Created packs subfolder - contains user-created packs (from scratch)
         /// </summary>
         public const string PACKS_CREATED_SUBFOLDER = "Created";
-
-        /// <summary>
-        /// Backup subfolder - contains original ZIP files for approved packs
-        /// Used to reset packs to default state
-        /// </summary>
-        public const string PACKS_BACKUP_SUBFOLDER = "Backup";
 
         /// <summary>
         /// Server scripts/data folder in Data directory
@@ -454,34 +448,11 @@ namespace UORespawnApp.Scripts.Constants
         }
 
         /// <summary>
-        /// Get the backup packs folder path (Data/PACKS/Backup/)
-        /// Contains original ZIP files for approved packs
-        /// </summary>
-        public static string PacksBackupPath
-        {
-            get
-            {
-                var path = Path.Combine(PacksPath, PACKS_BACKUP_SUBFOLDER);
-
-                if (!Directory.Exists(path))
-                {
-                    Directory.CreateDirectory(path);
-                }
-
-                return path;
-            }
-        }
-
-        /// <summary>
         /// Currently active pack's data folder path.
         /// Set when ANY pack is applied (Approved, Created, or Imported).
         /// When spawn edits are saved and IsSpawnDataDirty is true,
         /// files are synced to this folder (keeping the pack up to date).
         /// Null if no pack is currently loaded.
-        /// 
-        /// SRP Flow:
-        /// - Approved packs: Sync on save triggers Reset availability (backup comparison)
-        /// - Created/Imported packs: Sync on save keeps pack folder current (no backup/reset)
         /// </summary>
         public static string? ActivePackDataPath { get; set; }
 

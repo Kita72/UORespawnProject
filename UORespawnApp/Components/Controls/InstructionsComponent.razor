@@ -447,7 +447,8 @@
                     <h6 class="text-primary mt-4"><span class="bi bi-folder2 me-2"></span>Pack Categories</h6>
                     <ul>
                         <li><strong><span class="bi bi-patch-check me-1"></span>Approved:</strong>
-                            These are bundled with the application and can be reset to their original state if modified.</li>
+                            These are bundled with the application. They can be edited like any other pack, but cannot be deleted.
+                            To restore an approved pack to its original state, re-download the application.</li>
                         <li><strong><span class="bi bi-pencil-square me-1"></span>Created:</strong> Packs you've created from scratch using the editor. 
                             Start with empty spawn data and build your own configuration from the ground up.</li>
                         <li><strong><span class="bi bi-cloud-download me-1"></span>Imported:</strong> Custom packs you've imported from zip files shared by others. 
@@ -477,18 +478,18 @@
                                 <li><span class="bi bi-star"></span> <strong>Favorite:</strong> Star your preferred packs</li>
                                 <li><span class="bi bi-check2-circle"></span> <strong>Apply:</strong> Load this pack's spawn data</li>
                                 <li><span class="bi bi-info-circle"></span> <strong>Info:</strong> Hover to see pack description (Default pack opens ecology modal)</li>
-                                <li><span class="bi bi-arrow-counterclockwise"></span> <strong>Reset:</strong> Restore approved packs to original state (approved packs only)</li>
                                 <li><span class="bi bi-trash"></span> <strong>Delete:</strong> Remove packs (created and imported packs only, not available for approved packs)</li>
                             </ul>
                         </li>
                     </ul>
 
                     <div class="alert alert-secondary">
-                        <span class="bi bi-shield-check"></span> <strong>Delete Rules:</strong>
+                        <span class="bi bi-shield-check"></span> <strong>Pack Rules:</strong>
                         <ul class="mb-0 mt-2">
-                            <li><strong>Approved packs</strong> cannot be deleted (they ship with the app)</li>
-                            <li><strong>Created/Imported packs</strong> can be deleted, but not while loaded</li>
+                            <li><strong>Approved packs</strong> cannot be deleted (they ship with the app) but can be edited</li>
+                            <li><strong>Created/Imported packs</strong> can be edited and deleted</li>
                             <li>To delete the currently loaded pack, first apply a different pack</li>
+                            <li>To restore an approved pack, re-download the application</li>
                         </ul>
                     </div>
 
@@ -864,8 +865,15 @@
                                 <li><code>UOR_HiveData.txt</code> - Beehive locations</li>
                             </ul>
                         </li>
-                        <li>Place them in the editor's <code>Data/UORespawn/</code> folder</li>
+                        <li>Place them in the editor's <code>Resources/Raw/</code> folder (this updates the app's default reference data)</li>
                     </ol>
+
+                    <div class="alert alert-info mt-2 mb-3">
+                        <span class="bi bi-info-circle"></span> <strong>Why Resources/Raw?</strong> The <code>Resources/Raw/</code> folder contains 
+                        the app's bundled default reference data. When no server is linked, the editor uses these files. By copying your server's 
+                        OUTPUT files here, you update what creatures, regions, signs, and hives are available for spawn configuration.
+                        This is the <strong>source of truth</strong> when working offline or with a remote server.
+                    </div>
 
                     <p><strong>Step 3: Export & Upload Spawn Data (Editor → Server)</strong></p>
                     <ol>

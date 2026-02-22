@@ -145,6 +145,9 @@
     <!-- In Publish: Include ZIP, exclude unpacked folder -->
     <!-- In Debug: Unpacked folder exists for development, ZIP optional -->
     <ItemGroup>
+      <None Include="Data\PACKS\Approved\DefaultPack\pack.json">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
       <None Include="Data\SERVER\UORespawnSystem.zip" Condition="Exists('Data\SERVER\UORespawnSystem.zip')">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
@@ -168,14 +171,8 @@
       <Content Remove="Data\PACKS\**\*" />
 
       <!-- Include Backup ZIPs (for reset functionality and release builds) -->
-      <None Include="Data\PACKS\Backup\*.zip" Condition="Exists('Data\PACKS\Backup\')">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </None>
       <!-- Include Backup folders with all contents (for Git repo/Debug builds) -->
       <!-- This copies DefaultPack folder from Backup so it can be extracted to Approved -->
-      <None Include="Data\PACKS\Backup\**\*.*" Exclude="Data\PACKS\Backup\*.zip;Data\PACKS\Backup\.gitkeep">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </None>
       <!-- Include Created folder contents (for user-created packs) -->
       <None Include="Data\PACKS\Created\**\*.*" Exclude="Data\PACKS\Created\.gitkeep" Condition="Exists('Data\PACKS\Created\')">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
