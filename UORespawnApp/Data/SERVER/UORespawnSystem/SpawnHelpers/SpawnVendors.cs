@@ -79,7 +79,7 @@ namespace Server.Custom.UORespawnSystem.SpawnHelpers
             }
             else
             {
-                Dictionary<int, List<Point3D>> UniqueLocations = new Dictionary<int, List<Point3D>>();
+                Dictionary<int, List<Point2D>> UniqueLocations = new Dictionary<int, List<Point2D>>();
 
                 foreach (var item in World.Items.Values)
                 {
@@ -87,18 +87,20 @@ namespace Server.Custom.UORespawnSystem.SpawnHelpers
                     {
                         var signType = GetSignType(sign);
 
+                        var point2D = new Point2D(sign.Location.X, sign.Location.Y);
+
                         if (ValidateSign(signType))
                         {
                             if (!UniqueLocations.ContainsKey(sign.Map.MapID))
                             {
-                                UniqueLocations.Add(sign.Map.MapID, new List<Point3D>());
+                                UniqueLocations.Add(sign.Map.MapID, new List<Point2D>());
                             }
 
-                            if (!UniqueLocations[sign.Map.MapID].Contains(sign.Location))
+                            if (!UniqueLocations[sign.Map.MapID].Contains(point2D))
                             {
                                 SignLocations[sign.Map.MapID].Add((signType, GetFacing(sign), sign.Location));
 
-                                UniqueLocations[sign.Map.MapID].Add(sign.Location);
+                                UniqueLocations[sign.Map.MapID].Add(point2D);
 
                                 count++;
                             }

@@ -30,7 +30,7 @@ namespace UORespawnApp.Scripts.Services
         public bool IsComplete => _isComplete;
 
         // Progress tracking
-        public const int TotalSteps = 12;
+        public const int TotalSteps = 13;
         public int CompletedSteps { get; private set; }
         public double ProgressPercentage => (double)CompletedSteps / TotalSteps * 100;
 
@@ -259,10 +259,13 @@ namespace UORespawnApp.Scripts.Services
                 // Step 9: Load XML Spawner List
                 await LoadXMLSpawnerListAsync();
 
-                // Step 10: Verify Map Files exist in Data/MAPS
+                // Step 10: Sync spawn packs with server data (remove invalid creatures, regions, locations)
+                await SyncSpawnPacksWithServerDataAsync();
+
+                // Step 11: Verify Map Files exist in Data/MAPS
                 await CopyMapFilesAsync();
 
-                // Step 11: Start DataWatcher (LAST - after all data is loaded)
+                // Step 12: Start DataWatcher (LAST - after all data is loaded)
                 await StartDataWatcherAsync();
 
                 _isComplete = true;
@@ -574,6 +577,28 @@ namespace UORespawnApp.Scripts.Services
             catch (Exception ex)
             {
                 Logger.Error("[Startup Step 8/10] Error loading XML spawner list", ex);
+            }
+        }
+
+        /// <summary>
+        /// Synchronizes all spawn packs with current server data.
+        /// Removes invalid creatures, regions, and vendor locations from all packs.
+        /// This ensures packs stay aligned when server data changes.
+        /// </summary>
+        private async Task SyncSpawnPacksWithServerDataAsync()
+        {
+            Logger.Info("[Startup Step 10/13] Syncing spawn packs with server data...");
+            try
+            {
+                var syncService = new SpawnPackSyncService();
+                await syncService.SyncAllPacksAsync();
+
+                CompletedSteps++;
+                Logger.Info("[Startup Step 10/13] Spawn pack sync completed");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("[Startup Step 10/13] Error syncing spawn packs", ex);
             }
         }
 
