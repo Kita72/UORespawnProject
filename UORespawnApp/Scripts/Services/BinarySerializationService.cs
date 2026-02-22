@@ -70,18 +70,18 @@ namespace UORespawnApp.Scripts.Services
 
                 Logger.Info($"Settings saved to: {localPath}");
 
-                // Sync to server if linked
-                var serverPath = PathConstants.ServerDataPath;
+                // Sync to server INPUT folder if linked
+                var serverInputPath = PathConstants.ServerInputPath;
 
-                if (serverPath != null)
+                if (serverInputPath != null)
                 {
-                    var serverFilePath = PathConstants.GetServerFilePath(PathConstants.SETTINGS_FILENAME);
+                    var serverFilePath = PathConstants.GetServerInputFilePath(PathConstants.SETTINGS_FILENAME);
 
                     if (serverFilePath != null)
                     {
                         WriteSettings(serverFilePath);
 
-                        Logger.Info($"Settings synced to server: {serverFilePath}");
+                        Logger.Info($"Settings synced to server INPUT: {serverFilePath}");
                     }
                 }
 
@@ -209,18 +209,18 @@ namespace UORespawnApp.Scripts.Services
 
                 Logger.Info($"Box spawns saved to: {localPath} ({count} boxes)");
 
-                // Sync to server if linked
-                var serverPath = PathConstants.ServerDataPath;
+                // Sync to server INPUT folder if linked
+                var serverInputPath = PathConstants.ServerInputPath;
 
-                if (serverPath != null)
+                if (serverInputPath != null)
                 {
-                    var serverFilePath = PathConstants.GetServerFilePath(PathConstants.BOX_FILENAME);
+                    var serverFilePath = PathConstants.GetServerInputFilePath(PathConstants.BOX_FILENAME);
 
                     if (serverFilePath != null)
                     {
                         WriteBoxSpawns(serverFilePath);
 
-                        Logger.Info($"Box spawns synced to server: {serverFilePath}");
+                        Logger.Info($"Box spawns synced to server INPUT: {serverFilePath}");
                     }
                 }
 
@@ -401,18 +401,18 @@ namespace UORespawnApp.Scripts.Services
 
                 Logger.Info($"Tile spawns saved to: {localPath} ({count} tiles)");
 
-                // Sync to server if linked
-                var serverPath = PathConstants.ServerDataPath;
+                // Sync to server INPUT folder if linked
+                var serverInputPath = PathConstants.ServerInputPath;
 
-                if (serverPath != null)
+                if (serverInputPath != null)
                 {
-                    var serverFilePath = PathConstants.GetServerFilePath(PathConstants.TILE_FILENAME);
+                    var serverFilePath = PathConstants.GetServerInputFilePath(PathConstants.TILE_FILENAME);
 
-                    if(serverFilePath != null)
+                    if (serverFilePath != null)
                     {
                         WriteTileSpawns(serverFilePath);
 
-                        Logger.Info($"Tile spawns synced to server: {serverFilePath}");
+                        Logger.Info($"Tile spawns synced to server INPUT: {serverFilePath}");
                     }
                 }
 
@@ -571,18 +571,18 @@ namespace UORespawnApp.Scripts.Services
 
                 Logger.Info($"Region spawns saved to: {localPath} ({count} regions)");
 
-                // Sync to server if linked
-                var serverPath = PathConstants.ServerDataPath;
+                // Sync to server INPUT folder if linked
+                var serverInputPath = PathConstants.ServerInputPath;
 
-                if (serverPath != null)
+                if (serverInputPath != null)
                 {
-                    var serverFilePath = PathConstants.GetServerFilePath(PathConstants.REGION_FILENAME);
+                    var serverFilePath = PathConstants.GetServerInputFilePath(PathConstants.REGION_FILENAME);
 
                     if (serverFilePath != null)
                     {
                         WriteRegionSpawns(serverFilePath);
 
-                        Logger.Info($"Region spawns synced to server: {serverFilePath}");
+                        Logger.Info($"Region spawns synced to server INPUT: {serverFilePath}");
                     }
                 }
 
@@ -742,18 +742,18 @@ namespace UORespawnApp.Scripts.Services
 
                 Logger.Info($"Vendor spawns saved to: {localPath} ({count} sign types with vendors)");
 
-                // Sync to server if linked
-                var serverPath = PathConstants.ServerDataPath;
+                // Sync to server INPUT folder if linked
+                var serverInputPath = PathConstants.ServerInputPath;
 
-                if (serverPath != null)
+                if (serverInputPath != null)
                 {
-                    var serverFilePath = PathConstants.GetServerFilePath(PathConstants.VENDOR_FILENAME);
+                    var serverFilePath = PathConstants.GetServerInputFilePath(PathConstants.VENDOR_FILENAME);
 
                     if (serverFilePath != null)
                     {
                         WriteVendorSpawns(serverFilePath);
 
-                        Logger.Info($"Vendor spawns synced to server: {serverFilePath}");
+                        Logger.Info($"Vendor spawns synced to server INPUT: {serverFilePath}");
                     }
                 }
 

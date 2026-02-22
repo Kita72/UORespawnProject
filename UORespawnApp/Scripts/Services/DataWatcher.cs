@@ -16,7 +16,7 @@ namespace UORespawnApp
         public DataWatcher(Action? onDataChanged = null)
         {
             _onDataChanged = onDataChanged;
-            
+
             // Check platform support first
             if (!IsSupported)
             {
@@ -25,13 +25,15 @@ namespace UORespawnApp
                 Logger.Warning("DataWatcher not supported on this platform (requires Windows or macOS)");
                 return;
             }
-            
-            if (!string.IsNullOrEmpty(Settings.ServUODataFolder) && 
-                Directory.Exists(Settings.ServUODataFolder))
+
+            // Watch the server OUTPUT folder where server writes .txt files
+            var outputPath = PathConstants.ServerOutputPath;
+
+            if (!string.IsNullOrEmpty(outputPath) && Directory.Exists(outputPath))
             {
                 try
                 {
-                    _watcher = new FileSystemWatcher(Settings.ServUODataFolder)
+                    _watcher = new FileSystemWatcher(outputPath)
                     {
                         NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName,
                         Filter = "*.txt",
@@ -41,7 +43,7 @@ namespace UORespawnApp
 
                     SetupWatcher();
 
-                    Logger.Info($"DataWatcher started for: {Settings.ServUODataFolder}");
+                    Logger.Info($"DataWatcher started for OUTPUT folder: {outputPath}");
                 }
                 catch (Exception ex)
                 {
@@ -55,7 +57,7 @@ namespace UORespawnApp
             {
                 _watcher = null;
 
-                Logger.Warning("DataWatcher not started - No ServUO folder configured");
+                Logger.Warning("DataWatcher not started - Server OUTPUT folder not available (server may not have generated data yet)");
             }
         }
 
@@ -131,25 +133,21 @@ namespace UORespawnApp
         {
             try
             {
-                // Copy server bestiary file to Resources/Raw to update local copy
-                var serverPath = Settings.ServUODataFolder;
-                if (!string.IsNullOrEmpty(serverPath))
+                // Copy server bestiary file from OUTPUT folder to Resources/Raw
+                var serverBestiaryPath = PathConstants.GetServerOutputFilePath(PathConstants.BESTIARY_FILENAME);
+                var localBestiaryPath = PathConstants.GetBestiaryFilePath();
+
+                if (!string.IsNullOrEmpty(serverBestiaryPath) && File.Exists(serverBestiaryPath))
                 {
-                    var serverBestiaryPath = Path.Combine(serverPath, PathConstants.UOR_DATA_SUBFOLDER, PathConstants.BESTIARY_FILENAME);
-                    var localBestiaryPath = PathConstants.GetBestiaryFilePath();
-
-                    if (File.Exists(serverBestiaryPath))
+                    // Ensure Resources/Raw directory exists
+                    var rawDir = Path.GetDirectoryName(localBestiaryPath);
+                    if (!string.IsNullOrEmpty(rawDir) && !Directory.Exists(rawDir))
                     {
-                        // Ensure Resources/Raw directory exists
-                        var rawDir = Path.GetDirectoryName(localBestiaryPath);
-                        if (!string.IsNullOrEmpty(rawDir) && !Directory.Exists(rawDir))
-                        {
-                            Directory.CreateDirectory(rawDir);
-                        }
-
-                        File.Copy(serverBestiaryPath, localBestiaryPath, overwrite: true);
-                        Logger.Info($"Copied bestiary from server to: {localBestiaryPath}");
+                        Directory.CreateDirectory(rawDir);
                     }
+
+                    File.Copy(serverBestiaryPath, localBestiaryPath, overwrite: true);
+                    Logger.Info($"Copied bestiary from server OUTPUT to: {localBestiaryPath}");
                 }
 
                 // Clear existing list to force reload with server-generated data
@@ -186,25 +184,21 @@ namespace UORespawnApp
         {
             try
             {
-                // Copy server vendor list file to Resources/Raw to update local copy
-                var serverPath = Settings.ServUODataFolder;
-                if (!string.IsNullOrEmpty(serverPath))
+                // Copy server vendor list file from OUTPUT folder to Resources/Raw
+                var serverVendorPath = PathConstants.GetServerOutputFilePath(PathConstants.VENDOR_LIST_FILENAME);
+                var localVendorPath = PathConstants.GetVendorListFilePath();
+
+                if (!string.IsNullOrEmpty(serverVendorPath) && File.Exists(serverVendorPath))
                 {
-                    var serverVendorPath = Path.Combine(serverPath, PathConstants.UOR_DATA_SUBFOLDER, PathConstants.VENDOR_LIST_FILENAME);
-                    var localVendorPath = PathConstants.GetVendorListFilePath();
-
-                    if (File.Exists(serverVendorPath))
+                    // Ensure Resources/Raw directory exists
+                    var rawDir = Path.GetDirectoryName(localVendorPath);
+                    if (!string.IsNullOrEmpty(rawDir) && !Directory.Exists(rawDir))
                     {
-                        // Ensure Resources/Raw directory exists
-                        var rawDir = Path.GetDirectoryName(localVendorPath);
-                        if (!string.IsNullOrEmpty(rawDir) && !Directory.Exists(rawDir))
-                        {
-                            Directory.CreateDirectory(rawDir);
-                        }
-
-                        File.Copy(serverVendorPath, localVendorPath, overwrite: true);
-                        Logger.Info($"Copied vendor list from server to: {localVendorPath}");
+                        Directory.CreateDirectory(rawDir);
                     }
+
+                    File.Copy(serverVendorPath, localVendorPath, overwrite: true);
+                    Logger.Info($"Copied vendor list from server OUTPUT to: {localVendorPath}");
                 }
 
                 // Clear existing list to force reload with server-generated data
@@ -224,25 +218,21 @@ namespace UORespawnApp
         {
             try
             {
-                // Copy server sign data file to Resources/Raw to update local copy
-                var serverPath = Settings.ServUODataFolder;
-                if (!string.IsNullOrEmpty(serverPath))
+                // Copy server sign data file from OUTPUT folder to Resources/Raw
+                var serverSignPath = PathConstants.GetServerOutputFilePath(PathConstants.SIGN_DATA_FILENAME);
+                var localSignPath = PathConstants.GetSignDataFilePath();
+
+                if (!string.IsNullOrEmpty(serverSignPath) && File.Exists(serverSignPath))
                 {
-                    var serverSignPath = Path.Combine(serverPath, PathConstants.UOR_DATA_SUBFOLDER, PathConstants.SIGN_DATA_FILENAME);
-                    var localSignPath = PathConstants.GetSignDataFilePath();
-
-                    if (File.Exists(serverSignPath))
+                    // Ensure Resources/Raw directory exists
+                    var rawDir = Path.GetDirectoryName(localSignPath);
+                    if (!string.IsNullOrEmpty(rawDir) && !Directory.Exists(rawDir))
                     {
-                        // Ensure Resources/Raw directory exists
-                        var rawDir = Path.GetDirectoryName(localSignPath);
-                        if (!string.IsNullOrEmpty(rawDir) && !Directory.Exists(rawDir))
-                        {
-                            Directory.CreateDirectory(rawDir);
-                        }
-
-                        File.Copy(serverSignPath, localSignPath, overwrite: true);
-                        Logger.Info($"Copied sign data from server to: {localSignPath}");
+                        Directory.CreateDirectory(rawDir);
                     }
+
+                    File.Copy(serverSignPath, localSignPath, overwrite: true);
+                    Logger.Info($"Copied sign data from server OUTPUT to: {localSignPath}");
                 }
 
                 // Clear existing data to force reload with server-generated data
@@ -262,25 +252,21 @@ namespace UORespawnApp
         {
             try
             {
-                // Copy server hive data file to Resources/Raw to update local copy
-                var serverPath = Settings.ServUODataFolder;
-                if (!string.IsNullOrEmpty(serverPath))
+                // Copy server hive data file from OUTPUT folder to Resources/Raw
+                var serverHivePath = PathConstants.GetServerOutputFilePath(PathConstants.HIVE_DATA_FILENAME);
+                var localHivePath = PathConstants.GetHiveDataFilePath();
+
+                if (!string.IsNullOrEmpty(serverHivePath) && File.Exists(serverHivePath))
                 {
-                    var serverHivePath = Path.Combine(serverPath, PathConstants.UOR_DATA_SUBFOLDER, PathConstants.HIVE_DATA_FILENAME);
-                    var localHivePath = PathConstants.GetHiveDataFilePath();
-
-                    if (File.Exists(serverHivePath))
+                    // Ensure Resources/Raw directory exists
+                    var rawDir = Path.GetDirectoryName(localHivePath);
+                    if (!string.IsNullOrEmpty(rawDir) && !Directory.Exists(rawDir))
                     {
-                        // Ensure Resources/Raw directory exists
-                        var rawDir = Path.GetDirectoryName(localHivePath);
-                        if (!string.IsNullOrEmpty(rawDir) && !Directory.Exists(rawDir))
-                        {
-                            Directory.CreateDirectory(rawDir);
-                        }
-
-                        File.Copy(serverHivePath, localHivePath, overwrite: true);
-                        Logger.Info($"Copied hive data from server to: {localHivePath}");
+                        Directory.CreateDirectory(rawDir);
                     }
+
+                    File.Copy(serverHivePath, localHivePath, overwrite: true);
+                    Logger.Info($"Copied hive data from server OUTPUT to: {localHivePath}");
                 }
 
                 // Clear existing data to force reload with server-generated data

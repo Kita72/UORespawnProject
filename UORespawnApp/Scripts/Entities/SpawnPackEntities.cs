@@ -28,6 +28,7 @@ namespace UORespawnApp.Scripts.Entities
         public int BoxSpawnCount { get; set; }
         public int TileSpawnCount { get; set; }
         public int RegionSpawnCount { get; set; }
+        public int VendorSpawnCount { get; set; }
         public int TotalSpawnEntries { get; set; }
         public int UniqueCreatureCount { get; set; }
         public int MapCount { get; set; }

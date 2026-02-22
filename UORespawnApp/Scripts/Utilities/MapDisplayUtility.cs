@@ -1,4 +1,6 @@
-﻿namespace UORespawnApp.Scripts.Utilities
+﻿using UORespawnApp.Scripts.Constants;
+
+namespace UORespawnApp.Scripts.Utilities
 {
     internal static class MapDisplayUtility
     {
@@ -59,7 +61,13 @@
 
         internal static void InstantiateStatData()
         {
-            string statsFolderPath = Path.Combine(Settings.ServUODataFolder, "UOR_DATA", "UOR_STATS");
+            var statsFolderPath = PathConstants.ServerStatsPath;
+
+            if (string.IsNullOrEmpty(statsFolderPath))
+            {
+                Logger.Warning("Server STATS folder not available - no ServUO folder linked or STATS folder doesn't exist");
+                return;
+            }
 
             Logger.Info($"Looking for spawn stats in: {statsFolderPath}");
 
@@ -146,7 +154,7 @@
             }
             else
             {
-                Logger.Warning($"UOR_Stats folder not found at: {statsFolderPath}");
+                Logger.Warning($"STATS folder not found at: {statsFolderPath}");
             }
         }
     }

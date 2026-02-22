@@ -28,16 +28,37 @@ namespace UORespawnApp.Scripts.Constants
         /// <summary>
         /// UORespawn data subfolder (contains binary and text files)
         /// Editor: Data/UOR_DATA/
-        /// Server: ServUO/Data/UOR_DATA/
+        /// Server: ServUO/Data/UORespawn/
         /// </summary>
-        public const string UOR_DATA_SUBFOLDER = "UOR_DATA";
+        public const string UOR_DATA_SUBFOLDER = "UORespawn";
         
         /// <summary>
         /// Statistics subfolder for heatmap data (server-side only)
-        /// Server: Data/UOR_DATA/UOR_STATS/
+        /// Server: Data/UORespawn/STATS/
         /// NOT copied to editor (live session data only)
         /// </summary>
-        public const string UOR_STATS_SUBFOLDER = "UOR_STATS";
+        public const string UOR_STATS_SUBFOLDER = "STATS";
+
+        /// <summary>
+        /// Input subfolder for binary spawn data (editor writes, server reads)
+        /// Server: Data/UORespawn/INPUT/
+        /// Contains: UOR_BoxSpawn.bin, UOR_TileSpawn.bin, UOR_RegionSpawn.bin, UOR_VendorSpawn.bin, UOR_SpawnSettings.bin
+        /// </summary>
+        public const string UOR_INPUT_SUBFOLDER = "INPUT";
+
+        /// <summary>
+        /// Output subfolder for server-generated data (server writes, editor reads)
+        /// Server: Data/UORespawn/OUTPUT/
+        /// Contains: UOR_BestiaryList.txt, UOR_RegionList.txt, UOR_SpawnerList.txt, UOR_VendorList.txt, UOR_SignData.txt, UOR_HiveData.txt
+        /// </summary>
+        public const string UOR_OUTPUT_SUBFOLDER = "OUTPUT";
+
+        /// <summary>
+        /// System subfolder for internal tracking files (server-only)
+        /// Server: Data/UORespawn/SYS/
+        /// Contains: UOR_TrackSpawn.txt, UOR_VendorSpawn.txt, UOR_DebugLog.txt
+        /// </summary>
+        public const string UOR_SYS_SUBFOLDER = "SYS";
         
         /// <summary>
         /// Maps subfolder in Data folder (contains map image files)
@@ -247,8 +268,8 @@ namespace UORespawnApp.Scripts.Constants
         }
         
         /// <summary>
-        /// Get the server stats folder path (Server/Data/UOR_DATA/UOR_STATS/)
-        /// Used for heatmap statistics (live data only, not copied to editor)
+        /// Get the server stats folder path (Server/Data/UORespawn/STATS/)
+        /// Contains heatmap spawn statistics - editor reads these for map overlay display
         /// Returns null if server folder not configured
         /// </summary>
         public static string? ServerStatsPath
@@ -258,9 +279,9 @@ namespace UORespawnApp.Scripts.Constants
                 var serverDataPath = ServerDataPath;
                 if (serverDataPath == null)
                     return null;
-                
+
                 var statsPath = Path.Combine(serverDataPath, UOR_STATS_SUBFOLDER);
-                
+
                 if (!Directory.Exists(statsPath))
                 {
                     try
@@ -272,8 +293,65 @@ namespace UORespawnApp.Scripts.Constants
                         return null;
                     }
                 }
-                
+
                 return statsPath;
+            }
+        }
+
+        /// <summary>
+        /// Get the server INPUT folder path (Server/Data/UORespawn/INPUT/)
+        /// Editor writes binary spawn files here for server to load
+        /// Returns null if server folder not configured
+        /// </summary>
+        public static string? ServerInputPath
+        {
+            get
+            {
+                var serverDataPath = ServerDataPath;
+                if (serverDataPath == null)
+                    return null;
+
+                var inputPath = Path.Combine(serverDataPath, UOR_INPUT_SUBFOLDER);
+
+                if (!Directory.Exists(inputPath))
+                {
+                    try
+                    {
+                        Directory.CreateDirectory(inputPath);
+                    }
+                    catch
+                    {
+                        return null;
+                    }
+                }
+
+                return inputPath;
+            }
+        }
+
+        /// <summary>
+        /// Get the server OUTPUT folder path (Server/Data/UORespawn/OUTPUT/)
+        /// Server writes text data files here for editor to read
+        /// Contains: Bestiary, Region List, Spawner List, Vendor List, Sign Data, Hive Data
+        /// Returns null if server folder not configured
+        /// </summary>
+        public static string? ServerOutputPath
+        {
+            get
+            {
+                var serverDataPath = ServerDataPath;
+                if (serverDataPath == null)
+                    return null;
+
+                var outputPath = Path.Combine(serverDataPath, UOR_OUTPUT_SUBFOLDER);
+
+                // Don't auto-create OUTPUT - server creates this folder
+                if (!Directory.Exists(outputPath))
+                {
+                    return null;
+                }
+
+                return outputPath;
             }
         }
         
@@ -565,14 +643,52 @@ namespace UORespawnApp.Scripts.Constants
         {
             return Path.Combine(LocalDataPath, filename);
         }
-        
+
         /// <summary>
-        /// Get the full server path for a binary file (or null if server not connected)
+        /// Get the full server INPUT path for a binary file (editor writes, server reads)
+        /// Returns null if server not connected
+        /// </summary>
+        public static string? GetServerInputFilePath(string filename)
+        {
+            var inputPath = ServerInputPath;
+            return inputPath != null ? Path.Combine(inputPath, filename) : null;
+        }
+
+        /// <summary>
+        /// Get the full server OUTPUT path for a text file (server writes, editor reads)
+        /// Returns null if server not connected or OUTPUT folder doesn't exist
+        /// </summary>
+        public static string? GetServerOutputFilePath(string filename)
+        {
+            var outputPath = ServerOutputPath;
+            return outputPath != null ? Path.Combine(outputPath, filename) : null;
+        }
+
+        /// <summary>
+        /// Check if a filename is a binary spawn file (.bin)
+        /// These go to server INPUT folder
+        /// </summary>
+        public static bool IsBinaryFile(string fileName)
+        {
+            return fileName.EndsWith(".bin", StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// Get the full server path for a file (routes to INPUT or OUTPUT based on file type)
+        /// Binary files (.bin) -> INPUT folder
+        /// Text files (.txt) -> OUTPUT folder
+        /// Returns null if server not connected
         /// </summary>
         public static string? GetServerFilePath(string filename)
         {
-            var serverPath = ServerDataPath;
-            return serverPath != null ? Path.Combine(serverPath, filename) : null;
+            if (IsBinaryFile(filename))
+            {
+                return GetServerInputFilePath(filename);
+            }
+            else
+            {
+                return GetServerOutputFilePath(filename);
+            }
         }
     }
 }

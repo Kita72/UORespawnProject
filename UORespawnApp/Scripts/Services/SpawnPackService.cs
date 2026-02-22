@@ -21,7 +21,8 @@ namespace UORespawnApp.Scripts.Services
             PathConstants.SETTINGS_FILENAME,
             PathConstants.BOX_FILENAME,
             PathConstants.TILE_FILENAME,
-            PathConstants.REGION_FILENAME
+            PathConstants.REGION_FILENAME,
+            PathConstants.VENDOR_FILENAME
         ];
 
         /// <summary>
@@ -32,7 +33,8 @@ namespace UORespawnApp.Scripts.Services
         [
             PathConstants.BOX_FILENAME,
             PathConstants.TILE_FILENAME,
-            PathConstants.REGION_FILENAME
+            PathConstants.REGION_FILENAME,
+            PathConstants.VENDOR_FILENAME
         ];
 
         /// <summary>
@@ -336,6 +338,7 @@ namespace UORespawnApp.Scripts.Services
                     Utility.LoadBoxSpawnData();
                     Utility.LoadTileSpawnData();
                     Utility.LoadRegionSpawnData();
+                    Utility.LoadVendorSpawnData();
 
                     Logger.Info("[SpawnPack] Saving to sync data to server...");
                     // Save to sync data to server (if linked)
@@ -344,6 +347,7 @@ namespace UORespawnApp.Scripts.Services
                     Utility.SaveSpawnData();
                     Utility.SaveTileSpawnData();
                     Utility.SaveRegionSpawnData();
+                    Utility.SaveVendorSpawnData();
 
                     // Re-enable pack sync for future user edits
                     PathConstants.SuppressPackSync = false;
@@ -532,7 +536,8 @@ namespace UORespawnApp.Scripts.Services
                     ["Timed"] = 0,
                     ["Common"] = 0,
                     ["Uncommon"] = 0,
-                    ["Rare"] = 0
+                    ["Rare"] = 0,
+                    ["Vendor"] = 0
                 }
             };
 
@@ -548,6 +553,7 @@ namespace UORespawnApp.Scripts.Services
             stats.BoxSpawnCount = ReadBoxStats(Path.Combine(packDataPath, PathConstants.BOX_FILENAME), stats, uniqueCreatures, mapIds);
             stats.TileSpawnCount = ReadTileStats(Path.Combine(packDataPath, PathConstants.TILE_FILENAME), stats, uniqueCreatures, mapIds);
             stats.RegionSpawnCount = ReadRegionStats(Path.Combine(packDataPath, PathConstants.REGION_FILENAME), stats, uniqueCreatures, mapIds);
+            stats.VendorSpawnCount = ReadVendorStats(Path.Combine(packDataPath, PathConstants.VENDOR_FILENAME), stats, uniqueCreatures, mapIds);
 
             stats.TotalSpawnEntries = stats.SpawnTypeCounts.Values.Sum();
             stats.UniqueCreatureCount = uniqueCreatures.Count;
@@ -730,6 +736,68 @@ namespace UORespawnApp.Scripts.Services
             }
 
             stats.SpawnTypeCounts[typeKey] += count;
+        }
+
+        private static int ReadVendorStats(string filePath, SpawnPackStats stats, HashSet<string> uniqueCreatures, HashSet<int> mapIds)
+        {
+            if (!File.Exists(filePath))
+            {
+                return 0;
+            }
+
+            try
+            {
+                using var reader = new BinaryReader(File.Open(filePath, FileMode.Open, FileAccess.Read, FileShare.Read));
+                reader.ReadInt32(); // version
+                reader.ReadString(); // version string
+
+                int mapCount = reader.ReadInt32();
+                int totalVendors = 0;
+
+                for (int m = 0; m < mapCount; m++)
+                {
+                    int mapId = reader.ReadInt32();
+                    mapIds.Add(mapId);
+                    reader.ReadString(); // map name
+                    int vendorCount = reader.ReadInt32();
+
+                    for (int v = 0; v < vendorCount; v++)
+                    {
+                        reader.ReadBoolean(); // isSign
+                        reader.ReadInt32(); // signType
+                        reader.ReadInt32(); // facing
+                        reader.ReadInt32(); // x
+                        reader.ReadInt32(); // y
+                        reader.ReadInt32(); // z
+
+                        // Read vendor list (similar to ReadSpawnList but for "Vendor" type)
+                        int vendorListCount = reader.ReadInt32();
+                        if (!stats.SpawnTypeCounts.ContainsKey("Vendor"))
+                        {
+                            stats.SpawnTypeCounts["Vendor"] = 0;
+                        }
+
+                        for (int i = 0; i < vendorListCount; i++)
+                        {
+                            var name = reader.ReadString();
+                            if (!string.IsNullOrWhiteSpace(name))
+                            {
+                                uniqueCreatures.Add(name.Trim());
+                            }
+                        }
+
+                        stats.SpawnTypeCounts["Vendor"] += vendorListCount;
+                        totalVendors++;
+                    }
+                }
+
+                return totalVendors;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error reading vendor spawn pack stats", ex);
+                return 0;
+            }
         }
 
         /// <summary>
@@ -1153,6 +1221,15 @@ namespace UORespawnApp.Scripts.Services
             // Create empty region spawn file
             var regionPath = Path.Combine(packFolder, PathConstants.REGION_FILENAME);
             using (var writer = new BinaryWriter(File.Create(regionPath)))
+            {
+                writer.Write(1);             // Version
+                writer.Write(Utility.Version);
+                writer.Write(0);             // Map count (empty)
+            }
+
+            // Create empty vendor spawn file
+            var vendorPath = Path.Combine(packFolder, PathConstants.VENDOR_FILENAME);
+            using (var writer = new BinaryWriter(File.Create(vendorPath)))
             {
                 writer.Write(1);             // Version
                 writer.Write(Utility.Version);

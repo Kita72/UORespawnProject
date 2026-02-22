@@ -50,7 +50,7 @@ namespace UORespawnApp.Scripts.Services
         /// Called on startup to ensure edits sync back to the correct pack folder.
         /// On first launch (no data files in LocalDataPath), applies the default pack.
         /// </summary>
-        private void InitializeActivePackPath()
+        private static void InitializeActivePackPath()
         {
             try
             {
@@ -98,9 +98,10 @@ namespace UORespawnApp.Scripts.Services
                     Logger.Info($"Active pack path initialized: {dataPath}");
                 }
 
-                // Check if LocalDataPath is empty (first launch scenario)
-                // If so, copy pack files to LocalDataPath so data loading works
-                ApplyPackIfLocalDataEmpty(packFolder, dataPath);
+                // Sync pack data files to LocalDataPath
+                // - First launch: Copies all pack data files
+                // - Subsequent launches: Copies any MISSING files (handles upgrades)
+                SyncPackDataToLocalPath(packFolder, dataPath);
             }
             catch (Exception ex)
             {
@@ -109,48 +110,48 @@ namespace UORespawnApp.Scripts.Services
         }
 
         /// <summary>
-        /// On first launch, LocalDataPath (Data/UOR_DATA/) has no SPAWN data files.
-        /// This method copies pack data files to LocalDataPath so the app can load data.
-        /// Note: We check for SPAWN files specifically (Box, Tile, Region), not Settings,
-        /// because Settings may have been created by LoadSettingsAsync before this runs.
+        /// Ensures all pack data files exist in LocalDataPath (Data/UORespawn/).
+        /// - First launch: Copies all pack data files to LocalDataPath
+        /// - Subsequent launches: Copies any MISSING files from pack to LocalDataPath
+        /// This handles upgrades where new file types are added (e.g., VendorSpawn).
         /// </summary>
-        private static void ApplyPackIfLocalDataEmpty(string packFolder, string? packDataPath)
+        private static void SyncPackDataToLocalPath(string packFolder, string? packDataPath)
         {
             try
             {
                 var localDataPath = PathConstants.LocalDataPath;
-
-                // Check for SPAWN files only - Settings file may already exist from LoadSettingsAsync
-                // We need at least ONE spawn file to consider the data loaded
-                string[] spawnFiles = [PathConstants.BOX_FILENAME, PathConstants.TILE_FILENAME, PathConstants.REGION_FILENAME];
-
-                bool hasSpawnData = spawnFiles.Any(file => File.Exists(Path.Combine(localDataPath, file)));
-                if (hasSpawnData)
-                {
-                    Logger.Info("LocalDataPath already has spawn data files - skipping first-launch apply");
-                    return;
-                }
-
-                // No spawn data - this is first launch, apply the pack
                 var sourcePath = packDataPath ?? packFolder;
 
-                // Check if pack has spawn files to copy
-                bool packHasSpawnData = spawnFiles.Any(file => File.Exists(Path.Combine(sourcePath, file)));
+                // ALL data files that should exist in LocalDataPath
+                string[] allDataFiles = [PathConstants.SETTINGS_FILENAME, PathConstants.BOX_FILENAME,
+                                         PathConstants.TILE_FILENAME, PathConstants.REGION_FILENAME, PathConstants.VENDOR_FILENAME];
 
-                if (!packHasSpawnData)
+                // Check which files are missing from LocalDataPath
+                var missingFiles = allDataFiles
+                    .Where(fileName => !File.Exists(Path.Combine(localDataPath, fileName)))
+                    .ToList();
+
+                if (missingFiles.Count == 0)
                 {
-                    Logger.Warning($"Pack has no spawn data files to apply: {sourcePath}");
-                    Logger.Warning("Files checked: " + string.Join(", ", spawnFiles.Select(f => Path.Combine(sourcePath, f) + " exists=" + File.Exists(Path.Combine(sourcePath, f)))));
+                    Logger.Info("LocalDataPath has all pack data files - no sync needed");
                     return;
                 }
 
-                Logger.Info($"First launch detected - applying pack data from: {sourcePath}");
+                // Log what we're doing
+                bool isFirstLaunch = missingFiles.Count == allDataFiles.Length || 
+                                     !allDataFiles.Take(4).Any(f => File.Exists(Path.Combine(localDataPath, f))); // No spawn files = first launch
 
-                // Copy ALL data files (including settings)
-                string[] allDataFiles = [PathConstants.SETTINGS_FILENAME, PathConstants.BOX_FILENAME,
-                                         PathConstants.TILE_FILENAME, PathConstants.REGION_FILENAME];
+                if (isFirstLaunch)
+                {
+                    Logger.Info($"First launch detected - applying pack data from: {sourcePath}");
+                }
+                else
+                {
+                    Logger.Info($"Syncing {missingFiles.Count} missing file(s) from pack: {sourcePath}");
+                }
 
-                foreach (var fileName in allDataFiles)
+                // Copy missing files from pack to LocalDataPath
+                foreach (var fileName in missingFiles)
                 {
                     var sourceFile = Path.Combine(sourcePath, fileName);
 
@@ -163,15 +164,19 @@ namespace UORespawnApp.Scripts.Services
                     }
                     else
                     {
-                        Logger.Warning($"  Missing in pack: {fileName}");
+                        // Only warn for spawn files, not settings (settings might be intentionally absent in pack)
+                        if (fileName != PathConstants.SETTINGS_FILENAME)
+                        {
+                            Logger.Warning($"  Missing in pack: {fileName}");
+                        }
                     }
                 }
 
-                Logger.Info("First launch pack apply completed");
+                Logger.Info("Pack data sync completed");
             }
             catch (Exception ex)
             {
-                Logger.Error("Error applying pack on first launch", ex);
+                Logger.Error("Error syncing pack data to LocalDataPath", ex);
             }
         }
 
@@ -181,7 +186,7 @@ namespace UORespawnApp.Scripts.Services
         private static string? ResolvePackDataPath(string packFolder)
         {
             string[] dataFiles = [PathConstants.SETTINGS_FILENAME, PathConstants.BOX_FILENAME,
-                                  PathConstants.TILE_FILENAME, PathConstants.REGION_FILENAME];
+                                  PathConstants.TILE_FILENAME, PathConstants.REGION_FILENAME, PathConstants.VENDOR_FILENAME];
 
             if (dataFiles.Any(file => File.Exists(Path.Combine(packFolder, file))))
             {
@@ -230,7 +235,7 @@ namespace UORespawnApp.Scripts.Services
 
                 // Initialize active pack path from saved CurrentPackName setting
                 // Now the pack will exist in Approved (either from Backup ZIP or folder)
-                InitializeActivePackPath();
+                BackgroundDataLoader.InitializeActivePackPath();
 
                 // Step 1: Load Box Spawn Data (Binary)
                 await LoadBoxSpawnDataAsync();

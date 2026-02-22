@@ -126,9 +126,9 @@
                                         </strong>
                                     </div>
                                     <div class="d-flex align-items-center gap-2">
-                                        @if (locationsWithVendors > 0)
+                                        @if (totalVendorCount > 0)
                                         {
-                                            <span class="badge bg-success" title="@locationsWithVendors of @locationCount locations have vendors">@locationsWithVendors/@locationCount</span>
+                                            <span class="badge bg-success" title="@totalVendorCount total vendors assigned">@totalVendorCount</span>
                                             <button class="btn btn-warning" style="padding: 2px 6px; font-size: 0.7rem;" @onclick="() => ClearSignTypeVendors(signTypeGroup.SignType)" @onclick:stopPropagation="true" title="Clear All Vendors for this Sign Type">
                                                 <span class="bi bi-arrow-clockwise"></span>
                                             </button>
