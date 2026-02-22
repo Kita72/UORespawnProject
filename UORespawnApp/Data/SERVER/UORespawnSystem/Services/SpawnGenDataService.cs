@@ -167,7 +167,7 @@ namespace Server.Custom.UORespawnSystem.Services
                         spawnNames = string.Join("|", xml.SpawnObjects.Select(so => so.TypeName));
                     }
 
-                    allSpawners.Add($"{xml.Map}:{xml.X}:{xml.Y}:{xspwnr.HomeRange}:{xml.MaxCount}:{spawnNames}");
+                    allSpawners.Add($"{xml.Map.MapID}:{xml.X}:{xml.Y}:{xspwnr.HomeRange}:{xml.MaxCount}:{spawnNames}");
                 }
             }
 
