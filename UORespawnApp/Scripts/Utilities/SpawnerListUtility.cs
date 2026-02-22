@@ -1,3 +1,5 @@
+using UORespawnApp.Scripts.Constants;
+
 namespace UORespawnApp.Scripts.Utilities
 {
     internal static class SpawnerListUtility
@@ -10,9 +12,11 @@ namespace UORespawnApp.Scripts.Utilities
         {
             string fileLoc = SpawnersFile;
 
-            if (Directory.Exists(Settings.ServUODataFolder))
+            // Check server OUTPUT folder first (new v2.0 structure)
+            var serverOutputPath = PathConstants.ServerOutputPath;
+            if (!string.IsNullOrEmpty(serverOutputPath))
             {
-                var serverFile = Path.Combine(Settings.ServUODataFolder, "UOR_SpawnerList.txt");
+                var serverFile = Path.Combine(serverOutputPath, PathConstants.SPAWNER_LIST_FILENAME);
                 if (File.Exists(serverFile))
                 {
                     fileLoc = serverFile;

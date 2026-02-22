@@ -1,0 +1,541 @@
+@using Microsoft.JSInterop
+@using System.Text.Json
+@using UORespawnApp.Scripts.Utilities
+@using UORespawnApp.Scripts.Constants
+@inject IJSRuntime JS
+@inject ViewService ViewService
+@inject ToastService ToastService
+@implements IDisposable
+
+<div class="card shadow-sm mb-3 minimap-card">
+    <div class="card-header minimap-header text-center d-flex justify-content-between align-items-center">
+        <button class="btn btn-sm minimap-btn" @onclick="HandleResetClick" title="Reset View & Zoom">
+            <span class="bi bi-arrow-counterclockwise"></span>
+        </button>
+        <span class="minimap-title"><span class="bi bi-map me-1"></span>Mini Map</span>
+        <button class="btn btn-sm minimap-btn" @onclick="ToggleMiniMap" title="@(isExpanded ? "Collapse Mini Map" : "Expand Mini Map")">
+            <span class="bi @(isExpanded ? "bi-list" : "bi-chevron-down")"></span>
+        </button>
+    </div>
+    @if (isExpanded)
+    {
+        <div class="card-body p-2 minimap-body" @key="@("minimap-body")">
+            <canvas id="@CanvasId" width="250" height="188"
+                    style="cursor:pointer; border:1px solid #333; display:block; image-rendering:pixelated; width: 100%; height: auto;"
+                    @onclick="OnCanvasClick" />
+            <div class="d-flex gap-2 mt-2">
+                <button class="btn btn-sm w-50 @(ViewService.ShowXMLSpawners ? "btn-success" : "btn-danger")" 
+                        @onclick="ToggleXMLSpawners" title="Toggle XML Spawners">
+                    <span class="bi bi-gear-fill"></span> XML
+                </button>
+                <button class="btn btn-sm w-50 @(ViewService.ShowServerSpawns ? "btn-success" : "btn-danger")" 
+                        @onclick="ToggleServerSpawns" title="Toggle Server Spawns">
+                    <span class="bi bi-bullseye"></span> Spawns
+                </button>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    // ===================== PARAMETERS FROM PARENT =====================
+
+    [Parameter] public string CanvasId { get; set; } = "miniMapCanvas";
+    [Parameter] public string MainImageId { get; set; } = "mapImg";
+    // NOTE: ImgWidth/ImgHeight are no longer needed - we get them from the actual image via JS
+    [Parameter] public double PanX { get; set; }
+    [Parameter] public double PanY { get; set; }
+    [Parameter] public double ZoomLevel { get; set; } = 1.0;
+
+    // ===================== EVENT CALLBACKS TO PARENT =====================
+
+    [Parameter] public EventCallback<(double panX, double panY)> OnMiniMapClick { get; set; }
+    [Parameter] public EventCallback OnResetView { get; set; }
+
+    // ===================== INTERNAL STATE =====================
+
+    private bool isExpanded = true;
+    private bool isInitialized = false; // Track if InitializeAsync has been called
+    private string dimensionsKey => $"miniMapDimensions_{CanvasId}";
+
+    // Cache the last known dimensions from the actual image (set in InitializeAsync)
+    private int lastImgWidth = 0;
+    private int lastImgHeight = 0;
+
+    // ===================== LIFECYCLE =====================
+
+    protected override void OnInitialized()
+    {
+        ViewService.OnXMLSpawnersChanged += HandleXMLSpawnersChanged;
+        ViewService.OnServerSpawnsChanged += HandleServerSpawnsChanged;
+    }
+
+    // NOTE: We intentionally do NOT call UpdateViewport in OnParametersSetAsync
+    // The parent component is responsible for calling UpdateViewport() when needed
+    // This prevents race conditions where UpdateViewport runs before InitializeAsync
+
+    // ===================== PUBLIC METHODS (called by parent) =====================
+
+    /// <summary>
+    /// Initialize the mini map canvas with the map image.
+    /// Called by parent after main map image loads.
+    /// Uses the actual image dimensions from JavaScript for accurate scaling.
+    /// </summary>
+    /// <param name="currentPanX">Current pan X position (optional, uses parameter if not provided)</param>
+    /// <param name="currentPanY">Current pan Y position (optional, uses parameter if not provided)</param>
+    /// <param name="currentZoom">Current zoom level (optional, uses parameter if not provided)</param>
+    public async Task InitializeAsync(double? currentPanX = null, double? currentPanY = null, double? currentZoom = null)
+    {
+        if (!isExpanded) return;
+
+        // Store passed values for viewport calculation (avoids stale parameter issue)
+        double usePanX = currentPanX ?? PanX;
+        double usePanY = currentPanY ?? PanY;
+        double useZoom = currentZoom ?? ZoomLevel;
+
+        try
+        {
+            // Get actual image dimensions from JavaScript and initialize in one call
+            var result = await JS.InvokeAsync<string>("eval", $@"
+                (function() {{
+                    const miniCanvas = document.getElementById('{CanvasId}');
+                    const mainImg = document.getElementById('{MainImageId}');
+                    if (!miniCanvas || !mainImg) {{
+                        console.error('MiniMap [{CanvasId}]: Canvas or image not found');
+                        return '';
+                    }}
+
+                    // Check if image is loaded
+                    if (!mainImg.complete || mainImg.naturalWidth === 0) {{
+                        console.error('MiniMap [{CanvasId}]: Image not loaded yet');
+                        return '';
+                    }}
+
+                    const ctx = miniCanvas.getContext('2d');
+                    const canvasWidth = 250;
+                    const canvasHeight = 188;
+
+                    // Use ACTUAL image dimensions from the loaded image
+                    const imageWidth = mainImg.naturalWidth;
+                    const imageHeight = mainImg.naturalHeight;
+
+                    // Calculate scale to fit entire map in canvas (maintaining aspect ratio)
+                    const scaleX = canvasWidth / imageWidth;
+                    const scaleY = canvasHeight / imageHeight;
+                    const scale = Math.min(scaleX, scaleY);
+
+                    // Calculate drawn dimensions
+                    const drawWidth = imageWidth * scale;
+                    const drawHeight = imageHeight * scale;
+
+                    // Center the map in the canvas
+                    const offsetX = (canvasWidth - drawWidth) / 2;
+                    const offsetY = (canvasHeight - drawHeight) / 2;
+
+                    // Store dimensions globally for this canvas
+                    window['{dimensionsKey}'] = {{
+                        canvasWidth: canvasWidth,
+                        canvasHeight: canvasHeight,
+                        drawWidth: drawWidth,
+                        drawHeight: drawHeight,
+                        offsetX: offsetX,
+                        offsetY: offsetY,
+                        imageWidth: imageWidth,
+                        imageHeight: imageHeight,
+                        scale: scale,
+                        initialized: true
+                    }};
+
+                    // Clear canvas
+                    ctx.fillStyle = '#1a1a1a';
+                    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+                    // Draw the map from the actual image
+                    ctx.drawImage(mainImg, offsetX, offsetY, drawWidth, drawHeight);
+
+                    console.log('MiniMap [{CanvasId}]: ' + imageWidth + 'x' + imageHeight + 
+                        ' -> ' + drawWidth.toFixed(1) + 'x' + drawHeight.toFixed(1) + 
+                        ' @ scale ' + scale.toFixed(4) + 
+                        ', offset (' + offsetX.toFixed(1) + ', ' + offsetY.toFixed(1) + ')');
+
+                    return imageWidth + ',' + imageHeight;
+                }})()
+            ");
+
+            if (!string.IsNullOrEmpty(result))
+            {
+                // Update C# side with actual dimensions for viewport calculations
+                var parts = result.Split(',');
+                if (int.TryParse(parts[0], out int w) && int.TryParse(parts[1], out int h))
+                {
+                    lastImgWidth = w;
+                    lastImgHeight = h;
+                }
+
+                isInitialized = true;
+
+                // Draw initial viewport with the passed values
+                await UpdateViewportWithValues(usePanX, usePanY, useZoom);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"MiniMap [{CanvasId}] init error", ex);
+        }
+    }
+
+    /// <summary>
+    /// Update the viewport rectangle on the mini map.
+    /// Called by parent when pan/zoom changes.
+    /// </summary>
+    public async Task UpdateViewport()
+    {
+        if (!isInitialized || !isExpanded) return;
+        await UpdateViewportInternal();
+    }
+
+    private async Task UpdateViewportInternal()
+    {
+        await UpdateViewportWithValues(PanX, PanY, ZoomLevel);
+    }
+
+    private async Task UpdateViewportWithValues(double panX, double panY, double zoom)
+    {
+        // Use stored dimensions from InitializeAsync (from actual image)
+        if (lastImgWidth <= 0 || lastImgHeight <= 0) return;
+
+        try
+        {
+            // Calculate viewport in world coordinates
+            double viewportWidthWorld = 800.0 / zoom;
+            double viewportHeightWorld = 600.0 / zoom;
+            double viewportWorldX = -panX / zoom;
+            double viewportWorldY = -panY / zoom;
+
+            await JS.InvokeVoidAsync("eval", $@"
+                (function() {{
+                    const miniCanvas = document.getElementById('{CanvasId}');
+                    const mainImg = document.getElementById('{MainImageId}');
+                    const dims = window['{dimensionsKey}'];
+
+                    if (!miniCanvas || !mainImg || !dims || !dims.initialized) {{
+                        return;
+                    }}
+
+                    const ctx = miniCanvas.getContext('2d');
+
+                    // Clear and redraw map
+                    ctx.fillStyle = '#1a1a1a';
+                    ctx.fillRect(0, 0, dims.canvasWidth, dims.canvasHeight);
+
+                    // Draw map using stored dimensions (simpler - no source rect needed)
+                    ctx.drawImage(mainImg, dims.offsetX, dims.offsetY, dims.drawWidth, dims.drawHeight);
+
+                    // Calculate viewport position on mini-map
+                    const vpX = dims.offsetX + ({viewportWorldX} * dims.scale);
+                    const vpY = dims.offsetY + ({viewportWorldY} * dims.scale);
+                    const vpW = {viewportWidthWorld} * dims.scale;
+                    const vpH = {viewportHeightWorld} * dims.scale;
+
+                    // Draw viewport rectangle
+                    ctx.strokeStyle = '#00FF00';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(vpX, vpY, vpW, vpH);
+                }})()
+            ");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"MiniMap [{CanvasId}] viewport error", ex);
+        }
+    }
+
+    // ===================== INTERNAL HANDLERS =====================
+
+    private async Task ToggleMiniMap()
+    {
+        isExpanded = !isExpanded;
+        StateHasChanged();
+
+        if (isExpanded)
+        {
+            await Task.Delay(50); // Wait for DOM
+            await InitializeAsync();
+        }
+    }
+
+    private async Task HandleResetClick()
+    {
+        await OnResetView.InvokeAsync();
+    }
+
+    private async Task OnCanvasClick(MouseEventArgs e)
+    {
+        try
+        {
+            // Get minimap dimensions from JavaScript
+            var dimsJson = await JS.InvokeAsync<string>("eval", $@"
+                (function() {{
+                    const canvas = document.getElementById('{CanvasId}');
+                    const dims = window['{dimensionsKey}'];
+                    if (!canvas || !dims) return '';
+
+                    return JSON.stringify({{
+                        displayWidth: canvas.offsetWidth,
+                        displayHeight: canvas.offsetHeight,
+                        canvasWidth: dims.canvasWidth,
+                        canvasHeight: dims.canvasHeight,
+                        drawWidth: dims.drawWidth,
+                        drawHeight: dims.drawHeight,
+                        offsetX: dims.offsetX,
+                        offsetY: dims.offsetY,
+                        imageWidth: dims.imageWidth,
+                        imageHeight: dims.imageHeight,
+                        scale: dims.scale
+                    }});
+                }})()
+            ");
+
+            if (string.IsNullOrEmpty(dimsJson)) return;
+
+            var dims = JsonSerializer.Deserialize<Dictionary<string, double>>(dimsJson);
+            if (dims == null) return;
+
+            // Scale click from display coords to canvas coords
+            // (the canvas may be displayed at a different size than its internal resolution)
+            double displayToCanvasX = dims["canvasWidth"] / dims["displayWidth"];
+            double displayToCanvasY = dims["canvasHeight"] / dims["displayHeight"];
+
+            double canvasClickX = e.OffsetX * displayToCanvasX;
+            double canvasClickY = e.OffsetY * displayToCanvasY;
+
+            // Check if click is within the drawn map area
+            double mapLeft = dims["offsetX"];
+            double mapTop = dims["offsetY"];
+            double mapRight = mapLeft + dims["drawWidth"];
+            double mapBottom = mapTop + dims["drawHeight"];
+
+            if (canvasClickX < mapLeft || canvasClickX > mapRight ||
+                canvasClickY < mapTop || canvasClickY > mapBottom)
+            {
+                // Click was in the dark border area, ignore
+                return;
+            }
+
+            // Convert canvas click to position within drawn map area
+            double mapClickX = canvasClickX - mapLeft;
+            double mapClickY = canvasClickY - mapTop;
+
+            // Convert to world coordinates using the scale factor
+            // scale = drawSize / imageSize, so imageCoord = drawCoord / scale
+            double scale = dims["scale"];
+            double worldX = mapClickX / scale;
+            double worldY = mapClickY / scale;
+
+            // Get image dimensions for clamping
+            double imageWidth = dims["imageWidth"];
+            double imageHeight = dims["imageHeight"];
+
+            // Calculate pan position to center the viewport on this world position
+            // Pan formula: panX = -(worldX * zoom) + viewportCenterX
+            double newPanX = -(worldX * ZoomLevel) + 400; // Center horizontally (800/2)
+            double newPanY = -(worldY * ZoomLevel) + 300; // Center vertically (600/2)
+
+            // Clamp pan so viewport stays within map bounds
+            // Viewport dimensions in world coords: 800/zoom x 600/zoom
+            // Max pan (showing top-left corner): panX = 0, panY = 0
+            // Min pan (showing bottom-right corner): panX = -(imageWidth * zoom - 800), panY = -(imageHeight * zoom - 600)
+            double minPanX = -(imageWidth * ZoomLevel - 800);
+            double minPanY = -(imageHeight * ZoomLevel - 600);
+
+            // Clamp: don't let pan go positive (would show past top-left)
+            // and don't let pan go below minimum (would show past bottom-right)
+            newPanX = Math.Min(0, Math.Max(minPanX, newPanX));
+            newPanY = Math.Min(0, Math.Max(minPanY, newPanY));
+
+            // Notify parent of new pan position
+            await OnMiniMapClick.InvokeAsync((newPanX, newPanY));
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"MiniMap [{CanvasId}] click error", ex);
+        }
+    }
+    
+    // ===================== XML/SPAWNS TOGGLE HANDLERS =====================
+    
+    private async Task ToggleXMLSpawners()
+    {
+        ViewService.ToggleXMLSpawners();
+
+        if (ViewService.ShowXMLSpawners)
+        {
+            var xmlSpawners = SpawnerListUtility.GetSpawnersForMap(ViewService.CurrentMapId);
+            Logger.Info($"Showing {xmlSpawners.Count} XML spawners for {ViewService.CurrentMapId}");
+
+            if (xmlSpawners.Count > 0)
+            {
+                var options = new JsonSerializerOptions 
+                { 
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                    WriteIndented = false 
+                };
+                var json = JsonSerializer.Serialize(xmlSpawners, options);
+                await JS.InvokeVoidAsync("eval", $"window.mapModule.showXMLSpawners({json})");
+            }
+            else
+            {
+                Logger.Info("No XML spawners found for this map");
+                ToastService.ShowWarning($"No XML spawners found for {MapUtility.GetMapName(ViewService.CurrentMapId)}. Import XML Spawner data first.");
+                ViewService.ToggleXMLSpawners(); // Toggle back off
+            }
+        }
+        else
+        {
+            Logger.Info("Hiding XML spawners");
+            await JS.InvokeVoidAsync("eval", "window.mapModule.hideXMLSpawners()");
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task ToggleServerSpawns()
+    {
+        ViewService.ToggleServerSpawns();
+
+        if (ViewService.ShowServerSpawns)
+        {
+            Logger.Info($"Toggling ON server spawn statistics for {ViewService.CurrentMapId}");
+
+            // Check if ServUO folder is configured
+            if (string.IsNullOrEmpty(Settings.ServUODataFolder))
+            {
+                Logger.Warning("Server Data folder not configured!");
+                ToastService.ShowWarning("Server Data folder not configured! Go to Settings to set your ServUO Data folder path.");
+                ViewService.ToggleServerSpawns();
+                StateHasChanged();
+                return;
+            }
+
+            // Check if UORespawn/STATS folder exists
+            var statsFolderPath = PathConstants.ServerStatsPath;
+            if (string.IsNullOrEmpty(statsFolderPath) || !Directory.Exists(statsFolderPath))
+            {
+                Logger.Warning("STATS folder not found");
+                ToastService.ShowWarning("UORespawn/STATS folder not found! Ensure Data/UORespawn/STATS/ exists in your server data folder.");
+                ViewService.ToggleServerSpawns();
+                StateHasChanged();
+                return;
+            }
+
+            // Load spawn statistics from server if not already loaded
+            if (!MapDisplayUtility.HasSpawnData)
+            {
+                Logger.Info("Loading spawn statistics...");
+                MapDisplayUtility.InstantiateStatData();
+
+                if (!MapDisplayUtility.HasSpawnData)
+                {
+                    Logger.Warning("No spawn statistics files found!");
+                    ToastService.ShowWarning("No spawn statistics files found! Play on your server to generate data, then run [PushRespawnStats].");
+                    ViewService.ToggleServerSpawns();
+                    StateHasChanged();
+                    return;
+                }
+
+                Logger.Info("Loaded spawn statistics successfully!");
+            }
+
+            // Get spawn data for current map
+            var spawnData = MapDisplayUtility.GetSpawnDataForMap(ViewService.CurrentMapId);
+            if (spawnData.Count == 0)
+            {
+                Logger.Warning($"No spawn data available for {ViewService.CurrentMapId}");
+                ToastService.ShowWarning($"No spawn data available for {MapUtility.GetMapName(ViewService.CurrentMapId)}. Try a different map or play on this map to generate data.");
+                ViewService.ToggleServerSpawns();
+                StateHasChanged();
+                return;
+            }
+
+            // Send to JavaScript
+            var options = new JsonSerializerOptions 
+            { 
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                WriteIndented = false 
+            };
+            var json = JsonSerializer.Serialize(spawnData, options);
+
+            await JS.InvokeVoidAsync("eval", $"window.mapModule.showServerSpawns({json})");
+            Logger.Info($"Displayed {spawnData.Count} spawn points on map");
+        }
+        else
+        {
+            Logger.Info("Hiding server spawn statistics");
+            await JS.InvokeVoidAsync("eval", "window.mapModule.hideServerSpawns()");
+        }
+
+        StateHasChanged();
+    }
+    
+    // ===================== EVENT HANDLERS FROM VIEWSERVICE =====================
+    
+    private async void HandleXMLSpawnersChanged()
+    {
+        await InvokeAsync(async () =>
+        {
+            if (ViewService.ShowXMLSpawners)
+            {
+                var xmlSpawners = SpawnerListUtility.GetSpawnersForMap(ViewService.CurrentMapId);
+                if (xmlSpawners.Count > 0)
+                {
+                    var options = new JsonSerializerOptions 
+                    { 
+                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                        WriteIndented = false 
+                    };
+                    var json = JsonSerializer.Serialize(xmlSpawners, options);
+                    await JS.InvokeVoidAsync("eval", $"window.mapModule.showXMLSpawners({json})");
+                }
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("eval", "window.mapModule.hideXMLSpawners()");
+            }
+            StateHasChanged();
+        });
+    }
+
+    private async void HandleServerSpawnsChanged()
+    {
+        await InvokeAsync(async () =>
+        {
+            if (ViewService.ShowServerSpawns && MapDisplayUtility.HasSpawnData)
+            {
+                var spawnData = MapDisplayUtility.GetSpawnDataForMap(ViewService.CurrentMapId);
+                if (spawnData.Count > 0)
+                {
+                    var options = new JsonSerializerOptions 
+                    { 
+                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                        WriteIndented = false 
+                    };
+                    var json = JsonSerializer.Serialize(spawnData, options);
+                    await JS.InvokeVoidAsync("eval", $"window.mapModule.showServerSpawns({json})");
+                }
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("eval", "window.mapModule.hideServerSpawns()");
+            }
+            StateHasChanged();
+        });
+    }
+    
+    // ===================== CLEANUP =====================
+    
+    public void Dispose()
+    {
+        ViewService.OnXMLSpawnersChanged -= HandleXMLSpawnersChanged;
+        ViewService.OnServerSpawnsChanged -= HandleServerSpawnsChanged;
+    }
+}

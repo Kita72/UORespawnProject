@@ -245,5 +245,63 @@ namespace UORespawnApp
             get => Preferences.Get("IsDebugMode", false);
             set => Preferences.Set("IsDebugMode", value);
         }
+
+        /// <summary>
+        /// List of favorite creature names from the bestiary.
+        /// Stored as comma-separated values in preferences.
+        /// </summary>
+        public static List<string> BestiaryFavorites
+        {
+            get
+            {
+                var value = Preferences.Get("BestiaryFavorites", "");
+                if (string.IsNullOrEmpty(value))
+                    return [];
+                return [.. value.Split(',', StringSplitOptions.RemoveEmptyEntries)];
+            }
+            set => Preferences.Set("BestiaryFavorites", string.Join(",", value));
+        }
+
+        /// <summary>
+        /// List of favorite vendor names.
+        /// Stored as comma-separated values in preferences.
+        /// </summary>
+        public static List<string> VendorFavorites
+        {
+            get
+            {
+                var value = Preferences.Get("VendorFavorites", "");
+                if (string.IsNullOrEmpty(value))
+                    return [];
+                return [.. value.Split(',', StringSplitOptions.RemoveEmptyEntries)];
+            }
+            set => Preferences.Set("VendorFavorites", string.Join(",", value));
+        }
+
+        /// <summary>
+        /// Helper method to toggle a creature as favorite
+        /// </summary>
+        public static void ToggleBestiaryFavorite(string name)
+        {
+            var favorites = BestiaryFavorites;
+            if (favorites.Contains(name))
+                favorites.Remove(name);
+            else
+                favorites.Add(name);
+            BestiaryFavorites = favorites;
+        }
+
+        /// <summary>
+        /// Helper method to toggle a vendor as favorite
+        /// </summary>
+        public static void ToggleVendorFavorite(string name)
+        {
+            var favorites = VendorFavorites;
+            if (favorites.Contains(name))
+                favorites.Remove(name);
+            else
+                favorites.Add(name);
+            VendorFavorites = favorites;
+        }
     }
 }

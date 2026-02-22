@@ -1,0 +1,98 @@
+/* MiniMap Card Container */
+.minimap-card {
+    border: 1px solid #dee2e6;
+    transition: all 0.2s ease;
+}
+
+/* Dark solid header */
+.minimap-header {
+    background: #212529 !important;
+    border-bottom: 1px solid #3a3a3a !important;
+    color: white;
+    padding: 0.75rem;
+}
+
+/* Title styling */
+.minimap-title {
+    color: goldenrod;
+}
+
+/* Mini Map Body */
+.minimap-body {
+    background-color: #1a1a1a;
+}
+
+/* Mini Map Header Button Styling - Clean borderless buttons */
+.minimap-btn {
+    border: none !important;
+    background: none !important;
+    box-shadow: none !important;
+    padding: 0;
+    margin: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.minimap-btn:hover {
+    opacity: 0.8;
+    transform: scale(1.1);
+    background: none !important;
+    border: none !important;
+}
+
+.minimap-btn:active {
+    transform: scale(0.95);
+}
+
+/* Mini Map Button Icons - Using SVG backgrounds */
+.minimap-btn .bi {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    vertical-align: middle;
+}
+
+.bi-arrow-counterclockwise {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='white' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M8 3a5 5 0 1 1-4.546 2.914.5.5 0 0 0-.908-.417A6 6 0 1 0 8 2v1z'/%3E%3Cpath d='M8 4.466V.534a.25.25 0 0 0-.41-.192L5.23 2.308a.25.25 0 0 0 0 .384l2.36 1.966A.25.25 0 0 0 8 4.466z'/%3E%3C/svg%3E");
+}
+
+.bi-list {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='white' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5z'/%3E%3C/svg%3E");
+}
+
+.bi-chevron-down {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='white' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
+}
+
+.bi-map {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='goldenrod' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M15.817.113A.5.5 0 0 1 16 .5v14a.5.5 0 0 1-.402.49l-5 1a.502.502 0 0 1-.196 0L5.5 15.01l-4.902.98A.5.5 0 0 1 0 15.5v-14a.5.5 0 0 1 .402-.49l5-1a.5.5 0 0 1 .196 0L10.5.99l4.902-.98a.5.5 0 0 1 .415.103zM10 1.91l-4-.8v12.98l4 .8V1.91zm1 12.98 4-.8V1.11l-4 .8v12.98zm-6-.8V1.11l-4 .8v12.98l4-.8z'/%3E%3C/svg%3E");
+}
+
+/* Dark theme support */
+body.dark-theme .minimap-card {
+    background-color: #1a1a1a;
+    border-color: #3a3a3a;
+}
+
+body.dark-theme .minimap-body {
+    background-color: #1a1a1a;
+    color: #e0e0e0;
+}
+
+/* Light theme support */
+body.light-theme .minimap-card {
+    background-color: #ffffff;
+    border-color: #dee2e6;
+}
+
+body.light-theme .minimap-body {
+    background-color: #2a2a2a;
+}

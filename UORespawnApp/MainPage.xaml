@@ -29,7 +29,7 @@
                 HeightRequest="50"
                 HorizontalOptions="End"
                 VerticalOptions="Start"
-                Margin="0,8,16,0"
+                Margin="0,16,24,0"
                 Clicked="OnCloseWebViewClicked"
                 ZIndex="200" />
     </Grid>

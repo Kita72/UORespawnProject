@@ -857,8 +857,8 @@ panAnimationId: null,
                     const badgeY = screenPos.y - size;
                     const badgeRadius = 6;
 
-                    // Badge background
-                    this.ctx.fillStyle = '#DC3545';
+                    // Badge background (green to indicate vendors assigned)
+                    this.ctx.fillStyle = '#28A745';
                     this.ctx.beginPath();
                     this.ctx.arc(badgeX, badgeY, badgeRadius, 0, 2 * Math.PI);
                     this.ctx.fill();
@@ -1313,10 +1313,8 @@ panAnimationId: null,
             }
         }
 
-        // Override color if has vendors (but keep icon)
-        if (hasVendors && !isFocused) {
-            color = '#28A745'; // Green when has vendors
-        }
+        // No color override for hasVendors - keep sign type colors consistent
+        // Badge shows vendor count instead
 
         return { color, icon };
     },
@@ -1591,47 +1589,68 @@ panAnimationId: null,
     addKey: function(key) {
         const wasEmpty = this.keyStates.size === 0;
         this.keyStates.add(key.toLowerCase());
-        
+
         // Start animation loop if this is the first key
         if (wasEmpty) {
             this.startKeyPanning();
         }
     },
-    
+
     removeKey: function(key) {
         this.keyStates.delete(key.toLowerCase());
     },
-    
+
+    // Callback for pan updates during key panning (set by C#)
+    onPanUpdate: null,
+    lastPanUpdateTime: 0,
+    panUpdateThrottleMs: 50, // Update minimap at ~20fps max
+
     startKeyPanning: function() {
         if (this.panAnimationId !== null) return; // Already running
-        
+
         const panStep = 5; // pixels per frame at 60fps (~300 pixels/second)
-        
+
         const animate = () => {
             if (this.keyStates.size === 0) {
                 this.panAnimationId = null;
+                // Final update when panning stops
+                if (this.onPanUpdate) {
+                    this.onPanUpdate(this.panX, this.panY);
+                }
                 return; // Stop animation when no keys pressed
             }
-            
+
             let deltaX = 0;
             let deltaY = 0;
-            
+
             // Check all pressed keys and accumulate movement (supports diagonals!)
             if (this.keyStates.has('w') || this.keyStates.has('arrowup')) deltaY += panStep;
             if (this.keyStates.has('s') || this.keyStates.has('arrowdown')) deltaY -= panStep;
             if (this.keyStates.has('a') || this.keyStates.has('arrowleft')) deltaX += panStep;
             if (this.keyStates.has('d') || this.keyStates.has('arrowright')) deltaX -= panStep;
-            
+
             // Apply pan
             this.panX += deltaX;
             this.panY += deltaY;
             this.applyPan(this.panX, this.panY);
-            
+
+            // Throttled callback to update minimap during panning
+            const now = performance.now();
+            if (this.onPanUpdate && (now - this.lastPanUpdateTime) >= this.panUpdateThrottleMs) {
+                this.lastPanUpdateTime = now;
+                this.onPanUpdate(this.panX, this.panY);
+            }
+
             // Continue animation
             this.panAnimationId = requestAnimationFrame(animate);
         };
 
         this.panAnimationId = requestAnimationFrame(animate);
+    },
+
+    // Register a callback for pan updates (called from C#)
+    setPanUpdateCallback: function(callback) {
+        this.onPanUpdate = callback;
     },
 
     getPanPosition: function() {

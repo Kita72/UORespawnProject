@@ -50,36 +50,15 @@
             </div>
         </div>
         <div class="col-lg-3 right-column-container" style="padding-left:15px;">
-            <!-- Mini Map - Collapsible -->
-            <div class="card shadow-sm mb-3 map-card">
-                <div class="card-header dark-header text-center d-flex justify-content-between align-items-center">
-                    <button class="btn btn-sm btn-outline-secondary" @onclick="ResetView" title="Reset View & Zoom" style="width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center;">
-                        <span class="bi bi-arrow-counterclockwise"></span>
-                    </button>
-                    <span style="color: goldenrod;"><span class="bi bi-map me-1"></span>Mini Map</span>
-                    <button class="btn btn-sm btn-outline-secondary" @onclick="ToggleMiniMap" title="@(showMiniMap ? "Collapse Mini Map" : "Expand Mini Map")" style="width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center;">
-                        <span class="bi @(showMiniMap ? "bi-list" : "bi-chevron-down")"></span>
-                    </button>
-                </div>
-                @if (showMiniMap)
-                {
-                    <div class="card-body p-2 minimap-body" @key="@("minimap-body")">
-                        <canvas id="regionMiniMapCanvas" width="250" height="188"
-                                style="cursor:pointer; border:1px solid #333; display:block; image-rendering:pixelated; width: 100%; height: auto;"
-                                @onclick="OnMiniMapClick" />
-                        <div class="d-flex gap-2 mt-2">
-                            <button class="btn btn-sm w-50 @(ViewService.ShowXMLSpawners ? "btn-success" : "btn-danger")" 
-                                    @onclick="ToggleXMLSpawners" title="Toggle XML Spawners">
-                                <span class="bi bi-gear-fill"></span> XML
-                            </button>
-                            <button class="btn btn-sm w-50 @(ViewService.ShowServerSpawns ? "btn-success" : "btn-danger")" 
-                                    @onclick="ToggleServerSpawns" title="Toggle Server Spawns">
-                                <span class="bi bi-bullseye"></span> Spawns
-                            </button>
-                        </div>
-                    </div>
-                }
-            </div>
+            <!-- Mini Map Component -->
+            <MiniMapComponent @ref="miniMapRef"
+                              CanvasId="regionMiniMapCanvas"
+                              MainImageId="regionMapImg"
+                              PanX="@panX"
+                              PanY="@panY"
+                              ZoomLevel="@zoomLevel"
+                              OnMiniMapClick="HandleMiniMapClick"
+                              OnResetView="ResetView" />
             
             <!-- Region Spawn List - Flex to fill remaining space -->
             <div class="card shadow-sm map-card spawn-list-container">
@@ -268,8 +247,8 @@
     // Track which map we're currently viewing
     private int currentMapTracked = 0;
     
-    // Mini map collapse
-    private bool showMiniMap = true;
+    // Mini map component reference
+    private MiniMapComponent? miniMapRef;
 
     // Region selection
     private RegionInfo? selectedRegion = null;
@@ -299,62 +278,6 @@
         }
 
         ViewService.OnViewChanged += OnViewChanged;
-        ViewService.OnXMLSpawnersChanged += HandleXMLSpawnersChanged;
-        ViewService.OnServerSpawnsChanged += HandleServerSpawnsChanged;
-    }
-
-    private async void HandleXMLSpawnersChanged()
-    {
-        // Refresh the display when XML spawners toggle changes from another page
-        await InvokeAsync(async () =>
-        {
-            if (ViewService.ShowXMLSpawners)
-            {
-                var xmlSpawners = SpawnerListUtility.GetSpawnersForMap(ViewService.CurrentMapId);
-                if (xmlSpawners.Count > 0)
-                {
-                    var options = new System.Text.Json.JsonSerializerOptions 
-                    { 
-                        PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
-                        WriteIndented = false 
-                    };
-                    var json = System.Text.Json.JsonSerializer.Serialize(xmlSpawners, options);
-                    await JS.InvokeVoidAsync("eval", $"window.mapModule.showXMLSpawners({json})");
-                }
-            }
-            else
-            {
-                await JS.InvokeVoidAsync("eval", "window.mapModule.hideXMLSpawners()");
-            }
-            StateHasChanged();
-        });
-    }
-
-    private async void HandleServerSpawnsChanged()
-    {
-        // Refresh the display when server spawns toggle changes from another page
-        await InvokeAsync(async () =>
-        {
-            if (ViewService.ShowServerSpawns && MapDisplayUtility.HasSpawnData)
-            {
-                var spawnData = MapDisplayUtility.GetSpawnDataForMap(ViewService.CurrentMapId);
-                if (spawnData.Count > 0)
-                {
-                    var options = new System.Text.Json.JsonSerializerOptions 
-                    { 
-                        PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
-                        WriteIndented = false 
-                    };
-                    var json = System.Text.Json.JsonSerializer.Serialize(spawnData, options);
-                    await JS.InvokeVoidAsync("eval", $"window.mapModule.showServerSpawns({json})");
-                }
-            }
-            else
-            {
-                await JS.InvokeVoidAsync("eval", "window.mapModule.hideServerSpawns()");
-            }
-            StateHasChanged();
-        });
     }
 
     private void OnViewChanged()
@@ -445,10 +368,14 @@
                     // Set zoom level BEFORE any coordinate calculations (BoxSpawn pattern)
                     await JS.InvokeVoidAsync("eval", $"window.mapModule.setZoomLevel({zoomLevel.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)})");
 
-                    await InitializeMiniMap();
-
-                    // Apply pan position AFTER zoom is set (BoxSpawn pattern)
+                    // Apply pan position AFTER zoom is set, BEFORE minimap init
                     await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
+
+                    // Initialize the mini map component AFTER pan is applied, passing current values
+                    if (miniMapRef != null)
+                    {
+                        await miniMapRef.InitializeAsync(panX, panY, zoomLevel);
+                    }
 
                     await RenderRegions();
 
@@ -496,131 +423,7 @@
             imageDim = "Error loading image";
         }
     }
-    
-    private async Task InitializeMiniMap()
-    {
-        if (!showMiniMap) return;
 
-        try
-        {
-            await JS.InvokeVoidAsync("eval", $@"
-                (function() {{
-                    const miniCanvas = document.getElementById('regionMiniMapCanvas');
-                    const mainImg = document.getElementById('regionMapImg');
-                    if (!miniCanvas || !mainImg) return;
-
-                    const ctx = miniCanvas.getContext('2d');
-                    const canvasWidth = 250;
-                    const canvasHeight = 188;
-
-                    // Calculate aspect ratios
-                    const imageAspect = {imgWidth} / {imgHeight};
-                    const canvasAspect = canvasWidth / canvasHeight;
-
-                    let drawWidth, drawHeight, offsetX, offsetY;
-
-                    // Fit image to canvas while maintaining aspect ratio
-                    if (imageAspect > canvasAspect) {{
-                        // Image is wider - fit to width, letterbox top/bottom
-                        drawWidth = canvasWidth;
-                        drawHeight = canvasWidth / imageAspect;
-                        offsetX = 0;
-                        offsetY = (canvasHeight - drawHeight) / 2;
-                    }} else {{
-                        // Image is taller - fit to height, pillarbox left/right
-                        drawWidth = canvasHeight * imageAspect;
-                        drawHeight = canvasHeight;
-                        offsetX = (canvasWidth - drawWidth) / 2;
-                        offsetY = 0;
-                    }}
-
-                    // Store dimensions for click handling
-                    window.regionMiniMapDimensions = {{
-                        canvasWidth: canvasWidth,
-                        canvasHeight: canvasHeight,
-                        drawWidth: drawWidth,
-                        drawHeight: drawHeight,
-                        offsetX: offsetX,
-                        offsetY: offsetY,
-                        imageWidth: {imgWidth},
-                        imageHeight: {imgHeight}
-                    }};
-
-                    // Clear and draw with black background
-                    ctx.fillStyle = '#000000';
-                    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-
-                    // Draw the map centered and aspect-ratio corrected
-                    ctx.drawImage(mainImg, 0, 0, {imgWidth}, {imgHeight}, offsetX, offsetY, drawWidth, drawHeight);
-
-                    console.log(`Mini-map: {imgWidth}x{imgHeight} -> ${{drawWidth.toFixed(1)}}x${{drawHeight.toFixed(1)}} at (${{offsetX.toFixed(1)}}, ${{offsetY.toFixed(1)}})`);
-                }})()
-            ");
-
-            await UpdateMiniMapViewport();
-        }
-        catch (Exception ex)
-        {
-            Logger.Error("Mini map init error", ex);
-        }
-    }
-    
-    private async Task UpdateMiniMapViewport()
-    {
-        if (!showMiniMap) return;
-
-        try
-        {
-            // Calculate viewport rectangle on mini-map
-            // Viewport size depends on current zoom level
-            double viewportWidthWorld = 800.0 / zoomLevel;
-            double viewportHeightWorld = 600.0 / zoomLevel;
-
-            // Current viewport top-left in world coordinates
-            double viewportWorldX = -panX / zoomLevel;
-            double viewportWorldY = -panY / zoomLevel;
-
-            await JS.InvokeVoidAsync("eval", $@"
-                (function() {{
-                    const miniCanvas = document.getElementById('regionMiniMapCanvas');
-                    const mainImg = document.getElementById('regionMapImg');
-                    if (!miniCanvas || !mainImg || !window.regionMiniMapDimensions) return;
-
-                    const ctx = miniCanvas.getContext('2d');
-                    const dims = window.regionMiniMapDimensions;
-
-                    // Clear canvas with black background
-                    ctx.fillStyle = '#000000';
-                    ctx.fillRect(0, 0, dims.canvasWidth, dims.canvasHeight);
-
-                    // Redraw the map centered with aspect ratio
-                    ctx.drawImage(mainImg, 0, 0, dims.imageWidth, dims.imageHeight, 
-                                  dims.offsetX, dims.offsetY, dims.drawWidth, dims.drawHeight);
-
-                    // Calculate viewport position on mini-map
-                    const miniMapScaleX = dims.drawWidth / dims.imageWidth;
-                    const miniMapScaleY = dims.drawHeight / dims.imageHeight;
-
-                    const miniX = dims.offsetX + ({viewportWorldX} * miniMapScaleX);
-                    const miniY = dims.offsetY + ({viewportWorldY} * miniMapScaleY);
-                    const miniW = {viewportWidthWorld} * miniMapScaleX;
-                    const miniH = {viewportHeightWorld} * miniMapScaleY;
-
-                    // Draw viewport rectangle
-                    ctx.strokeStyle = '#00FF00';
-                    ctx.lineWidth = 2;
-                    ctx.strokeRect(miniX, miniY, miniW, miniH);
-
-                    console.log(`Viewport: (${{miniX.toFixed(1)}}, ${{miniY.toFixed(1)}}) ${{miniW.toFixed(1)}}x${{miniH.toFixed(1)}}`);
-                }})()
-            ");
-        }
-        catch (Exception ex)
-        {
-            Logger.Error("Update mini map viewport error", ex);
-        }
-    }
-    
     private async Task RenderRegions()
     {
         try
@@ -705,11 +508,11 @@
         await RenderRegions();
 
         // Update mini-map viewport with new zoom
-        await UpdateMiniMapViewport();
+        if (miniMapRef != null) await miniMapRef.UpdateViewport();
 
         StateHasChanged();
     }
-    
+
     private async Task ResetView()
     {
         panX = 0;
@@ -717,24 +520,11 @@
         zoomLevel = 1.0;
         await JS.InvokeVoidAsync("eval", $"window.mapModule.setZoomLevel(1.0)");
         await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan(0, 0)");
-        await UpdateMiniMapViewport();
+        if (miniMapRef != null) await miniMapRef.UpdateViewport();
         await RenderRegions();
         StateHasChanged();
     }
-    
-    private async Task ToggleMiniMap()
-    {
-        showMiniMap = !showMiniMap;
-        StateHasChanged();
 
-        // Redraw mini map when expanding
-        if (showMiniMap && imgWidth > 0 && imgHeight > 0)
-        {
-            await Task.Delay(50); // Small delay to ensure DOM is ready
-            await InitializeMiniMap();
-        }
-    }
-    
     // ===================== MOUSE EVENTS =====================
     
     private async Task OnMouseDown(MouseEventArgs e)
@@ -809,10 +599,10 @@
                 panY = panCoords[1];
             }
 
-            await UpdateMiniMapViewport();
+            if (miniMapRef != null) await miniMapRef.UpdateViewport();
         }
     }
-    
+
     private void OnMouseUp(MouseEventArgs e)
     {
         if (e.Button == 2)
@@ -838,24 +628,24 @@
             await JS.InvokeVoidAsync("eval", "window.mapModule.clearServerSpawnHover()");
         }
     }
-    
-    private async Task OnMiniMapClick(MouseEventArgs e)
+
+    private async Task HandleMiniMapClick((double panX, double panY) newPosition)
     {
-        var clickX = e.OffsetX;
-        var clickY = e.OffsetY;
-        
-        var worldX = (clickX / 250.0) * imgWidth;
-        var worldY = (clickY / 188.0) * imgHeight;
-        
-        panX = -(worldX * zoomLevel) + 400;
-        panY = -(worldY * zoomLevel) + 300;
-        
+        panX = newPosition.panX;
+        panY = newPosition.panY;
+
+        // Save the new position for the current map (preserve zoom)
+        mapPositions[currentMapTracked] = (panX, panY, zoomLevel);
+
         await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
-        await UpdateMiniMapViewport();
+
+        // Update the mini map viewport
+        if (miniMapRef != null) await miniMapRef.UpdateViewport();
+
         await RenderRegions();
         StateHasChanged();
     }
-    
+
     // ===================== KEYBOARD EVENTS =====================
     
     private void OnMapMouseEnter(MouseEventArgs e)
@@ -863,6 +653,49 @@
         mapContainerRef.FocusAsync();
     }
     
+    // Key panning state tracking
+    private bool isKeyPanning = false;
+    private System.Threading.Timer? keyPanTimer;
+
+    private async Task StartKeyPanTracking()
+    {
+        if (isKeyPanning) return;
+        isKeyPanning = true;
+
+        // Start a timer that syncs pan position while keys are held
+        keyPanTimer = new System.Threading.Timer(async _ =>
+        {
+            if (!isKeyPanning) return;
+
+            try
+            {
+                await InvokeAsync(async () =>
+                {
+                    var result = await JS.InvokeAsync<string>("eval", "JSON.stringify(window.mapModule.getPanPosition())");
+                    if (!string.IsNullOrEmpty(result))
+                    {
+                        var pos = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, double>>(result);
+                        if (pos != null)
+                        {
+                            panX = pos["x"];
+                            panY = pos["y"];
+                            if (miniMapRef != null) await miniMapRef.UpdateViewport();
+                            StateHasChanged();
+                        }
+                    }
+                });
+            }
+            catch { }
+        }, null, 0, 50); // Update every 50ms (~20fps)
+    }
+
+    private void StopKeyPanTracking()
+    {
+        isKeyPanning = false;
+        keyPanTimer?.Dispose();
+        keyPanTimer = null;
+    }
+
     private async Task OnKeyDown(KeyboardEventArgs e)
     {
         // Check if it's a panning key (WASD or arrows)
@@ -872,6 +705,9 @@
         {
             // Add key to active set and start smooth animation
             await JS.InvokeVoidAsync("eval", $"window.mapModule.addKey('{key}')");
+
+            // Start tracking pan position for minimap updates
+            await StartKeyPanTracking();
         }
     }
 
@@ -880,6 +716,14 @@
         // Remove key from active set
         var key = e.Key.ToLower();
         await JS.InvokeVoidAsync("eval", $"window.mapModule.removeKey('{key}')");
+
+        // Check if all keys are released
+        var keysCount = await JS.InvokeAsync<int>("eval", "window.mapModule.keyStates.size");
+        if (keysCount == 0)
+        {
+            // Stop tracking when all keys released
+            StopKeyPanTracking();
+        }
 
         // Sync pan position from JavaScript back to C#
         try
@@ -896,7 +740,7 @@
                     // Save the new position for the current map (preserve zoom)
                     mapPositions[currentMapTracked] = (panX, panY, zoomLevel);
 
-                    await UpdateMiniMapViewport();
+                    if (miniMapRef != null) await miniMapRef.UpdateViewport();
                     StateHasChanged();
                 }
             }
@@ -1081,7 +925,7 @@
             mapPositions[currentMapTracked] = (panX, panY, zoomLevel);
 
             await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
-            await UpdateMiniMapViewport();
+            if (miniMapRef != null) await miniMapRef.UpdateViewport();
 
             Logger.Info($"Jumped to region '{region.Name}' area {areaIndex} at ({centerX:F0}, {centerY:F0})");
         }
@@ -1252,124 +1096,10 @@
         return total;
     }
 
-    private async Task ToggleXMLSpawners()
-    {
-        ViewService.ToggleXMLSpawners();
-
-        if (ViewService.ShowXMLSpawners)
-        {
-            Logger.Info($"Toggling ON XML spawners for {ViewService.CurrentMapId}");
-            var xmlSpawners = SpawnerListUtility.GetSpawnersForMap(ViewService.CurrentMapId);
-            if (xmlSpawners.Count > 0)
-            {
-                var options = new System.Text.Json.JsonSerializerOptions 
-                { 
-                    PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
-                    WriteIndented = false 
-                };
-                var json = System.Text.Json.JsonSerializer.Serialize(xmlSpawners, options);
-                await JS.InvokeVoidAsync("eval", $"window.mapModule.showXMLSpawners({json})");
-                Logger.Info($"Displayed {xmlSpawners.Count} XML spawners on map");
-            }
-            else
-            {
-                Logger.Info("No XML spawners found for this map");
-                ToastService.ShowWarning($"No XML spawners found for {MapUtility.GetMapName(ViewService.CurrentMapId)}. Import XML Spawner data first.");
-                ViewService.ToggleXMLSpawners(); // Toggle back off
-            }
-        }
-        else
-        {
-            Logger.Info("Hiding XML spawners");
-            await JS.InvokeVoidAsync("eval", "window.mapModule.hideXMLSpawners()");
-        }
-
-        StateHasChanged();
-    }
-
-    private async Task ToggleServerSpawns()
-    {
-        ViewService.ToggleServerSpawns();
-
-        if (ViewService.ShowServerSpawns)
-        {
-            Logger.Info($"Toggling ON server spawn statistics for {ViewService.CurrentMapId}");
-
-            // Check if ServUO folder is configured
-            if (string.IsNullOrEmpty(Settings.ServUODataFolder))
-            {
-                Logger.Warning("Server Data folder not configured!");
-                ToastService.ShowWarning("Server Data folder not configured! Go to Settings to set your ServUO Data folder path.");
-                ViewService.ToggleServerSpawns(); // Toggle back off
-                StateHasChanged();
-                return;
-            }
-
-            // Check if UOR_DATA/UOR_STATS folder exists
-            string statsFolderPath = Path.Combine(Settings.ServUODataFolder, "UOR_DATA", "UOR_STATS");
-            if (!Directory.Exists(statsFolderPath))
-            {
-                Logger.Warning($"UOR_STATS folder not found at: {statsFolderPath}");
-                ToastService.ShowWarning($"UOR_STATS folder not found! Ensure UOR_DATA/UOR_STATS/ exists in your server data folder.");
-                ViewService.ToggleServerSpawns(); // Toggle back off
-                StateHasChanged();
-                return;
-            }
-
-            // Load spawn statistics from server if not already loaded
-            if (!MapDisplayUtility.HasSpawnData)
-            {
-                Logger.Info("Loading spawn statistics...");
-                MapDisplayUtility.InstantiateStatData();
-
-                if (!MapDisplayUtility.HasSpawnData)
-                {
-                    Logger.Warning("No spawn statistics files found!");
-                    ToastService.ShowWarning("No spawn statistics files found! Play on your server to generate data, then run [PushRespawnStats].");
-                    ViewService.ToggleServerSpawns(); // Toggle back off
-                    StateHasChanged();
-                    return;
-                }
-
-                Logger.Info("Loaded spawn statistics successfully!");
-            }
-
-            // Get spawn data for current map
-            var spawnData = MapDisplayUtility.GetSpawnDataForMap(ViewService.CurrentMapId);
-            if (spawnData.Count == 0)
-            {
-                Logger.Warning($"No spawn data available for {ViewService.CurrentMapId}");
-                ToastService.ShowWarning($"No spawn data available for {MapUtility.GetMapName(ViewService.CurrentMapId)}. Try a different map or play on this map to generate data.");
-                ViewService.ToggleServerSpawns(); // Toggle back off
-                StateHasChanged();
-                return;
-            }
-
-            // Convert to JSON and send to JavaScript
-            var options = new System.Text.Json.JsonSerializerOptions 
-            { 
-                PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
-                WriteIndented = false 
-            };
-            var json = System.Text.Json.JsonSerializer.Serialize(spawnData, options);
-
-            await JS.InvokeVoidAsync("eval", $"window.mapModule.showServerSpawns({json})");
-            Logger.Info($"Displayed {spawnData.Count} spawn points on map");
-        }
-        else
-        {
-            Logger.Info("Hiding server spawn statistics");
-            await JS.InvokeVoidAsync("eval", "window.mapModule.hideServerSpawns()");
-        }
-
-        StateHasChanged();
-    }
-
     public void Dispose()
     {
         ViewService.OnViewChanged -= OnViewChanged;
-        ViewService.OnXMLSpawnersChanged -= HandleXMLSpawnersChanged;
-        ViewService.OnServerSpawnsChanged -= HandleServerSpawnsChanged;
+        keyPanTimer?.Dispose();
 
         // Auto-save settings when leaving the page (binary file for server)
         try

@@ -15,6 +15,12 @@
                     <div class="bestiary-panel">
                         <div class="panel-header">
                             <span class="bi bi-search me-2"></span>@SourceListName
+                            @if (GetFavorites().Count > 0)
+                            {
+                                <span class="badge bg-warning text-dark ms-2" title="Favorites shown at top">
+                                    <span class="bi bi-star-fill"></span> @GetFavorites().Count
+                                </span>
+                            }
                         </div>
                         <div class="search-box">
                             <input type="text" 
@@ -30,9 +36,42 @@
                             }
                         </div>
                         <div class="available-list">
-                            @if (GetFilteredList().Any())
+                            @{
+                                var filteredList = GetFilteredList();
+                                var favorites = GetFavorites();
+                                var favoritesInList = filteredList.Where(e => favorites.Contains(e)).ToList();
+                                var nonFavorites = filteredList.Where(e => !favorites.Contains(e)).ToList();
+                            }
+                            @if (filteredList.Any())
                             {
-                                @foreach (var entry in GetFilteredList())
+                                @* Show favorites first *@
+                                @if (favoritesInList.Any())
+                                {
+                                    @foreach (var entry in favoritesInList)
+                                    {
+                                        var count = CurrentSpawns.Count(s => s == entry);
+                                        var hasAny = count > 0;
+                                        <div class="available-item favorite-item @(hasAny ? "already-added" : "")" 
+                                             @onclick="() => SelectEntry(entry)"
+                                             title="Favorite - Click to add">
+                                            <span class="bi bi-star-fill text-warning me-2" style="font-size: 0.8rem;"></span>
+                                            <span class="entry-name">@entry</span>
+                                            @if (hasAny)
+                                            {
+                                                <span class="badge bg-success me-1" style="font-size: 0.7rem;">@count</span>
+                                            }
+                                            <span class="bi bi-plus-circle add-icon"></span>
+                                        </div>
+                                    }
+                                    @if (nonFavorites.Any())
+                                    {
+                                        <div class="favorites-divider">
+                                            <span>All @SourceListName</span>
+                                        </div>
+                                    }
+                                }
+                                @* Then show non-favorites *@
+                                @foreach (var entry in nonFavorites)
                                 {
                                     var count = CurrentSpawns.Count(s => s == entry);
                                     var hasAny = count > 0;
@@ -125,27 +164,46 @@
     [Parameter] public List<string> SourceList { get; set; } = new();
     [Parameter] public EventCallback OnClose { get; set; }
     [Parameter] public EventCallback OnSave { get; set; }
-    
+
     private string searchQuery = "";
-    
+
+    /// <summary>
+    /// Gets the appropriate favorites list based on SourceListName,
+    /// filtered to only include items that exist in the current SourceList
+    /// </summary>
+    private List<string> GetFavorites()
+    {
+        var allFavorites = SourceListName.ToLower() switch
+        {
+            "vendors" or "vendor list" => Settings.VendorFavorites,
+            _ => Settings.BestiaryFavorites
+        };
+
+        // Only return favorites that exist in the current source list
+        if (SourceList == null || SourceList.Count == 0)
+            return [];
+
+        return allFavorites.Where(f => SourceList.Contains(f)).ToList();
+    }
+
     private List<string> GetFilteredList()
     {
         if (SourceList == null || SourceList.Count == 0)
         {
-            return new List<string>();
+            return [];
         }
-        
+
         if (string.IsNullOrEmpty(searchQuery))
         {
             return SourceList;
         }
-        
+
         // Case-insensitive search - EXACTLY like Settings page
         return SourceList
             .Where(s => s.Contains(searchQuery, StringComparison.OrdinalIgnoreCase))
             .ToList();
     }
-    
+
     private string GetCategoryBadgeClass()
     {
         return CategoryName.ToLower() switch
@@ -159,13 +217,13 @@
             _ => "bg-secondary"
         };
     }
-    
+
     private void ClearSearch()
     {
         searchQuery = "";
         StateHasChanged();
     }
-    
+
     private void SelectEntry(string entry)
     {
         // Allow duplicates - e.g., 3 Beekeepers at one hive
@@ -173,28 +231,28 @@
         Logger.Info($"Added {entry} to {CategoryName} {SpawnTypeName}");
         StateHasChanged();
     }
-    
+
     private void RemoveEntry(string entry)
     {
         CurrentSpawns.Remove(entry);
         Logger.Info($"Removed {entry} from {CategoryName} {SpawnTypeName}");
         StateHasChanged();
     }
-    
+
     private void ClearAll()
     {
         CurrentSpawns.Clear();
         Logger.Info($"Cleared all {CategoryName} {SpawnTypeName}");
         StateHasChanged();
     }
-    
+
     private async Task Close()
     {
         IsVisible = false;
         searchQuery = "";
         await OnClose.InvokeAsync();
     }
-    
+
     private async Task SaveAndClose()
     {
         await OnSave.InvokeAsync();

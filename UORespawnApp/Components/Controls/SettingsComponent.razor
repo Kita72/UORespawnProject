@@ -11,7 +11,7 @@
             <div class="card map-card mb-3">
                 <div class="card-header text-center">
                     <span class="text-primary" style="font-size: 1.25rem;"><span class="bi bi-hdd-network me-2"></span>ServUO Server Integration</span>
-                    <InfoIcon Text="Link your ServUO server folder. App validates structure, auto-creates Scripts/Custom/UORespawn, and syncs files automatically." />
+                    <InfoIcon Text="Link to ServUO folder for automatic file sync" />
                 </div>
                 <div class="card-body text-center">
                     @if (!DataWatcher.IsSupported)
@@ -136,7 +136,7 @@
             <div class="card map-card mb-3">
                 <div class="card-header text-center">
                     <span class="text-primary" style="font-size: 1.25rem;"><span class="bi bi-sliders me-2"></span>Spawn Settings</span>
-                    <InfoIcon Text="Configure spawn ranges, crowd limits, frequency chances, and special features for your server." />
+                    <InfoIcon Text="Server spawn behavior configuration" />
                 </div>
                 <div class="card-body">
                     <div class="row justify-content-center">
@@ -171,7 +171,7 @@
 
                     <h6 class="mb-3 text-center">
                         <span class="text-primary" style="font-size: 1.25rem; font-weight: normal;"><span class="bi bi-dice-5 me-2"></span>Spawn Chances</span>
-                        <InfoIcon Text="Probability values: 0.0 (0%) to 1.0 (100%). Controls spawn frequency for each rarity tier." />
+                        <InfoIcon Text="0.0 = 0% chance, 1.0 = 100% chance" />
                     </h6>
 
                     <div class="row justify-content-center">
@@ -245,7 +245,7 @@
                         <span class="text-primary" style="font-size: 1.25rem; font-weight: normal;">
                             <span class="bi bi-shop me-2"></span>Vendor Spawn
                         </span>
-                        <InfoIcon Text="Configure NPC vendor spawning in towns. Enable the system and customize vendor behavior." />
+                        <InfoIcon Text="NPC vendor spawning in towns" />
                     </h6>
 
                     <div class="row justify-content-center">
@@ -254,7 +254,7 @@
                                 <input class="form-check-input" type="checkbox" @bind="Settings.EnableVendorSpawn" id="vendorSpawn" style="transform: scale(1.2);">
                                 <label class="form-check-label" for="vendorSpawn" style="font-size: 1.05rem;">
                                     @(Settings.EnableVendorSpawn ? "Enabled" : "Disabled")
-                                    <InfoIcon Text="Master toggle for the vendor spawn system" />
+                                    <InfoIcon Text="Toggle vendor spawn system" />
                                 </label>
                             </div>
                         </div>
@@ -263,7 +263,7 @@
                                 <input class="form-check-input" type="checkbox" @bind="Settings.EnableVendorNight" id="vendorNight">
                                 <label class="form-check-label" for="vendorNight">
                                     Night Sleep
-                                    <InfoIcon Text="When enabled, vendors 'sleep' at night - players won't find vendors out during night hours. Disable for 24/7 vendors." />
+                                    <InfoIcon Text="Vendors hide at night when enabled" />
                                 </label>
                             </div>
                         </div>
@@ -272,7 +272,7 @@
                                 <input class="form-check-input" type="checkbox" @bind="Settings.EnableVendorExtra" id="vendorExtra">
                                 <label class="form-check-label" for="vendorExtra">
                                     Extra Townsfolk
-                                    <InfoIcon Text="When enabled, extra TownNPCs spawn alongside vendors to boost town population and make it look like there are shoppers." />
+                                    <InfoIcon Text="Spawns extra NPCs to fill towns" />
                                 </label>
                             </div>
                         </div>
@@ -284,7 +284,7 @@
             <div class="card map-card mb-3">
                 <div class="card-header text-center">
                     <span class="text-primary" style="font-size: 1.25rem;"><span class="bi bi-palette me-2"></span>Spawn Box Appearance</span>
-                    <InfoIcon Text="Customize how spawn boxes appear on the map. Each priority level (0-24) has a distinct color for easy identification." />
+                    <InfoIcon Text="Customize box colors and line thickness" />
                 </div>
                 <div class="card-body">
                     <div class="row justify-content-center">
@@ -308,7 +308,7 @@
                         <div class="col-12 text-center">
                             <span class="text-muted small">
                                 Priority Colors
-                                <InfoIcon Text="Priority levels 1-24 use distinct colors (red → orange → yellow → green → cyan → blue → violet → pink) for visual clarity when boxes overlap." />
+                                <InfoIcon Text="Boxes use distinct colors by priority level" />
                             </span>
                         </div>
                     </div>
@@ -319,7 +319,7 @@
             <div class="card map-card mb-3">
                 <div class="card-header text-center">
                     <span class="text-primary" style="font-size: 1.25rem;"><span class="bi bi-map me-2"></span>Map Management</span>
-                    <InfoIcon Text="Manage map images. Original maps (0-5) require exact dimensions. Custom maps (6+) support 800x800 to 10000x10000." />
+                    <InfoIcon Text="Add, replace, or remove map images" />
                 </div>
                 <div class="card-body">
                     <!-- Map Status Summary - Split Pill Badge -->
@@ -417,9 +417,19 @@
             <div class="card map-card mb-3">
                 <div class="card-header text-center">
                     <span class="text-primary" style="font-size: 1.25rem;"><span class="bi bi-book me-2"></span>Bestiary (@GetSpawnCount() Creatures)</span>
-                    <InfoIcon Text="View the list of valid creature names from the server. This list is read-only and updated automatically when linked to a server." />
+                    <InfoIcon Text="Star creatures to add them to favorites" />
                 </div>
                 <div class="card-body">
+                    <!-- Tab Toggle -->
+                    <div class="btn-group w-100 mb-3" role="group">
+                        <button class="btn @(showBestiaryFavorites ? "btn-outline-primary" : "btn-primary")" @onclick="() => showBestiaryFavorites = false">
+                            <span class="bi bi-list me-1"></span>All (@GetSpawnCount())
+                        </button>
+                        <button class="btn @(showBestiaryFavorites ? "btn-warning" : "btn-outline-warning")" @onclick="() => showBestiaryFavorites = true">
+                            <span class="bi bi-star-fill me-1"></span>Favorites (@Settings.BestiaryFavorites.Count)
+                        </button>
+                    </div>
+
                     <div class="input-group mb-3">
                         <span class="input-group-text"><span class="bi bi-search"></span></span>
                         <input type="text" class="form-control" placeholder="Search creatures..." @bind="searchText" @bind:event="oninput" />
@@ -443,10 +453,23 @@
                         {
                             @foreach (var spawn in GetFilteredSpawns())
                             {
-                                <div class="bestiary-item @(selectedSpawn == spawn ? "selected" : "")" @onclick="() => SelectSpawn(spawn)">
+                                var isFavorite = Settings.BestiaryFavorites.Contains(spawn);
+                                <div class="bestiary-item @(selectedSpawn == spawn ? "selected" : "") @(isFavorite ? "is-favorite" : "")" @onclick="() => SelectSpawn(spawn)">
+                                    <button class="btn btn-sm favorite-btn @(isFavorite ? "active" : "")" 
+                                            @onclick:stopPropagation="true"
+                                            @onclick="() => ToggleBestiaryFavorite(spawn)"
+                                            title="@(isFavorite ? "Remove from favorites" : "Add to favorites")">
+                                        <span class="bi @(isFavorite ? "bi-star-fill text-warning" : "bi-star")"></span>
+                                    </button>
                                     <span class="spawn-name">@spawn</span>
                                 </div>
                             }
+                        }
+                        else if (showBestiaryFavorites)
+                        {
+                            <div class="alert alert-info mb-0">
+                                <span class="bi bi-star me-2"></span>No favorites yet. Click the star on any creature to add it to your favorites.
+                            </div>
                         }
                         else if (!string.IsNullOrEmpty(searchText))
                         {
@@ -468,9 +491,19 @@
             <div class="card map-card mb-3">
                 <div class="card-header text-center">
                     <span class="text-primary" style="font-size: 1.25rem;"><span class="bi bi-shop me-2"></span>Vendor List (@GetVendorCount() Vendors)</span>
-                    <InfoIcon Text="View the list of valid vendor names from the server. This list is read-only and used for vendor spawning." />
+                    <InfoIcon Text="Star vendors to add them to favorites" />
                 </div>
                 <div class="card-body">
+                    <!-- Tab Toggle -->
+                    <div class="btn-group w-100 mb-3" role="group">
+                        <button class="btn @(showVendorFavorites ? "btn-outline-primary" : "btn-primary")" @onclick="() => showVendorFavorites = false">
+                            <span class="bi bi-list me-1"></span>All (@GetVendorCount())
+                        </button>
+                        <button class="btn @(showVendorFavorites ? "btn-warning" : "btn-outline-warning")" @onclick="() => showVendorFavorites = true">
+                            <span class="bi bi-star-fill me-1"></span>Favorites (@Settings.VendorFavorites.Count)
+                        </button>
+                    </div>
+
                     <div class="input-group mb-3">
                         <span class="input-group-text"><span class="bi bi-search"></span></span>
                         <input type="text" class="form-control" placeholder="Search vendors..." @bind="vendorSearchText" @bind:event="oninput" />
@@ -494,10 +527,23 @@
                         {
                             @foreach (var vendor in GetFilteredVendors())
                             {
-                                <div class="bestiary-item @(selectedVendor == vendor ? "selected" : "")" @onclick="() => SelectVendor(vendor)">
+                                var isFavorite = Settings.VendorFavorites.Contains(vendor);
+                                <div class="bestiary-item @(selectedVendor == vendor ? "selected" : "") @(isFavorite ? "is-favorite" : "")" @onclick="() => SelectVendor(vendor)">
+                                    <button class="btn btn-sm favorite-btn @(isFavorite ? "active" : "")" 
+                                            @onclick:stopPropagation="true"
+                                            @onclick="() => ToggleVendorFavorite(vendor)"
+                                            title="@(isFavorite ? "Remove from favorites" : "Add to favorites")">
+                                        <span class="bi @(isFavorite ? "bi-star-fill text-warning" : "bi-star")"></span>
+                                    </button>
                                     <span class="spawn-name">@vendor</span>
                                 </div>
                             }
+                        }
+                        else if (showVendorFavorites)
+                        {
+                            <div class="alert alert-info mb-0">
+                                <span class="bi bi-star me-2"></span>No favorites yet. Click the star on any vendor to add it to your favorites.
+                            </div>
                         }
                         else if (!string.IsNullOrEmpty(vendorSearchText))
                         {
@@ -521,7 +567,7 @@
                 <div class="card map-card mb-3" style="border: 2px solid #0dcaf0;">
                     <div class="card-header text-center" style="background: linear-gradient(135deg, #0dcaf0 0%, #0d6efd 100%); color: white;">
                         <strong><span class="bi bi-arrow-up-circle me-2"></span>Legacy Import (v1.0 → v2.0)</strong>
-                        <InfoIcon Text="Migrate CSV files from UORespawn v1.0 (3 frequencies) to v2.0 format (6 frequencies). Available per spawn type when empty." />
+                        <InfoIcon Text="Import v1.0 CSV files into v2.0 format" />
                     </div>
                     <div class="card-body text-center">
                         <!-- Box Spawn Import -->
@@ -608,7 +654,7 @@
                     <div class="mb-4">
                         <h6 class="text-warning mb-3">
                             Reset Spawn Settings
-                            <InfoIcon Text="Resets spawn chances, ranges, and options to defaults. Does not delete spawn data." />
+                            <InfoIcon Text="Reset all settings to defaults" />
                         </h6>
                         <button class="btn btn-warning" style="min-width: 200px;" @onclick="ResetToDefaults">
                             <span class="bi bi-arrow-counterclockwise me-2"></span>Reset Settings
@@ -617,14 +663,14 @@
 
                     <hr class="my-3" />
 
-                    <!-- Complete Tool Reset -->
+                    <!-- Factory Reset -->
                     <div>
                         <h6 class="text-danger mb-3">
-                            Complete Tool Reset
-                            <InfoIcon Text="Deletes ALL data files and resets tool to fresh install state." />
+                            Factory Reset
+                            <InfoIcon Text="Deletes data, keeps spawn packs" />
                         </h6>
                         <button class="btn btn-danger" style="min-width: 200px;" @onclick="ShowCompleteResetConfirmation">
-                            <span class="bi bi-trash me-2"></span>Complete Reset
+                            <span class="bi bi-trash me-2"></span>Factory Reset
                         </button>
                     </div>
                 </div>
@@ -634,7 +680,7 @@
             <div class="card map-card mb-3" style="border-color: #6f42c1;">
                 <div class="card-header text-center" style="background: linear-gradient(135deg, #6f42c1 0%, #9d4edd 100%); color: white;">
                     <span style="font-size: 1.25rem;"><span class="bi bi-bug me-2"></span>Developer Tools</span>
-                    <InfoIcon Text="Enable debug mode to show a live log viewer panel on the right side of the app. Useful for testing and troubleshooting." />
+                    <InfoIcon Text="Shows live log panel for debugging" />
                 </div>
                 <div class="card-body text-center">
                     <div class="form-check form-switch d-inline-block text-start mb-3">
@@ -659,25 +705,25 @@
                         <div class="modal-content bg-dark text-light">
                             <div class="modal-header border-danger">
                                 <h5 class="modal-title text-danger">
-                                    <span class="bi bi-exclamation-triangle me-2"></span>Complete Tool Reset
+                                    <span class="bi bi-exclamation-triangle me-2"></span>Factory Reset
                                 </h5>
                                 <button type="button" class="btn-close btn-close-white" @onclick="HideCompleteResetModal"></button>
                             </div>
                             <div class="modal-body">
-                                <p><strong>This will permanently delete:</strong></p>
+                                <p><strong>This will restore the tool to fresh install state:</strong></p>
                                 <ul>
-                                    <li>All Box Spawn data</li>
-                                    <li>All Region Spawn data</li>
-                                    <li>All Tile Spawn data</li>
-                                    <li>Spawn settings</li>
+                                    <li>All active spawn data (Box, Tile, Region, Vendor)</li>
+                                    <li>All spawn settings reset to defaults</li>
+                                    <li>Server link cleared</li>
                                 </ul>
+                                <p class="text-success"><span class="bi bi-check-circle me-2"></span><strong>Your Spawn Packs in PACKS folder will be preserved!</strong></p>
 
                                 @if (ServerSetupUtility.IsServerConfigured(Settings.ServUODataFolder))
                                 {
                                     <div class="form-check mb-3">
                                         <input class="form-check-input" type="checkbox" id="cleanServerCheck" @bind="cleanServerOnReset">
                                         <label class="form-check-label" for="cleanServerCheck">
-                                            Also clean linked ServUO folder
+                                            Also clean linked server files
                                         </label>
                                     </div>
 
@@ -687,7 +733,7 @@
                                             <span class="bi bi-exclamation-octagon me-2"></span>
                                             <strong>Server Cleanup Warning:</strong>
                                             <p class="mb-0 mt-2 small">
-                                                This will delete the <code>UORespawnSystem</code> scripts folder and <code>UOR_DATA</code> folder from your server.
+                                                This will delete the <code>UORespawnSystem</code> scripts folder and <code>UORespawn</code> data folder from your server.
                                             </p>
                                             <p class="mb-0 mt-2 small">
                                                 <strong class="text-warning">IMPORTANT:</strong> Before proceeding, ensure no UORespawn mobiles are spawned in the world! 
@@ -702,7 +748,7 @@
                             <div class="modal-footer border-secondary">
                                 <button type="button" class="btn btn-secondary" @onclick="HideCompleteResetModal">Cancel</button>
                                 <button type="button" class="btn btn-danger" @onclick="ExecuteCompleteReset">
-                                    <span class="bi bi-trash me-2"></span>Delete Everything
+                                    <span class="bi bi-trash me-2"></span>Factory Reset
                                 </button>
                             </div>
                         </div>
@@ -746,6 +792,8 @@ private string currentImportType = "";
 private bool isAddingCustomMap = false; // Flag to distinguish between replace and add modes
 private bool showCompleteResetModal = false;
 private bool cleanServerOnReset = false;
+private bool showBestiaryFavorites = false;
+private bool showVendorFavorites = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -811,37 +859,54 @@ private bool cleanServerOnReset = false;
 
         StateHasChanged();
     }
-    
+
     private List<string> GetFilteredSpawns()
     {
         if (BestiaryListUtility.BestiaryNameList == null)
         {
-            return new List<string>();
+            return [];
         }
-        
+
+        // If showing favorites only, filter to favorites
+        var sourceList = showBestiaryFavorites 
+            ? BestiaryListUtility.BestiaryNameList.Where(s => Settings.BestiaryFavorites.Contains(s)).ToList()
+            : BestiaryListUtility.BestiaryNameList;
+
         if (string.IsNullOrEmpty(searchText))
         {
-            return BestiaryListUtility.BestiaryNameList;
+            return sourceList;
         }
-        
-        return BestiaryListUtility.BestiaryNameList
+
+        return sourceList
             .Where(s => s.Contains(searchText, StringComparison.OrdinalIgnoreCase))
             .ToList();
     }
-    
+
     private int GetSpawnCount()
     {
         return BestiaryListUtility.BestiaryNameList?.Count ?? 0;
     }
-    
+
     private void SelectSpawn(string spawn)
     {
         selectedSpawn = spawn;
     }
-    
+
     private void ClearSearch()
     {
         searchText = "";
+    }
+
+    private void ToggleBestiaryFavorite(string name)
+    {
+        Settings.ToggleBestiaryFavorite(name);
+        StateHasChanged();
+    }
+
+    private void ToggleVendorFavorite(string name)
+    {
+        Settings.ToggleVendorFavorite(name);
+        StateHasChanged();
     }
 
     // Vendor list state
@@ -852,15 +917,20 @@ private bool cleanServerOnReset = false;
     {
         if (VendorListUtility.VendorNameList == null)
         {
-            return new List<string>();
+            return [];
         }
+
+        // If showing favorites only, filter to favorites
+        var sourceList = showVendorFavorites 
+            ? VendorListUtility.VendorNameList.Where(v => Settings.VendorFavorites.Contains(v)).ToList()
+            : VendorListUtility.VendorNameList;
 
         if (string.IsNullOrEmpty(vendorSearchText))
         {
-            return VendorListUtility.VendorNameList;
+            return sourceList;
         }
 
-        return VendorListUtility.VendorNameList
+        return sourceList
             .Where(v => v.Contains(vendorSearchText, StringComparison.OrdinalIgnoreCase))
             .ToList();
     }
@@ -1741,26 +1811,38 @@ private bool cleanServerOnReset = false;
     private void ResetToDefaults()
     {
         // Reset all spawn settings to default values (matching Settings.cs defaults)
+
+        // Spawn Range & Count Settings
         Settings.MaxMobs = 15;
         Settings.MinRange = 10;
         Settings.MaxRange = 50;
         Settings.MaxCrowd = 1;
 
+        // Frequency Chances
         Settings.CommonChance = 1.0;
         Settings.UnCommonChance = 0.5;
         Settings.RareChance = 0.1;
 
+        // Special Frequency Chances
         Settings.WaterChance = 0.5;
         Settings.WeatherChance = 0.1;
         Settings.TimedChance = 0.1;
 
+        // Special Features
         Settings.IsScaleSpawn = false;
         Settings.EnableRiftSpawn = false;
         Settings.EnableDebugSpawn = false;
 
-        // Update box color hex to match reset color
-        var color = Settings.BoxColor;
-        boxColorHex = $"#{(int)(color.Red * 255):X2}{(int)(color.Green * 255):X2}{(int)(color.Blue * 255):X2}";
+        // Vendor Spawn Settings
+        Settings.EnableVendorSpawn = false;
+        Settings.EnableVendorNight = false;
+        Settings.EnableVendorExtra = false;
+
+        // Reset box color to default dark red
+        Settings.BoxColor = Color.FromArgb("#8B0000");
+        Settings.BoxColorInc = 0.3;
+        Settings.BoxLineSize = 2;
+        boxColorHex = "#8B0000";
 
         // Save to binary file immediately
         try
@@ -1773,7 +1855,6 @@ private bool cleanServerOnReset = false;
             Logger.Error("Error saving settings after reset", ex);
         }
 
-        ToastService.ShowSuccess("Settings reset to defaults successfully!");
         StateHasChanged();
     }
 

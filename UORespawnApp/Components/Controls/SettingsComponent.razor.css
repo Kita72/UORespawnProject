@@ -83,13 +83,38 @@ body.dark-theme .bestiary-item.selected {
     border-color: #667eea;
 }
 
-.bestiary-item .btn {
-    opacity: 0;
-    transition: opacity 0.2s ease;
+/* Favorite button - always visible */
+.bestiary-item .favorite-btn {
+    padding: 0.15rem 0.4rem;
+    line-height: 1;
+    border: none;
+    background: transparent;
+    margin-right: 8px;
+    flex-shrink: 0;
+    opacity: 0.5;
+    transition: opacity 0.2s ease, transform 0.15s ease;
 }
 
-.bestiary-item:hover .btn {
+.bestiary-item .favorite-btn .bi-star {
+    color: #6c757d;
+}
+
+body.dark-theme .bestiary-item .favorite-btn .bi-star {
+    color: #adb5bd;
+}
+
+.bestiary-item .favorite-btn:hover {
+    opacity: 0.9;
+    transform: scale(1.2);
+}
+
+.bestiary-item .favorite-btn.active {
     opacity: 1;
+}
+
+/* Favorite item styling */
+.bestiary-item.is-favorite {
+    border-left: 3px solid #ffc107;
 }
 
 .spawn-name {

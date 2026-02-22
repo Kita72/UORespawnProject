@@ -137,6 +137,39 @@
     border-color: #2a5a2a;
 }
 
+/* Favorite items styling */
+.available-item.favorite-item {
+    background-color: #3a3520;
+    border-color: #5a5030;
+}
+
+.available-item.favorite-item:hover {
+    background-color: #4a4530;
+    border-color: #6a6040;
+}
+
+/* Favorites divider */
+.favorites-divider {
+    display: flex;
+    align-items: center;
+    margin: 12px 0 8px 0;
+    color: #888;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.favorites-divider::before,
+.favorites-divider::after {
+    content: '';
+    flex: 1;
+    border-top: 1px solid #3a3a3a;
+}
+
+.favorites-divider span {
+    padding: 0 10px;
+}
+
 .entry-name {
     font-weight: 500;
     flex-grow: 1;
