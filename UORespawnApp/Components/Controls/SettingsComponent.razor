@@ -829,17 +829,6 @@ private bool showVendorFavorites = false;
         // Unsubscribe from events
         BackgroundLoader.BestiaryLoaded -= OnBestiaryLoaded;
         BackgroundLoader.VendorListLoaded -= OnVendorListLoaded;
-
-        // Auto-save settings when leaving the page (using binary serialization)
-        try
-        {
-            Utility.SaveSettings();
-            Logger.Info("Auto-saved settings on page leave");
-        }
-        catch (Exception ex)
-        {
-            Logger.Error("Error auto-saving settings", ex);
-        }
     }
 
     private void ToggleDebugMode(ChangeEventArgs e)
@@ -1847,6 +1836,7 @@ private bool showVendorFavorites = false;
         // Save to binary file immediately
         try
         {
+            PathConstants.IsSpawnDataDirty = true;
             Utility.SaveSettings();
             Logger.Info("Settings reset to defaults and saved to binary");
         }

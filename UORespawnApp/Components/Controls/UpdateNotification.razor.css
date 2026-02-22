@@ -5,7 +5,11 @@
 }
 
 .update-section .btn {
-    font-size: 0.85rem;
+    font-size: 0.9rem;
+    height: 3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .update-section .btn-success {

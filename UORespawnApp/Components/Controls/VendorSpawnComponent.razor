@@ -1,6 +1,7 @@
 @using Microsoft.JSInterop
 @using Microsoft.Maui.Graphics
 @using System.Text.Json
+@using UORespawnApp.Scripts.Constants
 @using UORespawnApp.Scripts.Utilities
 @using UORespawnApp.Scripts.Entities
 @using UORespawnApp.Scripts.Services
@@ -337,7 +338,6 @@
 
     private async Task OnImageLoaded()
     {
-        await Task.Delay(100);
         try
         {
             var result = await JS.InvokeAsync<string>("eval", @"
@@ -526,11 +526,11 @@
         mapPositions[currentMapTracked] = (panX, panY, zoomLevel);
 
         await RenderVendorMarkers();
-        if (miniMapRef != null) await miniMapRef.UpdateViewport();
+        if (miniMapRef != null) await miniMapRef.UpdateViewport(panX, panY, zoomLevel);
 
         StateHasChanged();
     }
-    
+
     private async Task ResetView()
     {
         panX = 0;
@@ -538,7 +538,7 @@
         zoomLevel = 1.0;
         await JS.InvokeVoidAsync("eval", $"window.mapModule.setZoomLevel(1.0)");
         await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan(0, 0)");
-        if (miniMapRef != null) await miniMapRef.UpdateViewport();
+        if (miniMapRef != null) await miniMapRef.UpdateViewport(panX, panY, zoomLevel);
         await RenderVendorMarkers();
         StateHasChanged();
     }
@@ -608,7 +608,7 @@
                 panY = panCoords[1];
             }
 
-            if (miniMapRef != null) await miniMapRef.UpdateViewport();
+            if (miniMapRef != null) await miniMapRef.UpdateViewport(panX, panY, zoomLevel);
         }
     }
 
@@ -647,7 +647,7 @@
         await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
 
         // Update the mini map viewport
-        if (miniMapRef != null) await miniMapRef.UpdateViewport();
+        if (miniMapRef != null) await miniMapRef.UpdateViewport(panX, panY, zoomLevel);
 
         await RenderVendorMarkers();
         StateHasChanged();
@@ -686,7 +686,7 @@
                         {
                             panX = pos["x"];
                             panY = pos["y"];
-                            if (miniMapRef != null) await miniMapRef.UpdateViewport();
+                            if (miniMapRef != null) await miniMapRef.UpdateViewport(panX, panY, zoomLevel);
                             StateHasChanged();
                         }
                     }
@@ -740,7 +740,7 @@
                     panX = pos["x"];
                     panY = pos["y"];
                     mapPositions[currentMapTracked] = (panX, panY, zoomLevel);
-                    if (miniMapRef != null) await miniMapRef.UpdateViewport();
+                    if (miniMapRef != null) await miniMapRef.UpdateViewport(panX, panY, zoomLevel);
                     StateHasChanged();
                 }
             }
@@ -968,7 +968,7 @@
             mapPositions[currentMapTracked] = (panX, panY, zoomLevel);
 
             await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
-            if (miniMapRef != null) await miniMapRef.UpdateViewport();
+            if (miniMapRef != null) await miniMapRef.UpdateViewport(panX, panY, zoomLevel);
 
             Logger.Info($"Jumped to location ({x}, {y})");
         }
@@ -1108,6 +1108,7 @@
 
         vendors.RemoveAll(v => v.Sign == signType);
 
+        PathConstants.IsSpawnDataDirty = true;
         Utility.SaveVendorSpawnData();
         Logger.Info($"Cleared all vendors for sign type '{signType}' and auto-saved");
 
@@ -1297,6 +1298,7 @@
             vendors.Add(vendorEntity);
         }
 
+        PathConstants.IsSpawnDataDirty = true;
         Utility.SaveVendorSpawnData();
         Logger.Info($"Saved {currentVendorList.Count} vendors for location ({currentLocation.X}, {currentLocation.Y}, {currentLocation.Z})");
 
@@ -1397,6 +1399,7 @@
             }
         }
 
+        PathConstants.IsSpawnDataDirty = true;
         Utility.SaveVendorSpawnData();
         var typeName = FormatSignTypeName(currentSignType);
         Logger.Info($"Bulk added {currentVendorList.Count} vendor(s) to {locationsUpdated} {typeName} locations");

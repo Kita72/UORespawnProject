@@ -1,6 +1,7 @@
 @using Microsoft.JSInterop
 @using Microsoft.Maui.Graphics
 @using System.Text.Json
+@using UORespawnApp.Scripts.Constants
 @using UORespawnApp.Scripts.Utilities
 @using UORespawnApp.Scripts.Entities
 @using UORespawnApp.Scripts.Services
@@ -324,7 +325,6 @@
     
     private async Task OnImageLoaded()
     {
-        await Task.Delay(100);
         try
         {
             var result = await JS.InvokeAsync<string>("eval", @"
@@ -437,9 +437,12 @@
                 return;
             }
 
-            var screenRegions = regions.Select(r => new
+            // Sort regions by name to match the list order, then assign indices
+            var sortedRegions = regions.OrderBy(r => r.Name).ToList();
+            var screenRegions = sortedRegions.Select((r, index) => new
             {
                 name = r.Name,
+                listIndex = index + 1, // 1-based index to match UI
                 rectangles = r.Rectangles.Select(rect => new
                 {
                     x = rect.X,
@@ -508,7 +511,7 @@
         await RenderRegions();
 
         // Update mini-map viewport with new zoom
-        if (miniMapRef != null) await miniMapRef.UpdateViewport();
+        if (miniMapRef != null) await miniMapRef.UpdateViewport(panX, panY, zoomLevel);
 
         StateHasChanged();
     }
@@ -520,7 +523,7 @@
         zoomLevel = 1.0;
         await JS.InvokeVoidAsync("eval", $"window.mapModule.setZoomLevel(1.0)");
         await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan(0, 0)");
-        if (miniMapRef != null) await miniMapRef.UpdateViewport();
+        if (miniMapRef != null) await miniMapRef.UpdateViewport(panX, panY, zoomLevel);
         await RenderRegions();
         StateHasChanged();
     }
@@ -599,7 +602,7 @@
                 panY = panCoords[1];
             }
 
-            if (miniMapRef != null) await miniMapRef.UpdateViewport();
+            if (miniMapRef != null) await miniMapRef.UpdateViewport(panX, panY, zoomLevel);
         }
     }
 
@@ -640,7 +643,7 @@
         await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
 
         // Update the mini map viewport
-        if (miniMapRef != null) await miniMapRef.UpdateViewport();
+        if (miniMapRef != null) await miniMapRef.UpdateViewport(panX, panY, zoomLevel);
 
         await RenderRegions();
         StateHasChanged();
@@ -679,7 +682,7 @@
                         {
                             panX = pos["x"];
                             panY = pos["y"];
-                            if (miniMapRef != null) await miniMapRef.UpdateViewport();
+                            if (miniMapRef != null) await miniMapRef.UpdateViewport(panX, panY, zoomLevel);
                             StateHasChanged();
                         }
                     }
@@ -740,7 +743,7 @@
                     // Save the new position for the current map (preserve zoom)
                     mapPositions[currentMapTracked] = (panX, panY, zoomLevel);
 
-                    if (miniMapRef != null) await miniMapRef.UpdateViewport();
+                    if (miniMapRef != null) await miniMapRef.UpdateViewport(panX, panY, zoomLevel);
                     StateHasChanged();
                 }
             }
@@ -925,7 +928,7 @@
             mapPositions[currentMapTracked] = (panX, panY, zoomLevel);
 
             await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
-            if (miniMapRef != null) await miniMapRef.UpdateViewport();
+            if (miniMapRef != null) await miniMapRef.UpdateViewport(panX, panY, zoomLevel);
 
             Logger.Info($"Jumped to region '{region.Name}' area {areaIndex} at ({centerX:F0}, {centerY:F0})");
         }
@@ -967,6 +970,9 @@
         // Reset triggers
         entity.WeatherSpawn = WeatherTypes.None;
         entity.TimedSpawn = TimeNames.None;
+
+        // Mark data as dirty - spawns were cleared
+        PathConstants.IsSpawnDataDirty = true;
 
         // Auto-save region spawn data
         Utility.SaveRegionSpawnData();
@@ -1047,7 +1053,10 @@
                 currentEntity.RareSpawns = updatedList;
                 break;
         }
-        
+
+        // Mark data as dirty - spawn entries changed
+        PathConstants.IsSpawnDataDirty = true;
+
         SaveCurrentRegion(currentEntity);
         CloseModal();
         StateHasChanged();
@@ -1100,16 +1109,5 @@
     {
         ViewService.OnViewChanged -= OnViewChanged;
         keyPanTimer?.Dispose();
-
-        // Auto-save settings when leaving the page (binary file for server)
-        try
-        {
-            Utility.SaveSettings();
-            Logger.Info("Auto-saved settings on page leave");
-        }
-        catch (Exception ex)
-        {
-            Logger.Error("Error auto-saving settings", ex);
-        }
     }
 }

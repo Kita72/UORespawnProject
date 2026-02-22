@@ -352,6 +352,9 @@ namespace UORespawnApp.Scripts.Services
                     // Re-enable pack sync for future user edits
                     PathConstants.SuppressPackSync = false;
 
+                    // Reset dirty flag - pack is freshly loaded, no changes yet
+                    PathConstants.IsSpawnDataDirty = false;
+
                     Logger.Info("[SpawnPack] Data reload and server sync complete");
                 }
 
@@ -550,10 +553,11 @@ namespace UORespawnApp.Scripts.Services
             var uniqueCreatures = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var mapIds = new HashSet<int>();
 
-            stats.BoxSpawnCount = ReadBoxStats(Path.Combine(packDataPath, PathConstants.BOX_FILENAME), stats, uniqueCreatures, mapIds);
-            stats.TileSpawnCount = ReadTileStats(Path.Combine(packDataPath, PathConstants.TILE_FILENAME), stats, uniqueCreatures, mapIds);
-            stats.RegionSpawnCount = ReadRegionStats(Path.Combine(packDataPath, PathConstants.REGION_FILENAME), stats, uniqueCreatures, mapIds);
-            stats.VendorSpawnCount = ReadVendorStats(Path.Combine(packDataPath, PathConstants.VENDOR_FILENAME), stats, uniqueCreatures, mapIds);
+            // Read stats - methods now populate both entry counts and location counts
+            ReadBoxStats(Path.Combine(packDataPath, PathConstants.BOX_FILENAME), stats, uniqueCreatures, mapIds);
+            ReadTileStats(Path.Combine(packDataPath, PathConstants.TILE_FILENAME), stats, uniqueCreatures, mapIds);
+            ReadRegionStats(Path.Combine(packDataPath, PathConstants.REGION_FILENAME), stats, uniqueCreatures, mapIds);
+            ReadVendorStats(Path.Combine(packDataPath, PathConstants.VENDOR_FILENAME), stats, uniqueCreatures, mapIds);
 
             stats.TotalSpawnEntries = stats.SpawnTypeCounts.Values.Sum();
             stats.UniqueCreatureCount = uniqueCreatures.Count;
@@ -562,11 +566,11 @@ namespace UORespawnApp.Scripts.Services
             return stats;
         }
 
-        private static int ReadBoxStats(string filePath, SpawnPackStats stats, HashSet<string> uniqueCreatures, HashSet<int> mapIds)
+        private static void ReadBoxStats(string filePath, SpawnPackStats stats, HashSet<string> uniqueCreatures, HashSet<int> mapIds)
         {
             if (!File.Exists(filePath))
             {
-                return 0;
+                return;
             }
 
             try
@@ -576,7 +580,8 @@ namespace UORespawnApp.Scripts.Services
                 reader.ReadString();
 
                 int mapCount = reader.ReadInt32();
-                int totalBoxes = 0;
+                int totalLocations = 0;
+                int totalEntries = 0;
 
                 for (int m = 0; m < mapCount; m++)
                 {
@@ -596,31 +601,31 @@ namespace UORespawnApp.Scripts.Services
                         reader.ReadInt32();
                         reader.ReadInt32();
 
-                        ReadSpawnList(reader, uniqueCreatures, stats, "Water");
-                        ReadSpawnList(reader, uniqueCreatures, stats, "Weather");
-                        ReadSpawnList(reader, uniqueCreatures, stats, "Timed");
-                        ReadSpawnList(reader, uniqueCreatures, stats, "Common");
-                        ReadSpawnList(reader, uniqueCreatures, stats, "Uncommon");
-                        ReadSpawnList(reader, uniqueCreatures, stats, "Rare");
+                        totalEntries += ReadSpawnList(reader, uniqueCreatures, stats, "Water");
+                        totalEntries += ReadSpawnList(reader, uniqueCreatures, stats, "Weather");
+                        totalEntries += ReadSpawnList(reader, uniqueCreatures, stats, "Timed");
+                        totalEntries += ReadSpawnList(reader, uniqueCreatures, stats, "Common");
+                        totalEntries += ReadSpawnList(reader, uniqueCreatures, stats, "Uncommon");
+                        totalEntries += ReadSpawnList(reader, uniqueCreatures, stats, "Rare");
 
-                        totalBoxes++;
+                        totalLocations++;
                     }
                 }
 
-                return totalBoxes;
+                stats.BoxLocationCount = totalLocations;
+                stats.BoxSpawnCount = totalEntries;
             }
             catch (Exception ex)
             {
                 Logger.Error("Error reading box spawn pack stats", ex);
-                return 0;
             }
         }
 
-        private static int ReadTileStats(string filePath, SpawnPackStats stats, HashSet<string> uniqueCreatures, HashSet<int> mapIds)
+        private static void ReadTileStats(string filePath, SpawnPackStats stats, HashSet<string> uniqueCreatures, HashSet<int> mapIds)
         {
             if (!File.Exists(filePath))
             {
-                return 0;
+                return;
             }
 
             try
@@ -630,7 +635,8 @@ namespace UORespawnApp.Scripts.Services
                 reader.ReadString();
 
                 int mapCount = reader.ReadInt32();
-                int totalTiles = 0;
+                int totalLocations = 0;
+                int totalEntries = 0;
 
                 for (int m = 0; m < mapCount; m++)
                 {
@@ -647,31 +653,31 @@ namespace UORespawnApp.Scripts.Services
                         reader.ReadInt32();
                         reader.ReadInt32();
 
-                        ReadSpawnList(reader, uniqueCreatures, stats, "Water");
-                        ReadSpawnList(reader, uniqueCreatures, stats, "Weather");
-                        ReadSpawnList(reader, uniqueCreatures, stats, "Timed");
-                        ReadSpawnList(reader, uniqueCreatures, stats, "Common");
-                        ReadSpawnList(reader, uniqueCreatures, stats, "Uncommon");
-                        ReadSpawnList(reader, uniqueCreatures, stats, "Rare");
+                        totalEntries += ReadSpawnList(reader, uniqueCreatures, stats, "Water");
+                        totalEntries += ReadSpawnList(reader, uniqueCreatures, stats, "Weather");
+                        totalEntries += ReadSpawnList(reader, uniqueCreatures, stats, "Timed");
+                        totalEntries += ReadSpawnList(reader, uniqueCreatures, stats, "Common");
+                        totalEntries += ReadSpawnList(reader, uniqueCreatures, stats, "Uncommon");
+                        totalEntries += ReadSpawnList(reader, uniqueCreatures, stats, "Rare");
 
-                        totalTiles++;
+                        totalLocations++;
                     }
                 }
 
-                return totalTiles;
+                stats.TileLocationCount = totalLocations;
+                stats.TileSpawnCount = totalEntries;
             }
             catch (Exception ex)
             {
                 Logger.Error("Error reading tile spawn pack stats", ex);
-                return 0;
             }
         }
 
-        private static int ReadRegionStats(string filePath, SpawnPackStats stats, HashSet<string> uniqueCreatures, HashSet<int> mapIds)
+        private static void ReadRegionStats(string filePath, SpawnPackStats stats, HashSet<string> uniqueCreatures, HashSet<int> mapIds)
         {
             if (!File.Exists(filePath))
             {
-                return 0;
+                return;
             }
 
             try
@@ -681,7 +687,8 @@ namespace UORespawnApp.Scripts.Services
                 reader.ReadString();
 
                 int mapCount = reader.ReadInt32();
-                int totalRegions = 0;
+                int totalLocations = 0;
+                int totalEntries = 0;
 
                 for (int m = 0; m < mapCount; m++)
                 {
@@ -698,27 +705,27 @@ namespace UORespawnApp.Scripts.Services
                         reader.ReadInt32();
                         reader.ReadInt32();
 
-                        ReadSpawnList(reader, uniqueCreatures, stats, "Water");
-                        ReadSpawnList(reader, uniqueCreatures, stats, "Weather");
-                        ReadSpawnList(reader, uniqueCreatures, stats, "Timed");
-                        ReadSpawnList(reader, uniqueCreatures, stats, "Common");
-                        ReadSpawnList(reader, uniqueCreatures, stats, "Uncommon");
-                        ReadSpawnList(reader, uniqueCreatures, stats, "Rare");
+                        totalEntries += ReadSpawnList(reader, uniqueCreatures, stats, "Water");
+                        totalEntries += ReadSpawnList(reader, uniqueCreatures, stats, "Weather");
+                        totalEntries += ReadSpawnList(reader, uniqueCreatures, stats, "Timed");
+                        totalEntries += ReadSpawnList(reader, uniqueCreatures, stats, "Common");
+                        totalEntries += ReadSpawnList(reader, uniqueCreatures, stats, "Uncommon");
+                        totalEntries += ReadSpawnList(reader, uniqueCreatures, stats, "Rare");
 
-                        totalRegions++;
+                        totalLocations++;
                     }
                 }
 
-                return totalRegions;
+                stats.RegionLocationCount = totalLocations;
+                stats.RegionSpawnCount = totalEntries;
             }
             catch (Exception ex)
             {
                 Logger.Error("Error reading region spawn pack stats", ex);
-                return 0;
             }
         }
 
-        private static void ReadSpawnList(BinaryReader reader, HashSet<string> uniqueCreatures, SpawnPackStats stats, string typeKey)
+        private static int ReadSpawnList(BinaryReader reader, HashSet<string> uniqueCreatures, SpawnPackStats stats, string typeKey)
         {
             int count = reader.ReadInt32();
             if (!stats.SpawnTypeCounts.ContainsKey(typeKey))
@@ -736,13 +743,14 @@ namespace UORespawnApp.Scripts.Services
             }
 
             stats.SpawnTypeCounts[typeKey] += count;
+            return count;
         }
 
-        private static int ReadVendorStats(string filePath, SpawnPackStats stats, HashSet<string> uniqueCreatures, HashSet<int> mapIds)
+        private static void ReadVendorStats(string filePath, SpawnPackStats stats, HashSet<string> uniqueCreatures, HashSet<int> mapIds)
         {
             if (!File.Exists(filePath))
             {
-                return 0;
+                return;
             }
 
             try
@@ -752,7 +760,8 @@ namespace UORespawnApp.Scripts.Services
                 reader.ReadString(); // version string
 
                 int mapCount = reader.ReadInt32();
-                int totalVendors = 0;
+                int totalLocations = 0;
+                int totalEntries = 0;
 
                 for (int m = 0; m < mapCount; m++)
                 {
@@ -787,16 +796,17 @@ namespace UORespawnApp.Scripts.Services
                         }
 
                         stats.SpawnTypeCounts["Vendor"] += vendorListCount;
-                        totalVendors++;
+                        totalEntries += vendorListCount;
+                        totalLocations++;
                     }
                 }
 
-                return totalVendors;
+                stats.VendorLocationCount = totalLocations;
+                stats.VendorSpawnCount = totalEntries;
             }
             catch (Exception ex)
             {
                 Logger.Error("Error reading vendor spawn pack stats", ex);
-                return 0;
             }
         }
 

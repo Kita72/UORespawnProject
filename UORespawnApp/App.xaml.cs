@@ -1,4 +1,6 @@
-﻿using UORespawnApp.Scripts.Services;
+﻿using UORespawnApp.Scripts.Constants;
+using UORespawnApp.Scripts.Services;
+using UORespawnApp.Scripts.Utilities;
 
 namespace UORespawnApp
 {
@@ -65,6 +67,23 @@ namespace UORespawnApp
 
             window.Destroying += (s, e) =>
             {
+                // Save all data before closing
+                // Suppress pack sync to prevent re-serialized bytes from marking pack as modified
+                try
+                {
+                    PathConstants.SuppressPackSync = true;
+                    Utility.SaveSettings();
+                    Utility.SaveSpawnData();
+                    Utility.SaveTileSpawnData();
+                    Utility.SaveRegionSpawnData();
+                    Utility.SaveVendorSpawnData();
+                    Logger.Info("Application closing - all data saved");
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error("Error saving on close", ex);
+                }
+
                 _backgroundLoader?.Dispose();
             };
 

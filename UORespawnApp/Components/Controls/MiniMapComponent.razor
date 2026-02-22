@@ -191,12 +191,17 @@
     public async Task UpdateViewport()
     {
         if (!isInitialized || !isExpanded) return;
-        await UpdateViewportInternal();
+        await UpdateViewportWithValues(PanX, PanY, ZoomLevel);
     }
 
-    private async Task UpdateViewportInternal()
+    /// <summary>
+    /// Update the viewport rectangle with explicit values (avoids parameter binding delay).
+    /// Called by parent when pan/zoom changes and values are known.
+    /// </summary>
+    public async Task UpdateViewport(double panX, double panY, double zoom)
     {
-        await UpdateViewportWithValues(PanX, PanY, ZoomLevel);
+        if (!isInitialized || !isExpanded) return;
+        await UpdateViewportWithValues(panX, panY, zoom);
     }
 
     private async Task UpdateViewportWithValues(double panX, double panY, double zoom)

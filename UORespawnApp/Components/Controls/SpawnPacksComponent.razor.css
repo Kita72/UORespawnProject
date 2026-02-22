@@ -18,6 +18,13 @@
     font-weight: 600;
 }
 
+.spawn-packs-page .stat-sublabel {
+    display: block;
+    font-size: 0.65rem;
+    color: #666;
+    margin-top: 2px;
+}
+
 .spawn-packs-page .spawn-type-list {
     display: grid;
     gap: 8px;

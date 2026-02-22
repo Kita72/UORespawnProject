@@ -473,10 +473,15 @@ namespace UORespawnApp.Scripts.Constants
         }
 
         /// <summary>
-        /// Currently active approved pack's data folder path.
-        /// Set when an approved pack is applied. When spawn edits are saved,
-        /// they're also synced to this folder (similar to server sync).
-        /// Null if no approved pack is active.
+        /// Currently active pack's data folder path.
+        /// Set when ANY pack is applied (Approved, Created, or Imported).
+        /// When spawn edits are saved and IsSpawnDataDirty is true,
+        /// files are synced to this folder (keeping the pack up to date).
+        /// Null if no pack is currently loaded.
+        /// 
+        /// SRP Flow:
+        /// - Approved packs: Sync on save triggers Reset availability (backup comparison)
+        /// - Created/Imported packs: Sync on save keeps pack folder current (no backup/reset)
         /// </summary>
         public static string? ActivePackDataPath { get; set; }
 
@@ -486,6 +491,14 @@ namespace UORespawnApp.Scripts.Constants
         /// byte-level differences when comparing against backup ZIPs.
         /// </summary>
         public static bool SuppressPackSync { get; set; }
+
+        /// <summary>
+        /// Tracks whether spawn data has been modified since the pack was loaded.
+        /// Set to true when actual edits are made (add/remove/modify spawns).
+        /// Reset to false when a pack is applied.
+        /// Only sync to pack when this is true.
+        /// </summary>
+        public static bool IsSpawnDataDirty { get; set; }
 
         /// <summary>
         /// Get the server folder path (Data/SERVER/)

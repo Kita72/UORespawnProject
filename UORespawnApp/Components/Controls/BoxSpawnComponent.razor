@@ -1,6 +1,7 @@
 @using Microsoft.JSInterop
 @using Microsoft.Maui.Graphics
 @using System.Text.Json
+@using UORespawnApp.Scripts.Constants
 @using UORespawnApp.Scripts.Utilities
 @using UORespawnApp.Scripts.Entities
 @using UORespawnApp.Scripts.Services
@@ -330,7 +331,6 @@ private int? spawnSearchId = null;
 
     private async Task OnImageLoaded()
     {
-        await Task.Delay(100);
         try
         {
             var result = await JS.InvokeAsync<string>("eval", @"
@@ -463,10 +463,10 @@ private int? spawnSearchId = null;
 
         await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
 
-        // Update the mini map viewport
+        // Update the mini map viewport with explicit values
         if (miniMapRef != null)
         {
-            await miniMapRef.UpdateViewport();
+            await miniMapRef.UpdateViewport(panX, panY, zoomLevel);
         }
 
         StateHasChanged();
@@ -515,7 +515,7 @@ private int? spawnSearchId = null;
                 panY = panCoords[1];
             }
 
-            if (miniMapRef != null) await miniMapRef.UpdateViewport();
+            if (miniMapRef != null) await miniMapRef.UpdateViewport(panX, panY, zoomLevel);
         }
         else
         {
@@ -592,6 +592,9 @@ private int? spawnSearchId = null;
 
                 Logger.Info($"Spawn #{spawn.Position} created at ({spawn.SpawnBox.X},{spawn.SpawnBox.Y}) size {spawn.SpawnBox.Width}x{spawn.SpawnBox.Height} Priority:{spawn.Priority}");
 
+                // Mark data as dirty - actual change was made
+                PathConstants.IsSpawnDataDirty = true;
+
                 // Auto-save spawn data
                 Utility.SaveSpawnData();
                 Logger.Info("Auto-saved spawn data");
@@ -633,7 +636,7 @@ private int? spawnSearchId = null;
                 // Save the new position for the current map immediately (preserve zoom)
                 mapPositions[currentMapTracked] = (panX, panY, zoomLevel);
 
-                if (miniMapRef != null) await miniMapRef.UpdateViewport();
+                if (miniMapRef != null) await miniMapRef.UpdateViewport(panX, panY, zoomLevel);
                 StateHasChanged();
             }
         }
@@ -675,7 +678,7 @@ private int? spawnSearchId = null;
         Logger.Info($"Reset position and zoom for {currentMapTracked} to (0, 0) @ 1x");
 
         await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
-        if (miniMapRef != null) await miniMapRef.UpdateViewport();
+        if (miniMapRef != null) await miniMapRef.UpdateViewport(panX, panY, zoomLevel);
         StateHasChanged();
     }
     
@@ -712,7 +715,7 @@ private int? spawnSearchId = null;
         await Redraw();
 
         // Update mini-map viewport with new zoom
-        if (miniMapRef != null) await miniMapRef.UpdateViewport();
+        if (miniMapRef != null) await miniMapRef.UpdateViewport(panX, panY, zoomLevel);
 
         StateHasChanged();
     }
@@ -761,7 +764,7 @@ private int? spawnSearchId = null;
                     // Save the new position for the current map (preserve zoom)
                     mapPositions[currentMapTracked] = (panX, panY, zoomLevel);
 
-                    if (miniMapRef != null) await miniMapRef.UpdateViewport();
+                    if (miniMapRef != null) await miniMapRef.UpdateViewport(panX, panY, zoomLevel);
                     StateHasChanged();
                 }
             }
@@ -1149,7 +1152,7 @@ private int? spawnSearchId = null;
         mapPositions[currentMapTracked] = (panX, panY, zoomLevel);
 
         await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
-        if (miniMapRef != null) await miniMapRef.UpdateViewport();
+        if (miniMapRef != null) await miniMapRef.UpdateViewport(panX, panY, zoomLevel);
 
         Logger.Info($"Jumped to Spawn #{spawn.Position} at ({centerX:F0}, {centerY:F0})");
     }
@@ -1176,6 +1179,9 @@ private int? spawnSearchId = null;
             selected = null;
             spawnSearchId = null; // Clear the search ID too
         }
+
+        // Mark data as dirty - actual change was made
+        PathConstants.IsSpawnDataDirty = true;
 
         // Auto-save spawn data
         Utility.SaveSpawnData();
@@ -1291,6 +1297,7 @@ private int? spawnSearchId = null;
     
     private void SaveAfterTriggerChange(BoxSpawnEntity spawn)
     {
+        PathConstants.IsSpawnDataDirty = true;
         Utility.SaveSpawnData();
         StateHasChanged();
         Logger.Info($"Auto-saved after trigger change for Spawn #{spawn.Position}");
@@ -1402,6 +1409,9 @@ private int? spawnSearchId = null;
                 Logger.Warning($"{currentCategory} spawn list not yet supported in legacy BoxSpawnEntity - upgrade to BoxSpawnEntity coming soon!");
             }
 
+            // Mark data as dirty - spawn entries changed
+            PathConstants.IsSpawnDataDirty = true;
+
             // Save the data
             Utility.SaveSpawnData();
         }
@@ -1447,7 +1457,7 @@ private int? spawnSearchId = null;
                         {
                             panX = pos["x"];
                             panY = pos["y"];
-                            if (miniMapRef != null) await miniMapRef.UpdateViewport();
+                            if (miniMapRef != null) await miniMapRef.UpdateViewport(panX, panY, zoomLevel);
                             StateHasChanged();
                         }
                     }
@@ -1468,16 +1478,5 @@ private int? spawnSearchId = null;
     {
         ViewService.OnMapChanged -= HandleMapChanged;
         keyPanTimer?.Dispose();
-
-        // Auto-save settings when leaving the page (binary file for server)
-        try
-        {
-            Utility.SaveSettings();
-            Logger.Info("Auto-saved settings on page leave");
-        }
-        catch (Exception ex)
-        {
-            Logger.Error("Error auto-saving settings", ex);
-        }
     }
 }

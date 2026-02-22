@@ -1,4 +1,5 @@
 @using Microsoft.JSInterop
+@using UORespawnApp.Scripts.Constants
 @using UORespawnApp.Scripts.Utilities
 @using UORespawnApp.Scripts.Entities
 @using UORespawnApp.Scripts.Services
@@ -384,6 +385,9 @@
             }
         }
 
+        // Mark data as dirty - spawn entries changed
+        PathConstants.IsSpawnDataDirty = true;
+
         // Save to binary file
         SaveCurrentTile();
 
@@ -420,6 +424,9 @@
         currentEntity.WeatherSpawn = WeatherTypes.None;
         currentEntity.TimedSpawn = TimeNames.None;
 
+        // Mark data as dirty - spawns were cleared
+        PathConstants.IsSpawnDataDirty = true;
+
         // Save changes
         SaveCurrentTile();
 
@@ -448,15 +455,5 @@
 
     public void Dispose()
     {
-        // Auto-save settings when leaving the page (binary file for server)
-        try
-        {
-            Utility.SaveSettings();
-            Logger.Info("Auto-saved settings on page leave");
-        }
-        catch (Exception ex)
-        {
-            Logger.Error("Error auto-saving settings", ex);
-        }
     }
 }

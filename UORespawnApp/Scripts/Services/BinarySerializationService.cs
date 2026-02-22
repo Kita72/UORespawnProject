@@ -23,15 +23,27 @@ namespace UORespawnApp.Scripts.Services
         #region Active Pack Sync Helper
 
         /// <summary>
-        /// Copies a file to the active approved pack folder if one is set.
-        /// Called after saving spawn/settings files to keep the pack in sync with edits.
+        /// Copies a file to the active pack folder if one is set.
+        /// Called after saving spawn/settings files to keep the loaded pack in sync with edits.
+        /// Only syncs if spawn data has actually been modified (IsSpawnDataDirty).
+        /// 
+        /// Works for all pack types:
+        /// - Approved: Sync triggers Reset availability when compared to backup
+        /// - Created/Imported: Sync keeps pack folder current (no backup/reset feature)
         /// </summary>
         private static void SyncFileToActivePack(string sourceFilePath, string fileName)
         {
             try
             {
-                // Skip sync if suppressed (during ApplyPack to preserve original bytes)
+                // Skip sync if suppressed (during ApplyPack or app close)
                 if (PathConstants.SuppressPackSync)
+                {
+                    return;
+                }
+
+                // Skip sync if no actual edits were made - prevents Reset button appearing
+                // when user just clicks Save without making changes
+                if (!PathConstants.IsSpawnDataDirty)
                 {
                     return;
                 }
@@ -240,8 +252,11 @@ namespace UORespawnApp.Scripts.Services
             writer.Write(BOX_SPAWN_VERSION);
             writer.Write(Utility.Version);
 
-            // Count maps that have spawn data
-            var mapsWithData = Utility.BoxSpawns.Where(kvp => kvp.Value.Count > 0).ToList();
+            // Count maps that have spawn data - sort by key for deterministic output
+            var mapsWithData = Utility.BoxSpawns
+                .Where(kvp => kvp.Value.Count > 0)
+                .OrderBy(kvp => kvp.Key)
+                .ToList();
             writer.Write(mapsWithData.Count);
 
             int totalBoxes = 0;
@@ -432,7 +447,11 @@ namespace UORespawnApp.Scripts.Services
             writer.Write(TILE_SPAWN_VERSION);
             writer.Write(Utility.Version);
 
-            var mapsWithData = Utility.TileSpawns.Where(kvp => kvp.Value.Count > 0).ToList();
+            // Sort by key for deterministic output
+            var mapsWithData = Utility.TileSpawns
+                .Where(kvp => kvp.Value.Count > 0)
+                .OrderBy(kvp => kvp.Key)
+                .ToList();
             writer.Write(mapsWithData.Count);
 
             int totalTiles = 0;
@@ -602,7 +621,11 @@ namespace UORespawnApp.Scripts.Services
             writer.Write(REGION_SPAWN_VERSION);
             writer.Write(Utility.Version);
 
-            var mapsWithData = Utility.RegionSpawns.Where(kvp => kvp.Value.Count > 0).ToList();
+            // Sort by key for deterministic output
+            var mapsWithData = Utility.RegionSpawns
+                .Where(kvp => kvp.Value.Count > 0)
+                .OrderBy(kvp => kvp.Key)
+                .ToList();
             writer.Write(mapsWithData.Count);
 
             int totalRegions = 0;
@@ -792,12 +815,15 @@ namespace UORespawnApp.Scripts.Services
             writer.Write(VENDOR_SPAWN_VERSION);
             writer.Write(Utility.Version);
 
-            // Write map count (always 6: maps 0-5)
-            writer.Write(Utility.VendorSpawns.Count);
+            // Sort by key for deterministic output
+            var sortedVendorSpawns = Utility.VendorSpawns.OrderBy(kvp => kvp.Key).ToList();
+
+            // Write map count
+            writer.Write(sortedVendorSpawns.Count);
 
             int totalCount = 0;
 
-            foreach (var kvp in Utility.VendorSpawns)
+            foreach (var kvp in sortedVendorSpawns)
             {
                 int mapId = kvp.Key;
                 var vendors = kvp.Value;

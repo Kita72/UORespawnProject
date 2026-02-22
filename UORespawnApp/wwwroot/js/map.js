@@ -421,6 +421,49 @@ panAnimationId: null,
                             this.ctx.lineWidth = lineWidth + 3;
                             this.ctx.strokeRect(screenX - 2, screenY - 2, screenW + 4, screenH + 4);
                         }
+
+                        // Always draw list index number on each region rectangle
+                        const indexLabel = region.listIndex ? region.listIndex.toString() : '';
+                        if (indexLabel) {
+                            const labelCenterX = screenX + screenW / 2;
+                            const labelCenterY = screenY + screenH / 2;
+
+                            // Adjust font size based on box size (min 10px, max 14px)
+                            const fontSize = Math.min(14, Math.max(10, Math.min(screenW, screenH) / 4));
+                            this.ctx.font = `bold ${fontSize}px Arial`;
+                            this.ctx.textAlign = 'center';
+                            this.ctx.textBaseline = 'middle';
+
+                            // Draw text background pill
+                            const textMetrics = this.ctx.measureText(indexLabel);
+                            const textWidth = textMetrics.width + 6;
+                            const textHeight = fontSize + 4;
+
+                            // Background color based on state
+                            if (isSelected) {
+                                this.ctx.fillStyle = 'rgba(13, 110, 253, 0.85)';
+                            } else if (isAreaHovered) {
+                                this.ctx.fillStyle = 'rgba(255, 215, 0, 0.85)';
+                            } else {
+                                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+                            }
+
+                            // Draw rounded background
+                            const bgX = labelCenterX - textWidth / 2;
+                            const bgY = labelCenterY - textHeight / 2;
+                            const radius = 3;
+                            this.ctx.beginPath();
+                            this.ctx.roundRect(bgX, bgY, textWidth, textHeight, radius);
+                            this.ctx.fill();
+
+                            // Draw index number
+                            if (isSelected || isAreaHovered) {
+                                this.ctx.fillStyle = '#ffffff';
+                            } else {
+                                this.ctx.fillStyle = '#cccccc';
+                            }
+                            this.ctx.fillText(indexLabel, labelCenterX, labelCenterY);
+                        }
                     });
 
                     // Draw region name label on hovered area (or first rect if just region selected)

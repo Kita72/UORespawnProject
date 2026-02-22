@@ -25,10 +25,24 @@ namespace UORespawnApp.Scripts.Entities
     [Serializable]
     public class SpawnPackStats
     {
+        /// <summary>Total spawn entries (creatures) across all box spawns.</summary>
         public int BoxSpawnCount { get; set; }
+        /// <summary>Total spawn entries (creatures) across all tile spawns.</summary>
         public int TileSpawnCount { get; set; }
+        /// <summary>Total spawn entries (creatures) across all region spawns.</summary>
         public int RegionSpawnCount { get; set; }
+        /// <summary>Total vendor entries across all vendor spawns.</summary>
         public int VendorSpawnCount { get; set; }
+
+        /// <summary>Number of box spawn locations.</summary>
+        public int BoxLocationCount { get; set; }
+        /// <summary>Number of tile spawn locations.</summary>
+        public int TileLocationCount { get; set; }
+        /// <summary>Number of region spawn locations.</summary>
+        public int RegionLocationCount { get; set; }
+        /// <summary>Number of vendor spawn locations (signs/hives).</summary>
+        public int VendorLocationCount { get; set; }
+
         public int TotalSpawnEntries { get; set; }
         public int UniqueCreatureCount { get; set; }
         public int MapCount { get; set; }

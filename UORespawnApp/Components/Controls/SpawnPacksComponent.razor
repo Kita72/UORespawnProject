@@ -94,7 +94,7 @@
         <div class="col-xl-5">
             <div class="card map-card mb-2">
                 <div class="card-header text-center">
-                    <span class="text-primary" style="font-size: 1.25rem;">Pack Dashboard</span>
+                    <span class="bi bi-speedometer2 me-2 text-primary" style="font-size: 1.25rem;"></span><span class="text-primary" style="font-size: 1.25rem;">Pack Dashboard</span>
                 </div>
                 <div class="card-body">
                     @if (SelectedPack != null)
@@ -102,27 +102,31 @@
                         <h5 class="mb-3 text-center" style="color: goldenrod; font-weight: bold;">@SelectedPack.Metadata.Name</h5>
                         <div class="row g-2">
                             <div class="col-6">
-                                <div class="stat-tile">
+                                <div class="stat-tile" title="Total spawn entries across all box spawn locations">
                                     <span class="stat-label">Box Spawns</span>
                                     <span class="stat-value">@SelectedPack.Stats.BoxSpawnCount</span>
+                                    <span class="stat-sublabel">@SelectedPack.Stats.BoxLocationCount locations</span>
                                 </div>
                             </div>
                             <div class="col-6">
-                                <div class="stat-tile">
+                                <div class="stat-tile" title="Total spawn entries across all tile spawn locations">
                                     <span class="stat-label">Tile Spawns</span>
                                     <span class="stat-value">@SelectedPack.Stats.TileSpawnCount</span>
+                                    <span class="stat-sublabel">@SelectedPack.Stats.TileLocationCount locations</span>
                                 </div>
                             </div>
                             <div class="col-6">
-                                <div class="stat-tile">
+                                <div class="stat-tile" title="Total spawn entries across all region spawn locations">
                                     <span class="stat-label">Region Spawns</span>
                                     <span class="stat-value">@SelectedPack.Stats.RegionSpawnCount</span>
+                                    <span class="stat-sublabel">@SelectedPack.Stats.RegionLocationCount locations</span>
                                 </div>
                             </div>
                             <div class="col-6">
-                                <div class="stat-tile">
+                                <div class="stat-tile" title="Total vendor entries across all sign/hive locations">
                                     <span class="stat-label">Vendor Spawns</span>
                                     <span class="stat-value">@SelectedPack.Stats.VendorSpawnCount</span>
+                                    <span class="stat-sublabel">@SelectedPack.Stats.VendorLocationCount locations</span>
                                 </div>
                             </div>
                             <div class="col-6">
@@ -132,8 +136,8 @@
                                 </div>
                             </div>
                             <div class="col-6">
-                                <div class="stat-tile">
-                                    <span class="stat-label">Entries</span>
+                                <div class="stat-tile" title="Total spawn entries (Water + Weather + Timed + Common + Uncommon + Rare + Vendor)">
+                                    <span class="stat-label">Total Entries</span>
                                     <span class="stat-value">@SelectedPack.Stats.TotalSpawnEntries</span>
                                 </div>
                             </div>

@@ -1,6 +1,7 @@
 @using UORespawnApp.Scripts.Utilities
 @inject ViewService ViewService
 @inject IJSRuntime JS
+@inject ToastService ToastService
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid" style="display: flex; justify-content: center; align-items: center;">
@@ -34,50 +35,55 @@
                 <span class="bi bi-boxes-nav-menu" aria-hidden="true"></span> Spawn Packs
             </button>
         </div>
-        
-        <hr style="border-color: rgba(255,255,255,0.2); margin: 10px 15px;" />
 
-        <div class="nav-item px-3 mb-2">
-            <label class="map-label small mb-1">Current Map:</label>
-            <select class="form-select form-select-sm" 
-                @bind:get="ViewService.CurrentMapId" 
-                @bind:set="(int value) => ViewService.SetMap(value)">
-                @foreach (var mapId in GetAvailableMaps())
-                {
-                    <option value="@mapId">@MapUtility.GetMapName(mapId)</option>
-                }
-            </select>
+        <div class="spawn-section">
+            <div class="spawn-section-header px-3">
+                <div class="map-selector-row">
+                    <span class="bi bi-globe-americas-nav-menu map-icon" aria-hidden="true"></span>
+                    <select class="form-select form-select-sm" 
+                        @bind:get="ViewService.CurrentMapId" 
+                        @bind:set="(int value) => ViewService.SetMap(value)">
+                        @foreach (var mapId in GetAvailableMaps())
+                        {
+                            <option value="@mapId">@MapUtility.GetMapName(mapId)</option>
+                        }
+                    </select>
+                </div>
+            </div>
+
+            <div class="nav-item px-3">
+                <button class="nav-link btn btn-link @GetActiveClass("vendorspawn")" @onclick="ShowVendorSpawn">
+                    <span class="bi bi-shop-nav-menu" aria-hidden="true"></span> Vendor Spawn
+                </button>
+            </div>
+            <div class="nav-item px-3">
+                <button class="nav-link btn btn-link @GetActiveClass("boxspawn")" @onclick="ShowBoxSpawn">
+                    <span class="bi bi-map-fill-nav-menu" aria-hidden="true"></span> Box Spawn
+                </button>
+            </div>
+            <div class="nav-item px-3">
+                <button class="nav-link btn btn-link @GetActiveClass("regionspawn")" @onclick="ShowRegionSpawn">
+                    <span class="bi bi-pin-map-fill-nav-menu" aria-hidden="true"></span> Region Spawn
+                </button>
+            </div>
+            <div class="nav-item px-3">
+                <button class="nav-link btn btn-link @GetActiveClass("tilespawn")" @onclick="ShowWorldSpawn">
+                    <span class="bi bi-globe-nav-menu" aria-hidden="true"></span> Tile Spawn
+                </button>
+            </div>
+            <div class="nav-item px-3">
+                <button class="nav-link btn btn-link save-all-link" @onclick="SaveAll" title="Save All Data">
+                    <span class="bi bi-save-nav-menu" aria-hidden="true"></span> Save All
+                </button>
+            </div>
         </div>
 
-        <div class="nav-item px-3">
-            <button class="nav-link btn btn-link @GetActiveClass("vendorspawn")" @onclick="ShowVendorSpawn">
-                <span class="bi bi-shop-nav-menu" aria-hidden="true"></span> Vendor Spawn
-            </button>
-        </div>
-        <div class="nav-item px-3">
-            <button class="nav-link btn btn-link @GetActiveClass("boxspawn")" @onclick="ShowBoxSpawn">
-                <span class="bi bi-map-fill-nav-menu" aria-hidden="true"></span> Box Spawn
-            </button>
-        </div>
-        <div class="nav-item px-3">
-            <button class="nav-link btn btn-link @GetActiveClass("regionspawn")" @onclick="ShowRegionSpawn">
-                <span class="bi bi-pin-map-fill-nav-menu" aria-hidden="true"></span> Region Spawn
-            </button>
-        </div>
-        <div class="nav-item px-3">
-            <button class="nav-link btn btn-link @GetActiveClass("tilespawn")" @onclick="ShowWorldSpawn">
-                <span class="bi bi-globe-nav-menu" aria-hidden="true"></span> Tile Spawn
-            </button>
-        </div>
-
-        <hr style="border-color: rgba(255,255,255,0.2); margin: 10px 15px;" />
-        
         <div class="nav-item px-3">
             <button class="nav-link btn btn-link theme-toggle" @onclick="ToggleTheme">
                 <span class="bi @themeIcon" aria-hidden="true"></span> @themeText
             </button>
         </div>
-        
+
         <!-- Update Checker at bottom of nav -->
         <UpdateNotification />
     </nav>
@@ -135,5 +141,28 @@
         // For now, return standard maps 0-5
         // Could be extended to use MapUtility.GetAvailableMaps() for dynamic discovery
         return new List<int> { 0, 1, 2, 3, 4, 5 };
+    }
+
+    private async Task SaveAll()
+    {
+        try
+        {
+            // Save all spawn data and settings
+            Utility.SaveSettings();
+            Utility.SaveSpawnData();
+            Utility.SaveTileSpawnData();
+            Utility.SaveRegionSpawnData();
+            Utility.SaveVendorSpawnData();
+
+            Logger.Info("Manual save completed - all data saved");
+            ToastService.ShowSuccess("All data saved successfully!");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Error during manual save", ex);
+            ToastService.ShowWarning($"Error saving data: {ex.Message}");
+        }
+
+        await Task.CompletedTask;
     }
 }
