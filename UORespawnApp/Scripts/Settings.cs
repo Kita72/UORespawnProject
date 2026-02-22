@@ -249,6 +249,9 @@ namespace UORespawnApp
             set => Preferences.Set("WeatherChance", value);
         }
 
+        /// <summary>
+        /// Whether spawn scaling is enabled (adjusts spawn rates based on player population)
+        /// </summary>
         public static bool IsScaleSpawn
         {
             get => Preferences.Get("IsScaleSpawn", false);
