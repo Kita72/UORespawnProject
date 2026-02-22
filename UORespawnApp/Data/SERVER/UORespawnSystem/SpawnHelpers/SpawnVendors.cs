@@ -30,7 +30,6 @@ namespace Server.Custom.UORespawnSystem.SpawnHelpers
             VendorSpawnList = new List<int>();
 
             LoadAllSigns();
-
             LoadAllHives();
         }
 
@@ -80,6 +79,8 @@ namespace Server.Custom.UORespawnSystem.SpawnHelpers
             }
             else
             {
+                Dictionary<int, List<Point3D>> UniqueLocations = new Dictionary<int, List<Point3D>>();
+
                 foreach (var item in World.Items.Values)
                 {
                     if (item is Sign sign)
@@ -88,9 +89,19 @@ namespace Server.Custom.UORespawnSystem.SpawnHelpers
 
                         if (ValidateSign(signType))
                         {
-                            SignLocations[sign.Map.MapID].Add((signType, GetFacing(sign), sign.Location));
+                            if (!UniqueLocations.ContainsKey(sign.Map.MapID))
+                            {
+                                UniqueLocations.Add(sign.Map.MapID, new List<Point3D>());
+                            }
 
-                            count++;
+                            if (!UniqueLocations[sign.Map.MapID].Contains(sign.Location))
+                            {
+                                SignLocations[sign.Map.MapID].Add((signType, GetFacing(sign), sign.Location));
+
+                                UniqueLocations[sign.Map.MapID].Add(sign.Location);
+
+                                count++;
+                            }
                         }
                     }
                 }
