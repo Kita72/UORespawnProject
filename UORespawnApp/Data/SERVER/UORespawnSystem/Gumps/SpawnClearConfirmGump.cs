@@ -79,7 +79,7 @@ namespace Server.Custom.UORespawnSystem.Gumps
                     break;
 
                 case Buttons.Confirm:
-                    int deletedCount = UORespawnCore.ClearAllSpawns();
+                    int deletedCount = UORespawnCore.ClearAllSpawns("User - Gump");
                     from.SendMessage(0x22, $"⚠ Cleared and deleted {deletedCount} tracked spawns!");
                     
                     Console.ForegroundColor = ConsoleColor.Red;

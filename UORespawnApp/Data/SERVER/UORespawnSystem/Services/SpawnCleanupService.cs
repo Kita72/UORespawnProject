@@ -3,7 +3,6 @@ using System.Collections.Generic;
 
 using Server.Mobiles;
 using Server.Custom.UORespawnSystem.SpawnUtility;
-using Server.Custom.UORespawnSystem.SpawnHelpers;
 
 namespace Server.Custom.UORespawnSystem.Services
 {
@@ -32,7 +31,7 @@ namespace Server.Custom.UORespawnSystem.Services
             _onCleanupCompleteCallback = onCleanupCompleteCallback;
             _deletionQueue = new List<Mobile>();
 
-            UORespawnUtility.SendConsoleMsg(ConsoleColor.Green, "Cleanup Service Initialized...");
+            UORespawnUtility.SendConsoleMsg(ConsoleColor.Green, "Cleanup Service - Initialized");
         }
 
         /// <summary>
@@ -53,7 +52,7 @@ namespace Server.Custom.UORespawnSystem.Services
 
             _isRunning = true;
 
-            UORespawnUtility.SendConsoleMsg(ConsoleColor.Green,
+            UORespawnUtility.SendConsoleMsg(ConsoleColor.Yellow,
                 $"CLEANUP SERVICE: Started (Interval: {UORespawnSettings.CLEANUP_INTERVAL}s)");
         }
 

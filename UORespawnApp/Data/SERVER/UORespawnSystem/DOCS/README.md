@@ -1,4 +1,4 @@
-# UORespawn v2.0 - Professional Spawn Management System
+# UORespawn v2.0.0.6 - Professional Spawn Management System
 
 ## 🎯 Overview
 
@@ -9,8 +9,10 @@
 - **Comprehensive metrics** - Real-time performance monitoring and analysis
 - **Professional admin GUI** - Modern in-game control panel with live statistics
 - **Edge case tracking** - Automatic cleanup of orphaned spawns on server restart
+- **Vendor spawning** - Automatic NPC vendor placement based on signs
+- **Stress testing** - Built-in performance testing with virtual players
 
-**Status:** ✅ Production-Ready | **Version:** 2.0 | **Target Framework:** .NET Framework 4.8
+**Status:** ✅ Production-Ready | **Version:** 2.0.0.6 | **Target Framework:** .NET Framework 4.8
 
 ---
 
@@ -32,10 +34,11 @@
    - `UOR_BoxSpawn.bin` - Box-based spawn regions
    - `UOR_TileSpawn.bin` - Tile-type spawn definitions
    - `UOR_RegionSpawn.bin` - Named region spawn assignments
+   - `UOR_VendorSpawn.bin` - Vendor NPC spawn definitions (optional)
 
-2. **Place binary files** - Copy to `Data/UOR_DATA/` folder
+2. **Place binary files** - Copy to `Data/UORespawn/INPUT/` folder
 
-3. **Start server** - UORespawn auto-loads on startup
+3. **Start server** - UORespawn auto-loads on startup and generates output files
 
 4. **Verify operation** - Use `[SpawnAdmin` or `[SpawnStatus`
 
@@ -52,10 +55,11 @@
 | **UORespawnCore** | Central orchestration | Pause/Resume, Player tracking, Queue management |
 | **SpawnTimer** | 50ms tick processing | Batch processing (5 players/tick), Queue spawning |
 | **SpawnFactory** | Spawn selection logic | Box→Region→Tile→Debug hierarchy |
-| **UORespawnDataBase** | Binary data loading | Settings, Box, Tile, Region data with validation |
+| **UORespawnDataBase** | Binary data loading | Settings, Box, Tile, Region, Vendor data with validation |
 | **UORespawnSettings** | Configuration manager | Dynamic (file) + Static (hardcoded) settings |
 | **UORespawnUtility** | Helper functions | Location finding, spawn creation, validation |
 | **UORespawnTracker** | Edge case cleanup | Auto-delete orphaned spawns on server restart |
+| **UORespawnDir** | Directory management | Auto-creates INPUT/OUTPUT/STATS/SYS folders |
 
 ### Service Architecture
 
@@ -66,6 +70,8 @@
 | **SpawnDistanceService** | 1 second | Distance calculations for cleanup |
 | **SpawnCleanupService** | 10 seconds | Cleanup cycle (recycle or delete) |
 | **SpawnDebugService** | On-demand | In-memory debug log with file flushing |
+| **SpawnGenDataService** | On startup | Auto-generates bestiary, region, spawner, vendor lists |
+| **StressTestService** | 15 seconds | Virtual player stress testing for performance validation |
 
 ### Spawn Workers
 
@@ -74,6 +80,7 @@
 | **BoxSpawner** | 1st (Highest) | Priority-based rectangular spawn regions |
 | **RegionSpawner** | 2nd | Named region spawn assignments (e.g., "Britain", "Dungeon Despise") |
 | **TileSpawner** | 3rd | Tile-type spawn definitions (e.g., Grass, Snow, Swamp) |
+| **VendorSpawner** | On startup | Automatic NPC vendor placement based on signs |
 | **Debug Fallback** | 4th (Lowest) | PlaceHolder spawns for staff when ENABLE_DEBUG=true |
 
 ---
@@ -130,9 +137,11 @@
 1. Read tracked serials file (UOR_TrackSpawn.txt)
 2. Delete all tracked mobs (edge case cleanup)
 3. Delete tracking file
-4. Load binary spawn data
+4. Load binary spawn data (Settings, Box, Region, Tile, Vendor)
 5. Initialize services
-6. Start timer
+6. Generate output data files (Bestiary, Regions, Spawners, Vendors)
+7. Spawn vendors (if ENABLE_VENDOR_SPAWN=true)
+8. Start timer
 ```
 
 ---
@@ -146,7 +155,7 @@ UORespawn uses **binary serialization** for fast data loading. All files are cre
 #### 1. UOR_SpawnSettings.bin
 ```
 SettingsModel:
-├─ Version: "2.0.0.1"
+├─ Version: "2.0.0.6"
 ├─ MaxMobs: 15
 ├─ MinRange: 10
 ├─ MaxRange: 50
@@ -159,7 +168,10 @@ SettingsModel:
 ├─ ChanceRare: 0.1
 ├─ ScaleSpawn: false
 ├─ EnableRiftSpawn: false
-└─ EnableDebug: false
+├─ EnableDebug: false
+├─ EnableVendorSpawn: false
+├─ EnableVendorNight: false
+└─ EnableVendorExtra: false
 ```
 
 #### 2. UOR_BoxSpawn.bin
@@ -202,20 +214,33 @@ RegionContainer:
         └─ 6 spawn lists
 ```
 
+#### 5. UOR_VendorSpawn.bin (Optional)
+```
+VendorContainer:
+├─ Version: "2.0"
+└─ VendorData: List<VendorEntity>
+    ├─ IsSign: true/false
+    ├─ Sign: SignType (MetalPost, etc.)
+    ├─ Facing: SignFacing (North/South/East/West)
+    ├─ Location: Point3D
+    └─ VendorList: List<string> (vendor type names)
+```
+
 ### Region Name Lookup
 
 **Important:** UORespawn only uses **named regions**. The Region.Name must match exactly (case-insensitive).
 
-**Generate region list:**
+**Generate region list (auto-generated on startup):**
 ```bash
-[GenRegionList    # Creates UOR_RegionNames.txt with all named regions
+# Output file: Data/UORespawn/OUTPUT/UOR_RegionList.txt
 ```
 
 **How it works:**
-1. Editor loads region names from `UOR_RegionNames.txt`
-2. Admin assigns spawn lists to specific region names
-3. Editor saves region name + spawn lists to `UOR_RegionSpawn.bin`
-4. Server loads binary file and looks up regions using `map.Regions.TryGetValue(name)`
+1. Server auto-generates region names on startup to `OUTPUT/UOR_RegionList.txt`
+2. Editor loads region names from generated file
+3. Admin assigns spawn lists to specific region names
+4. Editor saves region name + spawn lists to `UOR_RegionSpawn.bin`
+5. Server loads binary file and looks up regions using `map.Regions.TryGetValue(name)`
 
 ---
 
@@ -238,6 +263,9 @@ RegionContainer:
 | `ENABLE_SCALE_SPAWN` | false | Player proximity scaling (0.1 multiplier per nearby player) |
 | `ENABLE_RIFT_SPAWN` | false | Special rift mob spawns during weather |
 | `ENABLE_DEBUG` | false | Staff spawn PlaceHolder mobs |
+| `ENABLE_VENDOR_SPAWN` | false | Enable automatic vendor NPC placement |
+| `ENABLE_VENDOR_NIGHT` | false | Enable night-time vendor behavior |
+| `ENABLE_VENDOR_EXTRA` | false | Spawn extra TownNPCs with vendors |
 
 ### Static Settings (Hardcoded in UORespawnSettings.cs)
 
@@ -251,6 +279,8 @@ RegionContainer:
 | `MAX_RECYCLE_TOTAL` | 50,000 | Total recycle pool limit |
 | `MAX_SPAWN_CHECKS` | 5 | Location search attempts |
 | `MAX_QUEUE_SIZE` | 5 | Max queued spawns per player |
+| `MAX_STAT_SIZE` | 10,000 | Max stat entries for heatmap data |
+| `CHECK_TIME_INTERVAL` | 10 minutes | Timed spawn check interval |
 
 ### Tuning Recommendations
 
@@ -331,20 +361,28 @@ BATCH_SIZE = 3          // Fewer players per tick (fine-grained)
 | **Command** | **Access** | **Description** |
 |------------|------------|-----------------|
 | `[DebugRespawn` | Administrator | Toggle debug mode ON/OFF |
-| `[PushRespawn` | Administrator | Force immediate spawn update for all players |
-| `[ClearRespawn` | Administrator | Clear all spawns (requires confirmation) |
+| `[UpdateRespawn` | Administrator | Force immediate spawn update for all players |
+| `[ClearRespawn` | Administrator | Clear all spawns (deletes all tracked spawns) |
+| `[ReloadRespawn` | Administrator | Reload spawn data from binary files |
 | `[TrackRespawn` | Administrator | Show current spawn statistics |
 | `[SpawnRecycleStats` | GameMaster | Show recycle pool statistics |
 | `[ClearRecycle` | Administrator | Clear recycle pool (delete all recycled mobs) |
 
 ### Data Generation Commands (For Editor Setup)
 
+Note: These files are **auto-generated on server startup** to `Data/UORespawn/OUTPUT/` folder.
+
 | **Command** | **Access** | **Description** |
 |------------|------------|-----------------|
-| `[GenRegionList` | Administrator | Generate list of all named regions → `UOR_RegionNames.txt` |
-| `[GenRespawnList` | Administrator | Generate list of all mob types → `UOR_MobList.txt` |
-| `[GenSpawnerList` | Administrator | Generate spawner statistics → `UOR_SpawnerList.txt` |
-| `[PushRespawnStats` | Administrator | Save spawn statistics → `UOR_STATS/` folder |
+| `[PushRespawnStats` | Administrator | Save spawn statistics → `Data/UORespawn/STATS/` folder |
+
+### Stress Testing Commands
+
+| **Command** | **Access** | **Description** |
+|------------|------------|-----------------|
+| `[StartStressTest [count]` | Administrator | Start stress test with virtual players (1-50, default: 10) |
+| `[StopStressTest` | Administrator | Stop stress test and cleanup virtual players |
+| `[StressTestStatus` | GameMaster | Show current stress test status |
 
 ---
 
@@ -394,11 +432,12 @@ BATCH_SIZE = 3          // Fewer players per tick (fine-grained)
 
 3. Check binary files exist:
    ```
-   Data/UOR_DATA/
+   Data/UORespawn/INPUT/
    ├─ UOR_SpawnSettings.bin  (required)
    ├─ UOR_BoxSpawn.bin       (optional but recommended)
    ├─ UOR_TileSpawn.bin      (optional but recommended)
-   └─ UOR_RegionSpawn.bin    (optional but recommended)
+   ├─ UOR_RegionSpawn.bin    (optional but recommended)
+   └─ UOR_VendorSpawn.bin    (optional)
    ```
 
 4. Check spawn data loaded:
@@ -531,12 +570,12 @@ BATCH_SIZE = 3          // Fewer players per tick (fine-grained)
 **Diagnostic Steps:**
 1. Verify region names:
    ```bash
-   [GenRegionList    # Generates Data/UOR_DATA/UOR_RegionNames.txt
+   # Check auto-generated file: Data/UORespawn/OUTPUT/UOR_RegionList.txt
    ```
    - Check if your region names match exactly (case-insensitive)
 
 2. Check binary file:
-   - Verify `UOR_RegionSpawn.bin` exists in `Data/UOR_DATA/`
+   - Verify `UOR_RegionSpawn.bin` exists in `Data/UORespawn/INPUT/`
 
 3. Enable debug and test:
    ```bash
@@ -552,12 +591,12 @@ BATCH_SIZE = 3          // Fewer players per tick (fine-grained)
 - ❌ Wrong map ID in binary file
 
 **Solutions:**
-1. Regenerate region list:
+1. Check auto-generated region list:
    ```bash
-   [GenRegionList    # Creates fresh list
+   # View: Data/UORespawn/OUTPUT/UOR_RegionList.txt
    ```
 
-2. Reload editor with new list
+2. Restart server to regenerate output files
 
 3. Verify region names in editor match server exactly
 
@@ -632,14 +671,45 @@ Last Reset:             12:34:56 PM
 
 ---
 
+## 📁 Directory Structure
+
+```
+Data/UORespawn/
+├── INPUT/                          # Binary files FROM Editor
+│   ├── UOR_SpawnSettings.bin       # System configuration (required)
+│   ├── UOR_BoxSpawn.bin            # Box-based spawn regions
+│   ├── UOR_TileSpawn.bin           # Tile-type spawn definitions
+│   ├── UOR_RegionSpawn.bin         # Named region spawn assignments
+│   └── UOR_VendorSpawn.bin         # Vendor NPC definitions
+│
+├── OUTPUT/                         # Auto-generated FOR Editor
+│   ├── UOR_BestiaryList.txt        # All valid creature types
+│   ├── UOR_RegionList.txt          # All named regions by map
+│   ├── UOR_SpawnerList.txt         # Existing spawner statistics
+│   └── UOR_VendorList.txt          # Valid vendor NPC types
+    ├── UOR_SignData.txt            # Cached sign locations
+    └── UOR_HiveData.txt            # Cached beehive locations
+│
+├── STATS/                          # Performance data
+│   └── [timestamp]_stats.txt       # Spawn heatmap data
+│
+└── SYS/                            # System files
+    ├── UOR_TrackSpawn.txt          # Tracked spawn serials
+    ├── UOR_VendorSpawn.txt         # Spawned vendor serials
+    └── UOR_DebugLog.txt            # Debug log output
+```
+
+---
+
 ## 🏆 Optimization Achievements
 
 ### Architecture Improvements
-- ✅ **Service-Based Design** - Separated concerns (Metrics, Recycle, Cleanup, Debug, Distance)
+- ✅ **Service-Based Design** - Separated concerns (Metrics, Recycle, Cleanup, Debug, Distance, GenData, StressTest)
 - ✅ **Binary Serialization** - Fast load times (JSON/CSV eliminated)
 - ✅ **Spatial Queries** - O(n) distance checks using Map.GetMobilesInRange()
 - ✅ **Batch Processing** - Configurable player throughput (5 players/50ms)
 - ✅ **Queue System** - Decoupled spawn decision from spawn execution
+- ✅ **Auto-Generation** - Output files auto-generated on startup for Editor
 
 ### Memory Optimizations
 - ✅ **Intelligent Recycling** - 30-60% reuse rate, reduced GC pressure
@@ -659,18 +729,39 @@ Last Reset:             12:34:56 PM
 - ✅ **Comprehensive Metrics** - Spawn/Recycle/Cleanup/Queue tracking
 - ✅ **Per-Player Metrics** - Individual spawn statistics
 - ✅ **Admin GUI** - Real-time monitoring with professional interface
+- ✅ **Stress Testing** - Built-in virtual player stress test system
 
 ### Edge Case Handling
 - ✅ **Tracker System** - Auto-cleanup orphaned spawns on restart
 - ✅ **Version Validation** - Binary file version checking
 - ✅ **Region Name Lookup** - Dictionary-based O(1) region resolution
 - ✅ **Graceful Degradation** - Missing files logged but don't crash
+- ✅ **Vendor Persistence** - Vendor spawns tracked and cleaned on restart
 
 ---
 
 ## 🚀 Version History
 
-### v2.0 - Production Release (Current)
+### v2.0.0.6 - Current Release
+**New Features:**
+- Vendor spawn system (VendorSpawner, VendorEntity)
+- Stress testing service (StartStressTest/StopStressTest commands)
+- Auto-generation of output files on startup (SpawnGenDataService)
+- Sign-based vendor placement with SignType/SignFacing support
+- TownNPC companion spawns (ENABLE_VENDOR_EXTRA)
+- Beehive location tracking
+
+**Directory Restructure:**
+- `Data/UORespawn/INPUT/` - Binary files from Editor
+- `Data/UORespawn/OUTPUT/` - Auto-generated lists for Editor
+- `Data/UORespawn/STATS/` - Performance statistics
+- `Data/UORespawn/SYS/` - System files (tracking, logs)
+
+**New Settings:**
+- ENABLE_VENDOR_SPAWN, ENABLE_VENDOR_NIGHT, ENABLE_VENDOR_EXTRA
+- MAX_STAT_SIZE, CHECK_TIME_INTERVAL
+
+### v2.0 - Production Release
 **Major Refactor:**
 - Renamed from "SpawnSystem" to "UORespawn" (professional branding)
 - Complete binary serialization system (Editor integration)
@@ -717,10 +808,16 @@ Last Reset:             12:34:56 PM
 A: Yes! UORespawn is independent and complementary. XMLSpawner handles static spawns, UORespawn handles dynamic player-centric spawns.
 
 **Q: How do I create the binary files?**  
-A: Use the **UORespawn Editor** (separate Windows Forms application). It generates all 4 .bin files.
+A: Use the **UORespawn Editor** (separate Windows Forms application). It generates all 5 .bin files.
 
-**Q: Do I need all 4 binary files?**  
-A: Settings file required, others optional. System works with any combination of Box/Tile/Region files.
+**Q: Do I need all 5 binary files?**  
+A: Settings file required, others optional. System works with any combination of Box/Tile/Region/Vendor files.
+
+**Q: Where do I put the binary files?**  
+A: Place them in `Data/UORespawn/INPUT/` folder. The system auto-creates this folder on first run.
+
+**Q: Where are the output files generated?**  
+A: Auto-generated to `Data/UORespawn/OUTPUT/` on server startup. These include bestiary, region, spawner, and vendor lists for the Editor.
 
 **Q: Can I edit spawn data in-game?**  
 A: Not yet. Binary save methods are placeholders for future in-game editing feature.
@@ -728,14 +825,17 @@ A: Not yet. Binary save methods are placeholders for future in-game editing feat
 **Q: What happens if a binary file is corrupted?**  
 A: System logs error and continues with remaining files. Check console for RED error messages.
 
-**Q: How often should I regenerate region lists?**  
-A: Only when you add new regions to your server or update ServUO version.
+**Q: How does the vendor spawn system work?**  
+A: When ENABLE_VENDOR_SPAWN=true, vendors are automatically placed near shop signs on server startup. Sign data is cached in `SYS/UOR_SignData.txt`.
 
 **Q: Can I pause spawning without stopping cleanup?**  
 A: Yes! `[SpawnPause` stops new spawns but cleanup continues (intended behavior).
 
 **Q: What's the difference between "Clear Spawns" and "Clear Pool"?**  
 A: **Clear Spawns** deletes active mobs in world. **Clear Pool** deletes recycled mobs in storage.
+
+**Q: How do I stress test the system?**  
+A: Use `[StartStressTest 20` to create 20 virtual players that move around, then `[SpawnMetrics` to monitor performance.
 
 ---
 
@@ -768,6 +868,6 @@ A: **Clear Spawns** deletes active mobs in world. **Clear Pool** deletes recycle
 
 ---
 
-**System Status:** ✅ Production-Ready | **Version:** 2.0 | **Framework:** .NET 4.8 | **Performance:** Optimized
+**System Status:** ✅ Production-Ready | **Version:** 2.0.0.6 | **Framework:** .NET 4.8 | **Performance:** Optimized
 
-**Documentation Complete** | **Maintained By:** Wilson | **Last Updated:** 2026
+**Documentation Complete** | **Maintained By:** Wilson | **Last Updated:** 2025

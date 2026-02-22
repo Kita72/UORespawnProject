@@ -12,7 +12,7 @@ namespace Server.Custom.UORespawnSystem.SpawnUtility
 
         private static List<int> TrackedSpawn;
 
-        private static readonly string TrackSpawnFile = Path.Combine(UORespawnSettings.UOR_DATA, "UOR_TrackSpawn.txt");
+        private static readonly string TrackSpawnFile = UORespawnDir.TRACK_SPAWN_FILE;
 
         public static void Initialize()
         {
@@ -40,10 +40,8 @@ namespace Server.Custom.UORespawnSystem.SpawnUtility
             {
                 for (int i = 0; i < TrackedSpawn.Count; i++)
                 {
-                    if (World.Mobiles.ContainsKey(TrackedSpawn[i]))
+                    if (World.FindMobile(TrackedSpawn[i]) is Mobile spawn)
                     {
-                        var spawn = World.Mobiles[TrackedSpawn[i]];
-
                         if (spawn != null && !spawn.Deleted)
                         {
                             spawn.Delete();
@@ -56,11 +54,9 @@ namespace Server.Custom.UORespawnSystem.SpawnUtility
 
             ResetTracking();
 
-            UORespawnUtility.SendConsoleMsg(ConsoleColor.DarkBlue, $"{deleted} Spawn Cleaned!");
+            UORespawnUtility.SendConsoleMsg(ConsoleColor.DarkBlue, $"Cleaned - {deleted} Spawn!");
 
             HasStarted = true;
-
-            SpawnVendors.TrySpawnVendors(SpawnVendors.LoadVendorSpawn());
         }
 
         private static void EventSink_MobileDeleted(MobileDeletedEventArgs e)
@@ -100,11 +96,6 @@ namespace Server.Custom.UORespawnSystem.SpawnUtility
         private static void ResetTracking()
         {
             TrackedSpawn.Clear();
-
-            //if (File.Exists(TrackSpawnFile))
-            //{
-            //    File.Delete(TrackSpawnFile);
-            //}
         }
     }
 }

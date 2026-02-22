@@ -11,10 +11,10 @@ namespace Server.Custom.UORespawnSystem.SpawnUtility
     internal static class UORespawnDataBase
     {
         // Binary File Paths (Editor creates, Server loads)
-        private static readonly string BoxSpawnFile = Path.Combine(UORespawnSettings.UOR_DATA, "UOR_BoxSpawn.bin");
-        private static readonly string RegionSpawnFile = Path.Combine(UORespawnSettings.UOR_DATA, "UOR_RegionSpawn.bin");
-        private static readonly string TileSpawnFile = Path.Combine(UORespawnSettings.UOR_DATA, "UOR_TileSpawn.bin");
-        private static readonly string VendorSpawnFile = Path.Combine(UORespawnSettings.UOR_DATA, "UOR_VendorSpawn.bin");
+        private static readonly string BoxSpawnFile = UORespawnDir.BOX_SAVE_FILE;
+        private static readonly string RegionSpawnFile = UORespawnDir.REGION_SAVE_FILE;
+        private static readonly string TileSpawnFile = UORespawnDir.TILE_SAVE_FILE;
+        private static readonly string VendorSpawnFile = UORespawnDir.VENDOR_SAVE_FILE;
 
         internal static Dictionary<Map, List<BoxEntity>> BoxSpawns { get; private set; }
         internal static Dictionary<Map, List<RegionEntity>> RegionSpawns { get; private set; }
@@ -23,7 +23,7 @@ namespace Server.Custom.UORespawnSystem.SpawnUtility
 
         internal static void LoadSpawns(string message = "Loading")
         {
-            UORespawnUtility.SendConsoleMsg(ConsoleColor.Cyan, $"{message} spawn data...");
+            UORespawnUtility.SendConsoleMsg(ConsoleColor.Green, $"Spawn Data - {message}... ");
 
             BoxSpawns = new Dictionary<Map, List<BoxEntity>>();
             RegionSpawns = new Dictionary<Map, List<RegionEntity>>();
@@ -36,12 +36,12 @@ namespace Server.Custom.UORespawnSystem.SpawnUtility
             LoadTileSpawnData();
             LoadVendorSpawnData();
 
-            UORespawnUtility.SendConsoleMsg(ConsoleColor.Green, "Spawn Loaded...");
+            UORespawnUtility.SendConsoleMsg(ConsoleColor.Green, "Spawn - Loaded");
         }
 
         internal static void ReLoadSpawns()
         {
-            UORespawnCore.ClearAllSpawns();
+            UORespawnCore.ClearAllSpawns("Reloaded Spawns");
 
             LoadSpawns("Reloading");
         }

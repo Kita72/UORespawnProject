@@ -61,21 +61,21 @@ namespace Server.Custom.UORespawnSystem
 
             LoadLogo();
 
-            UORespawnSettings.VerifyDirectories();
-
             UORespawnDataBase.LoadSpawns();
 
             InitializeLists();
 
             InitializeServices();
 
-            SubscribeEvents();
+            SpawnGenDataService.InitializeSpawnData();
 
-            SpawnVendors.VendorLoadInitialize();
+            SpawnVendors.TrySpawnVendors(SpawnVendors.LoadVendorSpawn());
+
+            SubscribeEvents();
 
             StartTimer();
 
-            UORespawnUtility.SendConsoleMsg(ConsoleColor.DarkCyan, "System Running...");
+            UORespawnUtility.SendConsoleMsg(ConsoleColor.DarkCyan, "System - Running...");
         }
 
         private static void LoadLogo()
@@ -94,7 +94,7 @@ namespace Server.Custom.UORespawnSystem
 
             _SpawnedList = new List<(Mobile mob, bool isTooFar)>();
 
-            UORespawnUtility.SendConsoleMsg(ConsoleColor.Green, "Lists Initialized...");
+            UORespawnUtility.SendConsoleMsg(ConsoleColor.Green, "Lists - Initialized");
         }
 
         private static void InitializeServices()
@@ -138,7 +138,7 @@ namespace Server.Custom.UORespawnSystem
 
             EventSink.Crashed += EventSink_Crashed;
 
-            UORespawnUtility.SendConsoleMsg(ConsoleColor.Green, "Events Subscribed...");
+            UORespawnUtility.SendConsoleMsg(ConsoleColor.Green, "Events - Subscribed");
         }
 
         private static void StartTimer()
@@ -147,7 +147,7 @@ namespace Server.Custom.UORespawnSystem
 
             _SpawnTimer.Start();
 
-            UORespawnUtility.SendConsoleMsg(ConsoleColor.Green, "Timer Activated...");
+            UORespawnUtility.SendConsoleMsg(ConsoleColor.Green, "Timer - Started");
         }
 
         private static void EventSink_TameCreature(TameCreatureEventArgs e)
@@ -530,7 +530,7 @@ namespace Server.Custom.UORespawnSystem
         /// <summary>
         /// Public cleanup for commands - returns count for user feedback
         /// </summary>
-        public static int ClearAllSpawns(string reason = "Manual clear command")
+        public static int ClearAllSpawns(string reason)
         {
             return PerformCompleteCleanup(reason, returnCount: true);
         }

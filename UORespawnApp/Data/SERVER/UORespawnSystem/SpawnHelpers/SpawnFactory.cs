@@ -14,7 +14,7 @@ namespace Server.Custom.UORespawnSystem.SpawnHelpers
 {
     internal static class SpawnFactory
     {
-        private static readonly string STAT_DIR = Path.Combine(UORespawnSettings.UOR_DATA, "UOR_STATS");
+        private static readonly string STAT_DIR = UORespawnDir.STAT_DIR;
 
         private static List<(DateTime, string, string, Point2D, Point2D, string)> SpawnStats { get; set; }
 

@@ -8,20 +8,10 @@ namespace Server.Custom.UORespawnSystem
 {
     internal static class UORespawnSettings
     {
-        internal static readonly string UOR_DATA = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data", "UOR_DATA");
-
-        internal static void VerifyDirectories()
-        {
-            if (!Directory.Exists(UOR_DATA))
-            {
-                Directory.CreateDirectory(UOR_DATA);
-            }
-        }
-
-        private const string Version = "2.0.0.5";
+        private const string Version = "2.0.0.6";
         private static double SPAWN_MOD { get; set; } = 0.0;
 
-        private static readonly string SettingsBinaryFile = Path.Combine(UOR_DATA, "UOR_SpawnSettings.bin");
+        private static readonly string SettingsBinaryFile = UORespawnDir.SETTINGS_SAVE_FILE;
 
         // Settings From File
         private static int maxMobs = 15;
@@ -58,7 +48,7 @@ namespace Server.Custom.UORespawnSystem
         internal static int MAX_RECYCLE_TOTAL { get; set; } = 50000; // Max total recycled mobs
         internal static int MAX_SPAWN_CHECKS { get; set; } = 5; // Max mobs checked when searching
         internal static int MAX_QUEUE_SIZE { get; set; } = 5; // Max mobs qued
-        internal static int MAX_STAT_SIZE { get; set; } = 1000; // Max stat points for stats data / heatmap in editor!
+        internal static int MAX_STAT_SIZE { get; set; } = 10000; // Max stat points for stats data / heatmap in editor!
         internal static int CHECK_TIME_INTERVAL { get; set; } = 10; // Minutes : Check Time Interval
 
         internal static void UpdateStats(double mod)
@@ -132,6 +122,12 @@ namespace Server.Custom.UORespawnSystem
                     {
                         ENABLE_VENDOR_SPAWN = reader.ReadBoolean();
                     }
+
+                    if (fileVersion > 2)
+                    {
+                        ENABLE_VENDOR_NIGHT = reader.ReadBoolean();
+                        ENABLE_VENDOR_EXTRA = reader.ReadBoolean();
+                    }
                 }
 
                 UORespawnUtility.SendConsoleMsg(ConsoleColor.Green, "Settings: Loaded successfully");
@@ -141,16 +137,6 @@ namespace Server.Custom.UORespawnSystem
                 UORespawnUtility.SendConsoleMsg(ConsoleColor.Red,
                     $"ERROR: Failed to load settings binary - {ex.Message}");
             }
-        }
-
-        /// <summary>
-        /// Placeholder: Binary save should be done from Editor
-        /// TODO: Future feature for in-game editing
-        /// </summary>
-        internal static void SaveSpawnSettingsData()
-        {
-            UORespawnUtility.SendConsoleMsg(ConsoleColor.Yellow, "WARNING: Not implemented!");
-            // TODO: Implement when in-game editing feature is added
         }
 
         internal static int GetSpawnMod(int stat)

@@ -30,7 +30,7 @@ namespace Server.Custom.UORespawnSystem.Services
             _spawnedListRef = spawnedListRef;
             _playersRef = playersRef;
 
-            UORespawnUtility.SendConsoleMsg(ConsoleColor.Green, "Distance Monitor Initialized...");
+            UORespawnUtility.SendConsoleMsg(ConsoleColor.Green, "Distance Monitor - Initialized");
         }
 
         /// <summary>
@@ -51,7 +51,7 @@ namespace Server.Custom.UORespawnSystem.Services
 
             _isRunning = true;
 
-            UORespawnUtility.SendConsoleMsg(ConsoleColor.Green, 
+            UORespawnUtility.SendConsoleMsg(ConsoleColor.Yellow, 
                 $"DISTANCE MONITOR: Started (Interval: {UORespawnSettings.DISTANCE_INTERVAL}ms)");
         }
 

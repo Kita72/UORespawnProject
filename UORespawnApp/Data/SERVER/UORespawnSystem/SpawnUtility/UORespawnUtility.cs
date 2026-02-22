@@ -453,7 +453,7 @@ namespace Server.Custom.UORespawnSystem.SpawnUtility
                 {
                     for (int j = 0; j < Map.Maps[l].Width; j++)
                     {
-                        targ = Map.Trammel.Tiles.GetStaticTiles(i, j);
+                        targ = Map.Maps[l].Tiles.GetStaticTiles(i, j);
 
                         if (targ.Length > 0)
                         {
@@ -463,7 +463,7 @@ namespace Server.Custom.UORespawnSystem.SpawnUtility
 
                                 staticTarg = new StaticTarget(loc, targ[k].ID);
 
-                                if (staticTarg.Name == name)
+                                if (staticTarg.Name == name && targ[k].ID == 2330)
                                 {
                                     locations.Add((l, loc));
                                 }

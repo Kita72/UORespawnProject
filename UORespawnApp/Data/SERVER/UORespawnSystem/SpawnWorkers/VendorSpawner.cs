@@ -1,4 +1,5 @@
 using Server.Custom.UORespawnSystem.Entities;
+using Server.Custom.UORespawnSystem.Mobiles;
 using Server.Custom.UORespawnSystem.SpawnHelpers;
 using Server.Custom.UORespawnSystem.SpawnUtility;
 using Server.Mobiles;
@@ -16,6 +17,11 @@ namespace Server.Custom.UORespawnSystem.SpawnWorkers
                 BaseCreature vendor = UORespawnUtility.CreateSpawn(entity.VendorList[i]) as BaseCreature;
 
                 Spawn(map, vendor, entity.Location);
+
+                if (UORespawnSettings.ENABLE_VENDOR_EXTRA)
+                {
+                    Spawn(map, new TownNPC(), entity.Location);
+                }
             }
         }
 

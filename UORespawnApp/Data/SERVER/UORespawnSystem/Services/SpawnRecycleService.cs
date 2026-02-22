@@ -1,6 +1,6 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
+using System.Collections.Generic;
 
 using Server.Mobiles;
 using Server.Custom.UORespawnSystem.SpawnUtility;
@@ -23,7 +23,7 @@ namespace Server.Custom.UORespawnSystem.Services
         {
             _recyclePool = new Dictionary<string, Queue<Mobile>>();
 
-            UORespawnUtility.SendConsoleMsg(ConsoleColor.Green, "Recycle Manager Initialized...");
+            UORespawnUtility.SendConsoleMsg(ConsoleColor.Green, "Recycle Manager - Initialized");
         }
 
         /// <summary>

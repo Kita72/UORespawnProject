@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Collections.Generic;
+using Server.Custom.UORespawnSystem.SpawnUtility;
 
 namespace Server.Custom.UORespawnSystem.Services
 {
@@ -61,7 +62,7 @@ namespace Server.Custom.UORespawnSystem.Services
 
         #region Fields
 
-        private static readonly string LOG_FILE = Path.Combine(UORespawnSettings.UOR_DATA, "UOR_DebugLog.txt");
+        private static readonly string LOG_FILE = UORespawnDir.LOG_DEBUG_FILE;
         private static readonly object _logLock = new object();
 
         // In-memory buffer for debug messages (only populated when debug enabled)
