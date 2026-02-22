@@ -93,9 +93,14 @@ namespace UORespawnApp.Scripts.Utilities
         }
 
         /// <summary>
-        /// Server-side scripts folder name in app base directory
+        /// Server-side scripts folder name within Data/SERVER/
         /// </summary>
         private const string SERVER_SCRIPTS_FOLDER = "UORespawnSystem";
+
+        /// <summary>
+        /// Parent folder containing server scripts (Data/SERVER)
+        /// </summary>
+        private const string SERVER_PARENT_FOLDER = "SERVER";
 
         /// <summary>
         /// Setup server-side scripts in ServUO/Scripts/Custom folder
@@ -128,8 +133,8 @@ namespace UORespawnApp.Scripts.Utilities
                     Logger.Info($"Created UORespawn folder: {destinationPath}");
                 }
 
-                // Get the source UORespawnSystem folder from the app's base directory
-                var sourcePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, SERVER_SCRIPTS_FOLDER);
+                // Get the source UORespawnSystem folder from Data/SERVER/
+                var sourcePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data", SERVER_PARENT_FOLDER, SERVER_SCRIPTS_FOLDER);
 
                 if (!Directory.Exists(sourcePath))
                 {

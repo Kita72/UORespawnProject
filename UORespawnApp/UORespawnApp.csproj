@@ -151,6 +151,11 @@
       <!-- Exclude server .cs files from compilation (they're ServUO scripts, not app code) -->
       <Compile Remove="Data\SERVER\**\*.cs" />
       <None Remove="Data\SERVER\UORespawnSystem\**\*.*" Condition="'$(Configuration)' == 'Release'" />
+      <!-- Copy UORespawnSystem folder contents for server linking (Debug builds and if ZIP not present) -->
+      <None Include="Data\SERVER\UORespawnSystem\**\*.*">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        <Link>Data\SERVER\UORespawnSystem\%(RecursiveDir)%(Filename)%(Extension)</Link>
+      </None>
     </ItemGroup>
 
     <!-- PACKS: Spawn pack system folders -->
