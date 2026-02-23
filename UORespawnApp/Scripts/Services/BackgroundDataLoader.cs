@@ -56,17 +56,17 @@ namespace UORespawnApp.Scripts.Services
             {
                 var packFolder = Settings.CurrentPackFolder;
 
-                // If no pack folder is set, check if we have a legacy CurrentPackName (folder name only)
-                // This handles migration from old settings format
+                // If no pack folder is set, find the pack by CurrentPackName
+                // This handles fresh installs and migration from old settings format
                 if (string.IsNullOrEmpty(packFolder))
                 {
-                    var legacyPackName = Settings.CurrentPackName;
-                    if (!string.IsNullOrEmpty(legacyPackName) && legacyPackName != "DefaultPack")
+                    var packName = Settings.CurrentPackName;
+                    if (!string.IsNullOrEmpty(packName))
                     {
                         // Try to find the pack folder by name in all pack directories
-                        var approvedPath = Path.Combine(PathConstants.PacksApprovedPath, legacyPackName);
-                        var createdPath = Path.Combine(PathConstants.PacksCreatedPath, legacyPackName);
-                        var importedPath = Path.Combine(PathConstants.PacksImportedPath, legacyPackName);
+                        var approvedPath = Path.Combine(PathConstants.PacksApprovedPath, packName);
+                        var createdPath = Path.Combine(PathConstants.PacksCreatedPath, packName);
+                        var importedPath = Path.Combine(PathConstants.PacksImportedPath, packName);
 
                         if (Directory.Exists(approvedPath))
                             packFolder = approvedPath;
@@ -74,6 +74,13 @@ namespace UORespawnApp.Scripts.Services
                             packFolder = createdPath;
                         else if (Directory.Exists(importedPath))
                             packFolder = importedPath;
+
+                        // If found, save the folder path so we don't have to look it up again
+                        if (!string.IsNullOrEmpty(packFolder))
+                        {
+                            Settings.CurrentPackFolder = packFolder;
+                            Logger.Info($"Resolved pack folder for '{packName}': {packFolder}");
+                        }
                     }
                 }
 
