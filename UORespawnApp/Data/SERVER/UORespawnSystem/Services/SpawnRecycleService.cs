@@ -4,6 +4,7 @@ using System.Collections.Generic;
 
 using Server.Mobiles;
 using Server.Custom.UORespawnSystem.SpawnUtility;
+using Server.Network;
 
 namespace Server.Custom.UORespawnSystem.Services
 {
@@ -97,11 +98,7 @@ namespace Server.Custom.UORespawnSystem.Services
             {
                 bc.Combatant = null;
                 bc.Warmode = false;
-                bc.Blessed = true; // Protect while in storage
             }
-
-            // Move to Map.Internal (hidden storage)
-            mob.MoveToWorld(Point3D.Zero, Map.Internal);
 
             queue.Enqueue(mob);
 

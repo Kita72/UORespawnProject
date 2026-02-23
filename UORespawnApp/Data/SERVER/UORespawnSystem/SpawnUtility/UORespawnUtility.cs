@@ -15,6 +15,8 @@ using Server.Custom.UORespawnSystem.Interfaces;
 using Server.Custom.UORespawnSystem.Enums;
 
 using CPA = Server.CommandPropertyAttribute;
+using System.Linq;
+using Server.Network;
 
 namespace Server.Custom.UORespawnSystem.SpawnUtility
 {
@@ -106,7 +108,7 @@ namespace Server.Custom.UORespawnSystem.SpawnUtility
                         break;
                     }
 
-                    spawnPoint = GetSpawnPoint(location, UORespawnSettings.MIN_RANGE, UORespawnSettings.MAX_RANGE, map);
+                    spawnPoint = GetSpawnPoint(location, UORespawnSettings.MIN_RANGE, UORespawnSettings.MAX_RANGE, map, pm.Direction);
 
                     // Cave : Use 'rock' spawn tile type!
                     if (spawnPoint.Z > pm.Location.Z + 20)
@@ -162,13 +164,82 @@ namespace Server.Custom.UORespawnSystem.SpawnUtility
             }
         }
 
-        private static Point3D GetSpawnPoint(Point3D center, int minRange, int maxRange, Map map)
+        internal static Point3D GetSpawnPoint(Point3D center, int min, int max, Map map)
         {
-            int x = center.X + (Utility.RandomBool() ? Utility.RandomMinMax(minRange, maxRange) : -Utility.RandomMinMax(minRange, maxRange));
-            int y = center.Y + (Utility.RandomBool() ? Utility.RandomMinMax(minRange, maxRange) : -Utility.RandomMinMax(minRange, maxRange));
-            int z = map.GetAverageZ(x, y);
+            var rndX = Utility.RandomMinMax(min, max);
+            var rndY = Utility.RandomMinMax(min, max);
 
-            return new Point3D(x, y, z);
+            int x = center.X + (Utility.RandomBool() ? rndX : -rndX);
+            int y = center.Y + (Utility.RandomBool() ? rndY : -rndY);
+
+            return new Point3D(x, y, map.GetAverageZ(x, y));
+        }
+
+        internal static Point3D GetSpawnPoint(Point3D center, int min, int max, Map map, Direction direction)
+        {
+            var range = Utility.RandomMinMax(min, max);
+
+            var roll = Utility.RandomMinMax(0, 3);
+
+            if (roll == 0)
+            {
+                direction = Utility.RandomList(
+                    direction,
+                    Direction.North,
+                    Direction.East,
+                    Direction.South,
+                    Direction.West,
+                    Direction.Up,
+                    Direction.Left,
+                    Direction.Down,
+                    Direction.Right,
+                    direction);
+            }
+
+            var mod = (Utility.RandomBool() ? roll : -roll);
+
+            int x;
+            int y;
+
+            switch (direction & Direction.Mask)
+            {
+                case Direction.North:
+                    x = center.X + mod;
+                    y = center.Y - range;
+                    break;
+                case Direction.Right:
+                    x = center.X + range + mod;
+                    y = center.Y - range;
+                    break;
+                case Direction.East:
+                    x = center.X + range;
+                    y = center.Y + mod;
+                    break;
+                case Direction.Down:
+                    x = center.X + range + mod;
+                    y = center.Y + range;
+                    break;
+                case Direction.South:
+                    x = center.X + mod;
+                    y = center.Y + range;
+                    break;
+                case Direction.Left:
+                    x = center.X - range;
+                    y = center.Y + range + mod;
+                    break;
+                case Direction.West:
+                    x = center.X - range;
+                    y = center.Y + mod;
+                    break;
+                case Direction.Up:
+                    x = center.X - range;
+                    y = center.Y - range + mod;
+                    break;
+                default:
+                    return GetSpawnPoint(center, min, max, map);
+            }
+
+            return new Point3D(x, y, map.GetAverageZ(x, y));
         }
 
         private static bool IsCrowded(Map map, Point3D location)
@@ -178,9 +249,11 @@ namespace Server.Custom.UORespawnSystem.SpawnUtility
                 var mobiles = map.GetMobilesInRange(location, UORespawnSettings.MIN_RANGE);
 
                 int mobCount = 0;
+
                 foreach (var m in mobiles)
                 {
-                    mobCount++;
+                    if (m is BaseCreature bc && bc.GetType() != typeof(BaseVendor))
+                        mobCount++;
                 }
 
                 mobiles.Free();
@@ -463,7 +536,7 @@ namespace Server.Custom.UORespawnSystem.SpawnUtility
 
                                 staticTarg = new StaticTarget(loc, targ[k].ID);
 
-                                if (staticTarg.Name == name && targ[k].ID == 2330)
+                                if (staticTarg.Name == name)
                                 {
                                     locations.Add((l, loc));
                                 }
@@ -520,6 +593,40 @@ namespace Server.Custom.UORespawnSystem.SpawnUtility
                 if (name.ToLower().StartsWith("khaldun ")) return false;
 
                 return true;
+            }
+
+            return false;
+        }
+
+        private static Dictionary<int, List<Point3D>> graveStones = new Dictionary<int, List<Point3D>>();
+
+        internal static bool HasGraveStone(Map map, Point3D location)
+        {
+            if (graveStones == null && graveStones.Count == 0)
+            {
+                for (int i = 0; i < 6; i++)
+                {
+                    graveStones[i] = new List<Point3D>();
+                }
+
+                var graveList = GetStaticLocationsList("grave");
+
+                foreach (var grave in graveList)
+                {
+                    graveStones[grave.Item1].Add(grave.Item2);
+                }
+
+                var graveStoneList = GetStaticLocationsList("gravestone");
+
+                foreach (var graveStone in graveStoneList)
+                {
+                    graveStones[graveStone.Item1].Add(graveStone.Item2);
+                }
+            }
+
+            if (graveStones != null && graveStones.Count > 0)
+            {
+                if (graveStones[map.MapID].Contains(location)) return true;
             }
 
             return false;

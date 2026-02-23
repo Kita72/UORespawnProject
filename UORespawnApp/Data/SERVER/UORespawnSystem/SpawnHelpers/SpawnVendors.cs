@@ -222,7 +222,7 @@ namespace Server.Custom.UORespawnSystem.SpawnHelpers
             }
             else
             {
-                var hiveList = UORespawnUtility.GetStaticLocationsList("beehive");
+                var hiveList = UORespawnUtility.GetStaticLocationsList("beehive"); // ITEMID 2330
 
                 if (hiveList != null && hiveList.Count > 0)
                 {

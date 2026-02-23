@@ -16,11 +16,27 @@ namespace Server.Custom.UORespawnSystem.SpawnWorkers
             {
                 BaseCreature vendor = UORespawnUtility.CreateSpawn(entity.VendorList[i]) as BaseCreature;
 
-                Spawn(map, vendor, entity.Location);
+                Point3D spawnPoint = entity.Location;
+
+                int count = UORespawnSettings.MAX_SPAWN_CHECKS;
+
+                while (!map.CanSpawnMobile(spawnPoint) && count > 0)
+                {
+                    spawnPoint = UORespawnUtility.GetSpawnPoint(entity.Location, 1, 6, map);
+
+                    count--;
+                }
+
+                if (count == 0)
+                {
+                    spawnPoint = entity.Location;
+                }
+
+                Spawn(map, vendor, spawnPoint);
 
                 if (UORespawnSettings.ENABLE_VENDOR_EXTRA)
                 {
-                    Spawn(map, new TownNPC(), entity.Location);
+                    Spawn(map, new TownNPC(), spawnPoint);
                 }
             }
         }

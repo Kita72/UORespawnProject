@@ -46,6 +46,11 @@ namespace Server.Custom.UORespawnSystem.SpawnHelpers
                 }
             }
 
+            if (SpawnTimeInfo.IsNight(pm) && UORespawnUtility.HasGraveStone(map, location))
+            {
+                return Utility.RandomList<string>("Zombie", "HeadlessOne", "Shade", "Skeleton");
+            }
+
             string spawn;
 
             _Roll = Utility.RandomDouble();
@@ -53,7 +58,7 @@ namespace Server.Custom.UORespawnSystem.SpawnHelpers
             // Box
             spawn = BoxSpawner.TryBoxSpawn(map, location, isWater);
 
-            if (!string.IsNullOrEmpty(spawn) && _Roll > UORespawnSettings.CHANCE_RARE)
+            if (!string.IsNullOrEmpty(spawn) && _Roll > UORespawnSettings.CHANCE_RARE + 0.2)
             {
                 return spawn;
             }
@@ -61,7 +66,7 @@ namespace Server.Custom.UORespawnSystem.SpawnHelpers
             // Region
             spawn = RegionSpawner.TryRegionSpawn(map, region, location, isWater);
 
-            if (!string.IsNullOrEmpty(spawn) && _Roll > UORespawnSettings.CHANCE_UNCOMMON)
+            if (!string.IsNullOrEmpty(spawn) && _Roll > UORespawnSettings.CHANCE_RARE + 0.1)
             {
                 return spawn;
             }

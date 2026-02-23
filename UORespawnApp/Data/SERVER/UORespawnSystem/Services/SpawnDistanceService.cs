@@ -160,7 +160,7 @@ namespace Server.Custom.UORespawnSystem.Services
 
             foreach (PlayerMobile pm in players)
             {
-                if (!IsValidPlayer(pm))
+                if (!UORespawnUtility.IsValidPlayer(pm))
                     continue;
 
                 // Different maps = too far
@@ -175,14 +175,6 @@ namespace Server.Custom.UORespawnSystem.Services
             }
 
             return true; // Too far from all players
-        }
-
-        /// <summary>
-        /// Validate player is active and valid
-        /// </summary>
-        private static bool IsValidPlayer(PlayerMobile pm)
-        {
-            return (pm != null && !pm.Deleted && pm.Map != null && pm.Map != Map.Internal);
         }
 
         /// <summary>

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using Server.Custom.UORespawnSystem.SpawnUtility;
 using Server.Custom.UORespawnSystem.SpawnHelpers;
 using Server.Custom.UORespawnSystem.Entities;
-using System.Linq;
 
 namespace Server.Custom.UORespawnSystem
 {
@@ -11,7 +10,9 @@ namespace Server.Custom.UORespawnSystem
     {
         internal static string TryRegionSpawn(Map map, Region region, Point3D location, bool isWater)
         {
+
             if (region == null || region.Name == null) return string.Empty;
+
 
             List<RegionEntity> spawnList = new List<RegionEntity>();
 
