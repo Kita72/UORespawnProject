@@ -26,9 +26,9 @@ UORespawnProject/
 │   │   └── Utilities/               # Static helper utilities
 │   ├── Data/                        # Runtime data folder (user accessible)
 │   │   ├── UOR_DATA/                # Active spawn binary files (.bin)
-│   │   ├── PACKS/                   # Spawn pack backup/staging area
-│   │   └── maps/                    # Map images (Map0.bmp - Map255.bmp)
-│   ├── Resources/Raw/               # Bundled resources (fallback files)
+│   │   ├── PACKS/                   # Spawn packs (Approved, Created, Imported)
+│   │   └── MAPS/                    # Map images (Map0.bmp - Map255.bmp)
+│   ├── Resources/Raw/               # Bundled resources (default reference data)
 │   └── wwwroot/
 │       ├── css/                     # Global styles
 │       └── js/map.js                # Canvas rendering & mouse interactions
@@ -58,7 +58,7 @@ UORespawn/
 ### Data Flow
 1. **Editor → Server**: Editor saves `.bin` files to `Data/UOR_DATA/`, DataWatcher syncs to server's `INPUT/`
 2. **Server → Editor**: Server auto-generates `.txt` files in `OUTPUT/` on startup (bestiary, regions, spawners, vendors)
-3. **Spawn Packs**: `Data/PACKS/` stores backup packs; applying a pack copies files to `UOR_DATA/`
+3. **Spawn Packs**: `Data/PACKS/` organizes packs by category (Approved/Created/Imported); applying a pack copies files to `UOR_DATA/`
 
 ### Binary Files (Editor Writes)
 | File | Purpose |

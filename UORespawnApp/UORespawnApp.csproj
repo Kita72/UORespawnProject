@@ -107,9 +107,6 @@
 		<ExcludeFromSingleFile>true</ExcludeFromSingleFile>
 		<CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
 	  </Content>
-	  <Content Include="Resources\Raw\growl.wav">
-		<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-	  </Content>
 	  <Content Include="Resources\Raw\UOR_SpawnerList.txt">
 		<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	  </Content>
@@ -142,12 +139,7 @@
          ======================================================================== -->
 
     <!-- SERVER: Pre-packaged server scripts ZIP for export functionality -->
-    <!-- In Publish: Include ZIP, exclude unpacked folder -->
-    <!-- In Debug: Unpacked folder exists for development, ZIP optional -->
     <ItemGroup>
-      <None Include="Data\PACKS\Approved\DefaultPack\pack.json">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </None>
       <None Include="Data\SERVER\UORespawnSystem.zip" Condition="Exists('Data\SERVER\UORespawnSystem.zip')">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
@@ -162,29 +154,30 @@
     </ItemGroup>
 
     <!-- PACKS: Spawn pack system folders -->
-    <!-- Approved: Unpacked packs ready to use (Debug) / ZIPs extracted on first launch (Release) -->
-    <!-- Imported: User-imported packs (empty on publish) -->
-    <!-- Backup: Original ZIPs for reset functionality + folders for Git repo -->
+    <!-- Approved: Contains DefaultPack (bundled with app, editable, not deletable) -->
+    <!-- Created: User-created packs (empty on install) -->
+    <!-- Imported: User-imported packs (empty on install) -->
     <ItemGroup>
       <!-- Exclude PACKS folder from MAUI asset processing (prevents "outside app bundle" warnings) -->
       <MauiAsset Remove="Data\PACKS\**\*" />
       <Content Remove="Data\PACKS\**\*" />
 
-      <!-- Include Backup ZIPs (for reset functionality and release builds) -->
-      <!-- Include Backup folders with all contents (for Git repo/Debug builds) -->
-      <!-- This copies DefaultPack folder from Backup so it can be extracted to Approved -->
-      <!-- Include Created folder contents (for user-created packs) -->
-      <None Include="Data\PACKS\Created\**\*.*" Exclude="Data\PACKS\Created\.gitkeep" Condition="Exists('Data\PACKS\Created\')">
+      <!-- Copy DefaultPack.zip to Approved folder (for extraction on first launch) -->
+      <None Include="Data\PACKS\Approved\DefaultPack.zip" Condition="Exists('Data\PACKS\Approved\DefaultPack.zip')">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
-      <!-- Preserve empty folder structure -->
+
+      <!-- Also copy DefaultPack folder contents directly (for Debug builds where folder already exists) -->
+      <None Include="Data\PACKS\Approved\DefaultPack\**\*.*" Condition="Exists('Data\PACKS\Approved\DefaultPack\')">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        <Link>Data\PACKS\Approved\DefaultPack\%(RecursiveDir)%(Filename)%(Extension)</Link>
+      </None>
+
+      <!-- Preserve empty folder structure with .gitkeep files -->
       <None Include="Data\PACKS\Approved\.gitkeep" Condition="Exists('Data\PACKS\Approved\.gitkeep')">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
       <None Include="Data\PACKS\Imported\.gitkeep" Condition="Exists('Data\PACKS\Imported\.gitkeep')">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </None>
-      <None Include="Data\PACKS\Backup\.gitkeep" Condition="Exists('Data\PACKS\Backup\.gitkeep')">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
       <None Include="Data\PACKS\Created\.gitkeep" Condition="Exists('Data\PACKS\Created\.gitkeep')">

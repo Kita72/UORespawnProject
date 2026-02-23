@@ -30,7 +30,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Sublabel shows location count (boxes, tiles, regions, signs)
 - **Dirty flag system** - Intelligent pack sync only when actual changes are made
   - Prevents false "Modified" detection on Save All
-  - Reset button only appears when files actually differ from backup
+
+### Removed
+- **Reset/Backup System** - Completely removed in favor of simpler pack management
+  - Removed `PACKS/Backup/` folder and all backup-related code
+  - Removed Reset button from approved pack cards
+  - Approved packs can now be edited like any other pack (just not deleted)
+  - Users can re-download the app to restore default pack if needed
 
 ### Changed
 - **Vendor Spawn system** fully integrated with editor workflow
@@ -43,11 +49,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - All pack types (Approved, Created, Imported) use unified sync logic
   - `ActivePackDataPath` works for any loaded pack type
   - Dirty flag tracks actual data changes, not just saves
+- **Approved Packs** - Now editable but not deletable (no reset functionality)
+  - DefaultPack lives directly in `PACKS/Approved/` folder
+  - Both folder and ZIP included for flexibility
+- **Pack Folder Structure** simplified to three categories:
+  - `PACKS/Approved/` - Bundled packs (editable, not deletable)
+  - `PACKS/Created/` - User-created packs
+  - `PACKS/Imported/` - User-imported packs
 - Documentation updated throughout Instructions page for new features
 - Deterministic binary serialization for consistent pack comparison
 
 ### Fixed
-- **Reset button no longer appears** after "Save All" when no changes were made
+- **DefaultPack not loading on fresh install** - Fixed .csproj to copy all DefaultPack files
+  - Previously only `pack.json` was being copied to output
+  - Now copies `DefaultPack.zip` and entire `DefaultPack/` folder contents
+- **Created folder not tracked in Git** - Fixed .gitignore pattern for .gitkeep files
 - Pack sync only triggers when spawn data is actually modified
 - Vendor spawn page correctly loads sign/hive data for selected map
 
@@ -58,6 +74,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Sorted dictionary serialization (`OrderBy`) for deterministic output
 - `VendorSpawnComponent.razor` with full map integration and marker rendering
 - Favorites stored in `Settings.BestiaryFavorites` and `Settings.VendorFavorites` lists
+- Removed `IsModified` property from `SpawnPackInfo` entity
+- Removed backup/reset methods from `SpawnPackService`
+- Updated `UORespawnApp.csproj` - Fixed DefaultPack file copying rules
 
 ## [2.0.0.5] - 2026-02-19
 
