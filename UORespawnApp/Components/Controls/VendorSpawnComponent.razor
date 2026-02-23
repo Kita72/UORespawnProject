@@ -119,13 +119,13 @@
                                 @if (isSelected)
                                 {
                                     <div class="spawn-controls mt-2">
-                                        <!-- Add to All Locations button -->
+                                        <!-- Manage All Locations button -->
                                         <div class="mb-2">
-                                            <button class="btn btn-sm btn-outline-success w-100" 
+                                            <button class="btn btn-sm btn-outline-primary w-100" 
                                                     @onclick="() => OpenBulkAddModal(signTypeGroup)" 
                                                     @onclick:stopPropagation="true" 
-                                                    title="Add vendors to ALL locations of this sign type at once">
-                                                <i class="bi bi-people-fill me-1"></i>Add to All @locationCount Locations
+                                                    title="Manage vendors for ALL @locationCount locations - add or remove vendors across all locations at once">
+                                                <i class="bi bi-people-fill me-1"></i>All @locationCount Locations
                                             </button>
                                         </div>
 
@@ -262,12 +262,13 @@
 
     // Modal state - per-location or bulk add mode
     private bool showModal = false;
-    private bool isBulkAddMode = false; // true = adding to ALL locations of a sign type
+    private bool isBulkAddMode = false; // true = managing vendors for ALL locations of a sign type
     private SignTypes currentSignType = SignTypes.MetalPost;
     private FacingTypes currentFacing = FacingTypes.North;
     private Point3D currentLocation = new();
     private bool currentIsHive = false;
     private List<string> currentVendorList = new();
+    private List<string> originalBulkVendorList = new(); // Track original common vendors for diff calculation
 
     // Sign type group for UI display
     private class SignTypeGroup
@@ -1218,19 +1219,76 @@
     }
 
     /// <summary>
-    /// Opens the vendor modal in bulk add mode - vendors selected will be added to ALL locations.
+    /// Opens the vendor modal in bulk mode - shows vendors common to ALL locations.
+    /// Adding vendors will add to all locations; removing vendors will remove from all locations.
     /// </summary>
     private void OpenBulkAddModal(SignTypeGroup group)
     {
         currentSignType = group.SignType;
         currentIsHive = group.SignType == SignTypes.MetalPost;
 
-        // Start with empty list - user selects what to ADD to all locations
-        currentVendorList = new List<string>();
+        // Load vendors that are common to ALL locations (intersection)
+        var commonVendors = GetCommonVendorsForSignType(group.SignType);
+        originalBulkVendorList = new List<string>(commonVendors);
+        currentVendorList = new List<string>(commonVendors);
 
         isBulkAddMode = true;
         showModal = true;
         StateHasChanged();
+    }
+
+    /// <summary>
+    /// Gets vendors that exist in ALL locations of a sign type (intersection).
+    /// Returns empty list if any location has no vendors or if locations have no common vendors.
+    /// </summary>
+    private List<string> GetCommonVendorsForSignType(SignTypes signType)
+    {
+        if (!Utility.VendorSpawns.TryGetValue(ViewService.CurrentMapId, out var vendors))
+            return [];
+
+        List<List<string>> allLocationVendors = [];
+
+        if (signType == SignTypes.MetalPost)
+        {
+            var hives = HiveDataUtility.GetHivesForMap(ViewService.CurrentMapId);
+            foreach (var hive in hives)
+            {
+                var entity = vendors.FirstOrDefault(v => 
+                    v.Sign == SignTypes.MetalPost && 
+                    v.Location.X == hive.X && 
+                    v.Location.Y == hive.Y && 
+                    v.Location.Z == hive.Z);
+                allLocationVendors.Add(entity?.VendorList ?? []);
+            }
+        }
+        else
+        {
+            var signs = SignDataUtility.GetSignsForMap(ViewService.CurrentMapId)
+                .Where(s => s.SignType == signType)
+                .ToList();
+
+            foreach (var sign in signs)
+            {
+                var entity = vendors.FirstOrDefault(v => 
+                    v.Sign == signType && 
+                    v.Location.X == sign.X && 
+                    v.Location.Y == sign.Y && 
+                    v.Location.Z == sign.Z);
+                allLocationVendors.Add(entity?.VendorList ?? []);
+            }
+        }
+
+        if (allLocationVendors.Count == 0)
+            return [];
+
+        // Find intersection - vendors that exist in ALL locations
+        var commonVendors = allLocationVendors[0].ToList();
+        foreach (var locationVendors in allLocationVendors.Skip(1))
+        {
+            commonVendors = commonVendors.Intersect(locationVendors).ToList();
+        }
+
+        return commonVendors;
     }
 
     private void LoadVendorListForCurrentLocation()
@@ -1256,6 +1314,7 @@
     {
         showModal = false;
         isBulkAddMode = false;
+        originalBulkVendorList = [];
         StateHasChanged();
     }
 
@@ -1308,28 +1367,31 @@
     }
 
     /// <summary>
-    /// Saves vendors in bulk mode - adds selected vendors to ALL locations of the sign type.
-    /// Does not replace existing vendors, just adds to each location.
+    /// Saves vendors in bulk mode - compares with original common vendors to determine additions and removals.
+    /// Additions are added to all locations; removals are removed from all locations.
     /// </summary>
     private async Task SaveBulkAddModal()
     {
-        if (currentVendorList.Count == 0)
+        if (!Utility.VendorSpawns.TryGetValue(ViewService.CurrentMapId, out var vendors))
+        {
+            vendors = [];
+            Utility.VendorSpawns[ViewService.CurrentMapId] = vendors;
+        }
+
+        // Calculate what was added vs removed compared to original common vendors
+        var vendorsToAdd = currentVendorList.Except(originalBulkVendorList).ToList();
+        var vendorsToRemove = originalBulkVendorList.Except(currentVendorList).ToList();
+
+        if (vendorsToAdd.Count == 0 && vendorsToRemove.Count == 0)
         {
             CloseModal();
             return;
-        }
-
-        if (!Utility.VendorSpawns.TryGetValue(ViewService.CurrentMapId, out var vendors))
-        {
-            vendors = new List<VendorEntity>();
-            Utility.VendorSpawns[ViewService.CurrentMapId] = vendors;
         }
 
         int locationsUpdated = 0;
 
         if (currentSignType == SignTypes.MetalPost)
         {
-            // Add to all hive locations
             var hives = HiveDataUtility.GetHivesForMap(ViewService.CurrentMapId);
             foreach (var hive in hives)
             {
@@ -1342,20 +1404,30 @@
 
                 if (existingEntity != null)
                 {
-                    // Add vendors to existing entity
-                    foreach (var vendor in currentVendorList)
+                    // Remove vendors from all locations
+                    foreach (var vendor in vendorsToRemove)
+                    {
+                        existingEntity.RemoveVendor(vendor);
+                    }
+                    // Add vendors to all locations
+                    foreach (var vendor in vendorsToAdd)
                     {
                         existingEntity.AddVendor(vendor);
                     }
+                    // Remove entity if no vendors left
+                    if (existingEntity.VendorList.Count == 0)
+                    {
+                        vendors.Remove(existingEntity);
+                    }
                 }
-                else
+                else if (vendorsToAdd.Count > 0)
                 {
-                    // Create new entity with the vendors
+                    // Create new entity with the vendors to add
                     var newEntity = new VendorEntity(location)
                     {
                         MapId = ViewService.CurrentMapId
                     };
-                    newEntity.SetVendors(new List<string>(currentVendorList));
+                    newEntity.SetVendors(new List<string>(vendorsToAdd));
                     vendors.Add(newEntity);
                 }
                 locationsUpdated++;
@@ -1363,7 +1435,6 @@
         }
         else
         {
-            // Add to all sign locations of this type
             var signs = SignDataUtility.GetSignsForMap(ViewService.CurrentMapId)
                 .Where(s => s.SignType == currentSignType)
                 .ToList();
@@ -1379,20 +1450,30 @@
 
                 if (existingEntity != null)
                 {
-                    // Add vendors to existing entity
-                    foreach (var vendor in currentVendorList)
+                    // Remove vendors from all locations
+                    foreach (var vendor in vendorsToRemove)
+                    {
+                        existingEntity.RemoveVendor(vendor);
+                    }
+                    // Add vendors to all locations
+                    foreach (var vendor in vendorsToAdd)
                     {
                         existingEntity.AddVendor(vendor);
                     }
+                    // Remove entity if no vendors left
+                    if (existingEntity.VendorList.Count == 0)
+                    {
+                        vendors.Remove(existingEntity);
+                    }
                 }
-                else
+                else if (vendorsToAdd.Count > 0)
                 {
-                    // Create new entity with the vendors
+                    // Create new entity with the vendors to add
                     var newEntity = new VendorEntity(currentSignType, sign.Facing, location)
                     {
                         MapId = ViewService.CurrentMapId
                     };
-                    newEntity.SetVendors(new List<string>(currentVendorList));
+                    newEntity.SetVendors(new List<string>(vendorsToAdd));
                     vendors.Add(newEntity);
                 }
                 locationsUpdated++;
@@ -1402,7 +1483,7 @@
         PathConstants.IsSpawnDataDirty = true;
         Utility.SaveVendorSpawnData();
         var typeName = FormatSignTypeName(currentSignType);
-        Logger.Info($"Bulk added {currentVendorList.Count} vendor(s) to {locationsUpdated} {typeName} locations");
+        Logger.Info($"Bulk updated {locationsUpdated} {typeName} locations: +{vendorsToAdd.Count} added, -{vendorsToRemove.Count} removed");
 
         CloseModal();
         await RenderVendorMarkers();
