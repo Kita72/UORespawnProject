@@ -165,19 +165,16 @@ tools/**
 # Map backups
 *.bmp.backup
 
-# ==================== UORRESPAWN USER DATA ====================
-# These are USER-SPECIFIC working files that should NOT be committed.
-# Each user has their own spawn data in UOR_DATA folder.
+# ==================== UORRESPAWN DATA ====================
+# User-specific data that should NOT be committed (each user has their own)
 
-# Binary spawn data files (.bin) - user's active spawn data
+# Active spawn data - user's working files
 UORespawnApp/Data/UOR_DATA/
 
-# Imported packs folder - user downloads/imports these
-UORespawnApp/Data/PACKS/Imported/
+# User pack folders - ignore contents but track .gitkeep placeholders
+UORespawnApp/Data/PACKS/Imported/*
+UORespawnApp/Data/PACKS/Created/*
 !UORespawnApp/Data/PACKS/Imported/.gitkeep
-
-# Created packs folder - user creates these
-UORespawnApp/Data/PACKS/Created/
 !UORespawnApp/Data/PACKS/Created/.gitkeep
 
 # ==================== UORRESPAWN TRACKED FILES ====================
@@ -186,32 +183,23 @@ UORespawnApp/Data/PACKS/Created/
 # Map images (bundled with app)
 !UORespawnApp/Data/MAPS/Map*.bmp
 
-# Region list (source of truth for region validation)
+# Resources (default reference data when no server linked)
 !UORespawnApp/Resources/Raw/UOR_RegionList.txt
-
-# Spawner list (for XML spawner overlay display)
 !UORespawnApp/Resources/Raw/UOR_SpawnerList.txt
 
-# ==================== SERVER SCRIPTS ====================
-# The SERVER folder contains ServUO scripts that must be tracked for:
-# 1. Repo users - can see/modify the server-side code
-# 2. App distribution - UORespawnSystem.zip is packaged for export
-
-# Track the server scripts ZIP for app distribution (overrides *.zip rule)
+# Server scripts ZIP for export
 !UORespawnApp/Data/SERVER/UORespawnSystem.zip
 
-# ==================== SPAWN PACKS (Approved) ====================
-# The PACKS/Approved folder contains bundled packs (like DefaultPack) that MUST be tracked
-# so users cloning the repo can build and have working spawn data.
+# ==================== SPAWN PACKS (Approved/DefaultPack) ====================
+# The Approved folder contains bundled packs that ship with the app.
+# DefaultPack is tracked so users cloning the repo have working spawn data.
 #
 # Structure:
-#   Approved/DefaultPack/     → Git repo (source files, diffable)
-#   Approved/DefaultPack.zip  → App distribution (for release builds)
+#   Approved/DefaultPack/     -> Folder with .bin files (tracked for Git)
+#   Approved/DefaultPack.zip  -> ZIP for releases (also tracked)
 
-# Track the Approved folder and DefaultPack contents
 !UORespawnApp/Data/PACKS/Approved/
 !UORespawnApp/Data/PACKS/Approved/.gitkeep
 !UORespawnApp/Data/PACKS/Approved/DefaultPack/
 !UORespawnApp/Data/PACKS/Approved/DefaultPack/**
 !UORespawnApp/Data/PACKS/Approved/DefaultPack.zip
-
