@@ -1,6 +1,6 @@
 using Server.Mobiles;
 
-namespace Server.Custom.UORespawnSystem.Mobiles
+namespace Server.Custom.UORespawnServer.Mobiles
 {
     internal class ConfettiEffectNPC : Bird
     {

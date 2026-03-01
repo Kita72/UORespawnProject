@@ -2,7 +2,7 @@ using Server.Items;
 using Server.Mobiles;
 using Server.Targeting;
 
-namespace Server.Custom.UORespawnSystem.Mobiles
+namespace Server.Custom.UORespawnServer.Mobiles
 {
     internal class PlaceHolder : BaseCreature
     {
@@ -11,6 +11,8 @@ namespace Server.Custom.UORespawnSystem.Mobiles
         private Region spawnRegion;
 
         private string tileName;
+
+        public string SpawnName { get; set; }
 
         [Constructable]
         public PlaceHolder() : base(AIType.AI_Melee, FightMode.None, 10, 1, 0.2, 0.4)
@@ -65,6 +67,8 @@ namespace Server.Custom.UORespawnSystem.Mobiles
             {
                 Say($"No Region: {spawnLocation} [{tileName}]");
             }
+
+            if (!string.IsNullOrEmpty(SpawnName)) { from.SendMessage(53, $"{SpawnName}"); }
 
             from.Location = spawnLocation;
 

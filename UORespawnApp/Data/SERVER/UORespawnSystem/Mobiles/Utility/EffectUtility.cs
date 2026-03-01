@@ -1,8 +1,7 @@
 using Server.Mobiles;
 using Server.Targeting;
-using Server.Custom.UORespawnSystem.SpawnHelpers;
 
-namespace Server.Custom.UORespawnSystem.Mobiles
+namespace Server.Custom.UORespawnServer.Mobiles
 {
     internal enum UOREffects
     {
@@ -90,16 +89,9 @@ namespace Server.Custom.UORespawnSystem.Mobiles
 
         internal static UOREffects SetSpawnEffect(Mobile m)
         {
-            if (m.Map == Map.Internal) return UOREffects.None;
+            if (UOR_Utility.IsValidSpawn(m.Serial, out m)) return UOREffects.None;
 
-            string tile = SpawnWaterInfo.TryGetWetName(m.Map, m.Location);
-
-            if (string.IsNullOrEmpty(tile) || tile == "NoName")
-            {
-                tile = SpawnTileInfo.GetTileName(new LandTarget(m.Location, m.Map).TileID);
-            }
-
-            switch (tile)
+            switch (UOR_Utility.GetTileName(m.Map, m.Location))
             {
                 case "water":
                     {

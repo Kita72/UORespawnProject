@@ -1,8 +1,9 @@
+using System;
+
 using Server.Items;
 using System.Collections.Generic;
-using Server.Custom.UORespawnSystem.SpawnWorkers;
 
-namespace Server.Custom.UORespawnSystem.Entities
+namespace Server.Custom.UORespawnServer.Entities
 {
     internal class VendorEntity
     {
@@ -40,11 +41,6 @@ namespace Server.Custom.UORespawnSystem.Entities
             Location = GetInsideLocation(facing, location);
 
             VendorList = new List<string>();
-        }
-
-        public void Spawn(Map map)
-        {
-            VendorSpawner.TryToSpawn(map, this);
         }
 
         public void AddVendor(string name)

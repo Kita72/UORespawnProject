@@ -1,11 +1,11 @@
-namespace Server.Custom.UORespawnSystem.Enums
+namespace Server.Custom.UORespawnServer.Enums
 {
     internal enum WeatherTypes
     {
         None,
         Rain,
-        Snow,
         Storm,
+        Snow,
         Blizzard
     }
 }

@@ -3,9 +3,9 @@ using System;
 using Server.Items;
 using Server.Misc;
 using Server.Mobiles;
-using Server.Custom.UORespawnSystem.Items;
+using Server.Custom.UORespawnServer.Items;
 
-namespace Server.Custom.UORespawnSystem.Mobiles
+namespace Server.Custom.UORespawnServer.Mobiles
 {
     [CorpseName("a rift wisp corpse")]
     internal class RiftMob : BaseCreature

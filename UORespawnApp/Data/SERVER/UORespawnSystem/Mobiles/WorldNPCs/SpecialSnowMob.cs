@@ -1,8 +1,7 @@
 using Server.Mobiles;
 using Server.Items;
-using Server.Custom.UORespawnSystem.SpawnHelpers;
 
-namespace Server.Custom.UORespawnSystem.Mobiles
+namespace Server.Custom.UORespawnServer.Mobiles
 {
     [CorpseName("a frost warden corpse")]
     internal class SpecialSnowMob : BaseCreature
@@ -62,33 +61,10 @@ namespace Server.Custom.UORespawnSystem.Mobiles
                 return;
             }
 
-            // Ensure spawn only in snow-type areas (region name contains "snow" or tile type is snow)
-            bool allowed = false;
+            string tile = UOR_Utility.GetTileName(Map, Location);
 
-            try
-            {
-                var region = Region.Find(Location, Map);
-
-                if (region != null && !string.IsNullOrEmpty(region.Name) && region.Name.ToLower().Contains("snow"))
-                    allowed = true;
-
-                if (!allowed)
-                {
-                    string tile = SpawnWaterInfo.TryGetWetName(Map, Location);
-
-                    if (string.IsNullOrEmpty(tile) || tile == "NoName")
-                        tile = SpawnTileInfo.GetTileName(Map.Tiles.GetLandTile(Location.X, Location.Y).ID);
-
-                    if (!string.IsNullOrEmpty(tile) && tile.ToLower() == "snow")
-                        allowed = true;
-                }
-            }
-            catch
-            {
-                allowed = false;
-            }
-
-            if (!allowed)
+            // Ensure spawn only on snow
+            if (!(!string.IsNullOrEmpty(tile) && tile.ToLower() == "snow"))
             {
                 Delete();
                 return;

@@ -1,18 +1,18 @@
-using Server.Custom.UORespawnSystem.Enums;
+using Server.Custom.UORespawnServer.Enums;
 using System.Collections;
 
-namespace Server.Custom.UORespawnSystem.Interfaces
+namespace Server.Custom.UORespawnServer.Interfaces
 {
     internal interface ISpawnEntity
     {
-        ArrayList WaterSpawnList { get; set; }
-        ArrayList WeatherSpawnList { get; set; }
-        ArrayList TimedSpawnList { get; set; }
-        ArrayList CommonSpawnList { get; set; }
-        ArrayList UnCommonSpawnList { get; set; }
-        ArrayList RareSpawnList { get; set; }
+        ArrayList WaterList { get; set; }
+        ArrayList WeatherList { get; set; }
+        ArrayList TimedList { get; set; }
+        ArrayList CommonList { get; set; }
+        ArrayList UnCommonList { get; set; }
+        ArrayList RareList { get; set; }
 
-        WeatherTypes WeatherSpawn { get; set; }
-        TimeNames TimedSpawn { get; set; }
+        WeatherTypes WeatherType { get; set; }
+        TimeTypes TimedType { get; set; }
     }
 }

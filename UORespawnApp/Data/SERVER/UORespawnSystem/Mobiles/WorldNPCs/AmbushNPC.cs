@@ -2,7 +2,7 @@ using System.Linq;
 using Server.Mobiles;
 using System.Collections.Generic;
 
-namespace Server.Custom.UORespawnSystem.Mobiles
+namespace Server.Custom.UORespawnServer.Mobiles
 {
     internal class AmbushNPC : SkeletalKnight
     {
@@ -160,6 +160,8 @@ namespace Server.Custom.UORespawnSystem.Mobiles
 
         private void Spawn(Mobile member, int i, Mobile victim)
         {
+            UOR_Core.UpdateSpawned(member.Serial, true);
+
             member.OnBeforeSpawn(Location, Map);
 
             Point3D location;
@@ -178,8 +180,6 @@ namespace Server.Custom.UORespawnSystem.Mobiles
             }
 
             member.MoveToWorld(location, Map);
-
-            UORespawnCore.AddSpawnToList(member);
 
             member.Say("ATTACK!");
 

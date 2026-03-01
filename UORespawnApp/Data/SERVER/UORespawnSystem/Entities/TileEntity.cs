@@ -1,30 +1,30 @@
+using System;
 using System.Collections;
 
-using Server.Custom.UORespawnSystem.Enums;
-using Server.Custom.UORespawnSystem.Interfaces;
-using Server.Custom.UORespawnSystem.SpawnUtility;
+using Server.Custom.UORespawnServer.Enums;
+using Server.Custom.UORespawnServer.Interfaces;
 
-namespace Server.Custom.UORespawnSystem.Entities
+namespace Server.Custom.UORespawnServer.Entities
 {
     internal class TileEntity : ISpawnEntity
     {
         public string Name { get; private set; } // Name of Tile
 
-        public WeatherTypes WeatherSpawn { get; set; }
-        public TimeNames TimedSpawn { get; set; }
+        public WeatherTypes WeatherType { get; set; }
+        public TimeTypes TimedType { get; set; }
 
-        public ArrayList WaterSpawnList { get; set; }
-        public ArrayList WeatherSpawnList { get; set; }
-        public ArrayList TimedSpawnList { get; set; }
-        public ArrayList CommonSpawnList { get; set; }
-        public ArrayList UnCommonSpawnList { get; set; }
-        public ArrayList RareSpawnList { get; set; }
+        public ArrayList WaterList { get; set; }
+        public ArrayList WeatherList { get; set; }
+        public ArrayList TimedList { get; set; }
+        public ArrayList CommonList { get; set; }
+        public ArrayList UnCommonList { get; set; }
+        public ArrayList RareList { get; set; }
 
-        public TileEntity(string name, WeatherTypes weather, TimeNames time)
+        public TileEntity(string name, WeatherTypes weather, TimeTypes time)
         {
-            Name = UORespawnUtility.ConvertTileName(name);
-            WeatherSpawn = weather;
-            TimedSpawn = time;
+            Name = name;
+            WeatherType = weather;
+            TimedType = time;
         }
     }
 }

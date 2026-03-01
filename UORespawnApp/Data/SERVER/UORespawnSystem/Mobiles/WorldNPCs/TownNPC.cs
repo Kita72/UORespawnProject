@@ -3,7 +3,7 @@ using System;
 using Server.Items;
 using Server.Mobiles;
 
-namespace Server.Custom.UORespawnSystem.Mobiles
+namespace Server.Custom.UORespawnServer.Mobiles
 {
     internal class TownNPC : BaseCreature
     {

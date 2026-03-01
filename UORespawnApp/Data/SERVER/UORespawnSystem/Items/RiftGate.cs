@@ -2,7 +2,7 @@ using System;
 
 using Server.Items;
 
-namespace Server.Custom.UORespawnSystem.Items
+namespace Server.Custom.UORespawnServer.Items
 {
     internal class RiftGate : Moongate
     {
@@ -56,6 +56,8 @@ namespace Server.Custom.UORespawnSystem.Items
         public override void Deserialize(GenericReader reader)
         {
             base.Deserialize(reader);
+
+            UOR_Core.AddGate();
 
             Delete();
         }

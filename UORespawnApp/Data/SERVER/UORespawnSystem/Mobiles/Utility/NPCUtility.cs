@@ -1,8 +1,7 @@
 using Server.Items;
 using Server.Mobiles;
-using Server.Custom.UORespawnSystem.SpawnHelpers;
 
-namespace Server.Custom.UORespawnSystem.Mobiles
+namespace Server.Custom.UORespawnServer.Mobiles
 {
     internal enum NPCTypes
     {
@@ -20,7 +19,7 @@ namespace Server.Custom.UORespawnSystem.Mobiles
     {
         internal static void CheckNightDress(Mobile m)
         {
-            if (SpawnTimeInfo.IsNight(m))
+            if (UOR_Utility.IsNight(m.Map, m.Location))
             {
                 if (Utility.RandomBool())
                 {
@@ -43,7 +42,7 @@ namespace Server.Custom.UORespawnSystem.Mobiles
         {
             bool canEquip = true;
 
-            if (SpawnTimeInfo.IsNight(bc))
+            if (UOR_Utility.IsNight(bc.Map, bc.Location))
             {
                 if (Utility.RandomBool())
                 {
