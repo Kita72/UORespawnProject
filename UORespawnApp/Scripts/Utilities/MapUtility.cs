@@ -26,22 +26,23 @@ namespace UORespawnApp.Scripts.Utilities
     public static class MapUtility
     {
         /// <summary>
-        /// Gets the friendly name for a map ID
+        /// Gets the friendly name for a map ID.
+        /// Uses MapListUtility for file-based map names (supports custom maps from server).
         /// </summary>
         /// <param name="mapId">The map ID (0-5 for standard maps, 6+ for custom)</param>
-        /// <returns>Friendly name (e.g., "Felucca") or generic "Map X" for custom maps</returns>
+        /// <returns>Friendly name (e.g., "Felucca") or generic "Map X" for unknown maps</returns>
         public static string GetMapName(int mapId)
         {
-            return mapId switch
+            // Use MapListUtility which loads from file (supports custom maps)
+            var name = MapListUtility.GetMapName(mapId);
+
+            // If MapListUtility returns "Unknown", provide a generic name
+            if (name == "Unknown")
             {
-                0 => "Felucca",
-                1 => "Trammel",
-                2 => "Ilshenar",
-                3 => "Malas",
-                4 => "Tokuno",
-                5 => "Ter Mur",
-                _ => $"Map {mapId}" // Custom maps
-            };
+                return $"Map {mapId}";
+            }
+
+            return name;
         }
 
         /// <summary>
@@ -84,7 +85,8 @@ namespace UORespawnApp.Scripts.Utilities
         }
 
         /// <summary>
-        /// Converts map name string to map ID
+        /// Converts map name string to map ID.
+        /// Uses MapListUtility for dynamic lookups (supports custom maps from server).
         /// </summary>
         /// <param name="name">Map name (e.g., "Felucca", "Map0", "3")</param>
         /// <returns>Map ID or 0 if invalid</returns>
@@ -92,29 +94,37 @@ namespace UORespawnApp.Scripts.Utilities
         {
             if (string.IsNullOrWhiteSpace(name))
                 return 0;
-                
+
             // Try parsing as number first
             if (int.TryParse(name, out int id))
                 return id;
-            
-            // Try friendly names
-            return name.ToLower() switch
+
+            // Try "MapX" format
+            if (name.StartsWith("Map", StringComparison.OrdinalIgnoreCase) && 
+                int.TryParse(name.AsSpan(3), out int mapIdFromFormat))
             {
-                "felucca" => 0,
-                "map0" => 0,
-                "trammel" => 1,
-                "map1" => 1,
-                "ilshenar" => 2,
-                "map2" => 2,
-                "malas" => 3,
-                "map3" => 3,
-                "tokuno" => 4,
-                "map4" => 4,
-                "termur" => 5,
-                "ter mur" => 5,
-                "map5" => 5,
-                _ => 0 // Default to Felucca
-            };
+                return mapIdFromFormat;
+            }
+
+            // Search in MapListUtility for matching name
+            var mapList = MapListUtility.MapList;
+            if (mapList != null)
+            {
+                foreach (var entry in mapList)
+                {
+                    if (entry.Value.Equals(name, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return entry.Key;
+                    }
+                    // Also try without spaces (e.g., "TerMur" matches "Ter Mur")
+                    if (entry.Value.Replace(" ", "").Equals(name.Replace(" ", ""), StringComparison.OrdinalIgnoreCase))
+                    {
+                        return entry.Key;
+                    }
+                }
+            }
+
+            return 0; // Default to Felucca
         }
 
         /// <summary>

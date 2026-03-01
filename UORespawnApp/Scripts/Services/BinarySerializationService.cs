@@ -463,6 +463,7 @@ namespace UORespawnApp.Scripts.Services
 
             int mapCount = reader.ReadInt32();
             int totalTiles = 0;
+            int skippedTiles = 0;
 
             for (int m = 0; m < mapCount; m++)
             {
@@ -480,9 +481,25 @@ namespace UORespawnApp.Scripts.Services
                 for (int t = 0; t < tileCount; t++)
                 {
                     var tile = ReadTileSpawnEntity(reader);
-                    value.Add(tile);
-                    totalTiles++;
+
+                    // Only load tiles that exist in the editor's tile list
+                    // This ensures spawn packs only contain tiles the server supports
+                    if (TileListUtility.IsValidTileName(tile.Name))
+                    {
+                        value.Add(tile);
+                        totalTiles++;
+                    }
+                    else
+                    {
+                        skippedTiles++;
+                        Logger.Warning($"Skipped unsupported tile '{tile.Name}' - not in tile list");
+                    }
                 }
+            }
+
+            if (skippedTiles > 0)
+            {
+                Logger.Warning($"Skipped {skippedTiles} tiles not in tile list (server data controls supported tiles)");
             }
 
             return totalTiles;

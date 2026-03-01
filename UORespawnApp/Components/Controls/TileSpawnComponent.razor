@@ -26,13 +26,13 @@
                 </div>
                 <div class="card-body p-2 tile-list-body">
                     <div class="tile-list">
-                        @foreach (TileNames tile in Enum.GetValues<TileNames>())
+                        @foreach (var tileName in TileListUtility.GetTileList())
                         {
-                            var tileName = GetTileDisplayName(tile);
-                            var totalSpawns = GetTileEntityTotalSpawnCount(tile);
-                            <div class="tile-item @(selectedTile == tile ? "selected" : "")" 
-                                 @onclick="() => SelectTile(tile)">
-                                <span class="tile-name">@tileName</span>
+                            var displayName = GetTileDisplayName(tileName);
+                            var totalSpawns = GetTileEntityTotalSpawnCount(tileName);
+                            <div class="tile-item @(selectedTile == tileName ? "selected" : "")" 
+                                 @onclick="() => SelectTile(tileName)">
+                                <span class="tile-name">@displayName</span>
                                 @if (totalSpawns > 0)
                                 {
                                     <span class="badge bg-primary">@totalSpawns</span>
@@ -49,10 +49,10 @@
             @if (selectedTile != null)
             {
                 <div class="card map-card mb-3">
-                    <div class="card-header text-center d-flex justify-content-between align-items-center">
-                        <div style="width: 40px;"></div>
-                        <strong>@GetTileDisplayName(selectedTile.Value)</strong>
-                        @if (currentEntity.GetTotalSpawnCount() > 0)
+                        <div class="card-header text-center d-flex justify-content-between align-items-center">
+                            <div style="width: 40px;"></div>
+                            <strong>@GetTileDisplayName(selectedTile)</strong>
+                            @if (currentEntity.GetTotalSpawnCount() > 0)
                         {
                             <button class="btn btn-warning" style="padding: 2px 6px; font-size: 0.7rem;" @onclick="() => ClearTileSpawns()" title="Clear All Spawns for this Tile">
                                 <span class="bi bi-arrow-clockwise"></span>
@@ -199,7 +199,7 @@
                     OnSave="@SaveModal" />
 
 @code {
-    private TileNames? selectedTile = null;
+    private string? selectedTile = null;
     private TileSpawnEntity currentEntity = new();
     private bool showModal = false;
     private Frequency currentFrequency = Frequency.Common;
@@ -214,33 +214,54 @@
         // Restore last selected tile from session, or auto-select first tile on initial visit
         if (Utility.SESSION != null)
         {
-            if (Utility.SESSION.HasVisitedTileSpawnPage && Utility.SESSION.LastSelectedTile.HasValue)
+            if (Utility.SESSION.HasVisitedTileSpawnPage && !string.IsNullOrEmpty(Utility.SESSION.LastSelectedTile))
             {
-                // Restore previous selection
-                selectedTile = Utility.SESSION.LastSelectedTile.Value;
-                SelectTile(selectedTile.Value);
-                Logger.Info($"Restored tile selection from session: {selectedTile}");
+                // Restore previous selection (only if tile still exists in list)
+                var lastTile = Utility.SESSION.LastSelectedTile;
+                if (TileListUtility.IsValidTileName(lastTile))
+                {
+                    selectedTile = lastTile;
+                    SelectTile(lastTile);
+                    Logger.Info($"Restored tile selection from session: {selectedTile}");
+                }
+                else
+                {
+                    // Tile no longer exists in list, select first available
+                    SelectFirstTile();
+                }
             }
             else
             {
                 // First visit - auto-select first tile
-                var firstTile = Enum.GetValues<TileNames>().FirstOrDefault();
-                selectedTile = firstTile;
-                SelectTile(firstTile);
-                Utility.SESSION.LastSelectedTile = firstTile;
-                Logger.Info($"First visit - auto-selected first tile: {firstTile}");
+                SelectFirstTile();
             }
         }
     }
 
-    private void SelectTile(TileNames tile)
+    private void SelectFirstTile()
     {
-        selectedTile = tile;
+        var tileList = TileListUtility.GetTileList();
+        if (tileList.Count > 0)
+        {
+            var firstTile = tileList[0];
+            selectedTile = firstTile;
+            SelectTile(firstTile);
+            if (Utility.SESSION != null)
+            {
+                Utility.SESSION.LastSelectedTile = firstTile;
+            }
+            Logger.Info($"Auto-selected first tile: {firstTile}");
+        }
+    }
+
+    private void SelectTile(string tileName)
+    {
+        selectedTile = tileName;
 
         // Save selection to session for persistence during runtime
         if (Utility.SESSION != null)
         {
-            Utility.SESSION.LastSelectedTile = tile;
+            Utility.SESSION.LastSelectedTile = tileName;
         }
 
         // Find or create TileSpawnEntity for this tile on current map
@@ -254,7 +275,7 @@
                 Utility.TileSpawns[currentMapId] = tileList;
             }
 
-            var existing = tileList.FirstOrDefault(t => t.Name.Equals(tile.ToString(), StringComparison.OrdinalIgnoreCase));
+            var existing = tileList.FirstOrDefault(t => t.Name.Equals(tileName, StringComparison.OrdinalIgnoreCase));
 
             if (existing != null)
             {
@@ -267,23 +288,25 @@
                 currentEntity = new TileSpawnEntity
                 {
                     Id = nextId,
-                    Name = tile.ToString().ToLowerInvariant(),
+                    Name = tileName.ToLowerInvariant(),
                     MapId = currentMapId
                 };
                 tileList.Add(currentEntity);
-                Logger.Info($"Created new TileSpawnEntity for {tile} on map {currentMapId}");
+                Logger.Info($"Created new TileSpawnEntity for {tileName} on map {currentMapId}");
             }
         }
 
         StateHasChanged();
     }
 
-    private string GetTileDisplayName(TileNames tile)
+    private string GetTileDisplayName(string? tileName)
     {
-        return tile.ToString().Replace('_', ' ').ToTitleCase();
+        if (string.IsNullOrEmpty(tileName))
+            return "Unknown";
+        return tileName.Replace('_', ' ').ToTitleCase();
     }
 
-    private int GetTileEntityTotalSpawnCount(TileNames tile)
+    private int GetTileEntityTotalSpawnCount(string tileName)
     {
         if (Utility.SESSION == null) return 0;
 
@@ -292,7 +315,7 @@
         if (!Utility.TileSpawns.TryGetValue(currentMapId, out var tileList))
             return 0;
 
-        var entity = tileList.FirstOrDefault(t => t.Name.Equals(tile.ToString(), StringComparison.OrdinalIgnoreCase));
+        var entity = tileList.FirstOrDefault(t => t.Name.Equals(tileName, StringComparison.OrdinalIgnoreCase));
         return entity?.GetTotalSpawnCount() ?? 0;
     }
 
@@ -433,7 +456,7 @@
         // Show success message
         if (selectedTile != null)
         {
-            ToastService.ShowSuccess($"Cleared all spawns for {GetTileDisplayName(selectedTile.Value)}");
+            ToastService.ShowSuccess($"Cleared all spawns for {GetTileDisplayName(selectedTile)}");
 
             Logger.Info($"Cleared all spawns for tile: {selectedTile}");
         }

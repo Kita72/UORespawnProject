@@ -159,9 +159,9 @@
 
     private List<int> GetAvailableMaps()
     {
-        // For now, return standard maps 0-5
-        // Could be extended to use MapUtility.GetAvailableMaps() for dynamic discovery
-        return new List<int> { 0, 1, 2, 3, 4, 5 };
+        // Use MapListUtility for dynamic map list from server
+        // Supports custom maps (6+) when server provides them
+        return MapListUtility.GetMapIds().ToList();
     }
 
     private async Task SaveAll()

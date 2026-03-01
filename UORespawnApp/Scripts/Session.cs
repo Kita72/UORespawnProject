@@ -22,10 +22,11 @@ namespace UORespawnApp
         // ==================== UI STATE (In-Memory Only) ====================
 
         /// <summary>
-        /// Last selected tile in Tile Spawn page (null = not yet visited)
+        /// Last selected tile name in Tile Spawn page (null = not yet visited)
+        /// Uses string to match file-based tile list from UOR_TileList.txt
         /// Persists during session to maintain user's position
         /// </summary>
-        public TileNames? LastSelectedTile { get; set; } = null;
+        public string? LastSelectedTile { get; set; } = null;
 
         /// <summary>
         /// Check if Tile Spawn page has been visited in this session

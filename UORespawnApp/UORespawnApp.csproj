@@ -90,6 +90,8 @@
 	  <MauiAsset Remove="Resources\Raw\UOR_VendorList.txt" />
 	  <MauiAsset Remove="Resources\Raw\UOR_SignData.txt" />
 	  <MauiAsset Remove="Resources\Raw\UOR_HiveData.txt" />
+	  <MauiAsset Remove="Resources\Raw\UOR_MapList.txt" />
+	  <MauiAsset Remove="Resources\Raw\UOR_TileList.txt" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -100,6 +102,8 @@
 	  <None Remove="Resources\Raw\UOR_VendorList.txt" />
 	  <None Remove="Resources\Raw\UOR_SignData.txt" />
 	  <None Remove="Resources\Raw\UOR_HiveData.txt" />
+	  <None Remove="Resources\Raw\UOR_MapList.txt" />
+	  <None Remove="Resources\Raw\UOR_TileList.txt" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -123,6 +127,12 @@
 		<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	  </Content>
 	  <Content Include="Resources\Raw\UOR_HiveData.txt">
+		<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </Content>
+	  <Content Include="Resources\Raw\UOR_MapList.txt">
+		<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </Content>
+	  <Content Include="Resources\Raw\UOR_TileList.txt">
 		<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	  </Content>
 	</ItemGroup>

@@ -117,6 +117,14 @@ namespace UORespawnApp
                 {
                     await ReloadHiveData().ConfigureAwait(false);
                 }
+                else if (PathConstants.IsMapListFile(e.Name))
+                {
+                    await ReloadMapList().ConfigureAwait(false);
+                }
+                else if (PathConstants.IsTileListFile(e.Name))
+                {
+                    await ReloadTileList().ConfigureAwait(false);
+                }
 
                 _onDataChanged?.Invoke();
             }
@@ -290,6 +298,74 @@ namespace UORespawnApp
             catch (Exception ex)
             {
                 Logger.Error("Error reloading hive data", ex);
+            }
+        }
+
+        private static async Task ReloadMapList()
+        {
+            try
+            {
+                // Copy server map list file from OUTPUT folder to Resources/Raw
+                var serverMapListPath = PathConstants.GetServerOutputFilePath(PathConstants.MAP_LIST_FILENAME);
+                var localMapListPath = PathConstants.GetMapListFilePath();
+
+                if (!string.IsNullOrEmpty(serverMapListPath) && File.Exists(serverMapListPath))
+                {
+                    // Ensure Resources/Raw directory exists
+                    var rawDir = Path.GetDirectoryName(localMapListPath);
+                    if (!string.IsNullOrEmpty(rawDir) && !Directory.Exists(rawDir))
+                    {
+                        Directory.CreateDirectory(rawDir);
+                    }
+
+                    File.Copy(serverMapListPath, localMapListPath, overwrite: true);
+                    Logger.Info($"Copied map list from server OUTPUT to: {localMapListPath}");
+                }
+
+                // Clear existing list to force reload with server-generated data
+                MapListUtility.ClearMapList();
+
+                await MapListUtility.LoadMapList();
+
+                Logger.Info($"Map list reloaded from server ({MapListUtility.GetMapCount()} maps)");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error reloading map list", ex);
+            }
+        }
+
+        private static async Task ReloadTileList()
+        {
+            try
+            {
+                // Copy server tile list file from OUTPUT folder to Resources/Raw
+                var serverTileListPath = PathConstants.GetServerOutputFilePath(PathConstants.TILE_LIST_FILENAME);
+                var localTileListPath = PathConstants.GetTileListFilePath();
+
+                if (!string.IsNullOrEmpty(serverTileListPath) && File.Exists(serverTileListPath))
+                {
+                    // Ensure Resources/Raw directory exists
+                    var rawDir = Path.GetDirectoryName(localTileListPath);
+                    if (!string.IsNullOrEmpty(rawDir) && !Directory.Exists(rawDir))
+                    {
+                        Directory.CreateDirectory(rawDir);
+                    }
+
+                    File.Copy(serverTileListPath, localTileListPath, overwrite: true);
+                    Logger.Info($"Copied tile list from server OUTPUT to: {localTileListPath}");
+                }
+
+                // Clear existing list to force reload with server-generated data
+                TileListUtility.ClearTileList();
+
+                await TileListUtility.LoadTileList();
+
+                Logger.Info($"Tile list reloaded from server ({TileListUtility.GetTileList().Count} tile types)");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error reloading tile list", ex);
             }
         }
 

@@ -27,7 +27,7 @@ namespace UORespawnApp.Scripts.Constants
 
         /// <summary>
         /// UORespawn data subfolder (contains binary and text files)
-        /// Editor: Data/UOR_DATA/
+        /// Editor: Data/UORespawn/
         /// Server: ServUO/Data/UORespawn/
         /// </summary>
         public const string UOR_DATA_SUBFOLDER = "UORespawn";
@@ -134,7 +134,22 @@ namespace UORespawnApp.Scripts.Constants
 
         // ==================== TEXT FILE NAMES (.txt) ====================
         // Server generates these files, editor copies and reads them
-        
+
+        /// <summary>
+        /// Map list text file (server-generated)
+        /// Format: (MapId, MapName)
+        /// Contains: List of all available maps including custom maps (6+)
+        /// Server validates and provides accurate map IDs
+        /// </summary>
+        public const string MAP_LIST_FILENAME = "UOR_MapList.txt";
+
+        /// <summary>
+        /// Tile list text file (server-generated)
+        /// Format: One tile name per line
+        /// Contains: List of all valid tile/land type names for tile spawning
+        /// </summary>
+        public const string TILE_LIST_FILENAME = "UOR_TileList.txt";
+
         /// <summary>
         /// Bestiary list text file (server-generated)
         /// Contains: List of all valid creature class names
@@ -582,6 +597,22 @@ namespace UORespawnApp.Scripts.Constants
         }
 
         /// <summary>
+        /// Check if a filename is a map list file
+        /// </summary>
+        public static bool IsMapListFile(string fileName)
+        {
+            return fileName.Equals(MAP_LIST_FILENAME, StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// Check if a filename is a tile list file
+        /// </summary>
+        public static bool IsTileListFile(string fileName)
+        {
+            return fileName.Equals(TILE_LIST_FILENAME, StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
         /// Get the full path to the bestiary file in Resources/Raw
         /// </summary>
         public static string GetBestiaryFilePath()
@@ -619,6 +650,22 @@ namespace UORespawnApp.Scripts.Constants
         public static string GetHiveDataFilePath()
         {
             return Path.Combine(ResourcesRawPath, HIVE_DATA_FILENAME);
+        }
+
+        /// <summary>
+        /// Get the full path to the map list file in Resources/Raw
+        /// </summary>
+        public static string GetMapListFilePath()
+        {
+            return Path.Combine(ResourcesRawPath, MAP_LIST_FILENAME);
+        }
+
+        /// <summary>
+        /// Get the full path to the tile list file in Resources/Raw
+        /// </summary>
+        public static string GetTileListFilePath()
+        {
+            return Path.Combine(ResourcesRawPath, TILE_LIST_FILENAME);
         }
 
         /// <summary>

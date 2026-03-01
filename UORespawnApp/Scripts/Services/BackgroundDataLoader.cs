@@ -13,6 +13,8 @@ namespace UORespawnApp.Scripts.Services
         private bool _isComplete = false;
 
         // Loading state flags
+        public bool IsMapListLoaded { get; private set; }
+        public bool IsTileListLoaded { get; private set; }
         public bool IsBestiaryLoaded { get; private set; }
         public bool IsVendorListLoaded { get; private set; }
         public bool IsSignDataLoaded { get; private set; }
@@ -30,11 +32,13 @@ namespace UORespawnApp.Scripts.Services
         public bool IsComplete => _isComplete;
 
         // Progress tracking
-        public const int TotalSteps = 13;
+        public const int TotalSteps = 15;
         public int CompletedSteps { get; private set; }
         public double ProgressPercentage => (double)CompletedSteps / TotalSteps * 100;
 
         // Events for components to subscribe to
+        public event EventHandler? MapListLoaded;
+        public event EventHandler? TileListLoaded;
         public event EventHandler? BestiaryLoaded;
         public event EventHandler? VendorListLoaded;
         public event EventHandler? BoxSpawnDataLoaded;
@@ -231,7 +235,17 @@ namespace UORespawnApp.Scripts.Services
                 // Step 0: Load Settings (FIRST - other systems may depend on settings)
                 await LoadSettingsAsync();
 
-                // Step 0.5: Ensure approved packs are unpacked from Backup folder
+                // Step 0.5: Sync server OUTPUT data to Resources/Raw if linked
+                // This MUST happen BEFORE loading map/tile lists and other server-generated data
+                await SyncServerOutputDataAsync();
+
+                // Step 1: Load Map List (needed for map name lookups)
+                await LoadMapListAsync();
+
+                // Step 2: Load Tile List (needed for tile spawn page)
+                await LoadTileListAsync();
+
+                // Step 2.5: Ensure approved packs are unpacked from Backup folder
                 // This MUST happen BEFORE InitializeActivePackPath so the pack exists in Approved
                 await BackgroundDataLoader.EnsureApprovedPacksUnpackedAsync();
 
@@ -239,40 +253,40 @@ namespace UORespawnApp.Scripts.Services
                 // Now the pack will exist in Approved (either from Backup ZIP or folder)
                 BackgroundDataLoader.InitializeActivePackPath();
 
-                // Step 1: Load Box Spawn Data (Binary)
+                // Step 3: Load Box Spawn Data (Binary)
                 await LoadBoxSpawnDataAsync();
 
-                // Step 2: Load Tile Spawn Data (Binary)
+                // Step 4: Load Tile Spawn Data (Binary)
                 await LoadTileSpawnDataAsync();
 
-                // Step 3: Load Region Spawn Data (Binary)
+                // Step 5: Load Region Spawn Data (Binary)
                 await LoadRegionSpawnDataAsync();
 
-                // Step 4: Load Vendor Spawn Data (Binary)
+                // Step 6: Load Vendor Spawn Data (Binary)
                 await LoadVendorSpawnDataAsync();
 
-                // Step 5: Load Bestiary (creature list from server-generated text file)
+                // Step 7: Load Bestiary (creature list from server-generated text file)
                 await LoadBestiaryAsync();
 
-                // Step 6: Load Vendor List (vendor names from server-generated text file)
+                // Step 8: Load Vendor List (vendor names from server-generated text file)
                 await LoadVendorListAsync();
 
-                // Step 7: Load Sign Data (shop sign locations for vendor spawning)
+                // Step 9: Load Sign Data (shop sign locations for vendor spawning)
                 await LoadSignDataAsync();
 
-                // Step 8: Load Hive Data (bee hive locations for beekeeper spawning)
+                // Step 10: Load Hive Data (bee hive locations for beekeeper spawning)
                 await LoadHiveDataAsync();
 
-                // Step 9: Load XML Spawner List
+                // Step 11: Load XML Spawner List
                 await LoadXMLSpawnerListAsync();
 
-                // Step 10: Sync spawn packs with server data (remove invalid creatures, regions, locations)
+                // Step 12: Sync spawn packs with server data (remove invalid creatures, regions, locations)
                 await SyncSpawnPacksWithServerDataAsync();
 
-                // Step 11: Verify Map Files exist in Data/MAPS
+                // Step 13: Verify Map Files exist in Data/MAPS
                 await CopyMapFilesAsync();
 
-                // Step 12: Start DataWatcher (LAST - after all data is loaded)
+                // Step 14: Start DataWatcher (LAST - after all data is loaded)
                 await StartDataWatcherAsync();
 
                 _isComplete = true;
@@ -318,6 +332,116 @@ namespace UORespawnApp.Scripts.Services
             catch (Exception ex)
             {
                 Logger.Error("[Startup] Error unpacking approved packs", ex);
+            }
+        }
+
+        /// <summary>
+        /// Syncs all server OUTPUT data files to Resources/Raw if server is linked.
+        /// This ensures we always load the latest server-generated data on startup.
+        /// Files synced: MapList, TileList, BestiaryList, VendorList, RegionList, SpawnerList, SignData, HiveData
+        /// </summary>
+        private static async Task SyncServerOutputDataAsync()
+        {
+            try
+            {
+                var serverOutputPath = PathConstants.ServerOutputPath;
+                if (string.IsNullOrEmpty(serverOutputPath))
+                {
+                    Logger.Info("[ServerSync] No server linked - using bundled data files");
+                    return;
+                }
+
+                Logger.Info("[ServerSync] Server linked - syncing OUTPUT data to Resources/Raw...");
+
+                // All server OUTPUT files that need to be synced
+                string[] outputFiles = [
+                    PathConstants.MAP_LIST_FILENAME,
+                    PathConstants.TILE_LIST_FILENAME,
+                    PathConstants.BESTIARY_FILENAME,
+                    PathConstants.VENDOR_LIST_FILENAME,
+                    PathConstants.REGION_LIST_FILENAME,
+                    PathConstants.SPAWNER_LIST_FILENAME,
+                    PathConstants.SIGN_DATA_FILENAME,
+                    PathConstants.HIVE_DATA_FILENAME
+                ];
+
+                var rawDir = PathConstants.ResourcesRawPath;
+                if (!Directory.Exists(rawDir))
+                {
+                    Directory.CreateDirectory(rawDir);
+                }
+
+                int syncedCount = 0;
+                await Task.Run(() =>
+                {
+                    foreach (var fileName in outputFiles)
+                    {
+                        var serverFilePath = Path.Combine(serverOutputPath, fileName);
+                        if (File.Exists(serverFilePath))
+                        {
+                            var localFilePath = Path.Combine(rawDir, fileName);
+                            File.Copy(serverFilePath, localFilePath, overwrite: true);
+                            syncedCount++;
+                        }
+                    }
+                });
+
+                Logger.Info($"[ServerSync] Synced {syncedCount} OUTPUT files from server");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("[ServerSync] Error syncing server OUTPUT data", ex);
+            }
+        }
+
+        /// <summary>
+        /// Loads the map list from file (Resources/Raw/UOR_MapList.txt).
+        /// This provides map IDs and names including custom maps from server.
+        /// </summary>
+        private async Task LoadMapListAsync()
+        {
+            Logger.Info("[Startup] Loading map list...");
+
+            try
+            {
+                await MapListUtility.LoadMapList();
+
+                IsMapListLoaded = true;
+                CompletedSteps++;
+                MapListLoaded?.Invoke(this, EventArgs.Empty);
+
+                var mapCount = MapListUtility.GetMapCount();
+                var hasCustomMaps = MapListUtility.HasCustomMaps();
+
+                Logger.Info($"[Startup] Loaded {mapCount} maps (custom maps: {hasCustomMaps})");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("[Startup] LoadMapList failed", ex);
+            }
+        }
+
+        /// <summary>
+        /// Loads the tile list from file (Resources/Raw/UOR_TileList.txt).
+        /// This provides valid tile type names for tile spawning.
+        /// </summary>
+        private async Task LoadTileListAsync()
+        {
+            Logger.Info("[Startup] Loading tile list...");
+
+            try
+            {
+                await TileListUtility.LoadTileList();
+
+                IsTileListLoaded = true;
+                CompletedSteps++;
+                TileListLoaded?.Invoke(this, EventArgs.Empty);
+
+                Logger.Info($"[Startup] Loaded {TileListUtility.GetTileList().Count} tile types");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("[Startup] LoadTileList failed", ex);
             }
         }
 
