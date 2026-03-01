@@ -277,6 +277,144 @@
                             </div>
                         </div>
                     </div>
+
+                    <hr class="my-4" />
+
+                    <!-- Additional Spawn Toggles (Server 2.0.0.7+) -->
+                    <h6 class="mb-3 text-center">
+                        <span class="text-primary" style="font-size: 1.25rem; font-weight: normal;">
+                            <span class="bi bi-toggles me-2"></span>Additional Toggles
+                        </span>
+                        <InfoIcon Text="Additional spawn behavior controls" />
+                    </h6>
+
+                    <div class="row justify-content-center">
+                        <div class="col-md-4 text-center">
+                            <div class="form-check form-switch d-inline-block text-start mb-3">
+                                <input class="form-check-input" type="checkbox" @bind="Settings.EnableTownSpawn" id="townSpawn">
+                                <label class="form-check-label" for="townSpawn">
+                                    Town Spawn
+                                    <InfoIcon Text="Allow spawns in town regions" />
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <div class="form-check form-switch d-inline-block text-start mb-3">
+                                <input class="form-check-input" type="checkbox" @bind="Settings.EnableGraveSpawn" id="graveSpawn">
+                                <label class="form-check-label" for="graveSpawn">
+                                    Grave Spawn
+                                    <InfoIcon Text="Enable grave spawn effects" />
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <div class="form-check form-switch d-inline-block text-start mb-3">
+                                <input class="form-check-input" type="checkbox" @bind="Settings.EnableSpawnEffects" id="spawnEffects">
+                                <label class="form-check-label" for="spawnEffects">
+                                    Spawn Effects
+                                    <InfoIcon Text="Show visual spawn effects" />
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="my-4" />
+
+                    <!-- Advanced Settings Section (Collapsible) -->
+                    <div class="d-flex align-items-center justify-content-center gap-2 mb-3" style="cursor: pointer;" @onclick="ToggleAdvancedSettings">
+                        <span class="bi bi-gear-wide-connected text-info"></span>
+                        <strong class="text-info">Advanced Server Settings</strong>
+                        <span class="bi @(showAdvancedSettings ? "bi-chevron-up" : "bi-chevron-down") text-info small"></span>
+                    </div>
+
+                    @if (showAdvancedSettings)
+                    {
+                        <div class="card bg-dark text-light mb-3">
+                            <div class="card-body">
+                                <!-- Scale Modifier -->
+                                <div class="row justify-content-center mb-3">
+                                    <div class="col-md-6 text-center">
+                                        <label class="form-label">
+                                            Scale Modifier
+                                            <InfoIcon Text="Multiplier for spawn limits when Scale Spawn is enabled (0.1-3.0)" />
+                                        </label>
+                                        <input type="number" class="form-control text-center" @bind="Settings.ScaleMod" min="0.1" max="3.0" step="0.1" />
+                                    </div>
+                                </div>
+
+                                <hr class="my-3" />
+
+                                <!-- System Intervals -->
+                                <h6 class="mb-3 text-center text-info">
+                                    <span class="bi bi-clock me-2"></span>System Intervals
+                                </h6>
+                                <div class="row justify-content-center">
+                                    <div class="col-md-3 mb-3 text-center">
+                                        <label class="form-label small">Search (ms)</label>
+                                        <input type="number" class="form-control form-control-sm text-center" @bind="Settings.SearchInterval" min="50" max="2000" />
+                                    </div>
+                                    <div class="col-md-3 mb-3 text-center">
+                                        <label class="form-label small">Process (ms)</label>
+                                        <input type="number" class="form-control form-control-sm text-center" @bind="Settings.ProcessInterval" min="50" max="2000" />
+                                    </div>
+                                    <div class="col-md-3 mb-3 text-center">
+                                        <label class="form-label small">Validate (sec)</label>
+                                        <input type="number" class="form-control form-control-sm text-center" @bind="Settings.ValidateInterval" min="1" max="60" />
+                                    </div>
+                                    <div class="col-md-3 mb-3 text-center">
+                                        <label class="form-label small">Timed (min)</label>
+                                        <input type="number" class="form-control form-control-sm text-center" @bind="Settings.TimedInterval" min="1" max="60" />
+                                    </div>
+                                </div>
+
+                                <hr class="my-3" />
+
+                                <!-- System Limits -->
+                                <h6 class="mb-3 text-center text-info">
+                                    <span class="bi bi-speedometer2 me-2"></span>System Limits
+                                </h6>
+                                <div class="row justify-content-center">
+                                    <div class="col-md-4 mb-3 text-center">
+                                        <label class="form-label small">
+                                            Max Recycle/Type
+                                            <InfoIcon Text="Max mobs cached per creature type" />
+                                        </label>
+                                        <input type="number" class="form-control form-control-sm text-center" @bind="Settings.MaxRecycleType" min="1" max="100" />
+                                    </div>
+                                    <div class="col-md-4 mb-3 text-center">
+                                        <label class="form-label small">
+                                            Max Recycle Total
+                                            <InfoIcon Text="Max total mobs in recycle pool" />
+                                        </label>
+                                        <input type="number" class="form-control form-control-sm text-center" @bind="Settings.MaxRecycleTotal" min="1" max="100000" />
+                                    </div>
+                                    <div class="col-md-4 mb-3 text-center">
+                                        <label class="form-label small">
+                                            Max Spawn Checks
+                                            <InfoIcon Text="Max attempts to find valid spawn point" />
+                                        </label>
+                                        <input type="number" class="form-control form-control-sm text-center" @bind="Settings.MaxSpawnChecks" min="1" max="10" />
+                                    </div>
+                                </div>
+                                <div class="row justify-content-center">
+                                    <div class="col-md-4 mb-3 text-center">
+                                        <label class="form-label small">
+                                            Max Queue Size
+                                            <InfoIcon Text="Max spawn locations queued per player" />
+                                        </label>
+                                        <input type="number" class="form-control form-control-sm text-center" @bind="Settings.MaxQueueSize" min="1" max="10" />
+                                    </div>
+                                    <div class="col-md-4 mb-3 text-center">
+                                        <label class="form-label small">
+                                            Max Stat Size
+                                            <InfoIcon Text="Max statistics entries tracked" />
+                                        </label>
+                                        <input type="number" class="form-control form-control-sm text-center" @bind="Settings.MaxStatSize" min="100" max="10000" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
                 </div>
             </div>
 
@@ -796,6 +934,12 @@ private bool showCompleteResetModal = false;
 private bool cleanServerOnReset = false;
 private bool showBestiaryFavorites = false;
 private bool showVendorFavorites = false;
+private bool showAdvancedSettings = false;
+
+    private void ToggleAdvancedSettings()
+    {
+        showAdvancedSettings = !showAdvancedSettings;
+    }
 
     protected override async Task OnInitializedAsync()
     {

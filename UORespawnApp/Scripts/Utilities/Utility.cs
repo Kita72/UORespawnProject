@@ -7,11 +7,11 @@ namespace UORespawnApp.Scripts.Utilities
 
     /// <summary>
     /// Core utility class for UORespawn v2.0
-    /// Manages spawn data (Box, Tile, Region) and settings with binary serialization
+    /// Manages spawn data (Box, Tile, Region) and settings with CSV/binary serialization
     /// </summary>
     public static class Utility
     {
-        internal const string Version = "2.0.0.6";
+        internal const string Version = "2.0.0.7";
 
         /// <summary>
         /// Current session (map, view state, etc.)

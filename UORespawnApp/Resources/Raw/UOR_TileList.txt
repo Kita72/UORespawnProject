@@ -1,0 +1,27 @@
+
+acid
+brick
+cave
+cobblestones
+dirt
+embank
+flagstone
+forest
+furrows
+grass
+jungle
+lava
+leaves
+marble
+Obsidian
+planks
+rock
+sand
+sand stone
+snow
+stone
+stone moss
+tile
+tree
+water
+wooden floor

@@ -102,10 +102,11 @@ namespace UORespawnApp.Scripts.Constants
         // Uses BinaryReader/BinaryWriter (ServUO-style) for .NET 10 compatibility
 
         /// <summary>
-        /// Spawn settings binary file 
+        /// Spawn settings CSV file 
         /// Contains: chances, ranges, mob limits, debug flags
+        /// Format: SettingName,Value (human-readable, server 2.0.0.7+)
         /// </summary>
-        public const string SETTINGS_FILENAME = "UOR_SpawnSettings.bin";
+        public const string SETTINGS_FILENAME = "UOR_SpawnSettings.csv";
 
         /// <summary>
         /// Box spawn binary file 

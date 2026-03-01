@@ -7,18 +7,19 @@ using UORespawnApp.Scripts.Utilities;
 namespace UORespawnApp.Scripts.Services
 {
     /// <summary>
-    /// Service for binary serialization of UORespawn v2.0 data files
-    /// Uses BinaryReader/BinaryWriter (ServUO-style) for .NET 10 compatibility
-    /// Generates files compatible with server-side UORespawnDataBase loader
+    /// Service for binary serialization of UORespawn v2.0 data files.
+    /// Uses BinaryReader/BinaryWriter (ServUO-style) for .NET 10 compatibility.
+    /// Generates files compatible with server-side UOR_SpawnManager loader.
+    /// 
+    /// Note: Settings now use CSV format (via CsvSettingsService) for server 2.0.0.7+
     /// </summary>
     public static class BinarySerializationService
     {
-        // Current file format versions
-            private const int SETTINGS_VERSION = 3; // v3: Added EnableVendorNight, EnableVendorExtra
-            private const int BOX_SPAWN_VERSION = 1;
-            private const int TILE_SPAWN_VERSION = 1;
-            private const int REGION_SPAWN_VERSION = 1;
-            private const int VENDOR_SPAWN_VERSION = 1; 
+        // Current file format versions (binary spawn data files)
+        private const int BOX_SPAWN_VERSION = 1;
+        private const int TILE_SPAWN_VERSION = 1;
+        private const int REGION_SPAWN_VERSION = 1;
+        private const int VENDOR_SPAWN_VERSION = 1; 
 
         #region Active Pack Sync Helper
 
@@ -67,10 +68,11 @@ namespace UORespawnApp.Scripts.Services
 
         #endregion
 
-        #region Settings Save/Load
+        #region Settings Save/Load (CSV Format - Server 2.0.0.7+)
 
         /// <summary>
-        /// Save settings to binary file using BinaryWriter
+        /// Save settings to CSV file (UOR_SpawnSettings.csv) using CsvSettingsService.
+        /// Server 2.0.0.7+ uses CSV format for human-readable settings.
         /// </summary>
         public static void SaveSettings()
         {
@@ -78,7 +80,7 @@ namespace UORespawnApp.Scripts.Services
             {
                 var localPath = PathConstants.GetLocalFilePath(PathConstants.SETTINGS_FILENAME);
 
-                WriteSettings(localPath);
+                CsvSettingsService.WriteSettings(localPath);
 
                 Logger.Info($"Settings saved to: {localPath}");
 
@@ -91,7 +93,7 @@ namespace UORespawnApp.Scripts.Services
 
                     if (serverFilePath != null)
                     {
-                        WriteSettings(serverFilePath);
+                        CsvSettingsService.WriteSettings(serverFilePath);
 
                         Logger.Info($"Settings synced to server INPUT: {serverFilePath}");
                     }
@@ -106,38 +108,9 @@ namespace UORespawnApp.Scripts.Services
             }
         }
 
-        private static void WriteSettings(string filePath)
-        {
-            using var writer = new BinaryWriter(File.Open(filePath, FileMode.Create));
-
-            writer.Write(SETTINGS_VERSION);
-            writer.Write(Utility.Version);
-
-            // Basic spawn limits
-            writer.Write(Settings.MaxMobs);
-            writer.Write(Settings.MinRange);
-            writer.Write(Settings.MaxRange);
-            writer.Write(Settings.MaxCrowd);
-
-            // Spawn chances (doubles)
-            writer.Write(Settings.WaterChance);
-            writer.Write(Settings.WeatherChance);
-            writer.Write(Settings.TimedChance);
-            writer.Write(Settings.CommonChance);
-            writer.Write(Settings.UnCommonChance);
-            writer.Write(Settings.RareChance);
-
-            // Feature flags
-            writer.Write(Settings.IsScaleSpawn);
-            writer.Write(Settings.EnableRiftSpawn);
-            writer.Write(Settings.EnableDebugSpawn);
-            writer.Write(Settings.EnableVendorSpawn);
-            writer.Write(Settings.EnableVendorNight);
-            writer.Write(Settings.EnableVendorExtra);
-        }
-
         /// <summary>
-        /// Load settings from binary file using BinaryReader
+        /// Load settings from CSV file (UOR_SpawnSettings.csv) using CsvSettingsService.
+        /// Server 2.0.0.7+ uses CSV format for human-readable settings.
         /// </summary>
         public static bool LoadSettings()
         {
@@ -152,7 +125,7 @@ namespace UORespawnApp.Scripts.Services
                     return false;
                 }
 
-                ReadSettings(localPath);
+                CsvSettingsService.ReadSettings(localPath);
 
                 Logger.Info($"Settings loaded from: {localPath}");
 
@@ -164,56 +137,6 @@ namespace UORespawnApp.Scripts.Services
 
                 return false;
             }
-        }
-
-        private static void ReadSettings(string filePath)
-        {
-            using var reader = new BinaryReader(File.Open(filePath, FileMode.Open));
-
-            int version = reader.ReadInt32();
-            string fileVersion = reader.ReadString(); // App version string (for info)
-
-            // Basic spawn limits
-            Settings.MaxMobs = reader.ReadInt32();
-            Settings.MinRange = reader.ReadInt32();
-            Settings.MaxRange = reader.ReadInt32();
-            Settings.MaxCrowd = reader.ReadInt32();
-
-            // Spawn chances - clamp to 0.0-1.0 and round to 1 decimal for clean display
-            Settings.WaterChance = ClampAndRound(reader.ReadDouble());
-            Settings.WeatherChance = ClampAndRound(reader.ReadDouble());
-            Settings.TimedChance = ClampAndRound(reader.ReadDouble());
-            Settings.CommonChance = ClampAndRound(reader.ReadDouble());
-            Settings.UnCommonChance = ClampAndRound(reader.ReadDouble());
-            Settings.RareChance = ClampAndRound(reader.ReadDouble());
-
-            // Feature flags
-            Settings.IsScaleSpawn = reader.ReadBoolean();
-            Settings.EnableRiftSpawn = reader.ReadBoolean();
-            Settings.EnableDebugSpawn = reader.ReadBoolean();
-
-            if (version >= 2)
-            {
-                Settings.EnableVendorSpawn = reader.ReadBoolean();
-            }
-
-            if (version >= 3)
-            {
-                Settings.EnableVendorNight = reader.ReadBoolean();
-                Settings.EnableVendorExtra = reader.ReadBoolean();
-            }
-        }
-
-        /// <summary>
-        /// Clamps a double to 0.0-1.0 range and rounds to 1 decimal place.
-        /// This ensures clean display values like 0.1, 0.5, 1.0 instead of 0.92837456324.
-        /// </summary>
-        private static double ClampAndRound(double value)
-        {
-            // Clamp to valid range
-            value = Math.Max(0.0, Math.Min(1.0, value));
-            // Round to 1 decimal place
-            return Math.Round(value, 1);
         }
 
         #endregion

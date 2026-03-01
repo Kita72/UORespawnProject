@@ -423,7 +423,7 @@ namespace UORespawnApp.Scripts.Services
         }
 
         /// <summary>
-        /// Gets the resolved data path for a pack (where the .bin files are located).
+        /// Gets the resolved data path for a pack (where the spawn data files are located).
         /// Returns the pack folder path if files are there, or the UOR_DATA subfolder if nested.
         /// </summary>
         public string? GetPackDataPath(SpawnPackInfo pack)

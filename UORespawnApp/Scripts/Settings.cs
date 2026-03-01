@@ -137,7 +137,7 @@ namespace UORespawnApp
 
         public static double TimedChance
         {
-            get => Preferences.Get("TimedChance", 0.1);
+            get => Preferences.Get("TimedChance", 0.01);
             set => Preferences.Set("TimedChance", value);
         }
 
@@ -149,13 +149,13 @@ namespace UORespawnApp
 
         public static double UnCommonChance
         {
-            get => Preferences.Get("UnCommonChance", 0.5);
+            get => Preferences.Get("UnCommonChance", 0.1);
             set => Preferences.Set("UnCommonChance", value);
         }
 
         public static double RareChance
         {
-            get => Preferences.Get("RareChance", 0.1);
+            get => Preferences.Get("RareChance", 0.01);
             set => Preferences.Set("RareChance", value);
         }
 
@@ -215,37 +215,136 @@ namespace UORespawnApp
 
         public static int MaxMobs
         {
-            get => Preferences.Get("MaxMobs", 15);
+            get => Preferences.Get("MaxMobs", 25);
             set => Preferences.Set("MaxMobs", value);
         }
 
         public static int MinRange
         {
-            get => Preferences.Get("MinRange", 10);
+            get => Preferences.Get("MinRange", 20);
             set => Preferences.Set("MinRange", value);
         }
 
         public static int MaxRange
         {
-            get => Preferences.Get("MaxRange", 50);
+            get => Preferences.Get("MaxRange", 80);
             set => Preferences.Set("MaxRange", value);
         }
 
         public static int MaxCrowd
         {
-            get => Preferences.Get("MaxCrowd", 1);
+            get => Preferences.Get("MaxCrowd", 3);
             set => Preferences.Set("MaxCrowd", value);
+        }
+
+        // ==================== NEW SETTINGS (Server 2.0.0.7) ====================
+
+        /// <summary>
+        /// Scale modifier for spawn limits when ENABLE_SCALE_SPAWN is true.
+        /// Applied as multiplier to MAX_SPAWN, MIN_RANGE, MAX_RANGE, MAX_CROWD.
+        /// </summary>
+        public static double ScaleMod
+        {
+            get => Preferences.Get("ScaleMod", 1.0);
+            set => Preferences.Set("ScaleMod", value);
+        }
+
+        // System Intervals
+        /// <summary>How often to search for spawn locations per player (milliseconds)</summary>
+        public static int SearchInterval
+        {
+            get => Preferences.Get("SearchInterval", 75);
+            set => Preferences.Set("SearchInterval", value);
+        }
+
+        /// <summary>How often to process the spawn queue (milliseconds)</summary>
+        public static int ProcessInterval
+        {
+            get => Preferences.Get("ProcessInterval", 250);
+            set => Preferences.Set("ProcessInterval", value);
+        }
+
+        /// <summary>How often to validate existing spawns (seconds)</summary>
+        public static int ValidateInterval
+        {
+            get => Preferences.Get("ValidateInterval", 5);
+            set => Preferences.Set("ValidateInterval", value);
+        }
+
+        /// <summary>How often to check time-based spawns (minutes)</summary>
+        public static int TimedInterval
+        {
+            get => Preferences.Get("TimedInterval", 1);
+            set => Preferences.Set("TimedInterval", value);
+        }
+
+        // System Limits
+        /// <summary>Max mobs cached per type in recycle pool</summary>
+        public static int MaxRecycleType
+        {
+            get => Preferences.Get("MaxRecycleType", 20);
+            set => Preferences.Set("MaxRecycleType", value);
+        }
+
+        /// <summary>Max total mobs in recycle pool</summary>
+        public static int MaxRecycleTotal
+        {
+            get => Preferences.Get("MaxRecycleTotal", 50000);
+            set => Preferences.Set("MaxRecycleTotal", value);
+        }
+
+        /// <summary>Max attempts to find valid spawn point</summary>
+        public static int MaxSpawnChecks
+        {
+            get => Preferences.Get("MaxSpawnChecks", 3);
+            set => Preferences.Set("MaxSpawnChecks", value);
+        }
+
+        /// <summary>Max locations queued per player</summary>
+        public static int MaxQueueSize
+        {
+            get => Preferences.Get("MaxQueueSize", 5);
+            set => Preferences.Set("MaxQueueSize", value);
+        }
+
+        /// <summary>Max statistics entries</summary>
+        public static int MaxStatSize
+        {
+            get => Preferences.Get("MaxStatSize", 10000);
+            set => Preferences.Set("MaxStatSize", value);
+        }
+
+        // New Spawn Toggles
+        /// <summary>Allow spawns in town regions</summary>
+        public static bool EnableTownSpawn
+        {
+            get => Preferences.Get("EnableTownSpawn", true);
+            set => Preferences.Set("EnableTownSpawn", value);
+        }
+
+        /// <summary>Enable grave spawn effects</summary>
+        public static bool EnableGraveSpawn
+        {
+            get => Preferences.Get("EnableGraveSpawn", true);
+            set => Preferences.Set("EnableGraveSpawn", value);
+        }
+
+        /// <summary>Show spawn visual effects</summary>
+        public static bool EnableSpawnEffects
+        {
+            get => Preferences.Get("EnableSpawnEffects", true);
+            set => Preferences.Set("EnableSpawnEffects", value);
         }
 
         public static double WaterChance
         {
-            get => Preferences.Get("WaterChance", 0.5);
+            get => Preferences.Get("WaterChance", 0.25);
             set => Preferences.Set("WaterChance", value);
         }
 
         public static double WeatherChance
         {
-            get => Preferences.Get("WeatherChance", 0.1);
+            get => Preferences.Get("WeatherChance", 0.01);
             set => Preferences.Set("WeatherChance", value);
         }
 
@@ -354,30 +453,56 @@ namespace UORespawnApp
         /// <summary>
         /// Resets spawn-related settings to defaults without clearing ServUO link or pack info.
         /// Use this for a "soft reset" that preserves server configuration.
+        /// Matches server 2.0.0.7 default values.
         /// </summary>
         public static void ResetSpawnSettingsToDefaults()
         {
+            // Scale modifier
+            ScaleMod = 1.0;
+
+            // System intervals
+            SearchInterval = 75;
+            ProcessInterval = 250;
+            ValidateInterval = 5;
+            TimedInterval = 1;
+
+            // System limits
+            MaxRecycleType = 20;
+            MaxRecycleTotal = 50000;
+            MaxSpawnChecks = 3;
+            MaxQueueSize = 5;
+            MaxStatSize = 10000;
+
             // Spawn limits
-            MaxMobs = 15;
-            MinRange = 10;
-            MaxRange = 50;
-            MaxCrowd = 1;
+            MaxMobs = 25;
+            MinRange = 20;
+            MaxRange = 80;
+            MaxCrowd = 3;
 
             // Spawn chances
-            WaterChance = 0.5;
-            WeatherChance = 0.1;
-            TimedChance = 0.1;
+            WaterChance = 0.25;
+            WeatherChance = 0.01;
+            TimedChance = 0.01;
             CommonChance = 1.0;
-            UnCommonChance = 0.5;
-            RareChance = 0.1;
+            UnCommonChance = 0.1;
+            RareChance = 0.01;
 
-            // Feature flags
+            // Spawn toggles
             IsScaleSpawn = false;
             EnableRiftSpawn = false;
-            EnableDebugSpawn = false;
+            EnableTownSpawn = true;
+            EnableGraveSpawn = true;
+
+            // Vendor toggles
             EnableVendorSpawn = false;
             EnableVendorNight = false;
             EnableVendorExtra = false;
+
+            // Effects toggle
+            EnableSpawnEffects = true;
+
+            // Debug toggle
+            EnableDebugSpawn = false;
 
             // UI appearance
             BoxColor = DefaultBoxColor;
