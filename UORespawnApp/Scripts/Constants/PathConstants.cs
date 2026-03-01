@@ -93,7 +93,7 @@ namespace UORespawnApp.Scripts.Constants
 
         /// <summary>
         /// Server scripts/data folder in Data directory
-        /// Contains UORespawnSystem.zip for server setup
+        /// Contains UORespawnServer.zip for server setup
         /// </summary>
         public const string SERVER_SUBFOLDER = "SERVER";
 

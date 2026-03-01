@@ -2,9 +2,10 @@ namespace UORespawnApp.Scripts.Entities
 {
     /// <summary>
     /// Tile-based spawn entity for UORespawn v2.0
-    /// Spawns mobs based on ground tile type (grass, snow, swamp, etc.)
+    /// Spawns mobs based on ground tile type (grass, snow, swamp, etc.).
+    /// Implements ISpawnEntity for consistent spawn list handling.
     /// </summary>
-    public class TileSpawnEntity
+    public class TileSpawnEntity : ISpawnEntity
     {
         /// <summary>
         /// Unique identifier for tile spawn entry

@@ -73,8 +73,9 @@ namespace UORespawnApp
 
         private async void OnChanged(object sender, FileSystemEventArgs e)
         {
-            // Cancel any existing delay if file changes again
+            // Cancel and dispose any existing delay if file changes again
             _delayTokenSource?.Cancel();
+            _delayTokenSource?.Dispose();
             _delayTokenSource = new CancellationTokenSource();
 
             try

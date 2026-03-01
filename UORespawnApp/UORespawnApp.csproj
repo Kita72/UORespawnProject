@@ -150,16 +150,16 @@
 
     <!-- SERVER: Pre-packaged server scripts ZIP for export functionality -->
     <ItemGroup>
-      <None Include="Data\SERVER\UORespawnSystem.zip" Condition="Exists('Data\SERVER\UORespawnSystem.zip')">
+      <None Include="Data\SERVER\UORespawnServer.zip" Condition="Exists('Data\SERVER\UORespawnServer.zip')">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
       <!-- Exclude server .cs files from compilation (they're ServUO scripts, not app code) -->
       <Compile Remove="Data\SERVER\**\*.cs" />
-      <None Remove="Data\SERVER\UORespawnSystem\**\*.*" Condition="'$(Configuration)' == 'Release'" />
-      <!-- Copy UORespawnSystem folder contents for server linking (Debug builds and if ZIP not present) -->
-      <None Include="Data\SERVER\UORespawnSystem\**\*.*">
+      <None Remove="Data\SERVER\UORespawnServer\**\*.*" Condition="'$(Configuration)' == 'Release'" />
+      <!-- Copy UORespawnServer folder contents for server linking (Debug builds and if ZIP not present) -->
+      <None Include="Data\SERVER\UORespawnServer\**\*.*">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        <Link>Data\SERVER\UORespawnSystem\%(RecursiveDir)%(Filename)%(Extension)</Link>
+        <Link>Data\SERVER\UORespawnServer\%(RecursiveDir)%(Filename)%(Extension)</Link>
       </None>
     </ItemGroup>
 
@@ -199,6 +199,8 @@
     <ItemGroup>
       <Compile Remove="UORespawnSystem\**\*.cs" />
       <None Remove="UORespawnSystem\**\*.*" />
+      <Compile Remove="UORespawnServer\**\*.cs" />
+      <None Remove="UORespawnServer\**\*.*" />
     </ItemGroup>
     <ItemGroup>
       <MauiImage Remove="Resources\Images\splash.png" />

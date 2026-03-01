@@ -1,10 +1,11 @@
 ﻿using UORespawnApp.Scripts.Constants;
+using UORespawnApp.Scripts.Helpers;
 
 namespace UORespawnApp.Scripts.Utilities
 {
     internal static class MapDisplayUtility
     {
-        private static readonly List<(string ShortTime, string PlayerName, int PlayerMap, Microsoft.Maui.Graphics.Point PlayerLocation, Microsoft.Maui.Graphics.Point SpawnLocation, string CreatureName)> SpawnStats = [];
+        private static readonly List<(string ShortTime, string PlayerName, int PlayerMap, Point2D PlayerLocation, Point2D SpawnLocation, string CreatureName)> SpawnStats = [];
 
         private static readonly Dictionary<string, Color> playerColorCache = [];
 
@@ -109,10 +110,9 @@ namespace UORespawnApp.Scripts.Utilities
                                 {
                                     string shortTime = parts[0].Trim();      // "4:46 PM"
                                     string playerName = parts[1].Trim();     // "Maliki"
-                                    string mapString = parts[2].Trim();      // "Trammel"
 
-                                    // Convert map name to int mapId
-                                    int mapId = MapUtility.ParseMapName(mapString);
+                                     // Map ID is now stored as integer directly (e.g., "1" for Trammel)
+                                    int mapId = int.Parse(parts[2].Trim());
 
                                     int playerX = int.Parse(parts[3].Trim());
                                     int playerY = int.Parse(parts[4].Trim());
@@ -123,8 +123,8 @@ namespace UORespawnApp.Scripts.Utilities
                                     string creatureName = parts.Length >= 8 ? parts[7].Trim() : "";
 
                                     SpawnStats.Add((shortTime, playerName, mapId,
-                                        new Microsoft.Maui.Graphics.Point(playerX, playerY), 
-                                        new Microsoft.Maui.Graphics.Point(spawnX, spawnY),
+                                        new Point2D(playerX, playerY), 
+                                        new Point2D(spawnX, spawnY),
                                         creatureName));
 
                                     successfulLines++;

@@ -95,7 +95,7 @@ namespace UORespawnApp.Scripts.Utilities
         /// <summary>
         /// Server-side scripts folder name within Data/SERVER/
         /// </summary>
-        private const string SERVER_SCRIPTS_FOLDER = "UORespawnSystem";
+        private const string SERVER_SCRIPTS_FOLDER = "UORespawnServer";
 
         /// <summary>
         /// Parent folder containing server scripts (Data/SERVER)
@@ -133,16 +133,16 @@ namespace UORespawnApp.Scripts.Utilities
                     Logger.Info($"Created UORespawn folder: {destinationPath}");
                 }
 
-                // Get the source UORespawnSystem folder from Data/SERVER/
+                // Get the source UORespawnServer folder from Data/SERVER/
                 var sourcePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data", SERVER_PARENT_FOLDER, SERVER_SCRIPTS_FOLDER);
 
                 if (!Directory.Exists(sourcePath))
                 {
                     Logger.Error($"Source server scripts folder not found: {sourcePath}");
-                    return (false, "Server scripts source folder not found. Please ensure UORespawnSystem folder exists in the app directory.");
+                    return (false, "Server scripts source folder not found. Please ensure UORespawnServer folder exists in the app directory.");
                 }
 
-                // Copy all files and subdirectories from UORespawnSystem to Scripts/Custom/UORespawn
+                // Copy all files and subdirectories from UORespawnServer to Scripts/Custom/UORespawn
                 int filesCopied = CopyDirectoryRecursive(sourcePath, destinationPath);
 
                 if (filesCopied == 0)
@@ -248,7 +248,7 @@ namespace UORespawnApp.Scripts.Utilities
         }
 
         /// <summary>
-        /// Delete existing UORespawn/UORespawnSystem installation before fresh install
+        /// Delete existing UORespawn/UORespawnServer installation before fresh install
         /// </summary>
         /// <param name="scriptsFolderPath">Path to ServUO Scripts folder</param>
         /// <returns>True if cleanup was successful or no cleanup needed</returns>
@@ -269,6 +269,14 @@ namespace UORespawnApp.Scripts.Utilities
                 {
                     Directory.Delete(uorRespawnPath, true);
                     Logger.Info($"Cleaned up existing UORespawn folder: {uorRespawnPath}");
+                }
+
+                // Check for and delete old UORespawnServer folder (current name)
+                var uorRespawnServerPath = Path.Combine(customFolderPath, "UORespawnServer");
+                if (Directory.Exists(uorRespawnServerPath))
+                {
+                    Directory.Delete(uorRespawnServerPath, true);
+                    Logger.Info($"Cleaned up existing UORespawnServer folder: {uorRespawnServerPath}");
                 }
 
                 // Check for and delete old UORespawnSystem folder (legacy name)

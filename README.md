@@ -23,7 +23,7 @@
 
 UORespawn is a modern .NET MAUI application that provides a comprehensive visual interface for creating and managing spawn systems in Ultima Online ServUO servers. It offers three complementary spawn methods to populate your world with creatures and NPCs.
 
-**Version:** 2.0.0.6  
+**Version:** 2.0.0.7  
 **Platform:** Windows, macOS  
 **Framework:** .NET 10 MAUI with Blazor  
 **License:** MIT
@@ -69,7 +69,6 @@ UORespawn is a modern .NET MAUI application that provides a comprehensive visual
 - **Spawn Packs** - Three-category system (Approved, Created, Imported) for managing spawn configurations
 - Pack Dashboard with detailed statistics (entry counts + location counts)
 - **Intelligent pack sync** - Only syncs changes when actual edits are made
-- **Approved pack reset** - Restore modified packs to original state
 - **Bestiary Favorites** - Star creatures for quick access in spawn modals
 - **Vendor Favorites** - Star vendors for quick access in vendor spawn editor
 - Dark theme UI
@@ -156,10 +155,11 @@ Add these predefined NPCs from the bestiary:
 
 ### Binary Files Generated
 
-- `UOR_SpawnSettings.bin` - System configuration
+- `UOR_SpawnSettings.csv` - System configuration
 - `UOR_BoxSpawn.bin` - Map spawn boxes
 - `UOR_TileSpawn.bin` - Tile spawns
 - `UOR_RegionSpawn.bin` - Named region spawns
+- `UOR_VendorSpawn.bin` - Vendor spawn assignments
 
 ---
 
@@ -218,7 +218,7 @@ UORespawnProject/
 │   │       ├── SettingsComponent.razor
 │   │       └── InstructionsComponent.razor
 │   ├── Scripts/              # C# utility scripts
-│   ├── UORespawnSystem/      # Server-side scripts for ServUO
+│   ├── UORespawnServer/      # Server-side scripts for ServUO
 │   ├── wwwroot/              # Web assets (JS, CSS)
 │   └── Resources/            # App resources
 ├── README.md
@@ -269,3 +269,11 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 <p align="center">
   <a href="#top">Back to Top</a>
 </p>
+
+
+
+
+
+
+
+

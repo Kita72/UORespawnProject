@@ -50,6 +50,32 @@ namespace UORespawnApp
         private const string DefaultPackName = "DefaultPack";
         private static readonly Color DefaultBoxColor = Color.FromArgb(DefaultBoxColorHex);
 
+        // ==================== VALIDATION CONSTANTS ====================
+
+        /// <summary>Minimum allowed value for range settings</summary>
+        public const int MinRangeValue = 1;
+
+        /// <summary>Maximum allowed value for range settings</summary>
+        public const int MaxRangeValue = 500;
+
+        /// <summary>Minimum allowed value for MaxMobs</summary>
+        public const int MinMobsValue = 1;
+
+        /// <summary>Maximum allowed value for MaxMobs</summary>
+        public const int MaxMobsValue = 500;
+
+        /// <summary>Minimum allowed value for MaxCrowd</summary>
+        public const int MinCrowdValue = 1;
+
+        /// <summary>Maximum allowed value for MaxCrowd</summary>
+        public const int MaxCrowdValue = 50;
+
+        /// <summary>Minimum allowed value for interval settings (ms)</summary>
+        public const int MinIntervalValue = 10;
+
+        /// <summary>Maximum allowed value for interval settings (ms)</summary>
+        public const int MaxIntervalValue = 60000;
+
         private static void LoadCache()
         {
             _cachedServUODataFolder = Preferences.Get("ServUODataFolder", "");
@@ -130,33 +156,33 @@ namespace UORespawnApp
             get => _cachedBoxLineSize ?? 2;
             set
             {
-                _cachedBoxLineSize = value;
-                Preferences.Set("BoxLineSize", value);
+                _cachedBoxLineSize = Math.Clamp(value, 1, 10);
+                Preferences.Set("BoxLineSize", _cachedBoxLineSize.Value);
             }
         }
 
         public static double TimedChance
         {
             get => Preferences.Get("TimedChance", 0.01);
-            set => Preferences.Set("TimedChance", value);
+            set => Preferences.Set("TimedChance", Math.Clamp(value, 0.0, 1.0));
         }
 
         public static double CommonChance
         {
             get => Preferences.Get("CommonChance", 1.0);
-            set => Preferences.Set("CommonChance", value);
+            set => Preferences.Set("CommonChance", Math.Clamp(value, 0.0, 1.0));
         }
 
         public static double UnCommonChance
         {
             get => Preferences.Get("UnCommonChance", 0.1);
-            set => Preferences.Set("UnCommonChance", value);
+            set => Preferences.Set("UnCommonChance", Math.Clamp(value, 0.0, 1.0));
         }
 
         public static double RareChance
         {
             get => Preferences.Get("RareChance", 0.01);
-            set => Preferences.Set("RareChance", value);
+            set => Preferences.Set("RareChance", Math.Clamp(value, 0.0, 1.0));
         }
 
         public static System.Collections.Specialized.StringCollection Bestiary
@@ -216,25 +242,25 @@ namespace UORespawnApp
         public static int MaxMobs
         {
             get => Preferences.Get("MaxMobs", 25);
-            set => Preferences.Set("MaxMobs", value);
+            set => Preferences.Set("MaxMobs", Math.Clamp(value, MinMobsValue, MaxMobsValue));
         }
 
         public static int MinRange
         {
             get => Preferences.Get("MinRange", 20);
-            set => Preferences.Set("MinRange", value);
+            set => Preferences.Set("MinRange", Math.Clamp(value, MinRangeValue, MaxRangeValue));
         }
 
         public static int MaxRange
         {
             get => Preferences.Get("MaxRange", 80);
-            set => Preferences.Set("MaxRange", value);
+            set => Preferences.Set("MaxRange", Math.Clamp(value, MinRangeValue, MaxRangeValue));
         }
 
         public static int MaxCrowd
         {
             get => Preferences.Get("MaxCrowd", 3);
-            set => Preferences.Set("MaxCrowd", value);
+            set => Preferences.Set("MaxCrowd", Math.Clamp(value, MinCrowdValue, MaxCrowdValue));
         }
 
         // ==================== NEW SETTINGS (Server 2.0.0.7) ====================
@@ -246,7 +272,7 @@ namespace UORespawnApp
         public static double ScaleMod
         {
             get => Preferences.Get("ScaleMod", 1.0);
-            set => Preferences.Set("ScaleMod", value);
+            set => Preferences.Set("ScaleMod", Math.Clamp(value, 0.1, 10.0));
         }
 
         // System Intervals
@@ -254,28 +280,28 @@ namespace UORespawnApp
         public static int SearchInterval
         {
             get => Preferences.Get("SearchInterval", 75);
-            set => Preferences.Set("SearchInterval", value);
+            set => Preferences.Set("SearchInterval", Math.Clamp(value, MinIntervalValue, MaxIntervalValue));
         }
 
         /// <summary>How often to process the spawn queue (milliseconds)</summary>
         public static int ProcessInterval
         {
             get => Preferences.Get("ProcessInterval", 250);
-            set => Preferences.Set("ProcessInterval", value);
+            set => Preferences.Set("ProcessInterval", Math.Clamp(value, MinIntervalValue, MaxIntervalValue));
         }
 
         /// <summary>How often to validate existing spawns (seconds)</summary>
         public static int ValidateInterval
         {
             get => Preferences.Get("ValidateInterval", 5);
-            set => Preferences.Set("ValidateInterval", value);
+            set => Preferences.Set("ValidateInterval", Math.Clamp(value, 1, 300));
         }
 
         /// <summary>How often to check time-based spawns (minutes)</summary>
         public static int TimedInterval
         {
             get => Preferences.Get("TimedInterval", 1);
-            set => Preferences.Set("TimedInterval", value);
+            set => Preferences.Set("TimedInterval", Math.Clamp(value, 1, 60));
         }
 
         // System Limits
@@ -283,35 +309,35 @@ namespace UORespawnApp
         public static int MaxRecycleType
         {
             get => Preferences.Get("MaxRecycleType", 20);
-            set => Preferences.Set("MaxRecycleType", value);
+            set => Preferences.Set("MaxRecycleType", Math.Clamp(value, 1, 1000));
         }
 
         /// <summary>Max total mobs in recycle pool</summary>
         public static int MaxRecycleTotal
         {
             get => Preferences.Get("MaxRecycleTotal", 50000);
-            set => Preferences.Set("MaxRecycleTotal", value);
+            set => Preferences.Set("MaxRecycleTotal", Math.Clamp(value, 100, 500000));
         }
 
         /// <summary>Max attempts to find valid spawn point</summary>
         public static int MaxSpawnChecks
         {
             get => Preferences.Get("MaxSpawnChecks", 3);
-            set => Preferences.Set("MaxSpawnChecks", value);
+            set => Preferences.Set("MaxSpawnChecks", Math.Clamp(value, 1, 20));
         }
 
         /// <summary>Max locations queued per player</summary>
         public static int MaxQueueSize
         {
             get => Preferences.Get("MaxQueueSize", 5);
-            set => Preferences.Set("MaxQueueSize", value);
+            set => Preferences.Set("MaxQueueSize", Math.Clamp(value, 1, 50));
         }
 
         /// <summary>Max statistics entries</summary>
         public static int MaxStatSize
         {
             get => Preferences.Get("MaxStatSize", 10000);
-            set => Preferences.Set("MaxStatSize", value);
+            set => Preferences.Set("MaxStatSize", Math.Clamp(value, 100, 100000));
         }
 
         // New Spawn Toggles
@@ -339,13 +365,13 @@ namespace UORespawnApp
         public static double WaterChance
         {
             get => Preferences.Get("WaterChance", 0.25);
-            set => Preferences.Set("WaterChance", value);
+            set => Preferences.Set("WaterChance", Math.Clamp(value, 0.0, 1.0));
         }
 
         public static double WeatherChance
         {
             get => Preferences.Get("WeatherChance", 0.01);
-            set => Preferences.Set("WeatherChance", value);
+            set => Preferences.Set("WeatherChance", Math.Clamp(value, 0.0, 1.0));
         }
 
         /// <summary>
@@ -404,6 +430,9 @@ namespace UORespawnApp
         public static void ToggleBestiaryFavorite(string name)
         {
             var favorites = BestiaryFavorites;
+
+            if (favorites == null) return;
+
             if (favorites.Contains(name))
                 favorites.Remove(name);
             else
@@ -417,6 +446,9 @@ namespace UORespawnApp
         public static void ToggleVendorFavorite(string name)
         {
             var favorites = VendorFavorites;
+
+            if (favorites == null) return;
+
             if (favorites.Contains(name))
                 favorites.Remove(name);
             else
@@ -510,6 +542,35 @@ namespace UORespawnApp
             BoxLineSize = 2;
 
             Logger.Info("Spawn settings reset to defaults");
+        }
+
+        /// <summary>
+        /// Validates that MinRange is not greater than MaxRange.
+        /// If invalid, adjusts MaxRange to match MinRange.
+        /// Call this after loading settings or when user changes range values.
+        /// </summary>
+        /// <returns>True if ranges were valid, false if adjustment was made</returns>
+        public static bool ValidateRanges()
+        {
+            if (MinRange > MaxRange)
+            {
+                MaxRange = MinRange;
+                Logger.Warning($"Range validation: MaxRange adjusted to {MaxRange} (was less than MinRange)");
+                return false;
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// Gets a summary of all current settings for debugging/logging.
+        /// </summary>
+        public static string GetSettingsSummary()
+        {
+            return $"Settings Summary:\n" +
+                   $"  Spawn Limits: MaxMobs={MaxMobs}, MinRange={MinRange}, MaxRange={MaxRange}, MaxCrowd={MaxCrowd}\n" +
+                   $"  Chances: Common={CommonChance:P0}, Uncommon={UnCommonChance:P0}, Rare={RareChance:P0}\n" +
+                   $"  Toggles: Scale={IsScaleSpawn}, Rift={EnableRiftSpawn}, Vendor={EnableVendorSpawn}\n" +
+                   $"  Pack: {CurrentPackName}";
         }
     }
 }

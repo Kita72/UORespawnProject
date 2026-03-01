@@ -15,7 +15,7 @@
         <!-- External Website WebView Overlay -->
         <WebView x:Name="externalWebView" 
                  IsVisible="False"
-                 Margin="250,0,0,0"
+                 Margin="310,0,0,0"
                  ZIndex="100" />
 
         <!-- Native Close Button (appears above WebView when open) -->

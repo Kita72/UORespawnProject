@@ -43,7 +43,7 @@
                             <ul class="list-unstyled mb-0">
                                 <li><a href="#maps" class="text-decoration-none">8. Maps</a></li>
                                 <li><a href="#server-integration" class="text-decoration-none">9. Server Integration</a></li>
-                                <li><a href="#admin-gui" class="text-decoration-none">10. Admin GUI & Commands</a></li>
+                                <li><a href="#admin-gui" class="text-decoration-none">10. Control Dashboard</a></li>
                                 <li><a href="#tips" class="text-decoration-none">11. Tips & Best Practices</a></li>
                                 <li><a href="#debug-mode" class="text-decoration-none">12. Debug Mode</a></li>
                                 <li><a href="#support" class="text-decoration-none">13. Support & Resources</a></li>
@@ -61,13 +61,14 @@
                 <div class="card-body">
                     <h6 class="text-primary"><span class="bi bi-question-circle me-2"></span>What is UORespawn v2.0?</h6>
                     <p>
-                        UORespawn is a high-performance, production-ready spawn system that provides three complementary ways 
-                        to populate your Ultima Online world with creatures:
+                        UORespawn is a high-performance, production-ready spawn system that provides four complementary ways 
+                        to populate your Ultima Online world:
                     </p>
                     <ul>
                         <li><strong>Box Spawns:</strong> Manual spawn boxes you draw directly on the map</li>
                         <li><strong>Region Spawns:</strong> Automatic spawns based on named server regions (Britain, Dungeon Despise, etc.)</li>
                         <li><strong>Tile Spawns:</strong> Automatic spawns based on terrain tile types (grass, forest, water, etc.)</li>
+                        <li><strong>Vendor Spawns:</strong> Automatic vendor NPCs at shop signs and bee hives</li>
                     </ul>
 
                     <h6 class="text-primary mt-4"><span class="bi bi-key me-2"></span>Key v2.0 Features</h6>
@@ -175,8 +176,8 @@
 
                     <div class="alert alert-warning mt-3">
                         <span class="bi bi-exclamation-triangle"></span> <strong>Note:</strong> The spawn statistics overlay 
-                        requires server-side data. Use the <code>[PushRespawnStats</code> command in-game (triggers on World Save) 
-                        to generate the data that the editor visualizes on the map.
+                        requires server-side data. Statistics are <strong>automatically saved</strong> during each World Save. 
+                        If linked to a local server, the editor reads stats files directly from <code>Data/UORespawn/STATS/</code>.
                     </div>
                 </div>
             </div>
@@ -240,7 +241,7 @@
 
                     <div class="alert alert-info mt-3">
                         <span class="bi bi-lightbulb"></span> <strong>Tip:</strong> Region Spawns have priority over 
-                        World Spawns! Configure specific dungeons and towns with region spawns, then use world spawns 
+                        Tile Spawns! Configure specific dungeons and towns with region spawns, then use tile spawns 
                         for general wilderness areas. The Region Spawn page also has XML and Spawns toggles in the mini-map 
                         for visualizing spawner locations and statistics.
                     </div>
@@ -276,6 +277,10 @@
                     </ol>
 
                     <h6 class="text-primary mt-4"><span class="bi bi-grid-fill me-2"></span>Tile Types Available</h6>
+                    <p>
+                        Tile types are <strong>loaded from your server's data</strong> (<code>UOR_TileList.txt</code>). 
+                        Common tiles include:
+                    </p>
                     <div class="row">
                         <div class="col-md-4">
                             <ul>
@@ -298,10 +303,14 @@
                                 <li>Brick / Cobblestones</li>
                                 <li>Wooden Floor / Planks</li>
                                 <li>Cloud / Void</li>
-                                <li>And more...</li>
+                                <li>And more (server-defined)...</li>
                             </ul>
                         </div>
                     </div>
+                    <p class="small text-muted mt-2">
+                        <span class="bi bi-info-circle"></span> Your actual tile list depends on your server's data files. 
+                        The editor shows only tiles that exist on your server.
+                    </p>
 
                     <h6 class="text-primary mt-4"><span class="bi bi-list-check me-2"></span>Example Setup</h6>
                     <p><strong>Forest Tile:</strong></p>
@@ -438,6 +447,19 @@
                         packs, create your own from scratch, or import configurations shared by others.
                     </p>
 
+                    <div class="alert alert-success mb-3">
+                        <span class="bi bi-shield-check"></span> <strong>Data Integrity Guarantee (v2.0.0.7):</strong>
+                        <p class="mb-2 mt-2">
+                            When a spawn pack is loaded, the editor <strong>automatically filters out</strong> any creatures, tiles, 
+                            or regions that don't exist on your server. This ensures:
+                        </p>
+                        <ul class="mb-0">
+                            <li><strong>No bad data sent to server</strong> - Only valid entries are saved</li>
+                            <li><strong>Pack always matches editor</strong> - What you see is what the server gets</li>
+                            <li><strong>Clean saves every time</strong> - Unsupported items are silently removed</li>
+                        </ul>
+                    </div>
+
                     <div class="alert alert-info">
                         <span class="bi bi-info-circle"></span> <strong>Note:</strong> The editor launches with a default 
                         spawn pack applied. If you want to start completely fresh, use <strong>Create New Pack</strong> to 
@@ -511,7 +533,7 @@
                         <li>Click on a pack card to view its statistics in the dashboard</li>
                         <li>Click the <span class="bi bi-check2-circle"></span> <strong>Apply</strong> button on the card</li>
                         <li>Your current spawn data will be replaced with the pack's configuration</li>
-                        <li>Use <code>[SpawnReload</code> in-game to load the new data on your server</li>
+                        <li>If linked, files sync automatically; for remote servers, transfer files and toggle system power in the Control Dashboard</li>
                     </ol>
 
                     <div class="alert alert-warning mt-3">
@@ -560,7 +582,7 @@
                     <h6 class="text-primary mt-4"><span class="bi bi-file-earmark-zip me-2"></span>Pack Contents</h6>
                     <p>A spawn pack zip file contains:</p>
                     <ul>
-                        <li><code>UOR_SpawnSettings.bin</code> - System configuration (ranges, chances, options)</li>
+                        <li><code>UOR_SpawnSettings.csv</code> - System configuration in CSV format (ranges, chances, options)</li>
                         <li><code>UOR_BoxSpawn.bin</code> - Map spawn boxes</li>
                         <li><code>UOR_TileSpawn.bin</code> - World tile spawns</li>
                         <li><code>UOR_RegionSpawn.bin</code> - Named region spawns</li>
@@ -568,6 +590,13 @@
                         <li><code>pack.json</code> - Pack name, author, description</li>
                         <li><code>preview.png/jpg</code> - Preview image (optional)</li>
                     </ul>
+
+                    <div class="alert alert-warning mt-3">
+                        <span class="bi bi-exclamation-triangle"></span> <strong>Compatibility Note:</strong> When loading 
+                        a pack from another server, any creatures, tiles, or regions not supported by your server's data 
+                        files will be automatically removed. The pack will still work - you'll just see reduced spawn lists 
+                        for entries that reference unsupported content.
+                    </div>
                 </div>
             </div>
 
@@ -577,21 +606,69 @@
                     <strong><span class="bi bi-gear"></span> 7. Settings & Configuration</strong>
                 </div>
                 <div class="card-body">
-                    <h6 class="text-primary"><span class="bi bi-sliders me-2"></span>Spawn Settings</h6>
+                    <div class="alert alert-success mb-4">
+                        <span class="bi bi-file-earmark-text"></span> <strong>Settings Format (v2.0.0.7):</strong> Settings are now stored in 
+                        <strong>CSV format</strong> (<code>UOR_SpawnSettings.csv</code>) for easy reading and editing. The format uses 
+                        simple <code>SettingName,Value</code> pairs with <code>#</code> comments for documentation.
+                    </div>
+
+                    <h6 class="text-primary"><span class="bi bi-sliders me-2"></span>Spawn Limits</h6>
                     <ul>
-                        <li><strong>Spawn Range Min/Max:</strong> Distance from player where creatures can spawn</li>
-                        <li><strong>Max Mobs:</strong> Maximum creatures within Max Range</li>
-                        <li><strong>Max Crowd:</strong> Maximum creatures within Min Range</li>
-                        <li><strong>Common/Uncommon/Rare Chances:</strong> Probability for each rarity tier (0.0 to 1.0)</li>
-                        <li><strong>Water/Weather/Timed Chances:</strong> Environmental spawn probabilities</li>
+                        <li><strong>Spawn Range Min/Max:</strong> Distance from player where creatures can spawn (default: 20-80 tiles)</li>
+                        <li><strong>Max Spawn:</strong> Maximum creatures within Max Range (default: 25)</li>
+                        <li><strong>Max Crowd:</strong> Crowd multiplier within Min Range (default: 3)</li>
                     </ul>
 
-                    <h6 class="text-primary mt-4"><span class="bi bi-toggles me-2"></span>Spawn Options</h6>
+                    <h6 class="text-primary mt-4"><span class="bi bi-percent me-2"></span>Spawn Chances</h6>
                     <ul>
-                        <li><strong>Scale Spawn:</strong> Increase spawns based on player count in area</li>
-                        <li><strong>Rift Spawn:</strong> Allow Trammel creatures to spawn in Felucca</li>
-                        <li><strong>Debug Spawn:</strong> Enable placeholder spawns for testing</li>
+                        <li><strong>Common/Uncommon/Rare:</strong> Probability for each rarity tier (default: 1.0 / 0.1 / 0.01)</li>
+                        <li><strong>Water/Weather/Timed:</strong> Environmental spawn probabilities (default: 0.25 / 0.01 / 0.01)</li>
                     </ul>
+
+                    <h6 class="text-primary mt-4"><span class="bi bi-toggles me-2"></span>Spawn Toggles</h6>
+                    <ul>
+                        <li><strong>Scale Spawn:</strong> Enable dynamic spawn zone scaling (uses Scale Modifier)</li>
+                        <li><strong>Rift Spawn:</strong> Allow Trammel creatures to spawn in Felucca</li>
+                        <li><strong>Town Spawn:</strong> Allow spawning in town/guarded regions (default: On)</li>
+                        <li><strong>Grave Spawn:</strong> Enable grave spawn effects (default: On)</li>
+                        <li><strong>Spawn Effects:</strong> Show visual effects when creatures spawn (default: On)</li>
+                    </ul>
+
+                    <h6 class="text-primary mt-4"><span class="bi bi-arrows-angle-contract me-2"></span>Scale Modifier</h6>
+                    <p>
+                        Controls spawn zone density when <strong>Scale Spawn</strong> is enabled (default: 1.0):
+                    </p>
+                    <ul>
+                        <li><strong>Lower values</strong> (e.g., 0.5) = Smaller spawn zone, creatures spawn closer together</li>
+                        <li><strong>Higher values</strong> (e.g., 2.0) = Larger spawn zone, creatures more spread out</li>
+                    </ul>
+                    <p class="small text-muted">
+                        <span class="bi bi-info-circle"></span> This doesn't change the total spawn count - just how concentrated or dispersed they appear around players.
+                    </p>
+
+                    <h6 class="text-primary mt-4"><span class="bi bi-clock-history me-2"></span>System Intervals (Advanced)</h6>
+                    <p class="text-muted small">These settings control server-side timing. Most users can leave defaults.</p>
+                    <ul>
+                        <li><strong>Search Interval:</strong> How often to search for spawn locations per player (default: 75ms)</li>
+                        <li><strong>Process Interval:</strong> How often to process the spawn queue (default: 250ms)</li>
+                        <li><strong>Validate Interval:</strong> How often to validate existing spawns (default: 5 seconds)</li>
+                        <li><strong>Timed Interval:</strong> How often to check time-based spawns (default: 1 minute)</li>
+                    </ul>
+
+                    <h6 class="text-primary mt-4"><span class="bi bi-gear-wide me-2"></span>System Limits (Advanced)</h6>
+                    <ul>
+                        <li><strong>Max Recycle Type:</strong> Max mobs cached per type in recycle pool (default: 20)</li>
+                        <li><strong>Max Recycle Total:</strong> Max total mobs in recycle pool (default: 50000)</li>
+                        <li><strong>Max Spawn Checks:</strong> Max attempts to find valid spawn point (default: 3)</li>
+                        <li><strong>Max Queue Size:</strong> Max locations queued per player (default: 5)</li>
+                        <li><strong>Max Stat Size:</strong> Max statistics entries (default: 10000)</li>
+                    </ul>
+
+                    <h6 class="text-primary mt-4"><span class="bi bi-toggle-on me-2"></span>Debug Toggle</h6>
+                    <p>
+                        <strong>Enable Debug:</strong> When enabled, the server outputs detailed spawn information to the console 
+                        and log files. Useful for troubleshooting but can impact performance on busy servers.
+                    </p>
 
                     <!-- Vendor Spawn Subsection -->
                     <h6 class="text-primary mt-4"><span class="bi bi-shop me-2"></span>Vendor Spawn System</h6>
@@ -626,7 +703,7 @@
                         <li>Go to <strong>Settings</strong></li>
                         <li>Find the <strong>Vendor Spawn</strong> subsection under Spawn Settings</li>
                         <li>Toggle <strong>Enabled</strong> to turn the system on</li>
-                        <li>Use <code>[SpawnReload</code> in-game to apply the change</li>
+                        <li>If linked, settings sync automatically; for remote servers, transfer files and toggle system power in the Control Dashboard</li>
                     </ol>
 
                     <p><strong>Additional Vendor Options:</strong></p>
@@ -664,6 +741,8 @@
                         and serve as the <strong>source of truth</strong>. To update them, make changes on the server and restart:
                     </p>
                     <ul>
+                        <li><strong>Map List:</strong> Available maps including custom maps (Map6+)</li>
+                        <li><strong>Tile List:</strong> Terrain tile types for the Tile Spawn system</li>
                         <li><strong>Bestiary List:</strong> Available creatures for spawning. Add new mobiles to your server, then restart</li>
                         <li><strong>Region List:</strong> Named regions for Region Spawn page. Regions are defined by the server</li>
                         <li><strong>Spawner List:</strong> XML spawner locations for the heatmap overlay</li>
@@ -787,223 +866,147 @@
                     <strong><span class="bi bi-server"></span> 9. Server Integration</strong>
                 </div>
                 <div class="card-body">
-                    <h6 class="text-primary"><span class="bi bi-gear-wide-connected me-2"></span>How UORespawn v2.0 Works</h6>
+                    <h6 class="text-primary"><span class="bi bi-gear-wide-connected me-2"></span>How UORespawn Works</h6>
                     <p>
                         UORespawn is a <strong>player-centric spawn system</strong> where players become the spawners.
                         Instead of placing XML spawners throughout the world, creatures spawn dynamically around players
                         based on their location, terrain, regions, and nearby objects.
                     </p>
 
-                    <h6 class="text-primary mt-4"><span class="bi bi-download me-2"></span>Server-Side Installation (Required)</h6>
-                    <p><strong>Step 1: Install Server Scripts</strong></p>
+                    <h6 class="text-primary mt-4"><span class="bi bi-download me-2"></span>One-Time Server Setup</h6>
                     <ol>
-                        <li>Download the <code>UORespawnSystem</code> folder from the GitHub release</li>
-                        <li>Copy to <code>ServUO\Scripts\Custom\UORespawnSystem\</code></li>
-                        <li>Compile your ServUO server (rebuild solution)</li>
-                        <li>Start the server - UORespawn initializes automatically</li>
+                        <li>Get the <code>UORespawnServer</code> folder from the GitHub release (or export from Settings)</li>
+                        <li>Copy to <code>ServUO\Scripts\Custom\UORespawnServer\</code></li>
+                        <li>Compile and start your server</li>
                     </ol>
                     <p class="small text-muted">
                         Look for console messages: "|-|-|-|-|-|-|-| UORespawn |-|-|-|-|-|-|-|"
                     </p>
 
-                    <p><strong>Step 2: Automatic File Generation</strong></p>
-                    <p>UORespawn v2.0 automatically generates all reference files on server startup. No manual commands needed!</p>
-                    <p>The server creates these files in <code>Data/UORespawn/OUTPUT/</code>:</p>
-                    <ul>
-                        <li><code>UOR_BestiaryList.txt</code> - Spawnable creatures from your bestiary</li>
-                        <li><code>UOR_SpawnerList.txt</code> - XML spawner locations for heatmap overlay</li>
-                        <li><code>UOR_RegionList.txt</code> - Named regions for Region Spawn page</li>
-                        <li><code>UOR_VendorList.txt</code> - Vendor/NPC types for vendor spawning</li>
-                        <li><code>UOR_SignData.txt</code> - Shop sign locations for vendor placement</li>
-                        <li><code>UOR_HiveData.txt</code> - Beehive locations for beekeeper spawning</li>
-                    </ul>
-                    <p class="small text-muted">
-                        These server-generated files are the <strong>source of truth</strong> for the editor. 
-                        To add new creatures or regions, make changes on your server and restart it.
-                    </p>
-
-                    <h6 class="text-primary mt-4"><span class="bi bi-arrow-left-right me-2"></span>Automatic File Syncing (Windows/macOS)</h6>
+                    <h6 class="text-primary mt-4"><span class="bi bi-link-45deg me-2"></span>Link Your Server (Recommended)</h6>
+                    <p>For the best experience, link the editor to your local ServUO folder:</p>
                     <ol>
-                        <li>In the editor, go to <strong>Settings</strong></li>
+                        <li>Go to <strong>Settings</strong></li>
                         <li>Click <strong>Add Link</strong> under "ServUO Server Integration"</li>
-                        <li>Select your main <code>ServUO\</code> folder</li>
-                        <li>All spawn files will now auto-sync when you make changes!</li>
+                        <li>Select your <code>ServUO\</code> folder</li>
                     </ol>
 
-                    <h6 class="text-primary mt-4"><span class="bi bi-cloud-upload me-1"></span>Remote Server Setup (Manual Transfer)</h6>
-                    <p>
-                        Running your server on a remote machine? The "Link Server" feature requires local file access, 
-                        but you can still use UORespawn by manually transferring files between your editor and server.
-                    </p>
-
-                    <div class="alert alert-info mb-3">
-                        <span class="bi bi-info-circle me-1"></span>
-                        <strong>File Flow Overview:</strong> The editor creates spawn data files (<code>.bin</code>) that go to <code>Data/UORespawn/INPUT/</code>. 
-                        The server creates reference lists (<code>.txt</code>) that go to <code>Data/UORespawn/OUTPUT/</code>. 
-                        These server-generated lists are auto-created on startup - no commands needed!
+                    <div class="alert alert-success mb-4">
+                        <span class="bi bi-check-circle me-1"></span> <strong>When Linked, Everything is Automatic:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li><strong>Editor reads</strong> server-generated reference data (creatures, regions, tiles, maps, vendors, signs, hives)</li>
+                            <li><strong>Editor writes</strong> spawn data to server's INPUT folder</li>
+                            <li><strong>Editor reads</strong> spawn statistics for heatmap overlay</li>
+                            <li><strong>Settings</strong> sync bidirectionally between editor and server</li>
+                        </ul>
                     </div>
 
-                    <p><strong>Step 1: Export & Install Server Scripts (One-Time Setup)</strong></p>
-                    <ol>
-                        <li>Go to <strong>Settings → For Remote Servers</strong> (click to expand)</li>
-                        <li>Click <strong>Export Server Scripts (.zip)</strong></li>
-                        <li>Transfer the ZIP to your remote server</li>
-                        <li>Extract contents to <code>ServUO/Scripts/Custom/UORespawn/</code></li>
-                        <li>Recompile and restart your server</li>
-                    </ol>
+                    <h6 class="text-primary mt-4"><span class="bi bi-cloud me-2"></span>Remote Server (No Link)</h6>
+                    <p>If your server is remote and you cannot link folders, you'll need to manually transfer files:</p>
 
-                    <p><strong>Step 2: Get Reference Files (Server → Editor)</strong></p>
-                    <ol>
-                        <li>Start your server once - reference files are generated automatically on startup</li>
-                        <li>Copy these files from <code>ServUO/Data/UORespawn/OUTPUT/</code> on your server:
-                            <ul>
-                                <li><code>UOR_BestiaryList.txt</code> - Creature names for spawn selection</li>
-                                <li><code>UOR_SpawnerList.txt</code> - XML spawner locations for heatmap</li>
-                                <li><code>UOR_RegionList.txt</code> - Region definitions for Region Spawn page</li>
-                                <li><code>UOR_VendorList.txt</code> - Vendor types for vendor spawning</li>
-                                <li><code>UOR_SignData.txt</code> - Shop sign locations</li>
-                                <li><code>UOR_HiveData.txt</code> - Beehive locations</li>
-                            </ul>
-                        </li>
-                        <li>Place them in the editor's <code>Resources/Raw/</code> folder (this updates the app's default reference data)</li>
-                    </ol>
-
-                    <div class="alert alert-info mt-2 mb-3">
-                        <span class="bi bi-info-circle"></span> <strong>Why Resources/Raw?</strong> The <code>Resources/Raw/</code> folder contains 
-                        the app's bundled default reference data. When no server is linked, the editor uses these files. By copying your server's 
-                        OUTPUT files here, you update what creatures, regions, signs, and hives are available for spawn configuration.
-                        This is the <strong>source of truth</strong> when working offline or with a remote server.
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="alert alert-info mb-3">
+                                <strong><span class="bi bi-arrow-down me-1"></span>Server → Editor</strong>
+                                <p class="mb-1 mt-2 small">Copy from <code>ServUO/Data/UORespawn/OUTPUT/</code>:</p>
+                                <ul class="mb-0 small">
+                                    <li><code>UOR_BestiaryList.txt</code></li>
+                                    <li><code>UOR_RegionList.txt</code></li>
+                                    <li><code>UOR_TileList.txt</code></li>
+                                    <li><code>UOR_MapList.txt</code></li>
+                                    <li><code>UOR_VendorList.txt</code></li>
+                                    <li><code>UOR_SignData.txt</code></li>
+                                    <li><code>UOR_HiveData.txt</code></li>
+                                </ul>
+                                <p class="mb-0 mt-2 small">Place in editor's <code>Resources/Raw/</code> folder</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="alert alert-warning mb-3">
+                                <strong><span class="bi bi-arrow-up me-1"></span>Editor → Server</strong>
+                                <p class="mb-1 mt-2 small">Copy from editor's <code>Data/UORespawn/</code>:</p>
+                                <ul class="mb-0 small">
+                                    <li><code>UOR_SpawnSettings.csv</code></li>
+                                    <li><code>UOR_BoxSpawn.bin</code></li>
+                                    <li><code>UOR_TileSpawn.bin</code></li>
+                                    <li><code>UOR_RegionSpawn.bin</code></li>
+                                    <li><code>UOR_VendorSpawn.bin</code></li>
+                                </ul>
+                                <p class="mb-0 mt-2 small">Place in <code>ServUO/Data/UORespawn/INPUT/</code></p>
+                            </div>
+                        </div>
                     </div>
 
-                    <p><strong>Step 3: Export & Upload Spawn Data (Editor → Server)</strong></p>
-                    <ol>
-                        <li>Create your spawns using the editor pages</li>
-                        <li>Go to <strong>Settings → For Remote Servers</strong></li>
-                        <li>Click <strong>Export Spawn Data (.zip)</strong></li>
-                        <li>Transfer the ZIP to your remote server</li>
-                        <li>Extract contents to <code>ServUO/Data/UORespawn/INPUT/</code></li>
-                        <li>In-game: <code>[SpawnReload</code> to load the new configurations</li>
-                    </ol>
-
-                    <p><strong>Step 4: Get Spawn Statistics (Optional - Server → Editor)</strong></p>
-                    <ol>
-                        <li>Play on your server to generate spawn activity data</li>
-                        <li>In-game: <code>[PushRespawnStats</code> to save statistics</li>
-                        <li>Copy files from <code>ServUO/Data/UORespawn/STATS/</code> to editor's <code>Data/UORespawn/STATS/</code></li>
-                        <li>Toggle "Spawns" button in editor to view heatmap overlay</li>
-                    </ol>
-
-                    <div class="alert alert-warning mt-3">
-                        <span class="bi bi-exclamation-triangle me-1"></span>
-                        <strong>Remember:</strong> Repeat Step 3 whenever you make spawn changes in the editor. 
-                        The export includes all your spawn settings, box spawns, tile spawns, and region spawns.
-                    </div>
-
-                    <h6 class="text-primary mt-4"><span class="bi bi-file-binary me-2"></span>Binary Files Generated by Editor</h6>
-                    <p>The editor creates these binary files automatically:</p>
-                    <ul>
-                        <li><code>UOR_SpawnSettings.bin</code> - System configuration (ranges, chances, options)</li>
-                        <li><code>UOR_BoxSpawn.bin</code> - Map spawn boxes (manual placements)</li>
-                        <li><code>UOR_TileSpawn.bin</code> - Tile spawns (terrain-based)</li>
-                        <li><code>UOR_RegionSpawn.bin</code> - Named region spawns</li>
-                        <li><code>UOR_VendorSpawn.bin</code> - Vendor spawn configurations</li>
-                    </ul>
                     <p class="small text-muted">
-                        Binary serialization provides faster loading than CSV files used in v1.0.
+                        <span class="bi bi-info-circle"></span> Use Settings → "For Remote Servers" to export spawn data as a ZIP for easy transfer.
                     </p>
 
-                    <h6 class="text-primary mt-4"><span class="bi bi-diagram-3 me-2"></span>Workflow: Editor → Server</h6>
-                    <ol>
-                        <li><strong>Create spawns</strong> using the editor (Box, Region, Tile, or Vendor spawn pages)</li>
-                        <li><strong>Files auto-save</strong> to <code>ServUO\Data\UORespawn\INPUT\</code> (if configured)</li>
-                        <li><strong>In-game:</strong> <code>[SpawnReload</code> to load new configurations</li>
-                        <li><strong>Test:</strong> Walk around - spawns appear dynamically around you!</li>
-                        <li><strong>Monitor:</strong> Use <code>[SpawnAdmin</code> to view live statistics</li>
-                        <li><strong>Visualize:</strong> Use editor's heatmap to see spawn distribution patterns</li>
-                    </ol>
-
-                    <h6 class="text-primary mt-4"><span class="bi bi-intersect me-2"></span>Compatibility with XML Spawners</h6>
+                    <h6 class="text-primary mt-4"><span class="bi bi-bar-chart me-2"></span>Spawn Statistics (Heatmap)</h6>
                     <p>
-                        UORespawn works <strong>alongside</strong> XML spawners - they complement each other:
+                        The editor can display a heatmap of spawn activity. Statistics are <strong>automatically saved</strong> 
+                        during each World Save to <code>Data/UORespawn/STATS/</code>.
                     </p>
+                    <ul>
+                        <li><strong>Linked:</strong> Editor reads stats files automatically</li>
+                        <li><strong>Remote:</strong> Copy <code>STATS/*.txt</code> files to editor's <code>Data/UORespawn/STATS/</code></li>
+                    </ul>
+                    <p class="small text-muted">Toggle the "Spawns" button in the mini-map to view the heatmap overlay.</p>
+
+                    <h6 class="text-primary mt-4"><span class="bi bi-intersect me-2"></span>Works Alongside XML Spawners</h6>
                     <ul>
                         <li><strong>XML Spawners:</strong> Use for boss rooms, quest NPCs, town guards, static encounters</li>
-                        <li><strong>UORespawn:</strong> Use for wilderness, dungeons, roads, random dynamic encounters</li>
-                        <li><strong>Overlap Prevention:</strong> The editor shows XML spawner locations (green circles) - hover to highlight, click for details</li>
+                        <li><strong>UORespawn:</strong> Use for wilderness, dungeons, roads, dynamic encounters</li>
                     </ul>
-
-                    <div class="alert alert-success mt-3">
-                        <span class="bi bi-check-circle"></span> <strong>Pro Tip:</strong> All reference files (Bestiary, Spawner, Region, Vendor, Sign, Hive lists) 
-                        are now auto-generated when the server starts. Just install the scripts, start your server, and you're ready to go!
-                    </div>
+                    <p class="small text-muted">The editor shows existing XML spawner locations (green circles) so you can avoid overlap.</p>
                 </div>
             </div>
 
             <!-- 10. Admin GUI & Commands -->
             <div class="card map-card mb-4" id="admin-gui">
                 <div class="card-header">
-                    <strong><span class="bi bi-terminal"></span> 10. Admin GUI & Commands</strong>
+                    <strong><span class="bi bi-terminal"></span> 10. Control Dashboard</strong>
                 </div>
                 <div class="card-body">
-                    <h6 class="text-primary"><span class="bi bi-window me-2"></span>Professional Admin Control Panel</h6>
+                    <h6 class="text-primary"><span class="bi bi-window me-2"></span>UORespawn Control Panel</h6>
                     <p>
-                        UORespawn v2.0 includes a professional in-game Admin GUI with real-time statistics and controls.
-                        Open it with <code>[SpawnAdmin</code> (GameMaster+ access required).
+                        UORespawn v2.0 includes a professional in-game Control Dashboard with real-time statistics and all controls.
+                        Open it with a single command:
                     </p>
 
-                    <h6 class="text-primary mt-4"><span class="bi bi-ui-checks me-2"></span>GUI Features</h6>
-                    <ul>
-                        <li><strong>System Status:</strong> Running/Paused indicator, active spawns, player count</li>
-                        <li><strong>Recycle Pool:</strong> Mob reuse statistics and efficiency rate</li>
-                        <li><strong>Cleanup Time:</strong> Performance metrics for the cleanup service</li>
-                        <li><strong>Pause/Resume:</strong> Toggle spawning (cleanup continues while paused)</li>
-                        <li><strong>Reload Data:</strong> Reload all binary files without server restart</li>
-                        <li><strong>Debug Toggle:</strong> Enable/disable debug mode instantly</li>
-                    </ul>
-
-                    <h6 class="text-primary mt-4"><span class="bi bi-terminal me-2"></span>Admin Commands (v2.0)</h6>
-                    <p><strong>Primary Commands (use GUI for most tasks):</strong></p>
-                    <ul>
-                        <li><code>[SpawnAdmin</code> - Open professional admin control panel (recommended)</li>
-                        <li><code>[SpawnStatus</code> - Quick health check with key statistics</li>
-                        <li><code>[SpawnMetrics</code> - Full performance metrics report (add "players" for per-player stats)</li>
-                        <li><code>[SpawnMetricsReset</code> - Reset all performance metric counters</li>
-                        <li><code>[SpawnReload</code> - Reload all binary data files (hot-reload without restart)</li>
-                        <li><code>[SpawnPause</code> - Pause spawning (cleanup continues)</li>
-                        <li><code>[SpawnResume</code> - Resume spawning</li>
-                    </ul>
-
-                    <p><strong>Utility Commands:</strong></p>
-                    <ul>
-                        <li><code>[DebugRespawn</code> - Toggle debug mode ON/OFF</li>
-                        <li><code>[UpdateRespawn</code> - Force immediate spawn update for all players</li>
-                        <li><code>[ReloadRespawn</code> - Reload spawn data from binary files</li>
-                        <li><code>[ClearRespawn</code> - Clear and delete all tracked spawns</li>
-                        <li><code>[TrackRespawn</code> - Show current spawn statistics</li>
-                        <li><code>[PushRespawnStats</code> - Save spawn statistics for heatmap visualization</li>
-                    </ul>
-
-                    <p><strong>Recycle System Commands:</strong></p>
-                    <ul>
-                        <li><code>[SpawnRecycleStats</code> - Show detailed recycle pool statistics</li>
-                        <li><code>[ClearRecycle</code> - Clear all mobs from recycle pool</li>
-                    </ul>
-
-                    <div class="alert alert-success mt-3">
-                        <span class="bi bi-info-circle"></span> <strong>Note:</strong> Data generation commands (GenBestiaryList, GenRegionList, etc.) 
-                        have been removed in v2.0. All reference files are now <strong>auto-generated on server startup</strong> - no manual commands needed!
+                    <div class="alert alert-success mb-4">
+                        <span class="bi bi-terminal-fill me-2"></span>
+                        <strong>Command:</strong> <code>[UORespawn</code> or <code>[UOR</code> (Administrator access required)
                     </div>
+
+                    <h6 class="text-primary mt-4"><span class="bi bi-ui-checks me-2"></span>Dashboard Features</h6>
+                    <p>The Control Dashboard provides everything you need in one place:</p>
+                    <ul>
+                        <li><strong>System Power:</strong> Enable/disable the entire spawn system</li>
+                        <li><strong>Live Statistics:</strong> Active spawns, player count, recycle pool status</li>
+                        <li><strong>All Toggles:</strong> Debug, Scale, Town, Grave, Rift, Effects, Vendor spawning</li>
+                        <li><strong>All Settings:</strong> Adjust intervals, ranges, chances, and limits in real-time</li>
+                        <li><strong>Save/Open:</strong> Save settings to file or reload from file</li>
+                    </ul>
+
+                    <h6 class="text-primary mt-4"><span class="bi bi-sliders me-2"></span>Dashboard Sections</h6>
+                    <ul>
+                        <li><strong>System Toggles:</strong> Lock Settings, Debug Mode, Spawn Effects, Scale Spawn, Town Spawn, Grave Spawn, Rift Spawn</li>
+                        <li><strong>Vendor Options:</strong> Enable Vendors, Night Sleep, Extra Townsfolk</li>
+                        <li><strong>Spawn Limits:</strong> Scale Modifier, Max Spawn, Max Range, Min Range, Max Crowd, Max Queue</li>
+                        <li><strong>System Intervals:</strong> Search, Process, Validate, and Timed intervals</li>
+                        <li><strong>Spawn Chances:</strong> Water, Weather, Timed, Common, Uncommon, Rare probabilities</li>
+                    </ul>
 
                     <h6 class="text-primary mt-4"><span class="bi bi-speedometer2 me-2"></span>Performance Targets</h6>
                     <ul>
-                        <li><strong>Recycle Rate:</strong> 30-60% is optimal (shows in Admin GUI)</li>
+                        <li><strong>Recycle Rate:</strong> 30-60% is optimal</li>
                         <li><strong>Cleanup Time:</strong> Should stay under 10ms</li>
                         <li><strong>Spawns Per Player:</strong> Target 12-15 active spawns</li>
                     </ul>
 
                     <div class="alert alert-info mt-3">
-                        <span class="bi bi-lightbulb"></span> <strong>Command Syntax:</strong> All commands start with 
-                        <code>[</code>. For example: type <code>[SpawnAdmin</code> and press Enter.
+                        <span class="bi bi-lightbulb"></span> <strong>Tip:</strong> All commands start with <code>[</code>.
+                        The dashboard provides GUI controls for everything - no need to memorize individual commands!
                     </div>
                 </div>
             </div>
@@ -1051,12 +1054,12 @@
                     <h6 class="text-primary mt-4"><span class="bi bi-clipboard-check me-2"></span>Testing Workflow</h6>
                     <ol>
                         <li>Create spawns in the editor</li>
-                        <li>Binary files auto-sync to server INPUT folder (if configured)</li>
-                        <li>Use <code>[SpawnReload</code> in-game to load changes</li>
-                        <li>Open <code>[SpawnAdmin</code> to monitor status and metrics</li>
-                        <li>Toggle <code>[DebugRespawn</code> to visualize spawn zones</li>
-                        <li>Adjust in editor and reload as needed</li>
-                        <li>Use <code>[PushRespawnStats</code> to generate heatmap data</li>
+                        <li>If linked, files auto-sync to server; otherwise, transfer manually</li>
+                        <li>Walk around in-game to trigger spawns near you</li>
+                        <li>Open Control Dashboard (<code>[UORespawn</code>) to monitor status and metrics</li>
+                        <li>Toggle Debug in the dashboard to visualize spawn zones</li>
+                        <li>Adjust in editor and test again as needed</li>
+                        <li>Use the editor's heatmap overlay to visualize spawn patterns (stats auto-save on World Save)</li>
                     </ol>
 
                     <div class="alert alert-success mt-3">
@@ -1168,7 +1171,7 @@
                         <li><strong>Bestiary:</strong> 600+ creatures included by default, fully customizable</li>
                         <li><strong>Map Support:</strong> All 6 standard UO maps (Felucca, Trammel, Ilshenar, Malas, Tokuno, Ter Mur)</li>
                         <li><strong>Custom Content:</strong> Add your own custom creatures to the bestiary</li>
-                        <li><strong>Server Scripts:</strong> Complete C# source code included in UORespawnSystem folder</li>
+                        <li><strong>Server Scripts:</strong> Complete C# source code included in UORespawnServer folder</li>
                         <li><strong>Cross-Platform:</strong> Works on Windows and macOS</li>
                         <li>
                             <strong>GitHub Repository:</strong> 
@@ -1182,14 +1185,18 @@
 
                     <h6 class="text-primary mt-4"><span class="bi bi-rocket-takeoff me-2"></span>What's New in v2.0</h6>
                     <ul>
-                        <li><strong>Binary Serialization:</strong> Faster file loading with .bin format</li>
+                        <li><strong>Binary Serialization:</strong> Faster file loading with .bin format for spawn data</li>
+                        <li><strong>CSV Settings (v2.0.0.7):</strong> Human-readable settings format with bidirectional sync</li>
+                        <li><strong>Auto-Loading Data (v2.0.0.7):</strong> Maps, tiles, creatures, and regions all load from server files</li>
+                        <li><strong>Data Integrity (v2.0.0.7):</strong> Spawn packs automatically filter unsupported content</li>
                         <li><strong>Region Spawn System:</strong> Spawn by named game regions</li>
                         <li><strong>Vendor Spawn System:</strong> Configure vendors per shop sign/hive location</li>
                         <li><strong>Auto-Generated Data:</strong> Server creates reference files on startup (no manual commands!)</li>
-                        <li><strong>Admin GUI:</strong> Professional in-game control panel</li>
+                        <li><strong>Control Dashboard:</strong> Professional in-game control panel</li>
                         <li><strong>Intelligent Recycling:</strong> Better performance through mobile reuse</li>
                         <li><strong>INPUT/OUTPUT Structure:</strong> Clean separation of editor→server and server→editor files</li>
                         <li><strong>Spawn Packs:</strong> Import, export, and share spawn configurations</li>
+                        <li><strong>Custom Maps:</strong> Support for maps beyond the default 6 (Map6, Map7, etc.)</li>
                     </ul>
 
                     <div class="alert alert-primary mt-3">

@@ -5,6 +5,55 @@ All notable changes to UORespawn will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0.7] - 2025-02-21
+
+### Added
+- **ISpawnEntity Interface** - New shared interface for consistent spawn entity handling
+  - Implemented by `BoxSpawnEntity`, `TileSpawnEntity`, and `RegionSpawnEntity`
+  - Defines the 6-list spawn structure (Water, Weather, Timed, Common, Uncommon, Rare)
+  - Includes `WeatherSpawn` and `TimedSpawn` trigger properties
+  - Enables future generic spawn handling and validation
+- **Settings Validation** - Comprehensive bounds checking on all numeric settings
+  - `Math.Clamp()` validation in property setters prevents invalid values
+  - Validation constants define allowed ranges (e.g., `MinRangeValue`, `MaxMobsValue`)
+  - `ValidateRanges()` helper ensures MinRange ≤ MaxRange
+  - `GetSettingsSummary()` for debugging/logging current settings
+- **Point2D Helper Struct** - Custom lightweight struct for spawn statistics
+  - Replaces `Microsoft.Maui.Graphics.Point` in `MapDisplayUtility`
+  - Eliminates MAUI-specific warnings in stats processing
+
+### Changed
+- **Stats File Format** - Now uses numeric map ID instead of map name
+  - Format: `Time|Player|MapID|PX|PY|SX|SY|CreatureName`
+  - Example: `12:42 AM|Wilson|1|1359|1844|1360|1645|Bird`
+  - `MapDisplayUtility` updated to parse map ID directly with `int.Parse()`
+- **Instructions Page** - Third-pass comprehensive review and updates
+  - Renamed "Admin GUI" → "Control Dashboard" throughout
+  - Fixed spawn system count: "three" → "four" (added Vendor Spawns)
+  - Changed "World Spawns" → "Tile Spawns" for consistency
+  - Removed outdated command references (`[SpawnReload`, `[SpawnAdmin`, `[PushRespawnStats`, `[DebugRespawn`)
+  - Clarified linked server auto-sync workflow
+  - Simplified Section 9 (Testing Workflow) from ~200 to ~80 lines
+- **Server Scripts Folder** - Renamed `UORespawnSystem` → `UORespawnServer`
+  - Updated folder: `Data/SERVER/UORespawnServer/`
+  - Updated zip: `UORespawnServer.zip`
+  - All references updated in codebase and documentation
+- **WebView Margin** - Fixed overlap with nav menu (250px → 260px)
+
+### Fixed
+- **CancellationTokenSource Disposal** - Proper disposal pattern in `DataWatcher.OnChanged()`
+  - Now calls `Dispose()` before reassigning to prevent resource leaks
+- **Empty Duplicate File** - Removed empty `Scripts/Utilities/ViewService.cs`
+  - Real implementation lives in `Scripts/Services/ViewService.cs`
+
+### Technical
+- All spawn entities now implement `ISpawnEntity` interface
+- Settings validation constants: `MinRangeValue=1`, `MaxRangeValue=500`, `MinMobsValue=1`, etc.
+- Chance values clamped to 0.0-1.0 range
+- Interval values clamped to reasonable bounds (10ms-60000ms for intervals)
+- Complete XML documentation on `VendorEntity` properties and methods
+- Build verified with .NET 10 - no warnings or errors
+
 ## [2.0.0.6] - 2026-02-20
 
 ### Added

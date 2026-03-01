@@ -2,9 +2,10 @@ namespace UORespawnApp.Scripts.Entities
 {
     /// <summary>
     /// Region-based spawn entity for UORespawn v2.0
-    /// Spawns mobs within named server regions (e.g., "Britain", "Dungeon Despise")
+    /// Spawns mobs within named server regions (e.g., "Britain", "Dungeon Despise").
+    /// Implements ISpawnEntity for consistent spawn list handling.
     /// </summary>
-    public class RegionSpawnEntity
+    public class RegionSpawnEntity : ISpawnEntity
     {
         /// <summary>
         /// Unique identifier for region spawn entry

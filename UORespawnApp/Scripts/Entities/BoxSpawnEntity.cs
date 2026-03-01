@@ -2,9 +2,10 @@ namespace UORespawnApp.Scripts.Entities
 {
     /// <summary>
     /// Box-based spawn entity for UORespawn v2.0
-    /// Supports 6 spawn list categories with Weather and Timed triggers
+    /// Supports 6 spawn list categories with Weather and Timed triggers.
+    /// Implements ISpawnEntity for consistent spawn list handling.
     /// </summary>
-    public class BoxSpawnEntity
+    public class BoxSpawnEntity : ISpawnEntity
     {
         /// <summary>
         /// Unique position/ID for this spawn box
