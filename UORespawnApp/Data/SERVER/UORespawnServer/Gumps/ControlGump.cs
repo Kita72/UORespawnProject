@@ -276,13 +276,11 @@ namespace Server.Custom.UORespawnServer.Gumps
 
                 case BTN_OPEN:
                     _Service.EditSpawn();
-                    _Service.CloseGump();
-                    return;
+                    break;
 
                 case BTN_POWER:
                     _Service.TogglePower();
-                    _Service.CloseGump();
-                    return;
+                    break;
 
                 // System Toggles
                 case BTN_TOGGLE_LOCK: _Service.ToggleLock(); break;
@@ -313,31 +311,31 @@ namespace Server.Custom.UORespawnServer.Gumps
                 case BTN_MAXQUEUE_UP: _Service.AdjustMaxQueueSize(1); break;
 
                 // Intervals
-                case BTN_SEARCH_DOWN: _Service.AdjustSearchInterval(-50); break;
-                case BTN_SEARCH_UP: _Service.AdjustSearchInterval(50); break;
-                case BTN_PROCESS_DOWN: _Service.AdjustProcessInterval(-50); break;
-                case BTN_PROCESS_UP: _Service.AdjustProcessInterval(50); break;
+                case BTN_SEARCH_DOWN: _Service.AdjustSearchInterval(-25); break;
+                case BTN_SEARCH_UP: _Service.AdjustSearchInterval(25); break;
+                case BTN_PROCESS_DOWN: _Service.AdjustProcessInterval(-25); break;
+                case BTN_PROCESS_UP: _Service.AdjustProcessInterval(25); break;
                 case BTN_VALIDATE_DOWN: _Service.AdjustValidateInterval(-1); break;
                 case BTN_VALIDATE_UP: _Service.AdjustValidateInterval(1); break;
                 case BTN_TIMED_DOWN: _Service.AdjustTimedInterval(-1); break;
                 case BTN_TIMED_UP: _Service.AdjustTimedInterval(1); break;
 
                 // Chances
-                case BTN_CHANCE_WATER_DOWN: _Service.AdjustChanceWater(-0.05); break;
-                case BTN_CHANCE_WATER_UP: _Service.AdjustChanceWater(0.05); break;
-                case BTN_CHANCE_WEATHER_DOWN: _Service.AdjustChanceWeather(-0.05); break;
-                case BTN_CHANCE_WEATHER_UP: _Service.AdjustChanceWeather(0.05); break;
-                case BTN_CHANCE_TIMED_DOWN: _Service.AdjustChanceTimed(-0.05); break;
-                case BTN_CHANCE_TIMED_UP: _Service.AdjustChanceTimed(0.05); break;
-                case BTN_CHANCE_COMMON_DOWN: _Service.AdjustChanceCommon(-0.05); break;
-                case BTN_CHANCE_COMMON_UP: _Service.AdjustChanceCommon(0.05); break;
-                case BTN_CHANCE_UNCOMMON_DOWN: _Service.AdjustChanceUncommon(-0.05); break;
-                case BTN_CHANCE_UNCOMMON_UP: _Service.AdjustChanceUncommon(0.05); break;
-                case BTN_CHANCE_RARE_DOWN: _Service.AdjustChanceRare(-0.05); break;
-                case BTN_CHANCE_RARE_UP: _Service.AdjustChanceRare(0.05); break;
+                case BTN_CHANCE_WATER_DOWN: _Service.AdjustChanceWater(-0.01); break;
+                case BTN_CHANCE_WATER_UP: _Service.AdjustChanceWater(0.01); break;
+                case BTN_CHANCE_WEATHER_DOWN: _Service.AdjustChanceWeather(-0.01); break;
+                case BTN_CHANCE_WEATHER_UP: _Service.AdjustChanceWeather(0.01); break;
+                case BTN_CHANCE_TIMED_DOWN: _Service.AdjustChanceTimed(-0.01); break;
+                case BTN_CHANCE_TIMED_UP: _Service.AdjustChanceTimed(0.01); break;
+                case BTN_CHANCE_COMMON_DOWN: _Service.AdjustChanceCommon(-0.01); break;
+                case BTN_CHANCE_COMMON_UP: _Service.AdjustChanceCommon(0.01); break;
+                case BTN_CHANCE_UNCOMMON_DOWN: _Service.AdjustChanceUncommon(-0.01); break;
+                case BTN_CHANCE_UNCOMMON_UP: _Service.AdjustChanceUncommon(0.01); break;
+                case BTN_CHANCE_RARE_DOWN: _Service.AdjustChanceRare(-0.01); break;
+                case BTN_CHANCE_RARE_UP: _Service.AdjustChanceRare(0.01); break;
             }
 
-            // Gump will auto-refresh via timer, no need to re-send here
+            _Service.RefreshGump();
         }
     }
 }

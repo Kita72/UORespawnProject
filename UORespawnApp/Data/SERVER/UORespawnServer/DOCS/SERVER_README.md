@@ -1,6 +1,6 @@
 # UORespawnServer - Server Documentation
 
-> **Version:** 2.0.0.7  
+> **Version:** 2.0.0.8
 > **Target:** .NET Framework 4.8  
 > **Last Updated:** Feb 2026
 
@@ -17,6 +17,10 @@
 7. [Logging System](#logging-system)
 8. [Editor Integration](#editor-integration)
 9. [Spawn Packs](#spawn-packs)
+10. [Command System](#command-system)
+11. [In-Game Spawn Editing System](#in-game-spawn-editing-system)
+12. [Vendor System](#vendor-system)
+13. [Event System](#event-system)
 
 ---
 
@@ -111,12 +115,12 @@ The server and editor work in a **synchronized partnership**:
 | Service | Purpose |
 |---------|---------|
 | `ProcessService` | Main spawn processing and mob creation |
-| `RecycleService` | Mob pooling and recycling for performance |
-| `TrackService` | Spawn location tracking and persistence |
-| `ValidateService` | Spawn validation and cleanup |
+| `RecycleService` | Mob pooling for performance (spawn keeps ISpawner leash) |
+| `TrackService` | Startup-only cleanup of stray mobs via ISpawner |
+| `ValidateService` | Spawn validation using ISpawner on-demand queries |
 | `TimedService` | Time-based spawn updates (day/night) |
 | `StatsService` | Spawn statistics collection |
-| `VendorService` | Vendor NPC lifecycle management |
+| `VendorService` | Vendor NPC lifecycle via ISpawner pattern |
 | `ControlService` | In-game settings gump interface |
 
 ### Managers (5 total)
@@ -129,7 +133,7 @@ The server and editor work in a **synchronized partnership**:
 | `VendorManager` | Sign and hive location management |
 | `LogManager` | Session log buffering, color-level tagging, and shutdown flush |
 
-### Spawners (4 total)
+### Spawners (4 spawn logic + 2 ISpawner singletons)
 
 | Spawner | Purpose |
 |---------|---------|
@@ -137,6 +141,19 @@ The server and editor work in a **synchronized partnership**:
 | `RegionSpawner` | Region-based spawns (medium priority) |
 | `TileSpawner` | Terrain tile-based spawns (lowest priority) |
 | `VendorSpawner` | Vendor NPC spawning at sign locations |
+
+### ISpawner Singletons (NEW in 2.0.0.8+)
+
+| ISpawner | Purpose |
+|----------|---------|
+| `UOR_MobSpawner` | Tracks all UORespawn mob spawn via `creature.Spawner` field |
+| `UOR_VendorSpawner` | Tracks all UORespawn vendor spawn via `creature.Spawner` field |
+
+The ISpawner pattern provides:
+- **On-demand queries** - `GetAllSpawn()` finds all owned creatures instantly
+- **Automatic cleanup** - `CleanupAll()` deletes all owned spawn
+- **No tracking lists** - Game's existing Mobile collection handles persistence
+- **Leak-proof** - Spawn keeps ISpawner reference even when recycled
 
 ### Timers (4 total)
 
@@ -159,7 +176,7 @@ Data/
     │   ├── UOR_RegionSpawn.bin
     │   ├── UOR_TileSpawn.bin
     │   ├── UOR_VendorSpawn.bin
-    │   └── UOR_SpawnSettings.csv    # ⚠️ NEW: CSV format settings
+    │   └── UOR_SpawnSettings.csv    # ⚠️ CSV format settings
     │
     ├── OUTPUT/         # Server → Editor (generated lists)
     │   ├── UOR_MapList.txt
@@ -171,11 +188,16 @@ Data/
     │   ├── UOR_SignData.txt
     │   └── UOR_HiveData.txt
     │
+    ├── COMMANDS/       # ⚠️ NEW: Server → Editor command queue
+    │   ├── settings_edits.txt   # Settings change commands
+    │   ├── box_edits.txt        # Box spawn commands
+    │   ├── region_edits.txt     # Region spawn commands
+    │   ├── tile_edits.txt       # Tile spawn commands
+    │   └── vendor_edits.txt     # Vendor spawn commands
+    │
     ├── STATS/          # Statistics data
     │
     └── SYS/            # System files
-        ├── UOR_TrackSpawn.txt
-        ├── UOR_VendorSpawn.txt
         └── UOR_DebugLog.txt
 ```
 
@@ -656,6 +678,264 @@ When loading a spawn pack in Editor:
 
 ---
 
+## Command System
+
+### ⚠️ NEW: Command-Based Edit Synchronization
+
+The command system provides **unidirectional data flow** with a **command queue** for server → editor communication. Instead of both server and editor reading/writing the same settings file, edits are logged as commands.
+
+### Why Commands?
+
+| Old Approach (Problems) | New Approach (Commands) |
+|------------------------|-------------------------|
+| Both read/write same file | One-way data flow with command queue |
+| Race conditions possible | Server logs commands, editor consumes |
+| Hard to track what changed | Each change is an explicit command |
+| Settings could conflict | Editor is source of truth, server proposes changes |
+
+### Directory Structure
+
+```
+Data/
+└── UORespawn/
+    └── COMMANDS/           # ⚠️ NEW: Command queue folder
+        ├── settings_edits.txt    # Settings change commands
+        ├── box_edits.txt         # Box spawn edit commands
+        ├── region_edits.txt      # Region spawn edit commands
+        ├── tile_edits.txt        # Tile spawn edit commands
+        └── vendor_edits.txt      # Vendor spawn edit commands
+```
+
+### Command File Format
+
+Each line in a command file is a pipe-delimited command:
+
+```
+Action|Target|Section|Trigger|SpawnName|ExtraData
+```
+
+#### Field Definitions
+
+| Field | Values | Description |
+|-------|--------|-------------|
+| `Action` | `Add`, `Remove`, `Update` | What to do |
+| `Target` | `Settings`, `Box`, `Region`, `Tile`, `Vendor` | What type to modify |
+| `Section` | `None`, `Common`, `Uncommon`, `Rare`, `Water`, `Weather`, `Timed` | Spawn list to modify |
+| `Trigger` | `None`, `Weather`, `Timed` | Trigger condition |
+| `SpawnName` | string | Creature name (spawn) or setting key (settings) |
+| `ExtraData` | string | Setting value or location identifier |
+
+### Command Examples
+
+#### Settings Commands
+
+```
+# Update a setting value
+Update|Settings|None|None|SEARCH_INTERVAL|125
+Update|Settings|None|None|ENABLE_DEBUG|True
+Update|Settings|None|None|CHANCE_RARE|0.05
+```
+
+#### Spawn Commands
+
+```
+# Add Orc to Box #5 on Felucca (MapId=0) Common list
+Add|Box|Common|None|Orc|0,5
+
+# Remove Dragon from Region "Britain" on Felucca Rare list
+Remove|Region|Rare|None|Dragon|0,Britain
+
+# Add RatmanArcher to Tile "grass" on Trammel (MapId=1) Uncommon list
+Add|Tile|Uncommon|None|RatmanArcher|1,grass
+
+# Add Blacksmith to Vendor at coordinates on Felucca
+Add|Vendor|None|None|Blacksmith|0,1434,1699,0
+```
+
+### ExtraData Format by Target
+
+| Target | ExtraData Format | Example |
+|--------|------------------|---------|
+| `Settings` | `{value}` | `125`, `True`, `0.05` |
+| `Box` | `{MapId},{BoxId}` | `0,5` (Felucca, Box #5) |
+| `Region` | `{MapId},{RegionName}` | `0,Britain` |
+| `Tile` | `{MapId},{TileName}` | `1,grass` |
+| `Vendor` | `{MapId},{X},{Y},{Z}` | `0,1434,1699,0` |
+
+### Command Flow
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    COMMAND FLOW DIAGRAM                              │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│   IN-GAME EDIT FLOW (Server → Editor)                                │
+│   ════════════════════════════════════                               │
+│                                                                      │
+│   1. Admin opens Control Gump in game                                │
+│   2. Adjusts settings (intervals, limits, toggles)                   │
+│   3. Clicks "Save" button                                            │
+│   4. ControlService.SaveSettings() is called                         │
+│   5. Settings logged as commands to COMMANDS/settings_edits.txt      │
+│   6. Server continues running with updated in-memory settings        │
+│                                                                      │
+│                         ↓                                            │
+│                                                                      │
+│   EDITOR CONSUMPTION (Editor processes server commands)              │
+│   ═════════════════════════════════════════════════════              │
+│                                                                      │
+│   1. Editor launches                                                 │
+│   2. Checks COMMANDS/ folder for edit files                          │
+│   3. For each edit file found:                                       │
+│      a. Read and parse commands                                      │
+│      b. Apply changes to spawn pack data                             │
+│      c. DELETE the consumed edit file                                │
+│   4. Save updated spawn pack files                                   │
+│   5. Push updated .bin/.csv files to server INPUT/ folder            │
+│                                                                      │
+│                         ↓                                            │
+│                                                                      │
+│   SERVER RESTART SAFETY                                              │
+│   ════════════════════════                                           │
+│                                                                      │
+│   If server restarts BEFORE editor consumes commands:                │
+│   1. Server starts → LoadSpawns()                                    │
+│   2. Loads settings/spawn data from binary files                     │
+│   3. Calls CheckAndApplyPendingCommands()                            │
+│   4. Reads any remaining command files                               │
+│   5. Applies commands to in-memory data                              │
+│   6. Deletes consumed command files                                  │
+│   7. Server runs with updated settings                               │
+│                                                                      │
+│   ⚠️ Commands persist until consumed by EITHER server OR editor!     │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Server-Side Components
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| `CommandTypes.cs` | `Enums/` | Defines `CommandAction`, `CommandTarget`, `SpawnSection`, `SpawnTrigger` |
+| `EditCommand.cs` | `Models/` | Command model with serialization/parsing |
+| `CommandManager.cs` | `Managers/` | Read/Write/Consume command files |
+| `GameManager.cs` | `Managers/` | `CheckAndApplyPendingCommands()` on startup |
+| `SpawnManager.cs` | `Managers/` | `ApplySpawnCommand()` for spawn edits |
+| `ControlService.cs` | `Services/` | `SaveSettings()` logs commands |
+
+### Fresh Install Behavior
+
+When NO data files exist (fresh install):
+
+| Scenario | Behavior |
+|----------|----------|
+| No settings file | Uses hardcoded defaults in `UOR_Settings` |
+| No spawn binary files | Empty spawn dictionaries, logs warning |
+| No command files | Skips command processing |
+| Unknown spawn type (debug) | Uses `PlaceHolder` mob |
+| Unknown spawn type (prod) | Uses `WanderingHealer` fallback |
+
+### Editor Integration Requirements
+
+**⚠️ EDITOR AI: READ THIS SECTION**
+
+The Editor must implement command consumption:
+
+#### On Launch
+
+```
+1. Check if COMMANDS/ folder exists
+2. For each edit file (settings_edits.txt, box_edits.txt, etc.):
+   a. Read file line by line
+   b. Parse each line as: Action|Target|Section|Trigger|SpawnName|ExtraData
+   c. Apply command to spawn pack data in memory
+   d. DELETE the file after successful processing
+3. Continue with normal Editor startup
+```
+
+#### Command Processing Pseudocode
+
+```csharp
+// For each command file
+foreach (var file in Directory.GetFiles(COMMANDS_DIR, "*_edits.txt"))
+{
+    var lines = File.ReadAllLines(file);
+
+    foreach (var line in lines)
+    {
+        // Skip comments and empty lines
+        if (string.IsNullOrWhiteSpace(line) || line.StartsWith("#"))
+            continue;
+
+        var parts = line.Split('|');
+        // parts[0] = Action (Add/Remove/Update)
+        // parts[1] = Target (Settings/Box/Region/Tile/Vendor)
+        // parts[2] = Section (None/Common/Uncommon/Rare/Water/Weather/Timed)
+        // parts[3] = Trigger (None/Weather/Timed)
+        // parts[4] = SpawnName (creature name or setting key)
+        // parts[5] = ExtraData (setting value or location identifier)
+
+        ApplyCommand(parts);
+    }
+
+    // CRITICAL: Delete file after consumption
+    File.Delete(file);
+}
+```
+
+#### Settings Command Application
+
+```csharp
+// For settings commands (Target == "Settings")
+// SpawnName = setting key, ExtraData = setting value
+switch (command.SpawnName.ToUpper())
+{
+    case "SEARCH_INTERVAL":
+        Settings.SearchInterval = int.Parse(command.ExtraData);
+        break;
+    case "ENABLE_DEBUG":
+        Settings.EnableDebug = bool.Parse(command.ExtraData);
+        break;
+    // ... etc for all settings
+}
+```
+
+#### Spawn Command Application
+
+```csharp
+// For spawn commands (Target == Box/Region/Tile)
+// Parse ExtraData to find the entity, then modify the appropriate list
+
+if (command.Action == "Add")
+{
+    GetSpawnList(entity, command.Section).Add(command.SpawnName);
+}
+else if (command.Action == "Remove")
+{
+    GetSpawnList(entity, command.Section).Remove(command.SpawnName);
+}
+```
+
+### Important Notes for Editor AI
+
+1. **Always delete command files after processing** - This prevents duplicate application
+2. **Commands are append-only** - New commands append to existing file
+3. **Process all commands before saving** - Apply all pending changes, then save updated packs
+4. **Validate commands** - Skip invalid commands and log warnings
+5. **Settings keys are case-insensitive** - `ENABLE_DEBUG` == `enable_debug`
+6. **ExtraData parsing varies by target** - See ExtraData Format table above
+
+### Version History (Commands)
+
+| Version | Changes |
+|---------|---------|
+| 2.0.0.7 | Added COMMANDS/ folder and command file system |
+| 2.0.0.7 | ControlService.SaveSettings() now logs commands |
+| 2.0.0.7 | GameManager.CheckAndApplyPendingCommands() on startup |
+| 2.0.0.7 | SpawnManager.ApplySpawnCommand() for runtime edits |
+
+---
+
 ## Server Events
 
 The system hooks into these ServUO events:
@@ -716,11 +996,26 @@ The system hooks into these ServUO events:
 
 | Version | Changes |
 |---------|---------|
+| 2.0.0.8 | **BREAKING:** Replaced tracking lists with ISpawner pattern |
+| 2.0.0.8 | **NEW:** `UOR_MobSpawner` and `UOR_VendorSpawner` singletons |
+| 2.0.0.8 | **NEW:** On-demand spawn queries via `creature.Spawner` field |
+| 2.0.0.8 | **NEW:** `RespawnVendorsAtLocation()` for immediate vendor swap |
+| 2.0.0.8 | **REMOVED:** `VENDOR_MARKER` (Home.Z=999) - Use ISpawner instead |
+| 2.0.0.8 | **REMOVED:** `UOR_VendorSerials.bin` - ISpawner persists with Mobile |
+| 2.0.0.8 | **REMOVED:** `_AllSpawns` tracking list - Query ISpawner on-demand |
+| 2.0.0.8 | **REMOVED:** `SpawnedVendors` list on VendorEntity - Query on-demand |
+| 2.0.0.8 | **FIX:** RecycleService maintains ISpawner leash (no Release) |
+| 2.0.0.8 | VendorEditService.SaveChanges() applies changes and respawns |
 | 2.0.0.7 | Settings changed from binary to CSV format |
 | 2.0.0.7 | Logging unified through UOR_Utility.SendMsg |
 | 2.0.0.7 | ControlGump layout fixes and improvements | 
 | 2.0.0.7 | Added SpatialGridManager for O(1) lookups |
 | 2.0.0.7 | Added Dictionary lookups for Region/Tile |
+| 2.0.0.7 | **NEW:** In-game spawn editing (SpawnEditGump/Service) |
+| 2.0.0.7 | **NEW:** Vendor spawn editing (VendorEditGump/Service) |
+| 2.0.0.7 | **NEW:** Event subscription safety (prevents double handlers) |
+| 2.0.0.7 | **FIX:** Vendor display names use actual sign text, not SignType enum |
+| 2.0.0.7 | **FIX:** VendorManager.LoadAllHives() now counts generated hives |
 
 ---
 
@@ -755,11 +1050,441 @@ Never manually edit OUTPUT/ files - they are regenerated every server start!
 |-------------|-------------|
 | Scans game → Generates OUTPUT/ | Reads OUTPUT/ → Populates UI |
 | Loads INPUT/ → Runs spawns | Saves INPUT/ → Defines spawns |
-| Owns game truth | Owns user editing |
+| Logs edits → COMMANDS/ | Reads COMMANDS/ → Updates packs |
+| Owns runtime state | Owns source of truth |
 | Regenerates on startup | Refreshes on launch |
+
+### Command System Summary
+
+```
+┌────────────────────────────────────────────────────────────────┐
+│                    DATA FLOW SUMMARY                            │
+├────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   OUTPUT/          One-way: Server → Editor (game data)         │
+│   INPUT/           One-way: Editor → Server (spawn data)        │
+│   COMMANDS/        One-way: Server → Editor (edit requests)     │
+│                                                                 │
+│   Server is CONSUMER of INPUT/                                  │
+│   Server is PRODUCER of OUTPUT/ and COMMANDS/                   │
+│                                                                 │
+│   Editor is CONSUMER of OUTPUT/ and COMMANDS/                   │
+│   Editor is PRODUCER of INPUT/                                  │
+│                                                                 │
+└────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
 ## Contact
 
 For issues or questions about the server-side code, check `UOR_DebugLog.txt` first, then refer to this documentation.
+
+---
+
+## In-Game Spawn Editing System
+
+### Overview
+
+The server includes an **in-game spawn editing system** that allows admins to view and edit spawn data directly in the game client. This system generates commands that the Editor consumes to update spawn pack files.
+
+### Accessing the Spawn Editor
+
+1. Use the command `[uor` to open the Control Gump
+2. Click the "Edit Spawn" button
+3. Target any location (land, static, or item)
+4. Spawn editor gump(s) will open for matching spawn data
+
+### Target Resolution
+
+When targeting a location, the system checks for spawn data in this priority:
+
+| Target Type | What Opens |
+|-------------|-----------|
+| **Land Tile** | Box → Region → Tile spawn editors |
+| **Static (Beehive)** | Vendor editor for beekeeper spawn |
+| **Item (Sign)** | Vendor editor for shop vendor spawn |
+
+### SpawnEditGump (Box/Region/Tile)
+
+The spawn edit gump displays all 6 spawn sections in tabs:
+
+| Tab | Section | Description |
+|-----|---------|-------------|
+| 1 | Water | Spawns when player is on water |
+| 2 | Weather | Spawns during weather events |
+| 3 | Timed | Spawns at night (timed events) |
+| 4 | Common | Always spawns (100% chance) |
+| 5 | Uncommon | Rare spawns (~10% chance) |
+| 6 | Rare | Very rare spawns (~1% chance) |
+
+#### SpawnEditGump Features
+
+- **View spawn lists** - See all creatures in each section
+- **Add spawns** - Type creature name, click Add
+- **Remove spawns** - Click X next to creature name
+- **Tab navigation** - Switch between 6 spawn sections
+- **Auto-command logging** - All changes logged to COMMANDS/ folder
+
+### VendorEditGump
+
+The vendor edit gump is a simplified single-list editor for vendor spawns:
+
+| Feature | Description |
+|---------|-------------|
+| **Location display** | Shows actual sign name from world (e.g., "Bank Of Skara Brae") |
+| **Vendor list** | Single list of vendor types to spawn |
+| **Add vendors** | Type vendor name (e.g., "Banker"), click Add |
+| **Remove vendors** | Click X next to vendor name |
+
+### Services Architecture
+
+| Service | File | Purpose |
+|---------|------|---------|
+| `SpawnEditService` | `Services/SpawnEditService.cs` | Handles Box/Region/Tile editing |
+| `VendorEditService` | `Services/VendorEditService.cs` | Handles vendor spawn editing |
+| `SpawnEditGump` | `Gumps/SpawnEditGump.cs` | 6-tab spawn editor UI |
+| `VendorEditGump` | `Gumps/VendorEditGump.cs` | Single-list vendor editor UI |
+
+### Command Generation
+
+When edits are made via gumps, commands are written to:
+
+| Edit Type | Command File |
+|-----------|-------------|
+| Box spawn | `COMMANDS/box_edits.txt` |
+| Region spawn | `COMMANDS/region_edits.txt` |
+| Tile spawn | `COMMANDS/tile_edits.txt` |
+| Vendor spawn | `COMMANDS/vendor_edits.txt` |
+
+---
+
+## Vendor System
+
+### Overview
+
+The vendor system manages NPC vendor spawning at shop signs and beehive locations. Vendors are tracked via the **ISpawner pattern** using `UOR_VendorSpawner`.
+
+### Key Differences from Regular Spawns
+
+| Regular Spawns | Vendor Spawns |
+|----------------|---------------|
+| Spawn/despawn dynamically | Spawn once, persist |
+| Tracked by `UOR_MobSpawner` | Tracked by `UOR_VendorSpawner` |
+| Recycled when far from players | Only deleted on system off/reset |
+| No special persistence | ISpawner field persists with Mobile |
+
+### ISpawner Pattern (NEW in 2.0.0.8+)
+
+All spawn tracking now uses the ServUO `ISpawner` interface:
+
+```csharp
+// Claiming a vendor (in VendorSpawner.cs)
+UOR_VendorSpawner.Instance.Claim(vendor, location);
+
+// On-demand query for all vendors
+var allVendors = UOR_VendorSpawner.GetAllSpawn();
+
+// Cleanup all vendors
+int deleted = UOR_VendorSpawner.CleanupAll();
+```
+
+**Benefits:**
+- No tracking lists needed - query `World.Mobiles` on-demand
+- No serial persistence files - ISpawner field saves with Mobile
+- No marker systems - check `creature.Spawner == UOR_VendorSpawner.Instance`
+- Immediate vendor swap on edit - `RespawnVendorsAtLocation()` method
+
+### Vendor Entity (Config Only)
+
+Each `VendorEntity` is now **config-only** - no runtime serial tracking:
+
+```csharp
+internal class VendorEntity
+{
+    // Config data from editor
+    internal List<string> VendorList { get; }  // Types to spawn
+    internal Point3D Location { get; }          // Spawn point
+    internal bool IsSign { get; }               // Sign vs beehive
+
+    // NO runtime tracking - ISpawner handles it
+}
+```
+
+### Vendor Lifecycle
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    VENDOR LIFECYCLE (ISpawner)                   │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│   SERVER STARTUP                                                 │
+│   ══════════════                                                 │
+│   1. SpawnManager.LoadVendorSpawnData()                          │
+│      → Loads VendorEntity definitions from UOR_VendorSpawn.bin   │
+│      → Each entity has VendorList (type names to spawn)          │
+│                                                                  │
+│   2. VendorService.InitializeSpawn()                             │
+│      → Checks UOR_VendorSpawner.GetCount() for existing vendors  │
+│      → If vendors exist (ISpawner tracked), skip spawning        │
+│      → If no vendors, spawn from config and Claim() via ISpawner │
+│                                                                  │
+│   WORLD SAVE                                                     │
+│   ══════════════                                                 │
+│   1. VendorService.Save()                                        │
+│      → Just logs count - ISpawner field saves with Mobile        │
+│      → No separate serial persistence needed!                    │
+│                                                                  │
+│   SYSTEM OFF / RESET                                             │
+│   ══════════════════                                             │
+│   1. VendorService.DeleteAllVendors()                            │
+│      → UOR_VendorSpawner.CleanupAll() - deletes all owned spawn  │
+│      → Single ISpawner query finds and deletes all vendors       │
+│                                                                  │
+│   IN-GAME VENDOR EDIT                                            │
+│   ═══════════════════                                            │
+│   1. VendorEditService.SaveChanges()                             │
+│      → Applies changes to in-memory VendorEntity                 │
+│      → Calls RespawnVendorsAtLocation() for immediate swap       │
+│      → ISpawner finds/deletes old vendors, spawns new ones       │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### ISpawner Queries (Replaces Markers/Tracking Lists)
+
+The ISpawner pattern eliminates the need for markers and tracking lists:
+
+```csharp
+// Find all UORespawn vendors in the world
+var allVendors = UOR_VendorSpawner.GetAllSpawn();
+
+// Find vendors near a specific location
+foreach (var vendor in allVendors)
+{
+    if (vendor.Map == map && vendor.GetDistanceToSqrt(location) <= range)
+    {
+        // This is a vendor at this location
+    }
+}
+
+// Delete all vendors
+int deleted = UOR_VendorSpawner.CleanupAll();
+```
+
+**No longer needed:**
+- ~~`VENDOR_MARKER` (Home.Z=999)~~ - Check `creature.Spawner` instead
+- ~~`UOR_VendorSerials.bin`~~ - ISpawner field persists with Mobile
+- ~~`SpawnedVendors` list on VendorEntity~~ - Query on-demand
+
+### VendorSpawn.bin Format (Editor Creates)
+
+```
+int32   FileVersion
+string  VersionString
+int32   MapCount
+[per map]:
+  int32   MapId
+  string  MapName
+  int32   VendorCount
+  [per vendor]:
+    bool    IsSign          // true = shop sign, false = beehive
+    int32   SignType        // SignType enum value
+    int32   SignFacing      // SignFacing enum (North/West)
+    int32   X
+    int32   Y
+    int32   Z
+    int32   VendorListCount
+    [per vendor type]:
+      string  VendorTypeName  // e.g., "Banker", "Blacksmith"
+```
+
+### Location Coordinate Systems
+
+**⚠️ IMPORTANT:** `VendorEntity.Location` stores the **inside location** (spawn point), not the original sign/hive position!
+
+| Source | Location Stored | Purpose |
+|--------|-----------------|---------|
+| Sign world position | Original sign item location | Where user clicks |
+| VendorEntity.Location | Inside location (offset) | Where vendors spawn |
+| Editor creates | Original sign position | Input data |
+| Server transforms | Inside location | Runtime storage |
+
+#### Offset Calculations
+
+**Signs (IsSign = true):**
+```csharp
+// North facing: Y - 2
+insideLocation = new Point3D(signX, signY - 2, signZ);
+
+// West facing: X - 2
+insideLocation = new Point3D(signX - 2, signY, signZ);
+```
+
+**Beehives (IsSign = false):**
+```csharp
+// Always: X + 1, Y + 1
+insideLocation = new Point3D(hiveX + 1, hiveY + 1, hiveZ);
+```
+
+#### Reverse Offset (For Editor Lookup)
+
+When targeting a sign to edit, the server reverses the offset:
+
+```csharp
+// Sign (North): Y + 2
+originalLocation = new Point3D(entityX, entityY + 2, entityZ);
+
+// Sign (West): X + 2
+originalLocation = new Point3D(entityX + 2, entityY, entityZ);
+
+// Beehive: X - 1, Y - 1
+originalLocation = new Point3D(entityX - 1, entityY - 1, entityZ);
+```
+
+### Vendor Display Names
+
+The in-game vendor editor shows the **actual sign name** from the targeted item, not the stored `SignType` enum:
+
+```csharp
+// When user targets a sign:
+string signName = baseSign.Name ?? baseSign.ItemData.Name;
+// Shows: "Bank Of Skara Brae (North)"
+
+// NOT the SignType enum:
+// Would show: "Library (North)" ← WRONG if binary data has wrong enum
+```
+
+### Vendor Command Format
+
+**File:** `COMMANDS/vendor_edits.txt`
+
+```
+# Add a vendor type to a location
+Add|Vendor|None|None|Blacksmith|0,1434,1699,0
+
+# Remove a vendor type from a location
+Remove|Vendor|None|None|Blacksmith|0,1434,1699,0
+
+# ExtraData format: MapId,X,Y,Z (original sign/hive position)
+```
+
+### Editor Requirements for Vendors
+
+#### Reading VendorSpawn.bin
+
+```csharp
+// Read vendor entity
+bool isSign = reader.ReadBoolean();
+SignType signType = (SignType)reader.ReadInt32();
+SignFacing signFacing = (SignFacing)reader.ReadInt32();
+int x = reader.ReadInt32();
+int y = reader.ReadInt32();
+int z = reader.ReadInt32();
+
+// Read vendor type list
+int vendorCount = reader.ReadInt32();
+for (int i = 0; i < vendorCount; i++)
+{
+    string vendorName = reader.ReadString();
+    // Add to entity's vendor list
+}
+```
+
+#### Writing VendorSpawn.bin
+
+```csharp
+// Write vendor entity
+writer.Write(entity.IsSign);
+writer.Write((int)entity.SignType);
+writer.Write((int)entity.SignFacing);
+writer.Write(entity.Location.X);  // Original sign/hive position!
+writer.Write(entity.Location.Y);
+writer.Write(entity.Location.Z);
+
+// Write vendor type list
+writer.Write(entity.VendorList.Count);
+foreach (var vendorName in entity.VendorList)
+{
+    writer.Write(vendorName);
+}
+```
+
+### Beehive Vendors
+
+Beehives are a special case of vendor locations:
+
+| Property | Sign | Beehive |
+|----------|------|---------|
+| `IsSign` | `true` | `false` |
+| `SignType` | Varies | `MetalPost` (ignored) |
+| `SignFacing` | `North`/`West` | `North` (ignored) |
+| Offset | -2 on facing axis | +1 on X and Y |
+| Typical vendors | Shop-specific | `Beekeeper` |
+
+### VendorManager Data Files
+
+These files contain **raw location data** for the Editor to populate its vendor location picker:
+
+| File | Format | Description |
+|------|--------|-------------|
+| `UOR_SignData.txt` | `MapId:SignType:Facing:X:Y:Z` | All shop signs |
+| `UOR_HiveData.txt` | `MapId:X:Y:Z` | All beehive locations |
+
+**⚠️ These are OUTPUT files (server generates, editor reads).** They do NOT contain spawn lists - just locations. The Editor uses these to show available vendor locations, then creates `VendorSpawn.bin` with the spawn lists.
+
+---
+
+## Event System
+
+### Event Subscription Safety
+
+The system prevents double event subscription when toggling power:
+
+```csharp
+private static bool _EventsSubscribed = false;
+
+private static void InitializeEvents()
+{
+    if (_EventsSubscribed) return; // Prevent double subscription
+
+    EventSink.TameCreature += EventSink_TameCreature;
+    // ... other events
+
+    _EventsSubscribed = true;
+}
+
+private static void UnsubscribeEvents()
+{
+    if (!_EventsSubscribed) return;
+
+    EventSink.TameCreature -= EventSink_TameCreature;
+    // ... other events
+
+    _EventsSubscribed = false;
+}
+```
+
+### SHUTDOWN Cleanup
+
+When the system is turned off via Control Gump:
+
+```csharp
+internal static void SHUTDOWN()
+{
+    IsLocked = true;
+
+    UnsubscribeEvents();                // Prevent double subscription on restart
+    _VendorService.DeleteAllVendors();  // Clean up all vendor spawn via ISpawner
+    _RecycleService.ClearRecycled();    // Clear recycled pool
+
+    int deleted = UOR_Utility.ClearAllSpawns();  // Clean up all mob spawn via ISpawner
+}
+```
+
+**ISpawner-based cleanup:**
+- `DeleteAllVendors()` → Uses `UOR_VendorSpawner.CleanupAll()` internally
+- `ClearAllSpawns()` → Uses `UOR_MobSpawner.CleanupAll()` internally
+- No tracking lists to save or reset
+
+---

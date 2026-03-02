@@ -130,9 +130,10 @@ namespace Server.Custom.UORespawnServer.Managers
 
                 _SessionLog.Clear();
             }
-            catch
+            catch (Exception ex)
             {
-                // Silent fail - we're likely in shutdown/crash state
+                // Last resort logging - we're likely in shutdown/crash state
+                Console.WriteLine($"[UORespawn] LogManager.FlushToFile failed: {ex.Message}");
             }
         }
     }

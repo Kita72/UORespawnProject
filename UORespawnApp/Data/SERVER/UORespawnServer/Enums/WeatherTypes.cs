@@ -4,8 +4,8 @@ namespace Server.Custom.UORespawnServer.Enums
     {
         None,
         Rain,
-        Storm,
         Snow,
+        Storm,
         Blizzard
     }
 }

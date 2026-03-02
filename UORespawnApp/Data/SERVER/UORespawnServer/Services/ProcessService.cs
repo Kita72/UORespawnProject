@@ -9,6 +9,11 @@ using Server.Custom.UORespawnServer.Helpers;
 
 namespace Server.Custom.UORespawnServer.Services
 {
+    /// <summary>
+    /// Processes spawn queue and creates mobs in the world.
+    /// ISpawner ownership is assigned automatically via AddSpawnToWorld.
+    /// No manual tracking needed - ISpawner handles it.
+    /// </summary>
     internal class ProcessService
     {
         private readonly ProcessTimer _ProcessTimer;
@@ -17,10 +22,9 @@ namespace Server.Custom.UORespawnServer.Services
         internal ProcessService()
         {
             _ProcessTimer = new ProcessTimer(this, TimeSpan.FromMilliseconds(UOR_Settings.PROCESS_INTERVAL));
-
             _SpawnCount = 0;
 
-            UOR_Utility.SendMsg(ConsoleColor.Yellow, $"PROCESS-[{UOR_Settings.PROCESS_INTERVAL} Created]");
+            UOR_Utility.SendMsg(ConsoleColor.Yellow, $"PROCESS-[{UOR_Settings.PROCESS_INTERVAL}ms Interval]");
         }
 
         internal void Start()
@@ -28,7 +32,6 @@ namespace Server.Custom.UORespawnServer.Services
             if (!_ProcessTimer.Running)
             {
                 _ProcessTimer?.Start();
-
                 UOR_Utility.SendMsg(ConsoleColor.Yellow, $"PROCESS-[Started]");
             }
         }
@@ -38,7 +41,6 @@ namespace Server.Custom.UORespawnServer.Services
             if (_ProcessTimer.Running)
             {
                 _ProcessTimer?.Stop();
-
                 UOR_Utility.SendMsg(ConsoleColor.Yellow, $"PROCESS-[Stopped]");
             }
         }
@@ -46,103 +48,103 @@ namespace Server.Custom.UORespawnServer.Services
         internal void Spawn(PlayerMobile pm, SpawnEntity entity)
         {
             if (entity == null)
-            {
                 return;
-            }
 
             var spawn = UOR_Core.GetRecycled(entity.Name, out bool isRecycled);
 
             if (spawn == null)
             {
                 UOR_Utility.SendMsg(ConsoleColor.Yellow, $"PROCESS-[{entity.Name} Failed]");
-
                 entity.OnAfterSpawn();
-
                 return;
             }
 
-            // Future Feature : Gets Stronger each Recycle : Max Recycle - Cap at 3x?
+            // Reset recycled spawn stats
             if (isRecycled)
             {
                 spawn.Hits = spawn.HitsMax;
                 spawn.Mana = spawn.ManaMax;
                 spawn.Stam = spawn.StamMax;
-
                 spawn.Combatant = null;
                 spawn.ResetStatTimers();
                 spawn.InvalidateProperties();
             }
 
+            // AddSpawnToWorld assigns ISpawner ownership automatically
             Create(pm, spawn, entity.Facet, entity.Location);
 
             entity.OnAfterSpawn();
-
             _SpawnCount++;
 
+            // Chance for extra spawns
             if (Utility.RandomDouble() < 0.01)
             {
-                Mobile extra = null;
+                SpawnExtras(pm, entity);
+            }
+        }
 
-                if (entity.IsWater)
+        private void SpawnExtras(PlayerMobile pm, SpawnEntity entity)
+        {
+            Mobile extra = null;
+
+            if (entity.IsWater)
+            {
+                extra = UOR_Utility.CreateSpawn(SpawnHelper.GetWaterSpawn(entity.WaterType));
+                Create(pm, extra, entity.Facet, entity.Location);
+            }
+
+            if (UOR_Settings.ENABLE_GRAVE_SPAWN && entity.IsNight)
+            {
+                var grave = UOR_Utility.GetStatic(entity.Facet, entity.Location, "grave") ??
+                            UOR_Utility.GetStatic(entity.Facet, entity.Location, "gravestone");
+
+                if (grave != null)
                 {
-                    extra = UOR_Utility.CreateSpawn(SpawnHelper.GetWaterSpawn(entity.WaterType));
-
+                    extra = UOR_Utility.CreateSpawn(SpawnHelper.GetUndeadSpawn());
                     Create(pm, extra, entity.Facet, entity.Location);
                 }
+            }
 
-                if (UOR_Settings.ENABLE_GRAVE_SPAWN && entity.IsNight)
+            if (UOR_Settings.ENABLE_RIFT_SPAWN && entity.IsWeather)
+            {
+                if (Utility.RandomDouble() < UOR_Settings.CHANCE_WEATHER)
                 {
-                    var grave = UOR_Utility.GetStatic(entity.Facet, entity.Location, "grave") ??
-                                UOR_Utility.GetStatic(entity.Facet, entity.Location, "gravestone");
-
-                    if (grave != null)
-                    {
-                        extra = UOR_Utility.CreateSpawn(SpawnHelper.GetUndeadSpawn());
-
-                        Create(pm, extra, entity.Facet, entity.Location);
-                    }
+                    extra = UOR_Utility.CreateSpawn(SpawnHelper.GetWeatherSpawn(entity.WeatherType));
+                    Create(pm, extra, entity.Facet, entity.Location);
                 }
+            }
 
-                if (UOR_Settings.ENABLE_RIFT_SPAWN && entity.IsWeather)
+            if (UOR_Settings.ENABLE_TOWN_SPAWN && entity.IsTown)
+            {
+                entity.Location = UOR_Utility.GetSpawnPoint(entity.Location, 3, 10, entity.Facet, out bool isWater);
+
+                if (!isWater)
                 {
-                    if (Utility.RandomDouble() < UOR_Settings.CHANCE_WEATHER)
-                    {
-                        extra = UOR_Utility.CreateSpawn(SpawnHelper.GetWeatherSpawn(entity.WeatherType));
-
-                        Create(pm, extra, entity.Facet, entity.Location);
-                    }
+                    extra = new TownNPC();
+                    Create(pm, extra, entity.Facet, entity.Location);
                 }
+            }
 
-                if (UOR_Settings.ENABLE_TOWN_SPAWN && entity.IsTown)
-                {
-                    entity.Location = UOR_Utility.GetSpawnPoint(entity.Location, 3, 10, entity.Facet, out bool isWater);
-
-                    if (!isWater)
-                    {
-                        extra = new TownNPC();
-
-                        Create(pm, extra, entity.Facet, entity.Location);
-                    }
-                }
-
-                if (extra != null)
-                {
-                    _SpawnCount++;
-                }
-
+            if (extra != null)
+            {
+                _SpawnCount++;
                 UOR_Utility.SendMsg(ConsoleColor.Yellow, $"SPAWNED-[{_SpawnCount} Extra]");
             }
         }
 
+        /// <summary>
+        /// Create spawn in world. ISpawner ownership assigned via AddSpawnToWorld.
+        /// </summary>
         private void Create(PlayerMobile pm, Mobile spawn, Map map, Point3D location)
         {
-            if (spawn == null) return;
+            if (spawn == null) 
+                return;
 
+            // AddSpawnToWorld assigns UOR_MobSpawner.Instance.Claim() automatically
             UOR_Utility.AddSpawnToWorld(spawn, map, location);
 
+            // Stats tracking (separate from spawn tracking)
             UOR_Core.AddStat(pm, spawn);
-
-            UOR_Core.UpdateSpawned(spawn.Serial, true);
         }
     }
 }

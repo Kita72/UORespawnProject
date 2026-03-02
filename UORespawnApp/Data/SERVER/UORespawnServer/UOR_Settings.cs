@@ -5,15 +5,16 @@ namespace Server.Custom.UORespawnServer
 {
     internal static class UOR_Settings
     {
-        internal const string VERSION = "2.0.0.7";
-        internal const int SPAWN_MARKER = 777; // Spawn Marker : Cleanup Checks!
-        internal const int VENDOR_MARKER = 999; // Vendor Marker : Cleanup Checks!
+        internal const string VERSION = "2.0.0.8"; // Updated: ISpawner-based tracking
+
+        // Note: SPAWN_MARKER and VENDOR_MARKER removed - now using ISpawner pattern
+        // Spawn ownership tracked via creature.Spawner (UOR_MobSpawner/UOR_VendorSpawner)
 
         // System Scaler (exposed for ControlService)
         internal static double SCALE_MOD { get; private set; } = 1.0;
 
         // System Intervals
-        internal static int SEARCH_INTERVAL { get; set; } = 75; // Millisecons : Per Player, Location Search
+        internal static int SEARCH_INTERVAL { get; set; } = 125; // Millisecons : Per Player, Location Search
         internal static int PROCESS_INTERVAL { get; set; } = 250; // Milliseconds : Spawn Processed (Created/Recycled)
         internal static int VALIDATE_INTERVAL { get; set; } = 5; // Seconds : Spawn Validation
         internal static int TIMED_INTERVAL { get; set; } = 1; // Minutes : Check Timed - IsNight
@@ -39,7 +40,7 @@ namespace Server.Custom.UORespawnServer
         internal static int MAX_CROWD => SetScaleMod(MAX_CROWD_VAL);
 
         // Spawn Chances
-        internal static double CHANCE_WATER { get; set; } = 0.25;
+        internal static double CHANCE_WATER { get; set; } = 0.05;
         internal static double CHANCE_WEATHER { get; set; } = 0.01;
         internal static double CHANCE_TIMED { get; set; } = 0.01;
         internal static double CHANCE_COMMON { get; set; } = 1.0;
@@ -277,6 +278,57 @@ namespace Server.Custom.UORespawnServer
         internal static void UpdateScaleMod(double mod)
         {
             SCALE_MOD = mod;
+        }
+
+        /// <summary>
+        /// Applies a setting from a command (used by CommandManager).
+        /// Returns true if the setting was recognized and applied.
+        /// </summary>
+        internal static bool ApplySettingCommand(string key, string value)
+        {
+            if (string.IsNullOrWhiteSpace(key) || string.IsNullOrWhiteSpace(value))
+                return false;
+
+            string normalizedKey = key.ToUpperInvariant();
+
+            // Check if this is a known setting
+            switch (normalizedKey)
+            {
+                case "SCALE_MOD":
+                case "SEARCH_INTERVAL":
+                case "PROCESS_INTERVAL":
+                case "VALIDATE_INTERVAL":
+                case "TIMED_INTERVAL":
+                case "MAX_RECYCLE_TYPE":
+                case "MAX_RECYCLE_TOTAL":
+                case "MAX_SPAWN_CHECKS":
+                case "MAX_QUEUE_SIZE":
+                case "MAX_STAT_SIZE":
+                case "MAX_SPAWN":
+                case "MIN_RANGE":
+                case "MAX_RANGE":
+                case "MAX_CROWD":
+                case "CHANCE_WATER":
+                case "CHANCE_WEATHER":
+                case "CHANCE_TIMED":
+                case "CHANCE_COMMON":
+                case "CHANCE_UNCOMMON":
+                case "CHANCE_RARE":
+                case "ENABLE_SCALE_SPAWN":
+                case "ENABLE_RIFT_SPAWN":
+                case "ENABLE_TOWN_SPAWN":
+                case "ENABLE_GRAVE_SPAWN":
+                case "ENABLE_VENDOR_SPAWN":
+                case "ENABLE_VENDOR_NIGHT":
+                case "ENABLE_VENDOR_EXTRA":
+                case "ENABLE_SPAWN_EFFECTS":
+                case "ENABLE_DEBUG":
+                    ApplySetting(key, value);
+                    return true;
+                default:
+                    UOR_Utility.SendMsg(ConsoleColor.Yellow, $"SETTINGS COMMAND-[Unknown setting: {key}]");
+                    return false;
+            }
         }
     }
 }

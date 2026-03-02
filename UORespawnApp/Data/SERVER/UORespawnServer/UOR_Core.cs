@@ -142,8 +142,17 @@ namespace Server.Custom.UORespawnServer
             UOR_Utility.SendMsg(ConsoleColor.Green, "SERVICES-[Initialized]");
         }
 
+        private static bool _EventsSubscribed = false;
+
         private static void InitializeEvents()
         {
+            // Prevent double subscription
+            if (_EventsSubscribed)
+            {
+                UOR_Utility.SendMsg(ConsoleColor.Yellow, $"Respawn-[Events Already Subscribed]");
+                return;
+            }
+
             UOR_Utility.SendMsg(ConsoleColor.Yellow, $"Respawn-[Subscribe Events]");
 
             EventSink.TameCreature += EventSink_TameCreature;
@@ -156,26 +165,46 @@ namespace Server.Custom.UORespawnServer
             EventSink.Shutdown += EventSink_Shutdown;
             EventSink.Crashed += EventSink_Crashed;
 
+            _EventsSubscribed = true;
+
             UOR_Utility.SendMsg(ConsoleColor.Green, "EVENTS-[Subscribed]");
+        }
+
+        private static void UnsubscribeEvents()
+        {
+            if (!_EventsSubscribed)
+                return;
+
+            EventSink.TameCreature -= EventSink_TameCreature;
+            EventSink.CreatureDeath -= EventSink_CreatureDeath;
+            EventSink.MobileDeleted -= EventSink_MobileDeleted;
+            EventSink.BeforeWorldSave -= EventSink_BeforeWorldSave;
+            EventSink.AfterWorldSave -= EventSink_AfterWorldSave;
+            EventSink.Login -= EventSink_Login;
+            EventSink.Logout -= EventSink_Logout;
+            EventSink.Shutdown -= EventSink_Shutdown;
+            EventSink.Crashed -= EventSink_Crashed;
+
+            _EventsSubscribed = false;
+
+            UOR_Utility.SendMsg(ConsoleColor.Green, "EVENTS-[Unsubscribed]");
         }
 
         private static void EventSink_TameCreature(TameCreatureEventArgs e)
         {
+            // ISpawner handles release automatically when creature is tamed
             UOR_Utility.SendMsg(ConsoleColor.Yellow, $"UORespawn-[{e.Creature.Name} Tamed]");
-
-            UpdateSpawned(e.Creature.Serial);
         }
 
         private static void EventSink_CreatureDeath(CreatureDeathEventArgs e)
         {
+            // ISpawner handles release automatically when creature dies
             UOR_Utility.SendMsg(ConsoleColor.Yellow, $"UORespawn-[{e.Creature.Name} Killed]");
-
-            UpdateSpawned(e.Creature.Serial);
         }
 
         private static void EventSink_MobileDeleted(MobileDeletedEventArgs e)
         {
-            UpdateSpawned(e.Mobile.Serial);
+            // ISpawner handles release automatically when mobile is deleted
         }
 
         private static void EventSink_BeforeWorldSave(BeforeWorldSaveEventArgs e)
@@ -191,7 +220,6 @@ namespace Server.Custom.UORespawnServer
 
             _StatsService.Save();
             _VendorService.Save();
-            _TrackService.Calibrate();
 
             UOR_Utility.SendMsg(ConsoleColor.Yellow, $"UORespawn-[Saved]");
         }
@@ -230,16 +258,12 @@ namespace Server.Custom.UORespawnServer
         {
             LogManager.FlushToFile("Server Shutdown");
 
-            _TrackService.Save();
-
             StopTimers();
         }
 
         private static void EventSink_Crashed(CrashedEventArgs e)
         {
             LogManager.FlushToFile("Server Crash");
-
-            _TrackService.Save();
 
             StopTimers();
         }
@@ -262,23 +286,9 @@ namespace Server.Custom.UORespawnServer
             UOR_Utility.SendMsg(ConsoleColor.Green, "TIMERS-[Stopped]");
         }
 
-        internal static void UpdateSpawned(Serial serial, bool add = false)
-        {
-            if (add)
-            {
-                UOR_Utility.AllSpawnAdd(serial);
-                _TrackService.AddTracked(serial);
-            }
-            else
-            {
-                UOR_Utility.AllSpawnRemove(serial);
-            }
-        }
-
         internal static void SendToRecycled(Serial serial)
         {
-            UpdateSpawned(serial);
-
+            // ISpawner releases ownership in RecycleService.Add()
             _RecycleService.Add(serial);
         }
 
@@ -318,14 +328,18 @@ namespace Server.Custom.UORespawnServer
             _VendorService.UpdateTime();
         }
 
-        internal static void AddVendor(Mobile vendor)
-        {
-            _VendorService.AddVendor(vendor);
-        }
-
         internal static void UpdateVendorService()
         {
             _VendorService.ResetVendors();
+        }
+
+        /// <summary>
+        /// Respawns vendors at a specific location using ISpawner pattern.
+        /// Deletes existing vendors near location and spawns from updated config.
+        /// </summary>
+        internal static int RespawnVendorsAtLocation(Map map, VendorEntity entity)
+        {
+            return _VendorService.RespawnVendorsAtLocation(map, entity);
         }
 
         internal static void OpenControlGump(PlayerMobile pm)
@@ -337,15 +351,19 @@ namespace Server.Custom.UORespawnServer
         {
             IsLocked = true;
 
-            _VendorService.DeleteVendors();
+            // Unsubscribe events to prevent double subscription on restart
+            UnsubscribeEvents();
 
-            _TrackService.Calibrate();
+            // Clean up all vendor spawn via ISpawner
+            _VendorService.DeleteAllVendors();
 
-            _TrackService.Reset();
-
+            // Clear recycled pool
             _RecycleService.ClearRecycled();
 
-            UOR_Utility.ClearAllSpawns();
+            // Clean up all mob spawn via ISpawner pattern
+            int deleted = UOR_Utility.ClearAllSpawns();
+
+            UOR_Utility.SendMsg(ConsoleColor.Magenta, $"SHUTDOWN - Stopped ({deleted} spawn deleted)");
         }
 
         internal static void RelogPlayers()

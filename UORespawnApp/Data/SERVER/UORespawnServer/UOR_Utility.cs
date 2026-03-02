@@ -17,6 +17,7 @@ using Server.Custom.UORespawnServer.Managers;
 using Server.Custom.UORespawnServer.Interfaces;
 using Server.Custom.UORespawnServer.Mobiles;
 using Server.Custom.UORespawnServer.Helpers;
+using Server.Custom.UORespawnServer.Spawners;
 
 using CPA = Server.CommandPropertyAttribute;
 
@@ -24,44 +25,36 @@ namespace Server.Custom.UORespawnServer
 {
     internal static class UOR_Utility
     {
-        private static List<Serial> _AllSpawns;
-
         private static Dictionary<string, Type> _TypeCache;
 
-        internal static void AllSpawnAdd(Serial spawn)
+        /// <summary>
+        /// Gets all spawn owned by UOR_MobSpawner (on-demand query).
+        /// Replaces the old _AllSpawns tracking list.
+        /// </summary>
+        internal static List<BaseCreature> GetAllSpawn()
         {
-            if (!_AllSpawns.Contains(spawn) && IsValidSpawn(spawn, out _))
-            {
-                _AllSpawns.Add(spawn);
-            }
+            return UOR_MobSpawner.GetAllSpawn();
         }
 
-        internal static void AllSpawnRemove(Serial spawn)
+        /// <summary>
+        /// Gets count of all UOR mob spawn.
+        /// </summary>
+        internal static int GetSpawnCount()
         {
-            if (_AllSpawns.Contains(spawn))
-            {
-                _AllSpawns.Remove(spawn);
-            }
+            return UOR_MobSpawner.GetCount();
         }
 
-        internal static List<Serial> GetAllSpawn()
+        /// <summary>
+        /// Deletes all spawn owned by UOR_MobSpawner.
+        /// Used on SHUTDOWN to clean up all mob spawn.
+        /// </summary>
+        internal static int ClearAllSpawns()
         {
-            return _AllSpawns;
-        }
-
-        internal static Mobile GetMobile(Serial serial)
-        {
-            if (_AllSpawns.Contains(serial))
-            {
-                return World.FindMobile(serial);
-            }
-
-            return null;
+            return UOR_MobSpawner.CleanupAll();
         }
 
         internal static void InitializeUtility()
         {
-            _AllSpawns = new List<Serial>();
             _TypeCache = new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase);
 
             InitializeQuedLocationList();
@@ -388,7 +381,8 @@ namespace Server.Custom.UORespawnServer
 
         private static bool IsWaterLimit()
         {
-            return _AllSpawns.Count(m => GetMobile(m)?.CanSwim == true) > (UOR_Settings.MAX_CROWD * UOR_Settings.SCALE_MOD);
+            // On-demand query using ISpawner pattern
+            return GetAllSpawn().Count(bc => bc.CanSwim) > (UOR_Settings.MAX_CROWD * UOR_Settings.SCALE_MOD);
         }
 
         internal static Rectangle2D GetSpawnBox(Point3D loc, int rad)
@@ -443,60 +437,6 @@ namespace Server.Custom.UORespawnServer
             return Point3D.Zero;
         }
 
-        // Need a better directional spawn loaction picker!
-        //internal static Point3D GetSpawnPoint(Point3D center, int min, int max, Map map, Direction direction)
-        //{
-        //    if (direction == Direction.Running || direction == Direction.Mask || direction == Direction.ValueMask)
-        //    {
-        //        return GetSpawnPoint(center, min, max, map);
-        //    }
-
-        //    var range = Utility.RandomMinMax(min, max);
-
-        //    int x;
-        //    int y;
-
-        //    switch (direction & Direction.Mask)
-        //    {
-        //        case Direction.North:
-        //            x = center.X + (max / min);
-        //            y = center.Y - range;
-        //            break;
-        //        case Direction.Right:
-        //            x = center.X + range + (max / min);
-        //            y = center.Y - range;
-        //            break;
-        //        case Direction.East:
-        //            x = center.X + range;
-        //            y = center.Y + (max / min);
-        //            break;
-        //        case Direction.Down:
-        //            x = center.X + range + (max / min);
-        //            y = center.Y + range;
-        //            break;
-        //        case Direction.South:
-        //            x = center.X + (max / min);
-        //            y = center.Y + range;
-        //            break;
-        //        case Direction.Left:
-        //            x = center.X - range;
-        //            y = center.Y + range + (max / min);
-        //            break;
-        //        case Direction.West:
-        //            x = center.X - range;
-        //            y = center.Y + (max / min);
-        //            break;
-        //        case Direction.Up:
-        //            x = center.X - range;
-        //            y = center.Y - range + (max / min);
-        //            break;
-        //        default:
-        //            return GetSpawnPoint(center, min, max, map);
-        //    }
-
-        //    return new Point3D(x, y, map.GetAverageZ(x, y));
-        //}
-
         private static bool IsCrowded(Map map, Point3D location)
         {
             if (location != Point3D.Zero)
@@ -523,10 +463,14 @@ namespace Server.Custom.UORespawnServer
             return hasPlayers;
         }
 
+        /// <summary>
+        /// Counts non-vendor spawn in range for crowd checking.
+        /// Excludes all BaseVendor subclasses - vendors add town life but shouldn't block main spawn.
+        /// </summary>
         internal static int SpawnInRange(Map map, Point3D location, int range)
         {
             var spawns = map.GetMobilesInRange(location, range)
-                            .Where(m => m.GetType() != typeof(BaseVendor))
+                            .Where(m => !(m is BaseVendor))
                             .ToList();
 
             int count = spawns.Count;
@@ -621,10 +565,11 @@ namespace Server.Custom.UORespawnServer
                 spawn.OnAfterSpawn();
             }
 
-            if (spawn is BaseCreature bc)
+            // Assign UOR_MobSpawner ownership via ISpawner pattern
+            // Only claim if not already owned (recycled spawn keep their ISpawner)
+            if (spawn is BaseCreature bc && bc.Spawner != UOR_MobSpawner.Instance)
             {
-                bc.Home = new Point3D(bc.Location.X, bc.Location.Y, UOR_Settings.SPAWN_MARKER);
-                bc.RangeHome = 50;
+                UOR_MobSpawner.Instance.Claim(bc, location);
             }
 
             // Visual effect
@@ -856,11 +801,6 @@ namespace Server.Custom.UORespawnServer
         {
             return color == ConsoleColor.Red ||
                    color == ConsoleColor.DarkRed;
-        }
-
-        internal static void ClearAllSpawns()
-        {
-            _AllSpawns.Clear();
         }
     }
 }

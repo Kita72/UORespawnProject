@@ -226,6 +226,7 @@ namespace Server.Custom.UORespawnServer.Managers
                     foreach (var hive in hiveList)
                     {
                         HiveLocations[hive.Item1].Add((SignType.MetalPost, SignFacing.North, hive.Item2));
+                        hiveCount++;
                     }
                 }
 

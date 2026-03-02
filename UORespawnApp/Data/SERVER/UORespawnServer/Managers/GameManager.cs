@@ -8,6 +8,7 @@ using Server.Mobiles;
 using Server.Engines.Doom;
 using Server.Custom.UORespawnServer.Mobiles;
 using Server.Custom.UORespawnServer.Helpers;
+using Server.Custom.UORespawnServer.Enums;
 
 namespace Server.Custom.UORespawnServer.Managers
 {
@@ -26,6 +27,115 @@ namespace Server.Custom.UORespawnServer.Managers
             GenVendorData();
 
             UOR_Utility.SendMsg(ConsoleColor.Green, "DATA-[Initialized]");
+        }
+
+        /// <summary>
+        /// Checks for and applies any pending edit commands.
+        /// Called after normal spawn data load to apply server-side edits that haven't been consumed by editor.
+        /// </summary>
+        internal static void CheckAndApplyPendingCommands()
+        {
+            if (!CommandManager.HasAnyPendingCommands())
+            {
+                UOR_Utility.SendMsg(ConsoleColor.Green, "COMMANDS-[No pending commands]");
+                return;
+            }
+
+            UOR_Utility.SendMsg(ConsoleColor.Cyan, "COMMANDS-[Checking pending commands...]");
+
+            int totalApplied = 0;
+            int totalFailed = 0;
+
+            // Process settings commands
+            if (CommandManager.HasPendingCommands(CommandTarget.Settings))
+            {
+                var result = ApplySettingsCommands();
+                totalApplied += result.applied;
+                totalFailed += result.failed;
+            }
+
+            // Process spawn commands (Box, Region, Tile, Vendor)
+            CommandTarget[] spawnTargets = { CommandTarget.Box, CommandTarget.Region, CommandTarget.Tile, CommandTarget.Vendor };
+
+            foreach (var target in spawnTargets)
+            {
+                if (CommandManager.HasPendingCommands(target))
+                {
+                    var result = ApplySpawnCommands(target);
+                    totalApplied += result.applied;
+                    totalFailed += result.failed;
+                }
+            }
+
+            if (totalApplied > 0 || totalFailed > 0)
+            {
+                UOR_Utility.SendMsg(ConsoleColor.Green, $"COMMANDS-[Applied: {totalApplied}, Failed: {totalFailed}]");
+            }
+        }
+
+        /// <summary>
+        /// Applies pending settings commands.
+        /// </summary>
+        private static (int applied, int failed) ApplySettingsCommands()
+        {
+            int applied = 0;
+            int failed = 0;
+
+            var commands = CommandManager.ProcessAndConsumeCommands(CommandTarget.Settings);
+
+            foreach (var command in commands)
+            {
+                if (!CommandManager.ValidateCommand(command))
+                {
+                    failed++;
+                    continue;
+                }
+
+                // Settings commands use SpawnName as key, ExtraData as value
+                if (UOR_Settings.ApplySettingCommand(command.SpawnName, command.ExtraData))
+                {
+                    applied++;
+                    UOR_Utility.SendMsg(ConsoleColor.Cyan, $"SETTING APPLIED-[{command.SpawnName}={command.ExtraData}]");
+                }
+                else
+                {
+                    failed++;
+                }
+            }
+
+            return (applied, failed);
+        }
+
+        /// <summary>
+        /// Applies pending spawn commands for a specific target type.
+        /// </summary>
+        private static (int applied, int failed) ApplySpawnCommands(CommandTarget target)
+        {
+            int applied = 0;
+            int failed = 0;
+
+            var commands = CommandManager.ProcessAndConsumeCommands(target);
+
+            foreach (var command in commands)
+            {
+                if (!CommandManager.ValidateCommand(command))
+                {
+                    failed++;
+                    continue;
+                }
+
+                if (SpawnManager.ApplySpawnCommand(command))
+                {
+                    applied++;
+                    UOR_Utility.SendMsg(ConsoleColor.Cyan, $"SPAWN APPLIED-[{command.Action} {command.SpawnName} to {target}/{command.Section}]");
+                }
+                else
+                {
+                    failed++;
+                }
+            }
+
+            return (applied, failed);
         }
 
         private static void GenMapList()

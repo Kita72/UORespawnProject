@@ -1,9 +1,13 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Collections;
 using System.Collections.Generic;
 
 using Server.Custom.UORespawnServer.Entities;
+using Server.Custom.UORespawnServer.Enums;
+using Server.Custom.UORespawnServer.Interfaces;
+using Server.Custom.UORespawnServer.Models;
 using Server.Items;
 
 namespace Server.Custom.UORespawnServer.Managers
@@ -40,11 +44,15 @@ namespace Server.Custom.UORespawnServer.Managers
             LoadRegionSpawnData();
             LoadTileSpawnData();
             LoadVendorSpawnData();
+            // Note: Vendor tracking now uses ISpawner pattern - no serial persistence needed
 
             // Build O(1) lookup structures
             SpatialGridManager.Initialize(BoxSpawns);
             BuildRegionLookup();
             BuildTileLookup();
+
+            // Check and apply any pending edit commands (server restart safety)
+            GameManager.CheckAndApplyPendingCommands();
 
             UOR_Utility.SendMsg(ConsoleColor.Green, "SPAWN-[Loaded]");
         }
@@ -173,19 +181,19 @@ namespace Server.Custom.UORespawnServer.Managers
             int width = reader.ReadInt32();
             int height = reader.ReadInt32();
 
-            Enums.WeatherTypes weather = (Enums.WeatherTypes)reader.ReadInt32();
-            Enums.TimeTypes time = (Enums.TimeTypes)reader.ReadInt32();
+            WeatherTypes weather = (WeatherTypes)reader.ReadInt32();
+            TimeTypes time = (TimeTypes)reader.ReadInt32();
 
             Rectangle2D spawnBox = new Rectangle2D(x, y, width, height);
 
             BoxEntity entity = new BoxEntity(position, priority, spawnBox, weather, time)
             {
-                WaterList = new System.Collections.ArrayList(ReadStringList(reader)),
-                WeatherList = new System.Collections.ArrayList(ReadStringList(reader)),
-                TimedList = new System.Collections.ArrayList(ReadStringList(reader)),
-                CommonList = new System.Collections.ArrayList(ReadStringList(reader)),
-                UnCommonList = new System.Collections.ArrayList(ReadStringList(reader)),
-                RareList = new System.Collections.ArrayList(ReadStringList(reader))
+                WaterList = new ArrayList(ReadStringList(reader)),
+                WeatherList = new ArrayList(ReadStringList(reader)),
+                TimedList = new ArrayList(ReadStringList(reader)),
+                CommonList = new ArrayList(ReadStringList(reader)),
+                UnCommonList = new ArrayList(ReadStringList(reader)),
+                RareList = new ArrayList(ReadStringList(reader))
             };
 
             return entity;
@@ -304,8 +312,8 @@ namespace Server.Custom.UORespawnServer.Managers
             int id = reader.ReadInt32();
             string name = reader.ReadString();
             int mapId = reader.ReadInt32();
-            Enums.WeatherTypes weather = (Enums.WeatherTypes)reader.ReadInt32();
-            Enums.TimeTypes time = (Enums.TimeTypes)reader.ReadInt32();
+            WeatherTypes weather = (WeatherTypes)reader.ReadInt32();
+            TimeTypes time = (TimeTypes)reader.ReadInt32();
 
             List<string> waterSpawns = ReadStringList(reader);
             List<string> weatherSpawns = ReadStringList(reader);
@@ -335,12 +343,12 @@ namespace Server.Custom.UORespawnServer.Managers
 
             RegionEntity entity = new RegionEntity(name, regionHandle, weather, time)
             {
-                WaterList = new System.Collections.ArrayList(waterSpawns),
-                WeatherList = new System.Collections.ArrayList(weatherSpawns),
-                TimedList = new System.Collections.ArrayList(timedSpawns),
-                CommonList = new System.Collections.ArrayList(commonSpawns),
-                UnCommonList = new System.Collections.ArrayList(uncommonSpawns),
-                RareList = new System.Collections.ArrayList(rareSpawns)
+                WaterList = new ArrayList(waterSpawns),
+                WeatherList = new ArrayList(weatherSpawns),
+                TimedList = new ArrayList(timedSpawns),
+                CommonList = new ArrayList(commonSpawns),
+                UnCommonList = new ArrayList(uncommonSpawns),
+                RareList = new ArrayList(rareSpawns)
             };
 
             return entity;
@@ -457,17 +465,17 @@ namespace Server.Custom.UORespawnServer.Managers
             int id = reader.ReadInt32();
             string name = reader.ReadString();
             int mapId = reader.ReadInt32();
-            Enums.WeatherTypes weather = (Enums.WeatherTypes)reader.ReadInt32();
-            Enums.TimeTypes time = (Enums.TimeTypes)reader.ReadInt32();
+            WeatherTypes weather = (WeatherTypes)reader.ReadInt32();
+            TimeTypes time = (TimeTypes)reader.ReadInt32();
 
             TileEntity entity = new TileEntity(name, weather, time)
             {
-                WaterList = new System.Collections.ArrayList(ReadStringList(reader)),
-                WeatherList = new System.Collections.ArrayList(ReadStringList(reader)),
-                TimedList = new System.Collections.ArrayList(ReadStringList(reader)),
-                CommonList = new System.Collections.ArrayList(ReadStringList(reader)),
-                UnCommonList = new System.Collections.ArrayList(ReadStringList(reader)),
-                RareList = new System.Collections.ArrayList(ReadStringList(reader))
+                WaterList = new ArrayList(ReadStringList(reader)),
+                WeatherList = new ArrayList(ReadStringList(reader)),
+                TimedList = new ArrayList(ReadStringList(reader)),
+                CommonList = new ArrayList(ReadStringList(reader)),
+                UnCommonList = new ArrayList(ReadStringList(reader)),
+                RareList = new ArrayList(ReadStringList(reader))
             };
 
             return entity;
@@ -701,5 +709,319 @@ namespace Server.Custom.UORespawnServer.Managers
 
             UOR_Utility.SendMsg(ConsoleColor.Green, $"TILE LOOKUP-[Built with {totalEntries} entries across {TileLookup.Count} maps]");
         }
+
+        #region Command-Based Spawn Edits
+
+        /// <summary>
+        /// Applies a spawn command to the in-memory spawn data.
+        /// Returns true if successful, false otherwise.
+        /// </summary>
+        internal static bool ApplySpawnCommand(EditCommand command)
+        {
+            if (command == null)
+                return false;
+
+            switch (command.Target)
+            {
+                case CommandTarget.Box:
+                    return ApplyBoxCommand(command);
+                case CommandTarget.Region:
+                    return ApplyRegionCommand(command);
+                case CommandTarget.Tile:
+                    return ApplyTileCommand(command);
+                case CommandTarget.Vendor:
+                    return ApplyVendorCommand(command);
+                default:
+                    UOR_Utility.SendMsg(ConsoleColor.Yellow, $"SPAWN COMMAND-[Unsupported target: {command.Target}]");
+                    return false;
+            }
+        }
+
+        /// <summary>
+        /// Applies a command to box spawn data.
+        /// ExtraData format for Box: "MapId,BoxId" (e.g., "0,5" for Felucca box #5)
+        /// </summary>
+        private static bool ApplyBoxCommand(EditCommand command)
+        {
+            // Parse ExtraData for map and box identification
+            if (string.IsNullOrWhiteSpace(command.ExtraData))
+            {
+                UOR_Utility.SendMsg(ConsoleColor.Yellow, $"BOX COMMAND-[Missing ExtraData (MapId,BoxId)]");
+                return false;
+            }
+
+            string[] parts = command.ExtraData.Split(',');
+            if (parts.Length < 2 || !int.TryParse(parts[0], out int mapId) || !int.TryParse(parts[1], out int boxId))
+            {
+                UOR_Utility.SendMsg(ConsoleColor.Yellow, $"BOX COMMAND-[Invalid ExtraData format: {command.ExtraData}]");
+                return false;
+            }
+
+            // Find the map
+            if (mapId < 0 || mapId >= Map.Maps.Length || Map.Maps[mapId] == null)
+            {
+                UOR_Utility.SendMsg(ConsoleColor.Yellow, $"BOX COMMAND-[Invalid map: {mapId}]");
+                return false;
+            }
+
+            Map map = Map.Maps[mapId];
+
+            if (!BoxSpawns.TryGetValue(map, out var boxList))
+            {
+                UOR_Utility.SendMsg(ConsoleColor.Yellow, $"BOX COMMAND-[No boxes for map: {map.Name}]");
+                return false;
+            }
+
+            // Find the box by ID
+            var box = boxList.FirstOrDefault(b => b.Id == boxId);
+            if (box == null)
+            {
+                UOR_Utility.SendMsg(ConsoleColor.Yellow, $"BOX COMMAND-[Box {boxId} not found on {map.Name}]");
+                return false;
+            }
+
+            return ApplyToSpawnList(box, command);
+        }
+
+        /// <summary>
+        /// Applies a command to region spawn data.
+        /// ExtraData format for Region: "MapId,RegionName" (e.g., "0,Britain")
+        /// </summary>
+        private static bool ApplyRegionCommand(EditCommand command)
+        {
+            if (string.IsNullOrWhiteSpace(command.ExtraData))
+            {
+                UOR_Utility.SendMsg(ConsoleColor.Yellow, $"REGION COMMAND-[Missing ExtraData (MapId,RegionName)]");
+                return false;
+            }
+
+            int commaIndex = command.ExtraData.IndexOf(',');
+            if (commaIndex <= 0)
+            {
+                UOR_Utility.SendMsg(ConsoleColor.Yellow, $"REGION COMMAND-[Invalid ExtraData format: {command.ExtraData}]");
+                return false;
+            }
+
+            if (!int.TryParse(command.ExtraData.Substring(0, commaIndex), out int mapId))
+            {
+                UOR_Utility.SendMsg(ConsoleColor.Yellow, $"REGION COMMAND-[Invalid map ID in ExtraData]");
+                return false;
+            }
+
+            string regionName = command.ExtraData.Substring(commaIndex + 1);
+
+            if (mapId < 0 || mapId >= Map.Maps.Length || Map.Maps[mapId] == null)
+            {
+                UOR_Utility.SendMsg(ConsoleColor.Yellow, $"REGION COMMAND-[Invalid map: {mapId}]");
+                return false;
+            }
+
+            Map map = Map.Maps[mapId];
+
+            if (!RegionSpawns.TryGetValue(map, out var regionList))
+            {
+                UOR_Utility.SendMsg(ConsoleColor.Yellow, $"REGION COMMAND-[No regions for map: {map.Name}]");
+                return false;
+            }
+
+            var region = regionList.FirstOrDefault(r => r.Name.Equals(regionName, StringComparison.OrdinalIgnoreCase));
+            if (region == null)
+            {
+                UOR_Utility.SendMsg(ConsoleColor.Yellow, $"REGION COMMAND-[Region '{regionName}' not found on {map.Name}]");
+                return false;
+            }
+
+            return ApplyToSpawnList(region, command);
+        }
+
+        /// <summary>
+        /// Applies a command to tile spawn data.
+        /// ExtraData format for Tile: "MapId,TileName" (e.g., "0,grass")
+        /// </summary>
+        private static bool ApplyTileCommand(EditCommand command)
+        {
+            if (string.IsNullOrWhiteSpace(command.ExtraData))
+            {
+                UOR_Utility.SendMsg(ConsoleColor.Yellow, $"TILE COMMAND-[Missing ExtraData (MapId,TileName)]");
+                return false;
+            }
+
+            int commaIndex = command.ExtraData.IndexOf(',');
+            if (commaIndex <= 0)
+            {
+                UOR_Utility.SendMsg(ConsoleColor.Yellow, $"TILE COMMAND-[Invalid ExtraData format: {command.ExtraData}]");
+                return false;
+            }
+
+            if (!int.TryParse(command.ExtraData.Substring(0, commaIndex), out int mapId))
+            {
+                UOR_Utility.SendMsg(ConsoleColor.Yellow, $"TILE COMMAND-[Invalid map ID in ExtraData]");
+                return false;
+            }
+
+            string tileName = command.ExtraData.Substring(commaIndex + 1);
+
+            if (mapId < 0 || mapId >= Map.Maps.Length || Map.Maps[mapId] == null)
+            {
+                UOR_Utility.SendMsg(ConsoleColor.Yellow, $"TILE COMMAND-[Invalid map: {mapId}]");
+                return false;
+            }
+
+            Map map = Map.Maps[mapId];
+
+            if (!TileSpawns.TryGetValue(map, out var tileList))
+            {
+                UOR_Utility.SendMsg(ConsoleColor.Yellow, $"TILE COMMAND-[No tiles for map: {map.Name}]");
+                return false;
+            }
+
+            var tile = tileList.FirstOrDefault(t => t.Name.Equals(tileName, StringComparison.OrdinalIgnoreCase));
+            if (tile == null)
+            {
+                UOR_Utility.SendMsg(ConsoleColor.Yellow, $"TILE COMMAND-[Tile '{tileName}' not found on {map.Name}]");
+                return false;
+            }
+
+            return ApplyToSpawnList(tile, command);
+        }
+
+        /// <summary>
+        /// Applies a command to vendor spawn data.
+        /// ExtraData format for Vendor: "MapId,X,Y,Z" (e.g., "0,1234,5678,10")
+        /// </summary>
+        private static bool ApplyVendorCommand(EditCommand command)
+        {
+            if (string.IsNullOrWhiteSpace(command.ExtraData))
+            {
+                UOR_Utility.SendMsg(ConsoleColor.Yellow, $"VENDOR COMMAND-[Missing ExtraData (MapId,X,Y,Z)]");
+                return false;
+            }
+
+            string[] parts = command.ExtraData.Split(',');
+            if (parts.Length < 4)
+            {
+                UOR_Utility.SendMsg(ConsoleColor.Yellow, $"VENDOR COMMAND-[Invalid ExtraData format: {command.ExtraData}]");
+                return false;
+            }
+
+            if (!int.TryParse(parts[0], out int mapId) ||
+                !int.TryParse(parts[1], out int x) ||
+                !int.TryParse(parts[2], out int y) ||
+                !int.TryParse(parts[3], out int z))
+            {
+                UOR_Utility.SendMsg(ConsoleColor.Yellow, $"VENDOR COMMAND-[Invalid coordinates in ExtraData]");
+                return false;
+            }
+
+            if (mapId < 0 || mapId >= Map.Maps.Length || Map.Maps[mapId] == null)
+            {
+                UOR_Utility.SendMsg(ConsoleColor.Yellow, $"VENDOR COMMAND-[Invalid map: {mapId}]");
+                return false;
+            }
+
+            Map map = Map.Maps[mapId];
+
+            if (!VendorSpawns.TryGetValue(map, out var vendorList))
+            {
+                UOR_Utility.SendMsg(ConsoleColor.Yellow, $"VENDOR COMMAND-[No vendors for map: {map.Name}]");
+                return false;
+            }
+
+            var vendor = vendorList.FirstOrDefault(v => v.Location.X == x && v.Location.Y == y && v.Location.Z == z);
+            if (vendor == null)
+            {
+                UOR_Utility.SendMsg(ConsoleColor.Yellow, $"VENDOR COMMAND-[Vendor at ({x},{y},{z}) not found on {map.Name}]");
+                return false;
+            }
+
+            // Vendor uses Add/Remove for vendor list
+            if (command.Action == CommandAction.Add)
+            {
+                if (!vendor.VendorList.Contains(command.SpawnName))
+                {
+                    vendor.AddVendor(command.SpawnName);
+                    return true;
+                }
+            }
+            else if (command.Action == CommandAction.Remove)
+            {
+                if (vendor.VendorList.Contains(command.SpawnName))
+                {
+                    vendor.RemoveVendor(command.SpawnName);
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Applies add/remove command to the appropriate spawn list on an entity.
+        /// </summary>
+        private static bool ApplyToSpawnList(ISpawnEntity entity, EditCommand command)
+        {
+            ArrayList targetList = GetSpawnList(entity, command.Section);
+
+            if (targetList == null)
+            {
+                UOR_Utility.SendMsg(ConsoleColor.Yellow, $"SPAWN COMMAND-[Invalid section: {command.Section}]");
+                return false;
+            }
+
+            if (command.Action == CommandAction.Add)
+            {
+                if (!targetList.Contains(command.SpawnName))
+                {
+                    targetList.Add(command.SpawnName);
+                    return true;
+                }
+                else
+                {
+                    UOR_Utility.SendMsg(ConsoleColor.Yellow, $"SPAWN COMMAND-[{command.SpawnName} already in {command.Section}]");
+                    return false;
+                }
+            }
+            else if (command.Action == CommandAction.Remove)
+            {
+                if (targetList.Contains(command.SpawnName))
+                {
+                    targetList.Remove(command.SpawnName);
+                    return true;
+                }
+                else
+                {
+                    UOR_Utility.SendMsg(ConsoleColor.Yellow, $"SPAWN COMMAND-[{command.SpawnName} not found in {command.Section}]");
+                    return false;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Gets the spawn list for a given section from an entity.
+        /// </summary>
+        private static ArrayList GetSpawnList(ISpawnEntity entity, SpawnSection section)
+        {
+            switch (section)
+            {
+                case SpawnSection.Common:
+                    return entity.CommonList;
+                case SpawnSection.Uncommon:
+                    return entity.UnCommonList;
+                case SpawnSection.Rare:
+                    return entity.RareList;
+                case SpawnSection.Water:
+                    return entity.WaterList;
+                case SpawnSection.Weather:
+                    return entity.WeatherList;
+                case SpawnSection.Timed:
+                    return entity.TimedList;
+                default:
+                    return null;
+            }
+        }
+
+        #endregion
     }
 }

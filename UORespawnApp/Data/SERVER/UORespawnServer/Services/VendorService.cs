@@ -1,9 +1,9 @@
 using System;
-using System.IO;
-using System.Collections.Generic;
+using System.Linq;
 
 using Server.Mobiles;
 
+using Server.Custom.UORespawnServer.Entities;
 using Server.Custom.UORespawnServer.Mobiles;
 using Server.Custom.UORespawnServer.Spawners;
 using Server.Custom.UORespawnServer.Managers;
@@ -12,33 +12,23 @@ namespace Server.Custom.UORespawnServer.Services
 {
     internal class VendorService
     {
-        private readonly List<string> _Vendors;
-
         internal VendorService()
         {
-            _Vendors = new List<string>();
-
             UOR_Utility.SendMsg(ConsoleColor.Yellow, $"VENDORS-[Created]");
 
             if (UOR_Settings.ENABLE_VENDOR_SPAWN)
             {
-                if (!Load())
-                {
-                    InitializeSpawn();
-                }
+                InitializeSpawn();
             }
             else
             {
-                if (Load())
-                {
-                    DeleteVendors();
-                }
+                DeleteAllVendors();
             }
         }
 
         internal void ResetVendors()
         {
-            DeleteVendors();
+            DeleteAllVendors();
 
             if (UOR_Settings.ENABLE_VENDOR_SPAWN)
             {
@@ -53,96 +43,51 @@ namespace Server.Custom.UORespawnServer.Services
 
         private void InitializeSpawn()
         {
-            var vendorSpawn = SpawnManager.VendorSpawns;
+            var vendorSpawns = SpawnManager.VendorSpawns;
 
-            int spawnedCount = 0;
-
-            if (vendorSpawn != null && vendorSpawn.Count > 0)
+            if (vendorSpawns == null || vendorSpawns.Count == 0)
             {
-                foreach (var vendor in vendorSpawn)
-                {
-                    foreach (var entity in vendor.Value)
-                    {
-                        VendorSpawner.TryToSpawn(vendor.Key, entity, this);
+                UOR_Utility.SendMsg(ConsoleColor.Yellow, $"VENDORS-[No vendor spawn data found]");
+                return;
+            }
 
-                        spawnedCount++;
+            // Check if vendors already exist (via ISpawner pattern)
+            int existingCount = UOR_VendorSpawner.GetCount();
+
+            if (existingCount > 0)
+            {
+                UOR_Utility.SendMsg(ConsoleColor.Yellow, $"VENDORS-[{existingCount} already exist]");
+                return;
+            }
+
+            int totalSpawned = 0;
+            int totalEntities = 0;
+
+            foreach (var kvp in vendorSpawns)
+            {
+                Map map = kvp.Key;
+
+                foreach (var entity in kvp.Value)
+                {
+                    totalEntities++;
+
+                    if (entity.VendorList.Count > 0)
+                    {
+                        int spawned = VendorSpawner.SpawnVendors(map, entity);
+                        totalSpawned += spawned;
                     }
                 }
             }
 
-            UOR_Utility.SendMsg(ConsoleColor.Yellow, $"VENDORS-[{_Vendors.Count} Initialized]");
+            UOR_Utility.SendMsg(ConsoleColor.Yellow, $"VENDORS-[{totalSpawned} spawned across {totalEntities} locations]");
         }
 
-        internal void DeleteVendors()
+        internal void DeleteAllVendors()
         {
-            if (_Vendors.Count == 0) return;
+            // Use ISpawner pattern - single call deletes all vendor spawn
+            int totalDeleted = UOR_VendorSpawner.CleanupAll();
 
-            List<Serial> list = new List<Serial>();
-
-            int deleted = 0;
-
-            foreach (var mobile in World.Mobiles.Values)
-            {
-                if (mobile is BaseCreature bc && bc.Home.Z == UOR_Settings.VENDOR_MARKER)
-                {
-                    list.Add(mobile.Serial);
-                }
-            }
-
-            foreach (var serial in list)
-            {
-                Mobile vendor = GetVendor($"{serial.Value}");
-
-                if (vendor != null && !vendor.Deleted)
-                {
-                    vendor.Delete();
-                    deleted++;
-                }
-            }
-
-            _Vendors.Clear();
-
-            UOR_Utility.SendMsg(ConsoleColor.Yellow, $"VENDORS-[{deleted} Deleted]");
-        }
-
-        internal void AddVendor(Mobile m)
-        {
-            if (!_Vendors.Contains($"{m.Serial.Value}"))
-            {
-                _Vendors.Add($"{m.Serial.Value}");
-            }
-        }
-
-        private Mobile GetVendor(string serial)
-        {
-            if (Int32.TryParse(serial, out var value))
-            {
-                return World.FindMobile(value);
-            }
-
-            return null;
-        }
-
-        private void ValidateVendors()
-        {
-            bool allGood = true;
-
-            for (int i = 0; i < _Vendors.Count; i++)
-            {
-                if (_Vendors.Count > 0 && Int32.TryParse(_Vendors[0], out int serial))
-                {
-                    if (World.FindMobile(serial) == null)
-                    {
-                        allGood = false;
-                        break; 
-                    }
-                }
-            }
-
-            if (!allGood)
-            {
-                ResetVendors();
-            }
+            UOR_Utility.SendMsg(ConsoleColor.Yellow, $"VENDORS-[{totalDeleted} Deleted via ISpawner]");
         }
 
         internal void UpdateTime()
@@ -150,32 +95,34 @@ namespace Server.Custom.UORespawnServer.Services
             ToggleWorking(UOR_Settings.ENABLE_VENDOR_NIGHT);
         }
 
-        private void ToggleWorking(bool isEnabled)
+        private void ToggleWorking(bool nightModeEnabled)
         {
+            // Use ISpawner-based query to get all vendor spawn
+            var allVendorSpawn = UOR_VendorSpawner.GetAllSpawn();
+
+            if (allVendorSpawn == null || allVendorSpawn.Count == 0)
+                return;
+
             int hidden = 0;
-            for (int i = 0; i < _Vendors.Count; i++)
+
+            foreach (var creature in allVendorSpawn)
             {
-                if (GetVendor(_Vendors[i]) is Mobile m)
+                if (creature is BaseVendor bv)
                 {
-                    if (m != null)
+                    bv.Hidden = nightModeEnabled && UOR_Utility.IsNight(bv.Map, bv.Location);
+                    bv.CantWalk = bv.Hidden;
+
+                    if (bv.Hidden)
+                        hidden++;
+
+                    if (!nightModeEnabled)
                     {
-                        if (m is BaseVendor bv)
-                        {
-                            bv.Hidden = isEnabled && UOR_Utility.IsNight(bv.Map, bv.Location);
-                            bv.CantWalk = bv.Hidden;
-
-                            if (bv.Hidden) hidden++;
-
-                            if (!isEnabled)
-                            {
-                                NPCUtility.CheckNightDress(bv);
-                            }
-                        }
-                        else
-                        {
-                            NPCUtility.CheckNightDress(m);
-                        }
+                        NPCUtility.CheckNightDress(bv);
                     }
+                }
+                else
+                {
+                    NPCUtility.CheckNightDress(creature);
                 }
             }
 
@@ -185,30 +132,94 @@ namespace Server.Custom.UORespawnServer.Services
             }
         }
 
-        internal void Save()
+        /// <summary>
+        /// Respawns vendors at a specific location by deleting existing and spawning from config.
+        /// Uses ISpawner pattern to find and delete vendors near the location.
+        /// </summary>
+        /// <param name="map">The map the vendors are on</param>
+        /// <param name="entity">The VendorEntity with updated vendor list</param>
+        /// <returns>Number of vendors spawned</returns>
+        internal int RespawnVendorsAtLocation(Map map, VendorEntity entity)
         {
-            if (_Vendors.Count > 0)
+            if (map == null || entity == null)
+                return 0;
+
+            // Find and delete existing vendors near this location using ISpawner
+            var allVendors = UOR_VendorSpawner.GetAllSpawn();
+            int deleted = 0;
+            int range = 8; // Search range for vendors at this location
+
+            foreach (var vendor in allVendors.ToList())
             {
-                ValidateVendors();
+                if (vendor.Map == map && vendor.GetDistanceToSqrt(entity.Location) <= range)
+                {
+                    vendor.Delete();
+                    deleted++;
+                }
+            }
 
-                File.WriteAllLines(UOR_DIR.VENDOR_SPAWN_FILE, _Vendors);
+            if (deleted > 0)
+            {
+                UOR_Utility.SendMsg(ConsoleColor.Yellow, $"VENDORS-[{deleted} deleted at {entity.Location}]");
+            }
 
-                UOR_Utility.SendMsg(ConsoleColor.Yellow, $"VENDORS-[{_Vendors.Count} Saved]");
+            // Respawn from updated config
+            int spawned = 0;
+            if (entity.VendorList.Count > 0)
+            {
+                spawned = VendorSpawner.SpawnVendors(map, entity);
+                UOR_Utility.SendMsg(ConsoleColor.Yellow, $"VENDORS-[{spawned} respawned at {entity.Location}]");
+            }
+
+            return spawned;
+        }
+
+        internal int GetTotalVendorCount()
+        {
+            // Use ISpawner-based query instead of entity tracking lists
+            return UOR_VendorSpawner.GetCount();
+        }
+
+        /// <summary>
+        /// Validates all vendor entities and respawns any that are missing vendors.
+        /// </summary>
+        internal void ValidateAndRespawn()
+        {
+            var vendorSpawns = SpawnManager.VendorSpawns;
+
+            if (vendorSpawns == null)
+                return;
+
+            int respawned = 0;
+
+            foreach (var kvp in vendorSpawns)
+            {
+                Map map = kvp.Key;
+
+                foreach (var entity in kvp.Value)
+                {
+                    if (entity.NeedsSpawn())
+                    {
+                        respawned += VendorSpawner.SpawnVendors(map, entity);
+                    }
+                }
+            }
+
+            if (respawned > 0)
+            {
+                UOR_Utility.SendMsg(ConsoleColor.Yellow, $"VENDORS-[{respawned} Respawned]");
             }
         }
 
-        private bool Load()
+        /// <summary>
+        /// Called on world save - no longer needs serial persistence since ISpawner handles tracking.
+        /// </summary>
+        internal void Save()
         {
-            if (File.Exists(UOR_DIR.VENDOR_SPAWN_FILE))
-            {
-                _Vendors.AddRange(File.ReadAllLines(UOR_DIR.VENDOR_SPAWN_FILE));
-
-                UOR_Utility.SendMsg(ConsoleColor.Yellow, $"VENDORS-[{_Vendors.Count} Loaded]");
-
-                return _Vendors.Count > 0;
-            }
-
-            return false;
+            // ISpawner pattern handles spawn tracking automatically
+            // No serial persistence needed
+            int count = GetTotalVendorCount();
+            UOR_Utility.SendMsg(ConsoleColor.Yellow, $"VENDORS-[{count} active]");
         }
     }
 }

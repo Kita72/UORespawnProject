@@ -2,6 +2,8 @@ using System.Linq;
 using Server.Mobiles;
 using System.Collections.Generic;
 
+using Server.Custom.UORespawnServer.Spawners;
+
 namespace Server.Custom.UORespawnServer.Mobiles
 {
     internal class AmbushNPC : SkeletalKnight
@@ -160,22 +162,27 @@ namespace Server.Custom.UORespawnServer.Mobiles
 
         private void Spawn(Mobile member, int i, Mobile victim)
         {
-            UOR_Core.UpdateSpawned(member.Serial, true);
+            // Assign ISpawner for tracking - ambush spawn is owned by UOR_MobSpawner
+            if (member is BaseCreature bc)
+            {
+                UOR_MobSpawner.Instance.Claim(bc);
+            }
 
             member.OnBeforeSpawn(Location, Map);
 
             Point3D location;
 
+            // 8 directions around the leader: N, NE, E, SE, S, SW, W, NW
             switch (Utility.Random(8))
             {
-                case 0: location = new Point3D(Location.X + i, Location.Y, Location.Z); break;
-                case 1: location = new Point3D(Location.X + i, Location.Y - i, Location.Z); break;
-                case 3: location = new Point3D(Location.X + i, Location.Y + i, Location.Z); break;
-                case 4: location = new Point3D(Location.X, Location.Y + i, Location.Z); break;
-                case 5: location = new Point3D(Location.X, Location.Y - i, Location.Z); break;
-                case 6: location = new Point3D(Location.X - i, Location.Y + i, Location.Z); break;
-                case 7: location = new Point3D(Location.X - i, Location.Y - i, Location.Z); break;
-                case 8: location = new Point3D(Location.X - i, Location.Y, Location.Z); break;
+                case 0: location = new Point3D(Location.X, Location.Y - i, Location.Z); break;      // North
+                case 1: location = new Point3D(Location.X + i, Location.Y - i, Location.Z); break;  // NorthEast
+                case 2: location = new Point3D(Location.X + i, Location.Y, Location.Z); break;      // East
+                case 3: location = new Point3D(Location.X + i, Location.Y + i, Location.Z); break;  // SouthEast
+                case 4: location = new Point3D(Location.X, Location.Y + i, Location.Z); break;      // South
+                case 5: location = new Point3D(Location.X - i, Location.Y + i, Location.Z); break;  // SouthWest
+                case 6: location = new Point3D(Location.X - i, Location.Y, Location.Z); break;      // West
+                case 7: location = new Point3D(Location.X - i, Location.Y - i, Location.Z); break;  // NorthWest
                 default: location = new Point3D(Location.X + i, Location.Y + i, Location.Z); break;
             }
 

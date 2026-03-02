@@ -1,10 +1,17 @@
 using System;
-using System.Collections.Generic;
+
+using Server.Mobiles;
 
 using Server.Custom.UORespawnServer.Timers;
+using Server.Custom.UORespawnServer.Spawners;
 
 namespace Server.Custom.UORespawnServer.Services
 {
+    /// <summary>
+    /// Validates spawn proximity to players.
+    /// Spawn too far from players gets sent to recycle.
+    /// Uses ISpawner on-demand query - no tracking list needed.
+    /// </summary>
     internal class ValidateService
     {
         private readonly ValidateTimer _ValidateTimer;
@@ -13,7 +20,7 @@ namespace Server.Custom.UORespawnServer.Services
         {
             _ValidateTimer = new ValidateTimer(this, TimeSpan.FromSeconds(UOR_Settings.VALIDATE_INTERVAL));
 
-            UOR_Utility.SendMsg(ConsoleColor.Yellow, $"VALIDATE-[{UOR_Settings.VALIDATE_INTERVAL} Created]");
+            UOR_Utility.SendMsg(ConsoleColor.Yellow, $"VALIDATE-[{UOR_Settings.VALIDATE_INTERVAL}s Interval]");
         }
 
         internal void Start()
@@ -36,22 +43,26 @@ namespace Server.Custom.UORespawnServer.Services
             }
         }
 
+        /// <summary>
+        /// Check all mob spawn - send those far from players to recycle.
+        /// </summary>
         internal void Validate()
         {
-            List<Serial> allSpawn = UOR_Utility.GetAllSpawn();
+            // On-demand ISpawner query - no tracking list
+            var allSpawn = UOR_MobSpawner.GetAllSpawn();
 
             int recycledThisPass = 0;
+            int maxDistance = UOR_Settings.MAX_RANGE + (UOR_Settings.MAX_RANGE / 2);
 
-            for (int i = 0; i < allSpawn.Count; i++)
+            foreach (var creature in allSpawn)
             {
-                if (allSpawn[i] is Serial serial && UOR_Utility.GetMobile(serial) is Mobile m)
-                {
-                    if (!UOR_Utility.PlayersInRange(m.Map, m.Location, UOR_Settings.MAX_RANGE + (UOR_Settings.MAX_RANGE / 2)))
-                    {
-                        UOR_Core.SendToRecycled(serial);
+                if (creature == null || creature.Deleted)
+                    continue;
 
-                        recycledThisPass++;
-                    }
+                if (!UOR_Utility.PlayersInRange(creature.Map, creature.Location, maxDistance))
+                {
+                    UOR_Core.SendToRecycled(creature.Serial);
+                    recycledThisPass++;
                 }
             }
 

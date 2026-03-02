@@ -13,6 +13,7 @@ namespace Server.Custom.UORespawnServer
         internal static readonly string OUTPUT_DIR = GetValidDir(UOR_Main, "OUTPUT");
         internal static readonly string STAT_DIR = GetValidDir(UOR_Main, "STATS");
         internal static readonly string SYSTEM_DIR = GetValidDir(UOR_Main, "SYS");
+        internal static readonly string COMMANDS_DIR = GetValidDir(UOR_Main, "COMMANDS");
 
         // Binary File Paths (Editor creates, Server loads)
         internal static readonly string BOX_DATA_FILE = Path.Combine(INPUT_DIR, "UOR_BoxSpawn.bin");
@@ -20,6 +21,13 @@ namespace Server.Custom.UORespawnServer
         internal static readonly string TILE_DATA_FILE = Path.Combine(INPUT_DIR, "UOR_TileSpawn.bin");
         internal static readonly string VENDOR_DATA_FILE = Path.Combine(INPUT_DIR, "UOR_VendorSpawn.bin");
         internal static readonly string SETTINGS_DATA_FILE = Path.Combine(INPUT_DIR, "UOR_SpawnSettings.csv");
+
+        // Command Edit Files (Server creates, Editor consumes OR Editor creates, Server consumes)
+        internal static readonly string SETTINGS_EDIT_FILE = Path.Combine(COMMANDS_DIR, "settings_edits.txt");
+        internal static readonly string BOX_EDIT_FILE = Path.Combine(COMMANDS_DIR, "box_edits.txt");
+        internal static readonly string REGION_EDIT_FILE = Path.Combine(COMMANDS_DIR, "region_edits.txt");
+        internal static readonly string TILE_EDIT_FILE = Path.Combine(COMMANDS_DIR, "tile_edits.txt");
+        internal static readonly string VENDOR_EDIT_FILE = Path.Combine(COMMANDS_DIR, "vendor_edits.txt");
 
         // Text File Paths (Sever creates, Editor loads)
         internal static readonly string MAP_LIST_FILE = Path.Combine(OUTPUT_DIR, "UOR_MapList.txt");
@@ -32,8 +40,6 @@ namespace Server.Custom.UORespawnServer
         internal static readonly string HIVE_DATA_FILE = Path.Combine(OUTPUT_DIR, "UOR_HiveData.txt");
 
         // System Files
-        internal static readonly string TRACK_SPAWN_FILE = Path.Combine(SYSTEM_DIR, "UOR_TrackSpawn.txt");
-        internal static readonly string VENDOR_SPAWN_FILE = Path.Combine(SYSTEM_DIR, "UOR_VendorSpawn.txt");
         internal static readonly string LOG_DEBUG_FILE = Path.Combine(SYSTEM_DIR, "UOR_DebugLog.txt");
 
         private static string GetValidDir(string dir, string route)
