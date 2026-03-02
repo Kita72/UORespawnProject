@@ -5,7 +5,7 @@ namespace Server.Custom.UORespawnServer
 {
     internal static class UOR_Settings
     {
-        internal const string VERSION = "2.0.0.8"; // Updated: ISpawner-based tracking
+        internal const string VERSION = "2.0.0.8"; // Updated: Centralized ServerStarted startup
 
         // Note: SPAWN_MARKER and VENDOR_MARKER removed - now using ISpawner pattern
         // Spawn ownership tracked via creature.Spawner (UOR_MobSpawner/UOR_VendorSpawner)

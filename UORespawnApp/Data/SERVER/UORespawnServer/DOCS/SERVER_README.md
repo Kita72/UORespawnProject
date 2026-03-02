@@ -10,17 +10,18 @@
 
 1. [Overview](#overview)
 2. [Architecture](#architecture)
-3. [Directory Structure](#directory-structure)
-4. [Data Files](#data-files)
-5. [Settings Configuration](#settings-configuration)
-6. [Spawn System](#spawn-system)
-7. [Logging System](#logging-system)
-8. [Editor Integration](#editor-integration)
-9. [Spawn Packs](#spawn-packs)
-10. [Command System](#command-system)
-11. [In-Game Spawn Editing System](#in-game-spawn-editing-system)
-12. [Vendor System](#vendor-system)
-13. [Event System](#event-system)
+3. [Startup Sequence](#startup-sequence)
+4. [Directory Structure](#directory-structure)
+5. [Data Files](#data-files)
+6. [Settings Configuration](#settings-configuration)
+7. [Spawn System](#spawn-system)
+8. [Logging System](#logging-system)
+9. [Editor Integration](#editor-integration)
+10. [Spawn Packs](#spawn-packs)
+11. [Command System](#command-system)
+12. [In-Game Spawn Editing System](#in-game-spawn-editing-system)
+13. [Vendor System](#vendor-system)
+14. [Event System](#event-system)
 
 ---
 
@@ -105,7 +106,7 @@ The server and editor work in a **synchronized partnership**:
 
 | Component | Purpose |
 |-----------|---------|
-| `UOR_Core` | Main orchestrator - initialization, events, state management |
+| `UOR_Core` | Main orchestrator - centralized startup, events, state management |
 | `UOR_Settings` | Configuration loading and runtime settings |
 | `UOR_DIR` | Directory and file path management |
 | `UOR_Utility` | Shared utility methods |
@@ -116,11 +117,11 @@ The server and editor work in a **synchronized partnership**:
 |---------|---------|
 | `ProcessService` | Main spawn processing and mob creation |
 | `RecycleService` | Mob pooling for performance (spawn keeps ISpawner leash) |
-| `TrackService` | Startup-only cleanup of stray mobs via ISpawner |
+| `TrackService` | Placeholder for future tracking features |
 | `ValidateService` | Spawn validation using ISpawner on-demand queries |
 | `TimedService` | Time-based spawn updates (day/night) |
 | `StatsService` | Spawn statistics collection |
-| `VendorService` | Vendor NPC lifecycle via ISpawner pattern |
+| `VendorService` | Vendor NPC runtime operations (reset, time updates) |
 | `ControlService` | In-game settings gump interface |
 
 ### Managers (5 total)
@@ -154,6 +155,109 @@ The ISpawner pattern provides:
 - **Automatic cleanup** - `CleanupAll()` deletes all owned spawn
 - **No tracking lists** - Game's existing Mobile collection handles persistence
 - **Leak-proof** - Spawn keeps ISpawner reference even when recycled
+
+---
+
+## Startup Sequence
+
+### ⚠️ Centralized ServerStarted Pattern (NEW in 2.0.0.8)
+
+UORespawn uses a **centralized startup pattern** via `EventSink.ServerStarted`. This ensures all initialization happens AFTER `World.Load()` completes, when `World.Mobiles` is fully populated.
+
+### Why ServerStarted?
+
+ServUO startup order:
+1. `World.Load()` - Deserializes all mobiles/items
+2. `ScriptCompiler.Invoke("Initialize")` - Runs all `[CallPriority]` Initialize methods
+3. `EventSink.ServerStarted` - Fires when server is fully ready
+
+**Problem with Initialize():** `Mobile.Spawner` (ISpawner) is NOT serialized by ServUO. After `World.Load()`, all creatures have `Spawner = null` even though the spawner Items exist.
+
+**Solution:** Use `ServerStarted` to reclaim spawner references AFTER world load, then initialize vendors and services.
+
+### Startup Flow Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    UORespawn STARTUP SEQUENCE                        │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│   PHASE 1: Initialize() - Called during script initialization        │
+│   ══════════════════════════════════════════════════════════════     │
+│   • Logo display                                                     │
+│   • UOR_Utility setup                                                │
+│   • GameManager.InitializeData() - Generate OUTPUT/ files            │
+│   • SpawnManager.LoadSpawns() - Load INPUT/ binary data              │
+│   • Subscribe to EventSink.ServerStarted                             │
+│                                                                      │
+│                         ↓ (Wait for World.Load)                      │
+│                                                                      │
+│   PHASE 2: OnServerStarted() - Called after server fully ready       │
+│   ══════════════════════════════════════════════════════════════     │
+│   1. ReclaimSpawners()     - Restore bc.Spawner references           │
+│   2. CleanupMobSpawn()     - Delete mob spawn (fresh world)          │
+│   3. InitializeVendors()   - Check existing or spawn new             │
+│   4. InitializeServices()  - Create service instances                │
+│   5. InitializeEvents()    - Subscribe to game events                │
+│   6. StartTimers()         - Start service timers                    │
+│   7. Enable system         - IsPaused = IsLocked                     │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Console Output on Startup
+
+```
+Respawn-[Started]
+*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*
+|-|-|-|-|-|-|-| UORespawn |-|-|-|-|-|-|-|
+|-|-|-|-|-|-|-|   ~*~*~   |-|-|-|-|-|-|-|
+*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*
+Respawn-[Pre-Load Setup]
+Respawn-[1/2]
+Respawn-[2/2]
+Respawn-[Waiting for ServerStarted...]
+... (ServUO startup messages) ...
+Respawn-[ServerStarted - Beginning Full Init]
+RECLAIM-[Mobs: 0, Vendors: 125]
+Respawn-[1/5]
+CLEANUP-[0 Mobs Deleted - Fresh World Ready]
+Respawn-[2/5]
+VENDORS-[125 persisted from save]
+Respawn-[3/5]
+SERVICES-[Initialized]
+Respawn-[4/5]
+EVENTS-[Subscribed]
+Respawn-[5/5]
+TIMERS-[Initialized]
+Respawn-[Sequence Complete]
+FLAGS-[0 Deleted]
+GATES-[0 Deleted]
+STARTED - Running ...
+```
+
+### Key Startup Operations
+
+| Step | Method | Purpose |
+|------|--------|---------|
+| 1 | `ReclaimSpawners()` | Restore `creature.Spawner` references from serial tracking |
+| 2 | `CleanupMobSpawn()` | Delete all mob spawn (fresh world for players) |
+| 3 | `InitializeVendors()` | Spawn vendors only if none exist from save |
+| 4 | `InitializeServices()` | Create all 8 service instances |
+| 5 | `InitializeEvents()` | Subscribe to Login, Logout, Death, Save, etc. |
+| 6 | `StartTimers()` | Start Process, Validate, Timed timers |
+
+### Why Vendors Persist, Mobs Don't
+
+| Spawn Type | On Startup | Reason |
+|------------|------------|--------|
+| **Mobs** | Deleted | Fresh world experience for players |
+| **Vendors** | Preserved | Town NPCs should persist across restarts |
+
+Vendors are only respawned when:
+- First server run (no existing vendors)
+- Manual reset via `[uor` → Reset Vendors
+- `ENABLE_VENDOR_SPAWN` toggled on after being off
 
 ### Timers (4 total)
 
@@ -942,13 +1046,20 @@ The system hooks into these ServUO events:
 
 | Event | Action |
 |-------|--------|
-| `EventSink.WorldLoad` | Initialize system, load spawns |
-| `EventSink.WorldSave` | Save tracked spawns, flush logs |
+| `EventSink.ServerStarted` | **Primary init point** - Reclaim, cleanup, vendors, services, timers |
+| `EventSink.TameCreature` | Log taming (ISpawner handles release) |
+| `EventSink.CreatureDeath` | Log death (ISpawner handles release) |
+| `EventSink.MobileDeleted` | ISpawner handles cleanup automatically |
+| `EventSink.BeforeWorldSave` | Pause system during save |
+| `EventSink.AfterWorldSave` | Resume system, save stats/vendors |
 | `EventSink.Login` | Add player to respawner list |
 | `EventSink.Logout` | Remove player from respawner list |
-| `EventSink.PlayerDeath` | Track death for statistics |
-| `EventSink.Shutdown` | Cleanup, flush final log |
+| `EventSink.Shutdown` | Flush logs, stop timers |
 | `EventSink.Crashed` | Emergency log flush |
+
+### Event Subscription Safety
+
+Events are subscribed only once via `_EventsSubscribed` flag. The `UnsubscribeEvents()` method is called during `SHUTDOWN()` to prevent double handlers if the system is restarted.
 
 ---
 
@@ -998,6 +1109,13 @@ The system hooks into these ServUO events:
 |---------|---------|
 | 2.0.0.8 | **BREAKING:** Replaced tracking lists with ISpawner pattern |
 | 2.0.0.8 | **NEW:** `UOR_MobSpawner` and `UOR_VendorSpawner` singletons |
+| 2.0.0.8 | **NEW:** Centralized startup to `EventSink.ServerStarted` |
+| 2.0.0.8 | **NEW:** `UOR_Core.OnServerStarted()` - single entry point after world load |
+| 2.0.0.8 | **NEW:** Explicit startup ordering: Reclaim → Cleanup → Vendors → Services → Events → Timers |
+| 2.0.0.8 | **FIX:** Vendors no longer recreated every restart (check after reclaim) |
+| 2.0.0.8 | **FIX:** Mobile.Spawner properly reclaimed after world load |
+| 2.0.0.8 | **SIMPLIFIED:** TrackService - startup logic moved to UOR_Core |
+| 2.0.0.8 | **SIMPLIFIED:** VendorService - startup logic moved to UOR_Core |
 | 2.0.0.8 | **NEW:** On-demand spawn queries via `creature.Spawner` field |
 | 2.0.0.8 | **NEW:** `RespawnVendorsAtLocation()` for immediate vendor swap |
 | 2.0.0.8 | **REMOVED:** `VENDOR_MARKER` (Home.Z=999) - Use ISpawner instead |

@@ -7,11 +7,26 @@ using Server.Mobiles;
 using Server.Custom.UORespawnServer.Entities;
 using Server.Custom.UORespawnServer.Managers;
 using Server.Custom.UORespawnServer.Services;
+using Server.Custom.UORespawnServer.Spawners;
 
 namespace Server.Custom.UORespawnServer
 {
     /// <summary>
+    /// UORespawn Core - Central initialization and management.
     /// 
+    /// STARTUP SEQUENCE:
+    /// 1. Initialize() - called during ScriptCompiler.Invoke("Initialize")
+    ///    - Minimal setup: logo, utility, data loading
+    ///    - Subscribes to ServerStarted for deferred startup
+    /// 
+    /// 2. OnServerStarted() - called after World.Load() completes
+    ///    - Reclaims spawner references (Mobile.Spawner not serialized)
+    ///    - Cleans up mob spawn (fresh world)
+    ///    - Initializes vendors (checks for existing)
+    ///    - Creates services and starts timers
+    ///    - Subscribes to game events
+    /// 
+    /// This ensures World.Mobiles is fully populated before any spawn operations.
     /// </summary>
     internal static class UOR_Core
     {
@@ -79,6 +94,12 @@ namespace Server.Custom.UORespawnServer
             TotalGatesCleaned++;
         }
 
+        #region Startup Sequence
+
+        /// <summary>
+        /// Called during ScriptCompiler.Invoke("Initialize") - BEFORE World.Load completes.
+        /// Performs minimal setup and defers main initialization to ServerStarted.
+        /// </summary>
         public static void Initialize()
         {
             UOR_Utility.SendMsg(ConsoleColor.Yellow, $"Respawn-[Started]");
@@ -89,33 +110,65 @@ namespace Server.Custom.UORespawnServer
 
             LoadLogo();
 
-            UOR_Utility.SendMsg(ConsoleColor.Yellow, $"Respawn-[Sequence Started]");
+            UOR_Utility.SendMsg(ConsoleColor.Yellow, $"Respawn-[Pre-Load Setup]");
 
-            UOR_Utility.InitializeUtility(); // Get Utility AllSpawns Ready!
+            UOR_Utility.InitializeUtility(); // Get Utility Ready!
 
-            UOR_Utility.SendMsg(ConsoleColor.Yellow, $"Respawn-[1/6]");
+            UOR_Utility.SendMsg(ConsoleColor.Yellow, $"Respawn-[1/2]");
 
             GameManager.InitializeData(); // Create Game Data Files : Output to Editor
 
-            UOR_Utility.SendMsg(ConsoleColor.Yellow, $"Respawn-[2/6]");
+            UOR_Utility.SendMsg(ConsoleColor.Yellow, $"Respawn-[2/2]");
 
             SpawnManager.LoadSpawns(); // Load Spawn Data : Input to Server
 
-            UOR_Utility.SendMsg(ConsoleColor.Yellow, $"Respawn-[3/6]");
+            // Subscribe to ServerStarted - fires AFTER World.Load() completes
+            EventSink.ServerStarted += OnServerStarted;
 
-            InitializeServices(); // Get Serrvices Loaded and Ready!
+            UOR_Utility.SendMsg(ConsoleColor.Yellow, $"Respawn-[Waiting for ServerStarted...]");
+        }
 
-            UOR_Utility.SendMsg(ConsoleColor.Yellow, $"Respawn-[4/6]");
+        /// <summary>
+        /// Called when server has fully started - World loaded, scripts initialized, timers running.
+        /// This is the main initialization entry point where World.Mobiles is fully populated.
+        /// </summary>
+        private static void OnServerStarted()
+        {
+            // Unsubscribe - one-time startup only
+            EventSink.ServerStarted -= OnServerStarted;
 
-            InitializeEvents(); // Hook into the Events!
+            UOR_Utility.SendMsg(ConsoleColor.Magenta, $"Respawn-[ServerStarted - Beginning Full Init]");
 
-            UOR_Utility.SendMsg(ConsoleColor.Yellow, $"Respawn-[5/6]");
+            // PHASE 1: Reclaim spawner references (Mobile.Spawner is not serialized)
+            ReclaimSpawners();
 
-            StartTimers(); // Start Service Timers!
+            UOR_Utility.SendMsg(ConsoleColor.Yellow, $"Respawn-[1/5]");
 
-            UOR_Utility.SendMsg(ConsoleColor.Yellow, $"Respawn-[6/6]");
+            // PHASE 2: Clean up mob spawn from previous session (fresh world)
+            CleanupMobSpawn();
 
-            IsPaused = IsLocked; // Enable System : Start!
+            UOR_Utility.SendMsg(ConsoleColor.Yellow, $"Respawn-[2/5]");
+
+            // PHASE 3: Initialize vendors (checks for existing, only spawns if needed)
+            InitializeVendors();
+
+            UOR_Utility.SendMsg(ConsoleColor.Yellow, $"Respawn-[3/5]");
+
+            // PHASE 4: Create services
+            InitializeServices();
+
+            UOR_Utility.SendMsg(ConsoleColor.Yellow, $"Respawn-[4/5]");
+
+            // PHASE 5: Subscribe to game events
+            InitializeEvents();
+
+            UOR_Utility.SendMsg(ConsoleColor.Yellow, $"Respawn-[5/5]");
+
+            // PHASE 6: Start service timers
+            StartTimers();
+
+            // Enable system
+            IsPaused = IsLocked;
 
             UOR_Utility.SendMsg(ConsoleColor.Yellow, $"Respawn-[Sequence Complete]");
 
@@ -126,23 +179,109 @@ namespace Server.Custom.UORespawnServer
             UOR_Utility.SendMsg(ConsoleColor.Magenta, "STARTED - Running ...");
         }
 
-        private static void InitializeServices()
+        /// <summary>
+        /// Reclaims all spawn from spawners after world load.
+        /// Mobile.Spawner is not serialized by ServUO, so we must restore references.
+        /// </summary>
+        private static void ReclaimSpawners()
         {
-            UOR_Utility.SendMsg(ConsoleColor.Yellow, $"Respawn-[Services Created]");
+            int mobsReclaimed = UOR_MobSpawner.Instance.ReclaimAll();
+            int vendorsReclaimed = UOR_VendorSpawner.Instance.ReclaimAll();
 
-            _ProcessService = new ProcessService();
-            _RecycleService = new RecycleService();
-            _TrackService = new TrackService();
-            _ValidateService = new ValidateService();
-            _TimedService = new TimedService();
-            _StatsService = new StatsService();
-            _VendorService = new VendorService();
-            _ControlService = new ControlService();
-
-            UOR_Utility.SendMsg(ConsoleColor.Green, "SERVICES-[Initialized]");
+            UOR_Utility.SendMsg(ConsoleColor.Cyan, $"RECLAIM-[Mobs: {mobsReclaimed}, Vendors: {vendorsReclaimed}]");
         }
 
-        private static bool _EventsSubscribed = false;
+        /// <summary>
+        /// Deletes all mob spawn from previous server session.
+        /// Keeps world fresh for players. Vendors persist across restarts.
+        /// </summary>
+        private static void CleanupMobSpawn()
+        {
+            int deleted = UOR_MobSpawner.CleanupAll();
+
+            UOR_Utility.SendMsg(ConsoleColor.Cyan, $"CLEANUP-[{deleted} Mobs Deleted - Fresh World Ready]");
+        }
+
+        /// <summary>
+        /// Initializes vendors - only spawns if none exist from previous save.
+        /// Must run AFTER ReclaimSpawners() so GetCount() returns accurate values.
+        /// </summary>
+        private static void InitializeVendors()
+        {
+            if (!UOR_Settings.ENABLE_VENDOR_SPAWN)
+            {
+                // Delete any existing vendors if system is disabled
+                int deleted = UOR_VendorSpawner.CleanupAll();
+                if (deleted > 0)
+                {
+                    UOR_Utility.SendMsg(ConsoleColor.Yellow, $"VENDORS-[{deleted} Deleted - System Disabled]");
+                }
+                return;
+            }
+
+            var vendorSpawns = SpawnManager.VendorSpawns;
+
+            if (vendorSpawns == null || vendorSpawns.Count == 0)
+            {
+                UOR_Utility.SendMsg(ConsoleColor.Yellow, $"VENDORS-[No vendor spawn data found]");
+                return;
+            }
+
+            // Check if vendors already exist (via ISpawner pattern)
+            int existingCount = UOR_VendorSpawner.GetCount();
+
+            if (existingCount > 0)
+            {
+                UOR_Utility.SendMsg(ConsoleColor.Green, $"VENDORS-[{existingCount} persisted from save]");
+                return;
+            }
+
+            // No existing vendors - spawn them
+            int totalSpawned = 0;
+            int totalEntities = 0;
+
+            foreach (var kvp in vendorSpawns)
+            {
+                Map map = kvp.Key;
+
+                foreach (var entity in kvp.Value)
+                {
+                    totalEntities++;
+
+                    if (entity.VendorList.Count > 0)
+                    {
+                        int spawned = VendorSpawner.SpawnVendors(map, entity);
+                        totalSpawned += spawned;
+                    }
+                }
+            }
+
+            UOR_Utility.SendMsg(ConsoleColor.Yellow, $"VENDORS-[{totalSpawned} spawned across {totalEntities} locations]");
+            }
+
+            /// <summary>
+            /// Creates service instances. Called during ServerStarted.
+            /// Note: TrackService and VendorService functionality is now handled directly in OnServerStarted.
+            /// </summary>
+            private static void InitializeServices()
+            {
+                UOR_Utility.SendMsg(ConsoleColor.Yellow, $"Respawn-[Services Created]");
+
+                _ProcessService = new ProcessService();
+                _RecycleService = new RecycleService();
+                _TrackService = new TrackService();      // Now a simple service, no ServerStarted subscription
+                _ValidateService = new ValidateService();
+                _TimedService = new TimedService();
+                _StatsService = new StatsService();
+                _VendorService = new VendorService();    // Now a simple service, no ServerStarted subscription
+                _ControlService = new ControlService();
+
+                UOR_Utility.SendMsg(ConsoleColor.Green, "SERVICES-[Initialized]");
+            }
+
+            #endregion
+
+            private static bool _EventsSubscribed = false;
 
         private static void InitializeEvents()
         {

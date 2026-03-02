@@ -10,29 +10,35 @@ using Server.Custom.UORespawnServer.Managers;
 
 namespace Server.Custom.UORespawnServer.Services
 {
+    /// <summary>
+    /// Vendor management service.
+    /// 
+    /// NOTE: Initial vendor spawning is now handled centrally in UOR_Core.OnServerStarted().
+    /// This ensures proper ordering: Reclaim → Cleanup → Vendor Init → Services.
+    /// 
+    /// This class handles runtime vendor operations:
+    /// - ResetVendors() - manual vendor reset
+    /// - UpdateTime() - night mode visibility
+    /// - RespawnVendorsAtLocation() - location-specific respawn
+    /// - ValidateAndRespawn() - missing vendor detection
+    /// </summary>
     internal class VendorService
     {
         internal VendorService()
         {
-            UOR_Utility.SendMsg(ConsoleColor.Yellow, $"VENDORS-[Created]");
-
-            if (UOR_Settings.ENABLE_VENDOR_SPAWN)
-            {
-                InitializeSpawn();
-            }
-            else
-            {
-                DeleteAllVendors();
-            }
+            // Startup vendor initialization moved to UOR_Core.OnServerStarted()
         }
 
+        /// <summary>
+        /// Resets all vendors - deletes existing and respawns from config.
+        /// </summary>
         internal void ResetVendors()
         {
             DeleteAllVendors();
 
             if (UOR_Settings.ENABLE_VENDOR_SPAWN)
             {
-                InitializeSpawn();
+                SpawnAllVendors();
             }
             else
             {
@@ -41,22 +47,16 @@ namespace Server.Custom.UORespawnServer.Services
             }
         }
 
-        private void InitializeSpawn()
+        /// <summary>
+        /// Spawns all vendors from config data.
+        /// </summary>
+        private void SpawnAllVendors()
         {
             var vendorSpawns = SpawnManager.VendorSpawns;
 
             if (vendorSpawns == null || vendorSpawns.Count == 0)
             {
                 UOR_Utility.SendMsg(ConsoleColor.Yellow, $"VENDORS-[No vendor spawn data found]");
-                return;
-            }
-
-            // Check if vendors already exist (via ISpawner pattern)
-            int existingCount = UOR_VendorSpawner.GetCount();
-
-            if (existingCount > 0)
-            {
-                UOR_Utility.SendMsg(ConsoleColor.Yellow, $"VENDORS-[{existingCount} already exist]");
                 return;
             }
 

@@ -8,62 +8,105 @@ using Server.Mobiles;
 namespace Server.Custom.UORespawnServer.Spawners
 {
     /// <summary>
-    /// Base ISpawner implementation for UORespawn system.
-    /// Provides ownership tracking via ServUO's built-in ISpawnable.Spawner pattern.
-    /// No markers, no serial tracking - just clean DI-based spawn identification.
+    /// Base Spawner implementation for UORespawn system.
+    /// Inherits from ServUO's Spawner class so MySpawner property works correctly.
+    /// Uses singleton pattern - one invisible spawner for all UOR mobs, one for vendors.
+    /// Re-implements ISpawner to override Remove behavior.
+    /// 
+    /// IMPORTANT: Mobile.Spawner property is NOT serialized by ServUO.
+    /// We must save our own list of spawned serials and re-claim them on deserialize.
     /// </summary>
-    internal abstract class UOR_Spawner : ISpawner
+    public abstract class UOR_Spawner : Spawner, ISpawner
     {
+        // Track spawned creature serials for serialization
+        // Mobile.Spawner is NOT saved by ServUO, so we must track and re-claim
+        private List<int> _spawnedSerials = new List<int>();
+
         /// <summary>
         /// Display name for logging purposes.
         /// </summary>
-        public abstract string Name { get; }
+        public abstract string SpawnerName { get; }
 
         /// <summary>
         /// Default home range for spawned creatures.
         /// </summary>
-        public virtual int HomeRange => 50;
+        public virtual int DefaultHomeRange => 50;
 
         /// <summary>
         /// Whether creatures should be unlinked from this spawner when tamed.
-        /// True = tamed creatures lose spawner reference (recommended).
+        /// True = tamed creatures lose spawner reference (recommended for mobs).
         /// </summary>
         public virtual bool UnlinkOnTaming => true;
 
         /// <summary>
-        /// Home location is determined per-creature at spawn time, not globally.
-        /// Returns Point3D.Zero as placeholder; actual home is set on creature.Home property.
+        /// Protected constructor for singleton subclasses.
+        /// Creates an invisible, intangible spawner item that exists in memory only.
         /// </summary>
-        public virtual Point3D HomeLocation => Point3D.Zero;
+        protected UOR_Spawner() : base()
+        {
+            // Make invisible and intangible - this spawner doesn't exist in the world
+            Visible = false;
+            Movable = false;
+
+            // Move to internal map so it's not in the game world
+            MoveToWorld(Point3D.Zero, Map.Internal);
+
+            // Set default properties
+            HomeRange = DefaultHomeRange;
+            Running = false; // We don't use the timer-based spawning
+        }
 
         /// <summary>
+        /// Public serial constructor for deserialization.
+        /// </summary>
+        public UOR_Spawner(Serial serial) : base(serial)
+        {
+            _spawnedSerials = new List<int>();
+        }
+
+        /// <summary>
+        /// Override to prevent normal spawner behavior - we control spawning ourselves.
+        /// </summary>
+        public override void OnDelete()
+        {
+            // Don't delete spawned creatures when spawner is removed
+            // UOR system manages creature lifecycle separately
+        }
+
+        /// <summary>
+        /// Override to add UOR-specific properties to creature property list.
+        /// </summary>
+        public override void GetSpawnProperties(ISpawnable spawn, ObjectPropertyList list)
+        {
+            list.Add($"UOR Spawner: {SpawnerName}");
+        }
+
+        /// <summary>
+        /// Called when spawn is removed. Override in subclasses for count tracking.
+        /// </summary>
+        protected virtual void OnSpawnRemoved(ISpawnable spawn)
+        {
+            // Remove from tracking list
+            if (spawn is Mobile m)
+            {
+                _spawnedSerials.Remove(m.Serial.Value);
+            }
+        }
+
+        /// <summary>
+        /// Explicit interface implementation for ISpawner.Remove.
         /// Called by ServUO when a spawn should be removed from this spawner's control.
         /// </summary>
-        public virtual void Remove(ISpawnable spawn)
+        void ISpawner.Remove(ISpawnable spawn)
         {
-            // No tracking list to remove from - we use on-demand queries
-            // Just let the creature handle its own deletion
-        }
-
-        /// <summary>
-        /// Adds spawn properties to the creature's property list (for [props] command).
-        /// </summary>
-        public virtual void GetSpawnProperties(ISpawnable spawn, ObjectPropertyList list)
-        {
-            list.Add($"UOR Spawner: {Name}");
-        }
-
-        /// <summary>
-        /// Adds context menu entries for the spawned creature.
-        /// </summary>
-        public virtual void GetSpawnContextEntries(ISpawnable spawn, Mobile m, List<ContextMenuEntry> list)
-        {
-            // No special context menu entries needed
+            // Notify subclass for count tracking
+            OnSpawnRemoved(spawn);
         }
 
         /// <summary>
         /// Assigns this spawner to a creature, establishing ownership.
-        /// This is the key pattern - creature.Spawner = this.
+        /// Sets creature.Spawner = this (MySpawner will now return this).
+        /// Also tracks the serial for serialization.
         /// </summary>
         public void Claim(BaseCreature creature, Point3D homeLocation = default)
         {
@@ -72,7 +115,13 @@ namespace Server.Custom.UORespawnServer.Spawners
 
             creature.Spawner = this;
             creature.Home = homeLocation != default ? homeLocation : creature.Location;
-            creature.RangeHome = HomeRange;
+            creature.RangeHome = DefaultHomeRange;
+
+            // Track for serialization
+            if (!_spawnedSerials.Contains(creature.Serial.Value))
+            {
+                _spawnedSerials.Add(creature.Serial.Value);
+            }
         }
 
         /// <summary>
@@ -86,7 +135,82 @@ namespace Server.Custom.UORespawnServer.Spawners
             if (creature.Spawner == this)
             {
                 creature.Spawner = null;
+                _spawnedSerials.Remove(creature.Serial.Value);
             }
+        }
+
+        /// <summary>
+        /// Re-claims all tracked creatures after world load.
+        /// Mobile.Spawner is not serialized, so we must restore the reference.
+        /// Returns the count of reclaimed creatures.
+        /// </summary>
+        public int ReclaimAll()
+        {
+            int reclaimed = 0;
+            var toRemove = new List<int>();
+
+            foreach (int serial in _spawnedSerials)
+            {
+                if (World.FindMobile(serial) is BaseCreature bc && !bc.Deleted)
+                {
+                    bc.Spawner = this;
+                    reclaimed++;
+                }
+                else
+                {
+                    toRemove.Add(serial);
+                }
+            }
+
+            // Clean up invalid serials (deleted creatures)
+            foreach (int serial in toRemove)
+            {
+                _spawnedSerials.Remove(serial);
+            }
+
+            return reclaimed;
+        }
+
+        /// <summary>
+        /// Serialization - saves spawned creature serials.
+        /// </summary>
+        public override void Serialize(GenericWriter writer)
+        {
+            base.Serialize(writer);
+
+            writer.Write((int)1); // version
+
+            // Version 1: Save spawned creature serials
+            writer.Write(_spawnedSerials.Count);
+            foreach (int serial in _spawnedSerials)
+            {
+                writer.Write(serial);
+            }
+        }
+
+        /// <summary>
+        /// Deserialization - loads spawned creature serials.
+        /// Reclaim is handled by TrackService after world load completes.
+        /// </summary>
+        public override void Deserialize(GenericReader reader)
+        {
+            base.Deserialize(reader);
+
+            int version = reader.ReadInt();
+
+            _spawnedSerials = new List<int>();
+
+            if (version >= 1)
+            {
+                int count = reader.ReadInt();
+                for (int i = 0; i < count; i++)
+                {
+                    _spawnedSerials.Add(reader.ReadInt());
+                }
+            }
+
+            // NOTE: Reclaim is NOT done here - TrackService handles it
+            // to ensure proper ordering: reclaim first, then cleanup
         }
 
         #region Static Query Methods
@@ -209,7 +333,7 @@ namespace Server.Custom.UORespawnServer.Spawners
     /// Cleaned up on server start when system initializes.
     /// Uses cached count for efficient frequent queries.
     /// </summary>
-    internal sealed class UOR_MobSpawner : UOR_Spawner
+    public sealed class UOR_MobSpawner : UOR_Spawner
     {
         private static UOR_MobSpawner _instance;
         private int _cachedCount;
@@ -218,15 +342,38 @@ namespace Server.Custom.UORespawnServer.Spawners
 
         /// <summary>
         /// Singleton instance for mob spawner.
+        /// Creates new instance if not yet loaded from world save.
         /// </summary>
-        public static UOR_MobSpawner Instance => _instance ?? (_instance = new UOR_MobSpawner());
+        public static UOR_MobSpawner Instance
+        {
+            get
+            {
+                if (_instance == null || _instance.Deleted)
+                {
+                    _instance = new UOR_MobSpawner();
+                }
+                return _instance;
+            }
+        }
 
-        public override string Name => "MobSpawner";
+        public override string SpawnerName => "UOR_MobSpawner";
 
-        public override int HomeRange => 50;
+        public override int DefaultHomeRange => 50;
 
-        private UOR_MobSpawner() 
+        public override bool UnlinkOnTaming => true;
+
+        private UOR_MobSpawner() : base()
         { 
+            _cachedCount = 0;
+            _lastCacheValidation = DateTime.MinValue;
+            Name = "UOR Mob Spawner"; // Shows in MySpawner props
+        }
+
+        /// <summary>
+        /// Public serial constructor required for ServUO deserialization.
+        /// </summary>
+        public UOR_MobSpawner(Serial serial) : base(serial)
+        {
             _cachedCount = 0;
             _lastCacheValidation = DateTime.MinValue;
         }
@@ -248,11 +395,11 @@ namespace Server.Custom.UORespawnServer.Spawners
         }
 
         /// <summary>
-        /// Called when spawn is deleted - decrements cached count.
+        /// Called when spawn is deleted - decrements cached count and removes from tracking.
         /// </summary>
-        public override void Remove(ISpawnable spawn)
+        protected override void OnSpawnRemoved(ISpawnable spawn)
         {
-            base.Remove(spawn);
+            base.OnSpawnRemoved(spawn); // Remove from serial tracking list
             if (_cachedCount > 0)
                 _cachedCount--;
         }
@@ -301,6 +448,23 @@ namespace Server.Custom.UORespawnServer.Spawners
         {
             return Find<UOR_MobSpawner>(serial);
         }
+
+        public override void Serialize(GenericWriter writer)
+        {
+            base.Serialize(writer);
+            writer.Write((int)0); // version
+        }
+
+        public override void Deserialize(GenericReader reader)
+        {
+            base.Deserialize(reader);
+            int version = reader.ReadInt();
+
+            // Restore singleton on deserialize
+            _instance = this;
+            _cachedCount = 0;
+            _lastCacheValidation = DateTime.MinValue;
+        }
     }
 
     /// <summary>
@@ -308,7 +472,7 @@ namespace Server.Custom.UORespawnServer.Spawners
     /// Only cleaned up when explicitly requested (toggle off, reset, etc).
     /// Uses cached count for efficient frequent queries.
     /// </summary>
-    internal sealed class UOR_VendorSpawner : UOR_Spawner
+    public sealed class UOR_VendorSpawner : UOR_Spawner
     {
         private static UOR_VendorSpawner _instance;
         private int _cachedCount;
@@ -317,20 +481,41 @@ namespace Server.Custom.UORespawnServer.Spawners
 
         /// <summary>
         /// Singleton instance for vendor spawner.
+        /// Creates new instance if not yet loaded from world save.
         /// </summary>
-        public static UOR_VendorSpawner Instance => _instance ?? (_instance = new UOR_VendorSpawner());
+        public static UOR_VendorSpawner Instance
+        {
+            get
+            {
+                if (_instance == null || _instance.Deleted)
+                {
+                    _instance = new UOR_VendorSpawner();
+                }
+                return _instance;
+            }
+        }
 
-        public override string Name => "VendorSpawner";
+        public override string SpawnerName => "UOR_VendorSpawner";
 
-        public override int HomeRange => 15;
+        public override int DefaultHomeRange => 15;
 
         /// <summary>
         /// Vendors should stay with their spawner even when "tamed" (hired).
         /// </summary>
         public override bool UnlinkOnTaming => false;
 
-        private UOR_VendorSpawner() 
+        private UOR_VendorSpawner() : base()
         { 
+            _cachedCount = 0;
+            _lastCacheValidation = DateTime.MinValue;
+            Name = "UOR Vendor Spawner"; // Shows in MySpawner props
+        }
+
+        /// <summary>
+        /// Public serial constructor required for ServUO deserialization.
+        /// </summary>
+        public UOR_VendorSpawner(Serial serial) : base(serial)
+        {
             _cachedCount = 0;
             _lastCacheValidation = DateTime.MinValue;
         }
@@ -352,11 +537,11 @@ namespace Server.Custom.UORespawnServer.Spawners
         }
 
         /// <summary>
-        /// Called when vendor is deleted - decrements cached count.
+        /// Called when vendor is deleted - decrements cached count and removes from tracking.
         /// </summary>
-        public override void Remove(ISpawnable spawn)
+        protected override void OnSpawnRemoved(ISpawnable spawn)
         {
-            base.Remove(spawn);
+            base.OnSpawnRemoved(spawn); // Remove from serial tracking list
             if (_cachedCount > 0)
                 _cachedCount--;
         }
@@ -422,6 +607,23 @@ namespace Server.Custom.UORespawnServer.Spawners
             }
 
             return results;
+        }
+
+        public override void Serialize(GenericWriter writer)
+        {
+            base.Serialize(writer);
+            writer.Write((int)0); // version
+        }
+
+        public override void Deserialize(GenericReader reader)
+        {
+            base.Deserialize(reader);
+            int version = reader.ReadInt();
+
+            // Restore singleton on deserialize
+            _instance = this;
+            _cachedCount = 0;
+            _lastCacheValidation = DateTime.MinValue;
         }
     }
 }
