@@ -246,6 +246,10 @@ namespace UORespawnApp.Scripts.Services
                 // Step 0: Load Settings (FIRST - other systems may depend on settings)
                 await LoadSettingsAsync();
 
+                // Step 0.25: Check and update server installation if linked
+                // This MUST happen BEFORE syncing server data to ensure scripts are current
+                await CheckAndUpdateServerAsync();
+
                 // Step 0.5: Sync server OUTPUT data to Resources/Raw if linked
                 // This MUST happen BEFORE loading map/tile lists and other server-generated data
                 await SyncServerOutputDataAsync();
@@ -442,6 +446,43 @@ namespace UORespawnApp.Scripts.Services
             catch (Exception ex)
             {
                 Logger.Warning($"[CommandSync] Error checking for pending commands: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Check if server is linked and verify/update server installation.
+        /// Ensures server scripts match editor version before syncing data.
+        /// </summary>
+        private async Task CheckAndUpdateServerAsync()
+        {
+            try
+            {
+                var servuoPath = Settings.ServerFolder;
+                if (string.IsNullOrEmpty(servuoPath))
+                {
+                    Logger.Info("[ServerCheck] No server linked - skipping server version check");
+                    return;
+                }
+
+                Logger.Info("[ServerCheck] Checking server installation...");
+
+                await Task.Run(() =>
+                {
+                    bool ready = ServerSetupUtility.CheckAndUpdateServerOnStartup(servuoPath);
+
+                    if (ready)
+                    {
+                        Logger.Info("[ServerCheck] Server is ready");
+                    }
+                    else
+                    {
+                        Logger.Warning("[ServerCheck] Server setup may have issues - check logs");
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                Logger.Warning($"[ServerCheck] Error during server check: {ex.Message}");
             }
         }
 

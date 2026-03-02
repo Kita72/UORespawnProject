@@ -289,22 +289,23 @@ namespace UORespawnApp.Scripts.Constants
         }
         
         /// <summary>
-        /// Get the server data folder path (Server/Data/UOR_DATA/)
+        /// Get the server data folder path (Server/Data/UORespawn/)
         /// Returns null if server folder not configured or doesn't exist
         /// </summary>
         public static string? ServerDataPath
         {
             get
             {
-                var serverFolder = Settings.ServUODataFolder;
-                
+                var serverFolder = Settings.ServerFolder;
+
                 if (string.IsNullOrEmpty(serverFolder) || !Directory.Exists(serverFolder))
                 {
                     return null;
                 }
 
-                var serverDataPath = Path.Combine(serverFolder, UOR_DATA_SUBFOLDER);
-                
+                // Server data path is ServUO/Data/UORespawn/
+                var serverDataPath = Path.Combine(serverFolder, "Data", UOR_DATA_SUBFOLDER);
+
                 if (!Directory.Exists(serverDataPath))
                 {
                     try
@@ -316,7 +317,7 @@ namespace UORespawnApp.Scripts.Constants
                         return null;
                     }
                 }
-                
+
                 return serverDataPath;
             }
         }

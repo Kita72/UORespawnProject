@@ -23,7 +23,7 @@
                     }
 
                     @{
-                        var isConfigured = ServerSetupUtility.IsServerConfigured(Settings.ServUODataFolder);
+                        var isConfigured = ServerSetupUtility.IsServerConfigured(Settings.ServerFolder);
                     }
 
                     @if (isConfigured)
@@ -34,7 +34,7 @@
                                 Active
                             </span>
                         </div>
-                        <p class="text-muted mb-3"><small>@Settings.ServUODataFolder</small></p>
+                        <p class="text-muted mb-3"><small>@Settings.ServerFolder</small></p>
                     }
                     else
                     {
@@ -105,7 +105,7 @@
                                                 <text>Export Server Scripts (.zip)</text>
                                             }
                                         </button>
-                                        <small class="text-muted d-block mt-1">Scripts go to: <code>Scripts/Custom/UORespawn/</code></small>
+                                        <small class="text-muted d-block mt-1">Extract to: <code>Scripts/Custom/UORespawnServer/</code></small>
                                     </div>
 
                                     <SpawnPackExportCard />
@@ -773,7 +773,7 @@
                                 </ul>
                                 <p class="text-success"><span class="bi bi-check-circle me-2"></span><strong>Your Spawn Packs in PACKS folder will be preserved!</strong></p>
 
-                                @if (ServerSetupUtility.IsServerConfigured(Settings.ServUODataFolder))
+                                @if (ServerSetupUtility.IsServerConfigured(Settings.ServerFolder))
                                 {
                                     <div class="form-check mb-3">
                                         <input class="form-check-input" type="checkbox" id="cleanServerCheck" @bind="cleanServerOnReset">
@@ -1023,29 +1023,20 @@ private bool showAdvancedSettings = false;
 
                 if (validation != null && validation.IsValid)
                 {
-                    // Clean up any existing UORespawn installation first
-                    if (!ServerSetupUtility.CleanupExistingInstallation(validation.ScriptsFolderPath))
-                    {
-                        serverSetupMessage = "✗ Failed to clean up existing installation. Please remove Scripts/Custom/UORespawn manually.";
-                        serverSetupSuccess = false;
-                        StateHasChanged();
-                        return;
-                    }
-
-                    // Auto-setup server scripts folder
-                    var (success, message) = ServerSetupUtility.SetupServerScripts(validation.ScriptsFolderPath);
+                    // Use FullServerSetup - handles cleanup, version check, installation, and data folder creation
+                    var (success, message) = ServerSetupUtility.FullServerSetup(folder.Path);
 
                     if (success)
                     {
-                        // Save the Data folder path
-                        Settings.ServUODataFolder = validation.DataFolderPath?? string.Empty;
+                        // Save the ServUO folder path (Settings.ServerFolder is the root path)
+                        Settings.ServerFolder = folder.Path;
 
-                        serverSetupMessage = $"✓ Setup complete! {message}";
+                        serverSetupMessage = $"✓ {message}";
                         serverSetupSuccess = true;
 
                         Logger.Info($"ServUO server linked successfully: {folder.Path}");
-                        Logger.Info($"Data folder: {validation.DataFolderPath}");
-                        Logger.Info($"Scripts folder: {validation.ScriptsFolderPath}");
+                        Logger.Info($"Server scripts: {ServerSetupUtility.GetServerScriptsPath(folder.Path)}");
+                        Logger.Info($"Server data: {ServerSetupUtility.GetServerDataPath(folder.Path)}");
                     }
                     else
                     {
@@ -1095,10 +1086,10 @@ private bool showAdvancedSettings = false;
         try
         {
             // Unlink and cleanup
-            var (success, message) = ServerSetupUtility.UnlinkServer(Settings.ServUODataFolder);
+            var (success, message) = ServerSetupUtility.UnlinkServer(Settings.ServerFolder);
 
             // Clear the settings
-            Settings.ServUODataFolder = string.Empty;
+            Settings.ServerFolder = string.Empty;
 
             if (success)
             {
@@ -1775,12 +1766,12 @@ private bool showAdvancedSettings = false;
             }
 
             // 2. Clean server if requested and linked (before clearing preferences!)
-            if (cleanServerOnReset && ServerSetupUtility.IsServerConfigured(Settings.ServUODataFolder))
+            if (cleanServerOnReset && ServerSetupUtility.IsServerConfigured(Settings.ServerFolder))
             {
                 Logger.Info("Cleaning linked ServUO folder...");
 
                 // Delete UORespawnServer scripts folder
-                var scriptsPath = Path.Combine(Settings.ServUODataFolder, "Scripts", "Custom", "UORespawnServer");
+                var scriptsPath = ServerSetupUtility.GetServerScriptsPath(Settings.ServerFolder);
                 if (Directory.Exists(scriptsPath))
                 {
                     try
@@ -1794,8 +1785,8 @@ private bool showAdvancedSettings = false;
                     }
                 }
 
-                // Delete UOR_DATA folder on server
-                var serverDataPath = Path.Combine(Settings.ServUODataFolder, "Data", "UOR_DATA");
+                // Delete UORespawn data folder on server
+                var serverDataPath = ServerSetupUtility.GetServerDataPath(Settings.ServerFolder);
                 if (Directory.Exists(serverDataPath))
                 {
                     try

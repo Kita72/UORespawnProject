@@ -413,10 +413,10 @@
             Logger.Info($"Toggling ON server spawn statistics for {ViewService.CurrentMapId}");
 
             // Check if ServUO folder is configured
-            if (string.IsNullOrEmpty(Settings.ServUODataFolder))
+            if (string.IsNullOrEmpty(Settings.ServerFolder))
             {
-                Logger.Warning("Server Data folder not configured!");
-                ToastService.ShowWarning("Server Data folder not configured! Go to Settings to set your ServUO Data folder path.");
+                Logger.Warning("Server folder not configured!");
+                ToastService.ShowWarning("Server folder not configured! Go to Settings to link your ServUO folder.");
                 ViewService.ToggleServerSpawns();
                 StateHasChanged();
                 return;

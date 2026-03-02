@@ -22,7 +22,7 @@ namespace UORespawnApp
     ///    IsScaleSpawn, EnableRiftSpawn, EnableDebugSpawn
     /// 
     /// PROPERTIES PREFERENCES-ONLY (NOT in binary):
-    ///    ServUODataFolder (editor config),
+    ///    ServerFolder (ServUO root path - editor config),
     ///    BoxColor, BoxColorInc, BoxLineSize (UI appearance),
     ///    Bestiary (editor custom creature list)
     /// 
@@ -33,7 +33,7 @@ namespace UORespawnApp
     internal static class Settings
     {
         // Cache for frequently accessed settings to avoid repeated Preferences.Get() calls
-        private static string? _cachedServUODataFolder;
+        private static string? _cachedServerFolder;
         private static string? _cachedCurrentPackName;
         private static string? _cachedCurrentPackFolder;
         private static Color? _cachedBoxColor;
@@ -78,7 +78,31 @@ namespace UORespawnApp
 
         private static void LoadCache()
         {
-            _cachedServUODataFolder = Preferences.Get("ServUODataFolder", "");
+            // Migration: Check for old ServUODataFolder and convert to new ServerFolder format
+            var oldDataFolder = Preferences.Get("ServUODataFolder", "");
+            var serverFolder = Preferences.Get("ServerFolder", "");
+
+            // If old setting exists but new one doesn't, migrate
+            if (!string.IsNullOrEmpty(oldDataFolder) && string.IsNullOrEmpty(serverFolder))
+            {
+                // Old setting stored Data folder path (e.g., C:\ServUO\Data)
+                // New setting stores ServUO root (e.g., C:\ServUO)
+                var parentFolder = Path.GetDirectoryName(oldDataFolder);
+                if (!string.IsNullOrEmpty(parentFolder) && Directory.Exists(parentFolder))
+                {
+                    // Verify it's actually a ServUO folder
+                    if (File.Exists(Path.Combine(parentFolder, "ServUO.exe")))
+                    {
+                        serverFolder = parentFolder;
+                        Preferences.Set("ServerFolder", serverFolder);
+                        Logger.Info($"Migrated ServUODataFolder to ServerFolder: {serverFolder}");
+                    }
+                }
+                // Clear old setting
+                Preferences.Remove("ServUODataFolder");
+            }
+
+            _cachedServerFolder = serverFolder;
             _cachedCurrentPackName = Preferences.Get("CurrentPackName", DefaultPackName);
             _cachedCurrentPackFolder = Preferences.Get("CurrentPackFolder", "");
 
@@ -91,13 +115,48 @@ namespace UORespawnApp
             _cachedBoxLineSize = Preferences.Get("BoxLineSize", 2);
         }
 
-        public static string ServUODataFolder
+        /// <summary>
+        /// The ServUO root folder path (e.g., C:\ServUO).
+        /// Used to derive Scripts/Custom/UORespawnServer/ and Data/UORespawn/ paths.
+        /// Empty string if not linked.
+        /// </summary>
+        public static string ServerFolder
         {
-            get => _cachedServUODataFolder ?? "";
+            get => _cachedServerFolder ?? "";
             set
             {
-                _cachedServUODataFolder = value;
-                Preferences.Set("ServUODataFolder", value);
+                _cachedServerFolder = value;
+                Preferences.Set("ServerFolder", value);
+            }
+        }
+
+        /// <summary>
+        /// [DEPRECATED] Use ServerFolder instead.
+        /// Returns the Data folder path for backwards compatibility.
+        /// </summary>
+        [Obsolete("Use ServerFolder instead. This returns derived Data path.")]
+        public static string ServUODataFolder
+        {
+            get
+            {
+                var serverFolder = ServerFolder;
+                if (string.IsNullOrEmpty(serverFolder))
+                    return "";
+                return Path.Combine(serverFolder, "Data");
+            }
+            set
+            {
+                // Convert Data folder path to root folder
+                if (!string.IsNullOrEmpty(value))
+                {
+                    var parent = Path.GetDirectoryName(value);
+                    if (!string.IsNullOrEmpty(parent))
+                        ServerFolder = parent;
+                }
+                else
+                {
+                    ServerFolder = "";
+                }
             }
         }
 
@@ -472,7 +531,7 @@ namespace UORespawnApp
             Preferences.Clear();
 
             // Reset the cache to default values
-            _cachedServUODataFolder = "";
+            _cachedServerFolder = "";
             _cachedCurrentPackName = DefaultPackName;
             _cachedCurrentPackFolder = "";
             _cachedBoxColor = DefaultBoxColor;
