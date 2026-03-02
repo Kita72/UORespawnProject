@@ -5,7 +5,45 @@ All notable changes to UORespawn will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.0.0.7] - 2025-02-21
+## [2.0.0.8] - 2026-03-02
+
+### Added
+
+#### In-Game Spawn Editing
+- **[EditBox** command - Target a creature to edit its parent box spawn directly in-game
+- **[EditRegion** command - Target a creature to edit its parent region spawn in-game
+- **[EditTile** command - Target a creature to edit its parent tile spawn in-game
+- **[EditVendor** command - Target a vendor to edit its vendor spawn in-game
+- Commands write to `COMMANDS/` folder; editor detects and opens the appropriate spawn panel
+- Two-way editing: changes in editor sync back to server automatically
+
+#### Server Auto-Install & Update
+- **Automatic Installation** - Server scripts auto-install to `Scripts/Custom/UORespawnServer/` when linking
+- **Auto-Update Detection** - Editor detects version mismatches and prompts to update server files
+- **Legacy Cleanup** - Automatically removes old `UORespawn*/Respawn*` folders during install/update
+- No more manual file copying required
+
+#### COMMANDS Folder
+- New `Data/UORespawn/COMMANDS/` directory for in-game edit command queue
+- Server writes command files; editor reads and opens appropriate spawn panel
+- Files auto-cleaned after processing
+
+### Changed
+- **Settings Property** - `ServUODataFolder` renamed to `ServerFolder` for clarity
+- **Server Folder Structure** - Now uses `Scripts/Custom/UORespawnServer/` (namespace match)
+- **Export Path Display** - Settings component now shows correct relative path
+- **Instructions Page** - Added comprehensive Server Integration and In-Game Editing sections
+
+### Fixed
+- Server folder naming now matches `UORespawnServer` namespace exactly
+- Improved error handling during server setup operations
+
+### Technical
+- `ServerSetupUtility` handles auto-install, update detection, and legacy cleanup
+- `CommandService` processes in-game edit commands via COMMANDS folder
+- Version consistency enforced between editor (2.0.0.8) and server (2.0.0.8)
+
+## [2.0.0.7] - 2026-03-01
 
 ### Added
 - **ISpawnEntity Interface** - New shared interface for consistent spawn entity handling

@@ -23,7 +23,7 @@
 
 UORespawn is a modern .NET MAUI application that provides a comprehensive visual interface for creating and managing spawn systems in Ultima Online ServUO servers. It offers three complementary spawn methods to populate your world with creatures and NPCs.
 
-**Version:** 2.0.0.7  
+**Version:** 2.0.0.8  
 **Platform:** Windows, macOS  
 **Framework:** .NET 10 MAUI with Blazor  
 **License:** MIT
@@ -61,9 +61,19 @@ UORespawn is a modern .NET MAUI application that provides a comprehensive visual
 ### ⚙️ Server Integration
 - **Binary Serialization** - Fast, efficient .bin file format
 - **Auto-Sync** - Files automatically sync to ServUO Data folder
-- **Professional Admin GUI** - In-game control panel with `[SpawnAdmin`
+- **Auto-Install** - Server scripts auto-install to `Scripts/Custom/UORespawnServer/` on linking
+- **Auto-Update** - Editor detects version mismatches and prompts to update server
+- **Legacy Cleanup** - Automatically removes old folders during install/update
+- **Professional Admin GUI** - In-game control panel with `[UORespawn`
 - **Intelligent Recycling** - Up to 60% mob reuse for optimal performance
-- **Real-time Metrics** - Monitor spawn performance with `[SpawnMetrics`
+- **Real-time Metrics** - Monitor spawn performance with `[SpawnStats`
+
+### 🎮 In-Game Editing (v2.0.0.8+)
+- **[EditBox** - Target a creature to edit its box spawn in the editor
+- **[EditRegion** - Target a creature to edit its region spawn in the editor
+- **[EditTile** - Target a creature to edit its tile spawn in the editor
+- **[EditVendor** - Target a vendor to edit its spawn configuration
+- Two-way editing: changes sync automatically between editor and server
 
 ### 🎨 Additional Features
 - **Spawn Packs** - Three-category system (Approved, Created, Imported) for managing spawn configurations
