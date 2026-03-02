@@ -6,22 +6,27 @@ namespace UORespawnApp
 {
     internal partial class DataWatcher : IDisposable
     {
-        private readonly FileSystemWatcher? _watcher;
+        private readonly FileSystemWatcher? _outputWatcher;
+        private readonly FileSystemWatcher? _commandsWatcher;
         private readonly Action? _onDataChanged;
-        private CancellationTokenSource? _delayTokenSource;
+        private readonly Action? _onCommandsDetected;
+        private CancellationTokenSource? _outputDelayTokenSource;
+        private CancellationTokenSource? _commandsDelayTokenSource;
         private const int DELAY_MILLISECONDS = 1000;
-        
-        public static bool IsSupported => OperatingSystem.IsWindows() || OperatingSystem.IsMacOS();
-        public bool IsActive => _watcher != null;
 
-        public DataWatcher(Action? onDataChanged = null)
+        public static bool IsSupported => OperatingSystem.IsWindows() || OperatingSystem.IsMacOS();
+        public bool IsActive => _outputWatcher != null || _commandsWatcher != null;
+
+        public DataWatcher(Action? onDataChanged = null, Action? onCommandsDetected = null)
         {
             _onDataChanged = onDataChanged;
+            _onCommandsDetected = onCommandsDetected;
 
             // Check platform support first
             if (!IsSupported)
             {
-                _watcher = null;
+                _outputWatcher = null;
+                _commandsWatcher = null;
 
                 Logger.Warning("DataWatcher not supported on this platform (requires Windows or macOS)");
                 return;
@@ -34,7 +39,7 @@ namespace UORespawnApp
             {
                 try
                 {
-                    _watcher = new FileSystemWatcher(outputPath)
+                    _outputWatcher = new FileSystemWatcher(outputPath)
                     {
                         NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName,
                         Filter = "*.txt",
@@ -42,47 +47,74 @@ namespace UORespawnApp
                         IncludeSubdirectories = false
                     };
 
-                    SetupWatcher();
+                    _outputWatcher.Changed += OnOutputChanged;
+                    _outputWatcher.Created += OnOutputChanged;
 
                     Logger.Info($"DataWatcher started for OUTPUT folder: {outputPath}");
                 }
                 catch (Exception ex)
                 {
-                    Logger.Warning($"DataWatcher failed to start: {ex.Message}");
+                    Logger.Warning($"DataWatcher (OUTPUT) failed to start: {ex.Message}");
 
-                    _watcher?.Dispose();
-                    _watcher = null;
+                    _outputWatcher?.Dispose();
+                    _outputWatcher = null;
                 }
             }
             else
             {
-                _watcher = null;
+                _outputWatcher = null;
 
-                Logger.Warning("DataWatcher not started - Server OUTPUT folder not available (server may not have generated data yet)");
+                Logger.Warning("DataWatcher (OUTPUT) not started - Server OUTPUT folder not available");
             }
-        }
 
-        private void SetupWatcher()
-        {
-            if (_watcher != null)
+            // Watch the server COMMANDS folder where server writes edit commands
+            var commandsPath = PathConstants.ServerCommandsPath;
+
+            if (!string.IsNullOrEmpty(commandsPath) && Directory.Exists(commandsPath))
             {
-                _watcher.Changed += OnChanged;
-                _watcher.Created += OnChanged;
+                try
+                {
+                    _commandsWatcher = new FileSystemWatcher(commandsPath)
+                    {
+                        NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName,
+                        Filter = "*_edits.txt",
+                        EnableRaisingEvents = true,
+                        IncludeSubdirectories = false
+                    };
+
+                    _commandsWatcher.Changed += OnCommandsChanged;
+                    _commandsWatcher.Created += OnCommandsChanged;
+
+                    Logger.Info($"DataWatcher started for COMMANDS folder: {commandsPath}");
+                }
+                catch (Exception ex)
+                {
+                    Logger.Warning($"DataWatcher (COMMANDS) failed to start: {ex.Message}");
+
+                    _commandsWatcher?.Dispose();
+                    _commandsWatcher = null;
+                }
+            }
+            else
+            {
+                _commandsWatcher = null;
+
+                Logger.Info("DataWatcher (COMMANDS) not started - Server COMMANDS folder not available");
             }
         }
 
-        private async void OnChanged(object sender, FileSystemEventArgs e)
+        private async void OnOutputChanged(object sender, FileSystemEventArgs e)
         {
             // Cancel and dispose any existing delay if file changes again
-            _delayTokenSource?.Cancel();
-            _delayTokenSource?.Dispose();
-            _delayTokenSource = new CancellationTokenSource();
+            _outputDelayTokenSource?.Cancel();
+            _outputDelayTokenSource?.Dispose();
+            _outputDelayTokenSource = new CancellationTokenSource();
 
             try
             {
                 // Wait 1 second - resets if another change happens during this time
                 // This buffers for server file generation to complete
-                await Task.Delay(DELAY_MILLISECONDS, _delayTokenSource.Token).ConfigureAwait(false);
+                await Task.Delay(DELAY_MILLISECONDS, _outputDelayTokenSource.Token).ConfigureAwait(false);
 
                 if (string.IsNullOrEmpty(e.Name))
                 {
@@ -370,18 +402,71 @@ namespace UORespawnApp
             }
         }
 
+        /// <summary>
+        /// Handles file changes in the COMMANDS folder.
+        /// Syncs command files to local folder and notifies UI.
+        /// </summary>
+        private async void OnCommandsChanged(object sender, FileSystemEventArgs e)
+        {
+            // Cancel and dispose any existing delay if file changes again
+            _commandsDelayTokenSource?.Cancel();
+            _commandsDelayTokenSource?.Dispose();
+            _commandsDelayTokenSource = new CancellationTokenSource();
+
+            try
+            {
+                // Wait 1 second - resets if another change happens during this time
+                await Task.Delay(DELAY_MILLISECONDS, _commandsDelayTokenSource.Token).ConfigureAwait(false);
+
+                if (string.IsNullOrEmpty(e.Name))
+                    return;
+
+                // Only process command edit files
+                if (!PathConstants.IsCommandEditFile(e.Name))
+                    return;
+
+                Logger.Info($"Command file changed: {e.Name}");
+
+                // Sync command files from server to local
+                var commandService = new CommandService();
+                commandService.SyncCommandsFromServer();
+
+                // Notify UI that commands are available
+                _onCommandsDetected?.Invoke();
+            }
+            catch (TaskCanceledException)
+            {
+                // Another change happened, this delay was cancelled - this is expected
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error processing command file change", ex);
+            }
+        }
+
         public void Dispose()
         {
-            _delayTokenSource?.Cancel();
-            _delayTokenSource?.Dispose();
+            _outputDelayTokenSource?.Cancel();
+            _outputDelayTokenSource?.Dispose();
+            _commandsDelayTokenSource?.Cancel();
+            _commandsDelayTokenSource?.Dispose();
 
-            if (_watcher != null)
+            if (_outputWatcher != null)
             {
-                _watcher.Changed -= OnChanged;
-                _watcher.Created -= OnChanged;
-                _watcher.Dispose();
+                _outputWatcher.Changed -= OnOutputChanged;
+                _outputWatcher.Created -= OnOutputChanged;
+                _outputWatcher.Dispose();
 
-                Logger.Info("DataWatcher stopped");
+                Logger.Info("DataWatcher (OUTPUT) stopped");
+            }
+
+            if (_commandsWatcher != null)
+            {
+                _commandsWatcher.Changed -= OnCommandsChanged;
+                _commandsWatcher.Created -= OnCommandsChanged;
+                _commandsWatcher.Dispose();
+
+                Logger.Info("DataWatcher (COMMANDS) stopped");
             }
         }
     }

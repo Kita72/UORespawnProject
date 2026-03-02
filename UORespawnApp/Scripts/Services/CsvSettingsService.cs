@@ -11,7 +11,7 @@ namespace UORespawnApp.Scripts.Services
     /// </summary>
     public static class CsvSettingsService
     {
-        private const string VERSION = "2.0.0.7";
+        private const string VERSION = "2.0.0.8";
 
         /// <summary>
         /// Writes all settings to a CSV file in server-compatible format.

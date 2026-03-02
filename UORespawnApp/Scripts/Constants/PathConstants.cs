@@ -59,6 +59,15 @@ namespace UORespawnApp.Scripts.Constants
         /// Contains: UOR_TrackSpawn.txt, UOR_VendorSpawn.txt, UOR_DebugLog.txt
         /// </summary>
         public const string UOR_SYS_SUBFOLDER = "SYS";
+
+        /// <summary>
+        /// Commands subfolder for server-to-editor edit synchronization
+        /// Server: Data/UORespawn/COMMANDS/ (server writes)
+        /// Editor: Data/UORespawn/ (reads from local, deletes after processing)
+        /// Contains: settings_edits.txt, box_edits.txt, region_edits.txt, tile_edits.txt, vendor_edits.txt
+        /// Commands persist until applied by editor or manually deleted
+        /// </summary>
+        public const string UOR_COMMANDS_SUBFOLDER = "COMMANDS";
         
         /// <summary>
         /// Maps subfolder in Data folder (contains map image files)
@@ -96,6 +105,41 @@ namespace UORespawnApp.Scripts.Constants
         /// Contains UORespawnServer.zip for server setup
         /// </summary>
         public const string SERVER_SUBFOLDER = "SERVER";
+
+        // ==================== COMMAND EDIT FILE NAMES (.txt) ====================
+        // Server generates these in COMMANDS/ folder for editor to consume
+        // Editor reads, applies to pack, then deletes the file
+        // Format: Action|Target|Section|Trigger|SpawnName|ExtraData
+
+        /// <summary>
+        /// Settings edit commands file
+        /// Format: Update|Settings|None|None|SETTING_NAME|value
+        /// </summary>
+        public const string SETTINGS_EDITS_FILENAME = "settings_edits.txt";
+
+        /// <summary>
+        /// Box spawn edit commands file
+        /// Format: Add|Box|Section|Trigger|CreatureName|MapId,BoxId
+        /// </summary>
+        public const string BOX_EDITS_FILENAME = "box_edits.txt";
+
+        /// <summary>
+        /// Region spawn edit commands file
+        /// Format: Add|Region|Section|Trigger|CreatureName|MapId,RegionName
+        /// </summary>
+        public const string REGION_EDITS_FILENAME = "region_edits.txt";
+
+        /// <summary>
+        /// Tile spawn edit commands file
+        /// Format: Add|Tile|Section|Trigger|CreatureName|MapId,TileName
+        /// </summary>
+        public const string TILE_EDITS_FILENAME = "tile_edits.txt";
+
+        /// <summary>
+        /// Vendor spawn edit commands file
+        /// Format: Add|Vendor|None|None|VendorType|MapId,X,Y,Z
+        /// </summary>
+        public const string VENDOR_EDITS_FILENAME = "vendor_edits.txt";
 
         // ==================== BINARY DATA FILE NAMES (.bin) ====================
         // Editor creates/saves these files, server reads them
@@ -364,6 +408,32 @@ namespace UORespawnApp.Scripts.Constants
                 return outputPath;
             }
         }
+
+        /// <summary>
+        /// Get the server COMMANDS folder path (Server/Data/UORespawn/COMMANDS/)
+        /// Server writes edit command files here for editor to consume
+        /// Commands are copied to local folder via DataWatcher or manual drop
+        /// Returns null if server folder not configured or COMMANDS folder doesn't exist
+        /// </summary>
+        public static string? ServerCommandsPath
+        {
+            get
+            {
+                var serverDataPath = ServerDataPath;
+                if (serverDataPath == null)
+                    return null;
+
+                var commandsPath = Path.Combine(serverDataPath, UOR_COMMANDS_SUBFOLDER);
+
+                // Don't auto-create COMMANDS - server creates this folder
+                if (!Directory.Exists(commandsPath))
+                {
+                    return null;
+                }
+
+                return commandsPath;
+            }
+        }
         
         /// <summary>
         /// Get the maps folder path (Data/maps/)
@@ -613,6 +683,33 @@ namespace UORespawnApp.Scripts.Constants
         }
 
         /// <summary>
+        /// Check if a filename is a command edit file
+        /// </summary>
+        public static bool IsCommandEditFile(string fileName)
+        {
+            return fileName.Equals(SETTINGS_EDITS_FILENAME, StringComparison.OrdinalIgnoreCase) ||
+                   fileName.Equals(BOX_EDITS_FILENAME, StringComparison.OrdinalIgnoreCase) ||
+                   fileName.Equals(REGION_EDITS_FILENAME, StringComparison.OrdinalIgnoreCase) ||
+                   fileName.Equals(TILE_EDITS_FILENAME, StringComparison.OrdinalIgnoreCase) ||
+                   fileName.Equals(VENDOR_EDITS_FILENAME, StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// Get all command edit file names
+        /// </summary>
+        public static string[] GetAllCommandEditFileNames()
+        {
+            return
+            [
+                SETTINGS_EDITS_FILENAME,
+                BOX_EDITS_FILENAME,
+                REGION_EDITS_FILENAME,
+                TILE_EDITS_FILENAME,
+                VENDOR_EDITS_FILENAME
+            ];
+        }
+
+        /// <summary>
         /// Get the full path to the bestiary file in Resources/Raw
         /// </summary>
         public static string GetBestiaryFilePath()
@@ -694,6 +791,25 @@ namespace UORespawnApp.Scripts.Constants
         {
             var outputPath = ServerOutputPath;
             return outputPath != null ? Path.Combine(outputPath, filename) : null;
+        }
+
+        /// <summary>
+        /// Get the full server COMMANDS path for a command file
+        /// Returns null if server not connected or COMMANDS folder doesn't exist
+        /// </summary>
+        public static string? GetServerCommandFilePath(string filename)
+        {
+            var commandsPath = ServerCommandsPath;
+            return commandsPath != null ? Path.Combine(commandsPath, filename) : null;
+        }
+
+        /// <summary>
+        /// Get the local path for a command edit file (in Data/UOR_DATA/)
+        /// Command files are stored in the working folder for user accessibility
+        /// </summary>
+        public static string GetLocalCommandFilePath(string filename)
+        {
+            return Path.Combine(LocalDataPath, filename);
         }
 
         /// <summary>

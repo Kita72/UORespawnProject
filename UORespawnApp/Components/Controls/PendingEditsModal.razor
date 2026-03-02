@@ -1,0 +1,260 @@
+@using UORespawnApp.Scripts.Services
+@using UORespawnApp.Scripts.Entities
+@using UORespawnApp.Scripts.Enums
+@using UORespawnApp.Scripts.Utilities
+
+@inject CommandService CommandService
+@inject ToastService ToastService
+
+@* Modal to display pending server edit commands and allow user to apply them *@
+
+<div class="modal fade @(IsVisible ? "show d-block" : "")" tabindex="-1" style="@(IsVisible ? "background-color: rgba(0,0,0,0.7);" : "")">
+    <div class="modal-dialog modal-lg pending-edits-dialog">
+        <div class="modal-content pending-edits-content">
+            <div class="modal-header pending-edits-header">
+                <h5 class="modal-title">
+                    <span class="bi bi-cloud-download me-2"></span>Pending Server Edits
+                </h5>
+                <button type="button" class="btn-close btn-close-white" @onclick="Close"></button>
+            </div>
+            <div class="modal-body pending-edits-body">
+                @if (_commands.Count == 0)
+                {
+                    <div class="text-center py-4">
+                        <span class="bi bi-check-circle text-success" style="font-size: 3rem;"></span>
+                        <p class="mt-3 text-muted">No pending commands to process.</p>
+                    </div>
+                }
+                else
+                {
+                    <!-- Summary Section -->
+                    <div class="command-summary mb-4">
+                        <div class="summary-header">
+                            <span class="bi bi-list-check me-2"></span>
+                            <span>@_commands.Count Command(s) Pending</span>
+                        </div>
+                        <div class="summary-badges">
+                            @foreach (var group in _commandSummary)
+                            {
+                                <span class="badge @GetTargetBadgeClass(group.Key)">
+                                    @group.Key: @group.Value
+                                </span>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Pack Selection -->
+                    <div class="pack-selection mb-4">
+                        <div class="selection-header">
+                            <span class="bi bi-box-seam me-2"></span>
+                            Target Pack
+                        </div>
+                        <div class="current-pack-info">
+                            @if (!string.IsNullOrEmpty(Settings.CurrentPackName))
+                            {
+                                <span class="pack-name">@Settings.CurrentPackName</span>
+                                <span class="pack-status text-success">
+                                    <span class="bi bi-check-circle me-1"></span>Loaded
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="pack-status text-warning">
+                                    <span class="bi bi-exclamation-triangle me-1"></span>No pack loaded
+                                </span>
+                            }
+                        </div>
+                        <p class="pack-hint text-muted small mt-2">
+                            <span class="bi bi-info-circle me-1"></span>
+                            Commands will be applied to the currently loaded pack. Use Spawn Packs page to load a different pack first.
+                        </p>
+                    </div>
+
+                    <!-- Command List (Collapsible) -->
+                    <div class="command-list">
+                        <div class="list-header" @onclick="ToggleCommandList">
+                            <span class="bi @(_showCommandList ? "bi-chevron-down" : "bi-chevron-right") me-2"></span>
+                            <span>View Commands</span>
+                        </div>
+                        @if (_showCommandList)
+                        {
+                            <div class="command-items">
+                                @foreach (var cmd in _commands)
+                                {
+                                    <div class="command-item @GetTargetClass(cmd.Target)">
+                                        <span class="command-action">@cmd.Action</span>
+                                        <span class="command-description">@cmd.GetDescription()</span>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+            <div class="modal-footer pending-edits-footer">
+                @if (_commands.Count > 0)
+                {
+                    @if (string.IsNullOrEmpty(Settings.CurrentPackName))
+                    {
+                        <span class="footer-warning text-warning">
+                            <span class="bi bi-exclamation-triangle me-1"></span>
+                            Load a pack first to apply commands
+                        </span>
+                    }
+                    <button type="button" class="btn btn-outline-secondary" @onclick="DismissCommands" title="Keep files for later">
+                        <span class="bi bi-clock me-1"></span>Later
+                    </button>
+                    <button type="button" 
+                            class="btn btn-success" 
+                            @onclick="ApplyCommands"
+                            disabled="@(string.IsNullOrEmpty(Settings.CurrentPackName) || _isApplying)">
+                        @if (_isApplying)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                            <span>Applying...</span>
+                        }
+                        else
+                        {
+                            <span class="bi bi-check-lg me-1"></span>
+                            <span>Apply to Pack</span>
+                        }
+                    </button>
+                }
+                else
+                {
+                    <button type="button" class="btn btn-outline-light" @onclick="Close">
+                        <span class="bi bi-x-lg me-1"></span>Close
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public bool IsVisible { get; set; }
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    [Parameter]
+    public EventCallback OnCommandsApplied { get; set; }
+
+    private List<EditCommand> _commands = [];
+    private Dictionary<CommandTarget, int> _commandSummary = [];
+    private bool _showCommandList = false;
+    private bool _isApplying = false;
+
+    protected override void OnParametersSet()
+    {
+        if (IsVisible)
+        {
+            LoadCommands();
+        }
+    }
+
+    private void LoadCommands()
+    {
+        CommandService.CheckForPendingCommands();
+        _commands = [.. CommandService.PendingCommands];
+        _commandSummary = CommandService.GetCommandSummary();
+    }
+
+    private void ToggleCommandList()
+    {
+        _showCommandList = !_showCommandList;
+    }
+
+    private async Task ApplyCommands()
+    {
+        if (_isApplying || string.IsNullOrEmpty(Settings.CurrentPackName))
+            return;
+
+        _isApplying = true;
+        StateHasChanged();
+
+        try
+        {
+            // Apply settings commands
+            int settingsApplied = CommandService.ApplyAllSettingsCommands();
+
+            // Apply spawn commands (Box, Region, Tile, Vendor)
+            int spawnApplied = CommandService.ApplyAllSpawnCommands();
+
+            // Save updated data back to files
+            if (settingsApplied > 0)
+            {
+                await Task.Run(() => Utility.SaveSettings());
+            }
+
+            if (spawnApplied > 0)
+            {
+                await Task.Run(() =>
+                {
+                    Utility.SaveSpawnData();
+                    Utility.SaveTileSpawnData();
+                    Utility.SaveRegionSpawnData();
+                    Utility.SaveVendorSpawnData();
+                });
+            }
+
+            // Delete processed command files
+            CommandService.DeleteProcessedCommandFiles();
+
+            // Notify parent
+            await OnCommandsApplied.InvokeAsync();
+
+            // Refresh display
+            _commands.Clear();
+            _commandSummary.Clear();
+
+            int totalApplied = settingsApplied + spawnApplied;
+            Logger.Info($"Applied {totalApplied} commands ({settingsApplied} settings, {spawnApplied} spawn)");
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning($"Error applying commands: {ex.Message}");
+            ToastService.ShowWarning($"Error applying commands: {ex.Message}");
+        }
+        finally
+        {
+            _isApplying = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task DismissCommands()
+    {
+        // Clear cache but keep files for later
+        CommandService.ClearCache();
+        _commands.Clear();
+        _commandSummary.Clear();
+        await OnClose.InvokeAsync();
+    }
+
+    private async Task Close()
+    {
+        await OnClose.InvokeAsync();
+    }
+
+    private string GetTargetBadgeClass(CommandTarget target) => target switch
+    {
+        CommandTarget.Settings => "bg-info",
+        CommandTarget.Box => "bg-primary",
+        CommandTarget.Region => "bg-success",
+        CommandTarget.Tile => "bg-warning text-dark",
+        CommandTarget.Vendor => "bg-secondary",
+        _ => "bg-secondary"
+    };
+
+    private string GetTargetClass(CommandTarget target) => target switch
+    {
+        CommandTarget.Settings => "settings-cmd",
+        CommandTarget.Box => "box-cmd",
+        CommandTarget.Region => "region-cmd",
+        CommandTarget.Tile => "tile-cmd",
+        CommandTarget.Vendor => "vendor-cmd",
+        _ => ""
+    };
+}

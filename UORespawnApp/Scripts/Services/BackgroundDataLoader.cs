@@ -26,6 +26,7 @@ namespace UORespawnApp.Scripts.Services
         public bool IsXMLSpawnerListLoaded { get; private set; }
         public bool IsMapFilesCopied { get; private set; }
         public bool IsDataWatcherStarted { get; private set; }
+        public bool HasPendingCommands { get; private set; }
 
         // Overall loading state
         public bool IsLoading => _isLoading;
@@ -46,8 +47,18 @@ namespace UORespawnApp.Scripts.Services
         public event EventHandler? RegionSpawnDataLoaded;
         public event EventHandler? VendorSpawnDataLoaded;
         public event EventHandler? AllDataLoaded;
+        public event EventHandler? PendingCommandsDetected;
 
         private DataWatcher? _dataWatcher;
+        private readonly CommandService _commandService;
+
+        /// <summary>
+        /// Constructor with DI injection of CommandService.
+        /// </summary>
+        public BackgroundDataLoader(CommandService commandService)
+        {
+            _commandService = commandService;
+        }
 
         /// <summary>
         /// Initializes the ActivePackDataPath from Settings.CurrentPackFolder.
@@ -239,6 +250,9 @@ namespace UORespawnApp.Scripts.Services
                 // This MUST happen BEFORE loading map/tile lists and other server-generated data
                 await SyncServerOutputDataAsync();
 
+                // Step 0.6: Check for and sync pending commands from server
+                await SyncAndCheckPendingCommandsAsync();
+
                 // Step 1: Load Map List (needed for map name lookups)
                 await LoadMapListAsync();
 
@@ -393,6 +407,48 @@ namespace UORespawnApp.Scripts.Services
                 Logger.Error("[ServerSync] Error syncing server OUTPUT data", ex);
             }
         }
+
+        /// <summary>
+        /// Syncs pending command files from server COMMANDS folder and checks for local command files.
+        /// If commands are found, raises PendingCommandsDetected event for UI to show modal.
+        /// </summary>
+        private async Task SyncAndCheckPendingCommandsAsync()
+        {
+            try
+            {
+                Logger.Info("[CommandSync] Checking for pending edit commands...");
+
+                // First, sync any commands from linked server
+                var serverCommandsPath = PathConstants.ServerCommandsPath;
+                if (serverCommandsPath != null)
+                {
+                    await Task.Run(() => _commandService.SyncCommandsFromServer());
+                }
+
+                // Then check for local command files (including any just synced)
+                int pendingCount = await Task.Run(() => _commandService.CheckForPendingCommands());
+
+                if (pendingCount > 0)
+                {
+                    HasPendingCommands = true;
+                    Logger.Info($"[CommandSync] Found {pendingCount} pending commands - UI will show modal");
+                    PendingCommandsDetected?.Invoke(this, EventArgs.Empty);
+                }
+                else
+                {
+                    Logger.Info("[CommandSync] No pending commands found");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Warning($"[CommandSync] Error checking for pending commands: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Gets the CommandService instance for use by UI components.
+        /// </summary>
+        public CommandService GetCommandService() => _commandService;
 
         /// <summary>
         /// Loads the map list from file (Resources/Raw/UOR_MapList.txt).
@@ -868,36 +924,49 @@ namespace UORespawnApp.Scripts.Services
         private async Task StartDataWatcherAsync()
         {
             Logger.Info("[Startup Step 10/10] Starting DataWatcher...");
-            try
-            {
-                // DataWatcher starts LAST to avoid false change events during initial loading
-                await Task.Run(() =>
+                try
                 {
-                    try
+                    // DataWatcher starts LAST to avoid false change events during initial loading
+                    await Task.Run(() =>
                     {
-                        _dataWatcher = new DataWatcher(() =>
+                        try
                         {
-                            Logger.Info("[DataWatcher] Server data files have been updated - reloading...");
-                            // Trigger reload of affected data
-                            _ = ReloadDataAsync();
-                        });
+                            _dataWatcher = new DataWatcher(
+                                onDataChanged: () =>
+                                {
+                                    Logger.Info("[DataWatcher] Server data files have been updated - reloading...");
+                                    // Trigger reload of affected data
+                                    _ = ReloadDataAsync();
+                                },
+                                onCommandsDetected: () =>
+                                {
+                                    Logger.Info("[DataWatcher] Server command files detected");
+                                    // Refresh command cache and notify UI
+                                    _commandService.CheckForPendingCommands();
+                                    HasPendingCommands = _commandService.HasPendingCommands;
+                                    if (HasPendingCommands)
+                                    {
+                                        PendingCommandsDetected?.Invoke(this, EventArgs.Empty);
+                                    }
+                                }
+                            );
 
-                        Logger.Info("[Startup Step 10/10] DataWatcher started successfully");
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.Warning($"[Startup Step 10/10] DataWatcher failed to start: {ex.Message}");
-                    }
-                });
+                            Logger.Info("[Startup Step 10/10] DataWatcher started successfully");
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.Warning($"[Startup Step 10/10] DataWatcher failed to start: {ex.Message}");
+                        }
+                    });
 
-                IsDataWatcherStarted = true;
-                CompletedSteps++;
+                    IsDataWatcherStarted = true;
+                    CompletedSteps++;
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error("Error starting DataWatcher", ex);
+                }
             }
-            catch (Exception ex)
-            {
-                Logger.Error("Error starting DataWatcher", ex);
-            }
-        }
 
         /// <summary>
         /// Reloads data when server files change (triggered by DataWatcher)

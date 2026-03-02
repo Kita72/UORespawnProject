@@ -1,0 +1,186 @@
+/* ===== Pending Edits Modal - Golden Theme Styling ===== */
+
+/* Modal Dialog */
+.pending-edits-dialog {
+    max-width: 700px;
+    width: 90vw;
+    margin: 3rem auto;
+}
+
+.pending-edits-content {
+    background: linear-gradient(145deg, #1a1a1a 0%, #0d0d0d 100%);
+    border: 2px solid rgba(218, 165, 32, 0.3);
+    border-radius: 12px;
+    box-shadow: 0 0 60px rgba(218, 165, 32, 0.15),
+                0 0 100px rgba(0, 0, 0, 0.8);
+}
+
+/* Header */
+.pending-edits-header {
+    background: linear-gradient(135deg, #1a1408 0%, #2a2010 100%);
+    border-bottom: 2px solid rgba(218, 165, 32, 0.4);
+    padding: 1rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.pending-edits-header .modal-title {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: goldenrod;
+    text-shadow: 0 0 10px rgba(218, 165, 32, 0.3);
+    display: flex;
+    align-items: center;
+}
+
+.pending-edits-header .modal-title .bi {
+    font-size: 1.2rem;
+    color: goldenrod;
+}
+
+.pending-edits-header .btn-close {
+    filter: brightness(0.8);
+}
+
+/* Body */
+.pending-edits-body {
+    padding: 1.5rem;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+/* Command Summary */
+.command-summary {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(218, 165, 32, 0.2);
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+.summary-header {
+    color: goldenrod;
+    font-weight: 600;
+    font-size: 1.1rem;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+}
+
+.summary-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.summary-badges .badge {
+    font-size: 0.85rem;
+    padding: 0.4rem 0.75rem;
+}
+
+/* Pack Selection */
+.pack-selection {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+.selection-header {
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 500;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+}
+
+.current-pack-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.pack-name {
+    color: goldenrod;
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.pack-status {
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+}
+
+.pack-hint {
+    margin-bottom: 0;
+    opacity: 0.8;
+}
+
+/* Command List */
+.command-list {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.list-header {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    color: rgba(255, 255, 255, 0.8);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    transition: background 0.2s;
+}
+
+.list-header:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.command-items {
+    max-height: 250px;
+    overflow-y: auto;
+}
+
+.command-item {
+    padding: 0.5rem 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    font-size: 0.9rem;
+    display: flex;
+    gap: 0.5rem;
+}
+
+.command-action {
+    font-weight: 600;
+    min-width: 60px;
+}
+
+.command-description {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+/* Command type colors */
+.settings-cmd .command-action { color: #0dcaf0; }
+.box-cmd .command-action { color: #0d6efd; }
+.region-cmd .command-action { color: #198754; }
+.tile-cmd .command-action { color: #ffc107; }
+.vendor-cmd .command-action { color: #6c757d; }
+
+/* Footer */
+.pending-edits-footer {
+    background: rgba(0, 0, 0, 0.3);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 1rem 1.5rem;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.footer-warning {
+    margin-right: auto;
+    font-size: 0.9rem;
+}

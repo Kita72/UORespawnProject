@@ -29,6 +29,7 @@ namespace UORespawnApp
             builder.Services.AddMauiBlazorWebView();
             builder.Services.AddSingleton<ViewService>();
             builder.Services.AddSingleton<ToastService>();
+            builder.Services.AddSingleton<CommandService>();
             builder.Services.AddSingleton<BackgroundDataLoader>();
             builder.Services.AddSingleton<UpdateChecker>();
             builder.Services.AddSingleton<SpawnPackService>();

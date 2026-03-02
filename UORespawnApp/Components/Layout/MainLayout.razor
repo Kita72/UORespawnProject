@@ -1,12 +1,19 @@
 ﻿@inherits LayoutComponentBase
 @inject DebugService DebugService
 @inject ViewService ViewService
+@inject BackgroundDataLoader BackgroundDataLoader
 @using UORespawnApp.Scripts.Services
 @using UORespawnApp.Scripts.Utilities
+@using UORespawnApp.Components.Controls
 @implements IDisposable
 
 <LoadingIndicator />
 <ToastNotification />
+
+@if (_showPendingEditsModal)
+{
+    <PendingEditsModal OnClose="ClosePendingEditsModal" />
+}
 
 @{
     // Hide debug panel on home page (splash screen)
@@ -32,11 +39,13 @@
 
 @code {
     private bool isDebugCollapsed = false;
+    private bool _showPendingEditsModal = false;
 
     protected override void OnInitialized()
     {
         DebugService.OnDebugModeChanged += OnDebugModeChanged;
         ViewService.OnViewChanged += OnViewChanged;
+        BackgroundDataLoader.PendingCommandsDetected += OnPendingCommandsDetected;
     }
 
     private void OnDebugModeChanged(bool enabled)
@@ -55,9 +64,22 @@
         StateHasChanged();
     }
 
+    private void OnPendingCommandsDetected(object? sender, EventArgs e)
+    {
+        _showPendingEditsModal = true;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void ClosePendingEditsModal()
+    {
+        _showPendingEditsModal = false;
+        StateHasChanged();
+    }
+
     public void Dispose()
     {
         DebugService.OnDebugModeChanged -= OnDebugModeChanged;
         ViewService.OnViewChanged -= OnViewChanged;
+        BackgroundDataLoader.PendingCommandsDetected -= OnPendingCommandsDetected;
     }
 }
