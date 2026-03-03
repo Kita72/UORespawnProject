@@ -5,6 +5,72 @@ All notable changes to UORespawn will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0.9] - 2026-03-03
+
+### Added
+
+#### FTP Remote Server Integration
+- **FTP Sync Feature** - New third option for server integration alongside "Link Local" and "Manual"
+  - Upload spawn data (.bin files) to remote servers via FTP
+  - Download reference data (.txt files) from remote servers
+  - Full sync option (download then upload)
+  - Real-time progress reporting with per-file status
+- **Auto-Detect Path** - Automatically searches common server paths for `Data/UORespawn/` folder
+  - Searches home directory, `/home`, `/var`, `/srv`, and common ServUO paths
+  - One-click path discovery for easier setup
+- **Cancellation Support** - All FTP operations can be cancelled mid-transfer
+  - Graceful handling with partial completion reporting
+  - Cancel button in sync modal
+
+#### File-Based Account System (Security)
+- **Local App Accounts** - Create accounts without passwords (just friendly names)
+- **User-Controlled Storage** - FTP credentials stored in user's chosen folder, not in app
+- **SRP Security Model** - App stores only folder paths; delete folder = data gone
+- **No Cloud/Server** - Zero external account storage, full user control
+
+#### Architecture Improvements
+- **ErrorHandler Utility** - Centralized error handling with:
+  - `Handle()` / `HandleSilent()` - Consistent logging patterns
+  - `TryExecute()` / `TryExecuteAsync()` - Safe execution wrappers
+  - `GetFriendlyMessage()` - User-friendly exception messages
+- **ConfigurationValidator** - Startup validation that:
+  - Creates missing required folders automatically
+  - Validates server link if configured
+  - Provides diagnostic summary for troubleshooting
+  - Logs warnings for configuration issues
+
+#### UI/UX Improvements
+- **Scroll-to-Top Button** - Added golden glowing button to Settings page (matches Instructions)
+- **Page Scroll Reset** - Settings and Instructions pages now scroll to top on navigation
+- **FTP Settings Card** - New card in Settings with account setup and credential management
+- **FTP Sync Modal** - Progress modal with file-by-file status and cancel button
+
+### Changed
+- **Instructions Page** - Added comprehensive FTP documentation in Section 9 (Server Integration)
+  - Step-by-step account setup guide
+  - FTP credential configuration
+  - Auto-detect path feature explanation
+  - Pull/Push sync button documentation
+- **Settings Page Layout** - FTP card matches centered styling of other settings cards
+- **MauiProgram Startup** - Now uses ConfigurationValidator and ErrorHandler
+
+### Fixed
+- **StackOverflowException** - Fixed recursive event loop in FtpSettingsCard credential change handling
+- **FTP Card Styling** - Fixed centering to match other Settings cards
+- **UpdateChecker HttpClient** - Headers now set once in static constructor (not on every call)
+- **DataWatcher Namespace** - Corrected from root `UORespawnApp` to `UORespawnApp.Scripts.Services`
+
+### Technical
+- `FtpSyncService` with `CancellationToken` support on all operations
+- `FtpConnectionService` wraps FluentFTP with cancellation and progress
+- `FtpCredentialService` manages credentials in user folders
+- `AccountService` with file-based account persistence
+- `UserAccount` entity with JSON serialization
+- `FtpCredentials` entity with validation
+- Removed unused `using` statements from `SpawnPackEntities.cs`
+- Removed unnecessary `partial` keyword from `DataWatcher.cs`
+- Build verified with .NET 10 - no warnings or errors
+
 ## [2.0.0.8] - 2026-03-02
 
 ### Added

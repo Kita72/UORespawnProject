@@ -23,7 +23,7 @@
 
 UORespawn is a modern .NET MAUI application that provides a comprehensive visual interface for creating and managing spawn systems in Ultima Online ServUO servers. It offers three complementary spawn methods to populate your world with creatures and NPCs.
 
-**Version:** 2.0.0.8  
+**Version:** 2.0.0.9  
 **Platform:** Windows, macOS  
 **Framework:** .NET 10 MAUI with Blazor  
 **License:** MIT
@@ -58,15 +58,32 @@ UORespawn is a modern .NET MAUI application that provides a comprehensive visual
 - Six frequency tiers for precise control
 - Applies globally to all maps
 
-### ⚙️ Server Integration
-- **Binary Serialization** - Fast, efficient .bin file format
+### ⚙️ Server Integration (Three Options)
+
+#### 🔗 Link Local (Recommended)
 - **Auto-Sync** - Files automatically sync to ServUO Data folder
 - **Auto-Install** - Server scripts auto-install to `Scripts/Custom/UORespawnServer/` on linking
 - **Auto-Update** - Editor detects version mismatches and prompts to update server
 - **Legacy Cleanup** - Automatically removes old folders during install/update
-- **Professional Admin GUI** - In-game control panel with `[UORespawn`
-- **Intelligent Recycling** - Up to 60% mob reuse for optimal performance
-- **Real-time Metrics** - Monitor spawn performance with `[SpawnStats`
+
+#### 🌐 FTP Remote Server (v2.0.0.9+)
+- **Push to Server** - Upload spawn data (.bin files) to remote servers
+- **Pull from Server** - Download reference data (.txt files) from remote servers
+- **Auto-Detect Path** - Automatically finds `Data/UORespawn/` on your server
+- **Secure Credentials** - FTP credentials stored in user-controlled folders, not in app
+- **Cancellation Support** - Cancel long-running transfers at any time
+- **Progress Tracking** - Real-time file-by-file transfer status
+
+#### 📦 Manual Export/Import
+- Export server scripts and data packs as ZIP files
+- Import via FTP client or file manager
+- Full control for advanced users
+
+### 🛡️ Security Features (v2.0.0.9+)
+- **No Password Required** - App accounts are just friendly names pointing to folders
+- **User-Controlled Storage** - All credentials stored in YOUR folder, not in the app
+- **Zero Cloud Dependency** - No external servers, no account databases
+- **Delete Folder = Data Gone** - Full control over your sensitive data
 
 ### 🎮 In-Game Editing (v2.0.0.8+)
 - **[EditBox** - Target a creature to edit its box spawn in the editor
@@ -76,6 +93,9 @@ UORespawn is a modern .NET MAUI application that provides a comprehensive visual
 - Two-way editing: changes sync automatically between editor and server
 
 ### 🎨 Additional Features
+- **Professional Admin GUI** - In-game control panel with `[UORespawn`
+- **Intelligent Recycling** - Up to 60% mob reuse for optimal performance
+- **Real-time Metrics** - Monitor spawn performance with `[SpawnStats`
 - **Spawn Packs** - Three-category system (Approved, Created, Imported) for managing spawn configurations
 - Pack Dashboard with detailed statistics (entry counts + location counts)
 - **Intelligent pack sync** - Only syncs changes when actual edits are made
