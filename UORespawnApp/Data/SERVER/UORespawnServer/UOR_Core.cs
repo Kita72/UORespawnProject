@@ -511,6 +511,10 @@ namespace Server.Custom.UORespawnServer
         internal static void SHUTDOWN()
         {
             IsLocked = true;
+            IsPaused = true;
+
+            // Stop all timers first
+            StopTimers();
 
             // Unsubscribe events to prevent double subscription on restart
             UnsubscribeEvents();
@@ -525,6 +529,39 @@ namespace Server.Custom.UORespawnServer
             int deleted = UOR_Utility.ClearAllSpawns();
 
             UOR_Utility.SendMsg(ConsoleColor.Magenta, $"SHUTDOWN - Stopped ({deleted} spawn deleted)");
+        }
+
+        /// <summary>
+        /// Starts the respawn system at runtime (power toggle ON).
+        /// Unlike Initialize() + OnServerStarted() which are for server boot,
+        /// this method can be safely called while the server is running.
+        /// </summary>
+        internal static void STARTUP()
+        {
+            UOR_Utility.SendMsg(ConsoleColor.DarkCyan, $"Respawn-[STARTUP - Runtime Init]");
+
+            // PHASE 1: Vendors - spawn if none exist (ISpawner manages ownership)
+            InitializeVendors();
+
+            UOR_Utility.SendMsg(ConsoleColor.Yellow, $"Respawn-[1/3]");
+
+            // PHASE 2: Subscribe to game events (if not already subscribed)
+            InitializeEvents();
+
+            UOR_Utility.SendMsg(ConsoleColor.Yellow, $"Respawn-[2/3]");
+
+            // PHASE 3: Start service timers
+            StartTimers();
+
+            UOR_Utility.SendMsg(ConsoleColor.Yellow, $"Respawn-[3/3]");
+
+            // Enable system
+            IsLocked = false;
+            IsPaused = false;
+
+            UOR_Utility.SendMsg(ConsoleColor.Yellow, $"Respawn-[STARTUP Complete]");
+
+            UOR_Utility.SendMsg(ConsoleColor.DarkBlue, "STARTED - Running ...");
         }
 
         internal static void RelogPlayers()

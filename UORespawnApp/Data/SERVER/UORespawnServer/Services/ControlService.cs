@@ -347,9 +347,8 @@ namespace Server.Custom.UORespawnServer.Services
 
             if (SystemPower)
             {
-                UOR_Core.ToggleLock();
-
-                UOR_Core.Initialize();
+                // Start the system at runtime using STARTUP (not Initialize which is for server boot)
+                UOR_Core.STARTUP();
 
                 UOR_Core.RelogPlayers();
             }
