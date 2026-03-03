@@ -21,8 +21,8 @@
                 <div class="d-flex align-items-center gap-2">
                     <span class="bi bi-info-circle" style="color: #6c757d; cursor: help;" title="Draw spawn boxes on the map to define creature spawn areas. Use priority levels for overlapping regions."></span>
                     <span class="badge bg-light text-dark" title="Total spawns across all boxes">@GetTotalBoxSpawnCount() Spawns</span>
-                    <button class="btn btn-sm @(zoomLevel == 2.0 ? "btn-primary" : "btn-outline-primary")" @onclick="ToggleZoom" title="Toggle Zoom (1x / 2x)">
-                        <span class="bi bi-zoom-@(zoomLevel == 2.0 ? "in" : "out")"></span> @(zoomLevel == 1.0 ? "1x" : "2x")
+                    <button class="btn btn-sm @(zoomLevel >= 2.0 ? "btn-primary" : "btn-outline-primary")" @onclick="ToggleZoom" title="Toggle Zoom (1x / 2x / 4x)">
+                        <span class="bi bi-zoom-in"></span> @(zoomLevel.ToString("0"))x
                     </button>
                 </div>
             </div>
@@ -779,10 +779,15 @@ private int addXmlWorldY = 0;
         double centerWorldY = (-panY / zoomLevel) + (600.0 / 2.0 / zoomLevel);
         
         Logger.Info($"Current center before zoom: world ({centerWorldX:F0}, {centerWorldY:F0}) at {zoomLevel}x");
-        
-        // Toggle between 1x (actual size) and 2x (zoomed in)
+
+        // Cycle through 1x → 2x → 4x → 1x
         double oldZoom = zoomLevel;
-        zoomLevel = zoomLevel == 2.0 ? 1.0 : 2.0;
+        zoomLevel = zoomLevel switch
+        {
+            1.0 => 2.0,
+            2.0 => 4.0,
+            _ => 1.0
+        };
         
         // Recalculate pan to keep the same world position centered
         // Formula: panX = -(centerWorldX * newZoom) + (viewport_width / 2)

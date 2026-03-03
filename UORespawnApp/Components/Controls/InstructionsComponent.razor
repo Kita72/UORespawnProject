@@ -35,19 +35,20 @@
                                 <li><a href="#region-spawn" class="text-decoration-none">3. Region Spawn System</a></li>
                                 <li><a href="#world-spawn" class="text-decoration-none">4. Tile Spawn System</a></li>
                                 <li><a href="#vendor-spawn" class="text-decoration-none">5. Vendor Spawn Editor</a></li>
-                                <li><a href="#spawn-packs" class="text-decoration-none">6. Spawn Packs</a></li>
-                                <li><a href="#settings" class="text-decoration-none">7. Settings & Configuration</a></li>
+                                <li><a href="#spawner-management" class="text-decoration-none">6. Spawner Management</a></li>
+                                <li><a href="#spawn-packs" class="text-decoration-none">7. Spawn Packs</a></li>
+                                <li><a href="#settings" class="text-decoration-none">8. Settings & Configuration</a></li>
                             </ul>
                         </div>
                         <div class="col-md-6">
                             <ul class="list-unstyled mb-0">
-                                <li><a href="#maps" class="text-decoration-none">8. Maps</a></li>
-                                <li><a href="#server-integration" class="text-decoration-none">9. Server Integration</a></li>
-                                <li><a href="#admin-gui" class="text-decoration-none">10. Control Dashboard</a></li>
-                                <li><a href="#ingame-editing" class="text-decoration-none">11. In-Game Editing</a></li>
-                                <li><a href="#tips" class="text-decoration-none">12. Tips & Best Practices</a></li>
-                                <li><a href="#debug-mode" class="text-decoration-none">13. Debug Mode</a></li>
-                                <li><a href="#support" class="text-decoration-none">14. Support & Resources</a></li>
+                                <li><a href="#maps" class="text-decoration-none">9. Maps</a></li>
+                                <li><a href="#server-integration" class="text-decoration-none">10. Server Integration</a></li>
+                                <li><a href="#admin-gui" class="text-decoration-none">11. Control Dashboard</a></li>
+                                <li><a href="#ingame-editing" class="text-decoration-none">12. In-Game Editing</a></li>
+                                <li><a href="#tips" class="text-decoration-none">13. Tips & Best Practices</a></li>
+                                <li><a href="#debug-mode" class="text-decoration-none">14. Debug Mode</a></li>
+                                <li><a href="#support" class="text-decoration-none">15. Support & Resources</a></li>
                             </ul>
                         </div>
                     </div>
@@ -117,9 +118,15 @@
                         <li><strong>Left-Drag:</strong> Draw spawn box</li>
                         <li><strong>Right-Drag:</strong> Pan the map</li>
                         <li><strong>WASD / Arrow Keys:</strong> Pan the map smoothly (supports diagonal movement)</li>
-                        <li><strong>Zoom Toggle:</strong> Switch between 1x (actual size) and 2x (zoomed) view</li>
+                        <li><strong>Zoom Toggle:</strong> Cycle between 1x, 2x, and 4x zoom levels
+                            <ul>
+                                <li><strong>1x:</strong> Actual size - see the full map area</li>
+                                <li><strong>2x:</strong> Standard zoom - good for general editing</li>
+                                <li><strong>4x:</strong> Close-up zoom - perfect for fine-detailed spawns (single rooms, small areas)</li>
+                            </ul>
+                        </li>
                         <li><strong>Mini-Map:</strong> Click anywhere to jump to that location</li>
-                        <li><strong>Reset Button:</strong> Return to map origin (0, 0)</li>
+                        <li><strong>Reset Button:</strong> Return to map origin (0, 0) at 1x zoom</li>
                     </ul>
 
                     <h6 class="text-primary mt-4"><span class="bi bi-plus-circle me-2"></span>Adding Creatures</h6>
@@ -449,10 +456,95 @@
                 </div>
             </div>
 
-            <!-- 6. Spawn Packs -->
+            <!-- 6. Spawner Management -->
+            <div class="card map-card mb-4" id="spawner-management">
+                <div class="card-header">
+                    <strong><span class="bi bi-gear-wide"></span> 6. Spawner Management</strong>
+                </div>
+                <div class="card-body">
+                    <h6 class="text-primary"><span class="bi bi-info-circle me-2"></span>What is Spawner Management?</h6>
+                    <p>
+                        The editor can manage <strong>existing spawners</strong> on your server (both default Spawner and XmlSpawner items).
+                        This feature allows you to delete unwanted spawners and add new ones directly from the map editor, with changes
+                        applied to your server on the next restart.
+                    </p>
+
+                    <div class="alert alert-info mb-3">
+                        <span class="bi bi-lightbulb"></span> <strong>Note:</strong> Both the default <code>Spawner</code> and 
+                        <code>XmlSpawner</code> items share the same core functionality we use here. The editor treats them 
+                        identically - we call them "XML Spawners" in the UI for simplicity.
+                    </div>
+
+                    <h6 class="text-primary mt-4"><span class="bi bi-eye me-2"></span>Viewing Spawners</h6>
+                    <ol>
+                        <li>Navigate to <strong>Box Spawn</strong>, <strong>Region Spawn</strong>, or <strong>Vendor Spawn</strong></li>
+                        <li>Enable the <strong>XML toggle</strong> in the mini-map (green = ON)</li>
+                        <li>Spawners appear as <strong>green circles</strong> on the map</li>
+                        <li>Circle radius represents the spawner's <strong>HomeRange</strong></li>
+                        <li>Hover over a spawner to see its details in a tooltip</li>
+                    </ol>
+
+                    <h6 class="text-primary mt-4"><span class="bi bi-trash me-2"></span>Deleting a Spawner</h6>
+                    <ol>
+                        <li>Enable the <strong>XML toggle</strong> to show spawners</li>
+                        <li>Hover over a spawner circle until the <strong>tooltip appears</strong></li>
+                        <li>Click the <strong class="text-danger">[🗑️ Delete Spawner]</strong> button in the tooltip</li>
+                        <li>Confirm the deletion in the modal dialog</li>
+                        <li>The spawner is removed from the map view immediately</li>
+                        <li>A <strong>DELETE command</strong> is queued for the server</li>
+                    </ol>
+
+                    <h6 class="text-primary mt-4"><span class="bi bi-plus-circle me-2"></span>Adding a Spawner</h6>
+                    <ol>
+                        <li>Enable the <strong>XML toggle</strong> to activate spawner mode</li>
+                        <li>Hold the <strong>X key</strong> on your keyboard</li>
+                        <li>While holding X, <strong>left-click</strong> anywhere on the map</li>
+                        <li>The <strong>Add Spawner</strong> modal appears with:
+                            <ul>
+                                <li><strong>HomeRange slider:</strong> Set the spawn radius (5-50 tiles)</li>
+                                <li><strong>Bestiary picker:</strong> Search and select creatures to spawn</li>
+                                <li><strong>Count per creature:</strong> How many of each creature to spawn</li>
+                            </ul>
+                        </li>
+                        <li>Click <strong>Create Spawner</strong> to queue the command</li>
+                    </ol>
+
+                    <h6 class="text-primary mt-4"><span class="bi bi-arrow-repeat me-2"></span>How Commands Are Processed</h6>
+                    <p>
+                        When you delete or add spawners, commands are written to a file that the server reads on startup:
+                    </p>
+                    <ul>
+                        <li><strong>File Location:</strong> <code>Data/UORespawn/INPUT/UOR_XmlCommands.txt</code></li>
+                        <li><strong>Processing:</strong> Server processes commands during startup, then deletes the file</li>
+                        <li><strong>DELETE:</strong> Finds the spawner by serial, removes all spawned creatures, deletes the spawner</li>
+                        <li><strong>ADD:</strong> Creates a new XmlSpawner at the specified location with your creature configuration</li>
+                    </ul>
+
+                    <div class="alert alert-warning mt-3">
+                        <span class="bi bi-exclamation-triangle"></span> <strong>Requirements:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>Server must be <strong>linked</strong> in Settings (Data folder configured)</li>
+                            <li>Changes take effect on <strong>next server restart</strong></li>
+                            <li>Legacy spawners without serial IDs cannot be deleted (delete button won't appear)</li>
+                        </ul>
+                    </div>
+
+                    <div class="alert alert-success mt-3">
+                        <span class="bi bi-lightning-charge"></span> <strong>Quick Workflow:</strong>
+                        <ol class="mb-0 mt-2">
+                            <li>Enable XML toggle to see existing spawners</li>
+                            <li>Delete any unwanted spawners via hover tooltip</li>
+                            <li>Hold X + click to add new spawners where needed</li>
+                            <li>Restart your server to apply changes</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 7. Spawn Packs -->
             <div class="card map-card mb-4" id="spawn-packs">
                 <div class="card-header">
-                    <strong><span class="bi bi-boxes"></span> 6. Spawn Packs</strong>
+                    <strong><span class="bi bi-boxes"></span> 7. Spawn Packs</strong>
                 </div>
                 <div class="card-body">
                     <h6 class="text-primary"><span class="bi bi-question-circle me-2"></span>What are Spawn Packs?</h6>
@@ -615,10 +707,10 @@
                 </div>
             </div>
 
-            <!-- 7. Settings & Configuration -->
+            <!-- 8. Settings & Configuration -->
             <div class="card map-card mb-4" id="settings">
                 <div class="card-header">
-                    <strong><span class="bi bi-gear"></span> 7. Settings & Configuration</strong>
+                    <strong><span class="bi bi-gear"></span> 8. Settings & Configuration</strong>
                 </div>
                 <div class="card-body">
                     <div class="alert alert-success mb-4">
@@ -817,10 +909,10 @@
                 </div>
             </div>
 
-            <!-- 8. Maps -->
+            <!-- 9. Maps -->
             <div class="card map-card mb-4" id="maps">
                 <div class="card-header">
-                    <strong><span class="bi bi-map"></span> 8. Maps</strong>
+                    <strong><span class="bi bi-map"></span> 9. Maps</strong>
                 </div>
                 <div class="card-body">
                     <h6 class="text-primary"><span class="bi bi-collection me-2"></span>Default Maps</h6>
@@ -875,10 +967,10 @@
                 </div>
             </div>
 
-            <!-- 9. Server Integration -->
+            <!-- 10. Server Integration -->
             <div class="card map-card mb-4" id="server-integration">
                 <div class="card-header">
-                    <strong><span class="bi bi-server"></span> 9. Server Integration</strong>
+                    <strong><span class="bi bi-server"></span> 10. Server Integration</strong>
                 </div>
                 <div class="card-body">
                     <h6 class="text-primary"><span class="bi bi-gear-wide-connected me-2"></span>How UORespawn Works</h6>
@@ -1098,10 +1190,10 @@
                 </div>
             </div>
 
-            <!-- 10. Admin GUI & Commands -->
+            <!-- 11. Admin GUI & Commands -->
             <div class="card map-card mb-4" id="admin-gui">
                 <div class="card-header">
-                    <strong><span class="bi bi-terminal"></span> 10. Control Dashboard</strong>
+                    <strong><span class="bi bi-terminal"></span> 11. Control Dashboard</strong>
                 </div>
                 <div class="card-body">
                     <h6 class="text-primary"><span class="bi bi-window me-2"></span>UORespawn Control Panel</h6>
@@ -1148,10 +1240,10 @@
                 </div>
             </div>
 
-            <!-- 11. In-Game Editing -->
+            <!-- 12. In-Game Editing -->
             <div class="card map-card mb-4" id="ingame-editing">
                 <div class="card-header">
-                    <strong><span class="bi bi-pencil-square"></span> 11. In-Game Editing</strong>
+                    <strong><span class="bi bi-pencil-square"></span> 12. In-Game Editing</strong>
                 </div>
                 <div class="card-body">
                     <h6 class="text-primary"><span class="bi bi-controller me-2"></span>Edit Spawns From In-Game (v2.0.0.8)</h6>
@@ -1251,10 +1343,10 @@
                 </div>
             </div>
 
-            <!-- 12. Tips & Best Practices -->
+            <!-- 13. Tips & Best Practices -->
             <div class="card map-card mb-4" id="tips">
                 <div class="card-header">
-                    <strong><span class="bi bi-star"></span> 12. Tips & Best Practices</strong>
+                    <strong><span class="bi bi-star"></span> 13. Tips & Best Practices</strong>
                 </div>
                 <div class="card-body">
                     <h6 class="text-primary"><span class="bi bi-box-arrow-in-down me-2"></span>Box Spawn Tips</h6>
@@ -1310,10 +1402,10 @@
                 </div>
             </div>
 
-            <!-- 13. Debug Mode -->
+            <!-- 14. Debug Mode -->
             <div class="card map-card mb-4" id="debug-mode">
                 <div class="card-header">
-                    <strong><span class="bi bi-bug"></span> 13. Debug Mode</strong>
+                    <strong><span class="bi bi-bug"></span> 14. Debug Mode</strong>
                 </div>
                 <div class="card-body">
                     <h6 class="text-primary"><span class="bi bi-question-circle me-2"></span>What is Debug Mode?</h6>
@@ -1387,10 +1479,10 @@
                 </div>
             </div>
 
-            <!-- 14. Support & Resources -->
+            <!-- 15. Support & Resources -->
             <div class="card map-card mb-4" id="support">
                 <div class="card-header">
-                    <strong><span class="bi bi-question-circle"></span> 14. Support & Resources</strong>
+                    <strong><span class="bi bi-question-circle"></span> 15. Support & Resources</strong>
                 </div>
                 <div class="card-body">
                     <h6 class="text-primary"><span class="bi bi-life-preserver me-2"></span>Need Help?</h6>
@@ -1450,6 +1542,15 @@
                         <li><strong>Server Update Confirmation:</strong> Editor now prompts before updating server scripts (protects custom modifications)</li>
                         <li><strong>Update Options:</strong> Choose to update now, skip this session, or skip until next version</li>
                         <li><strong>Enhanced Tile Preview:</strong> Tile Spawn page now shows detailed descriptions for each tile type</li>
+                        <li><strong>FTP Integration:</strong> Push/pull spawn data to remote servers via FTP</li>
+                    </ul>
+
+                    <h6 class="text-primary mt-4"><span class="bi bi-stars me-2"></span>New in v2.0.0.10</h6>
+                    <ul>
+                        <li><strong>4x Zoom:</strong> New close-up zoom level for fine-detailed spawn editing (single rooms, small areas)</li>
+                        <li><strong>Spawner Management:</strong> Delete existing spawners via tooltip hover, add new spawners with Hold X + click</li>
+                        <li><strong>HomeRange Slider:</strong> Configure spawn radius when adding new spawners (5-50 tiles)</li>
+                        <li><strong>Bestiary Picker:</strong> Search and add creatures when creating new spawners</li>
                     </ul>
 
                     <div class="alert alert-primary mt-3">

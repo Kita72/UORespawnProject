@@ -22,8 +22,8 @@
                 <div class="d-flex align-items-center gap-2">
                     <span class="bi bi-info-circle" style="color: #6c757d; cursor: help;" title="Configure vendor spawns for shop signs and hive locations. Click a marker on the map or card to edit vendors."></span>
                     <span class="badge bg-light text-dark" title="Total vendors assigned">@GetTotalVendorCount() Vendors</span>
-                    <button class="btn btn-sm @(zoomLevel == 2.0 ? "btn-primary" : "btn-outline-primary")" @onclick="ToggleZoom" title="Toggle Zoom (1x / 2x)">
-                        <span class="bi bi-zoom-@(zoomLevel == 2.0 ? "in" : "out")"></span> @(zoomLevel == 1.0 ? "1x" : "2x")
+                    <button class="btn btn-sm @(zoomLevel >= 2.0 ? "btn-primary" : "btn-outline-primary")" @onclick="ToggleZoom" title="Toggle Zoom (1x / 2x / 4x)">
+                        <span class="bi bi-zoom-in"></span> @(zoomLevel.ToString("0"))x
                     </button>
                 </div>
             </div>
@@ -516,7 +516,13 @@
         double centerWorldY = (-panY / zoomLevel) + (600.0 / 2.0 / zoomLevel);
 
         double oldZoom = zoomLevel;
-        zoomLevel = zoomLevel == 2.0 ? 1.0 : 2.0;
+        // Cycle through 1x → 2x → 4x → 1x
+        zoomLevel = zoomLevel switch
+        {
+            1.0 => 2.0,
+            2.0 => 4.0,
+            _ => 1.0
+        };
 
         panX = -(centerWorldX * zoomLevel) + 400;
         panY = -(centerWorldY * zoomLevel) + 300;
