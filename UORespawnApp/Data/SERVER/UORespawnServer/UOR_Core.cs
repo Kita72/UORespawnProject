@@ -4,6 +4,7 @@ using System.Collections.Generic;
 
 using Server.Mobiles;
 
+using Server.Custom.UORespawnServer.Core;
 using Server.Custom.UORespawnServer.Entities;
 using Server.Custom.UORespawnServer.Managers;
 using Server.Custom.UORespawnServer.Services;
@@ -129,7 +130,9 @@ namespace Server.Custom.UORespawnServer
 
             GameManager.InitializeData(); // Create Game Data Files : Output to Editor
 
-            UOR_Utility.SendMsg(ConsoleColor.Yellow, $"Respawn-[2/2]");
+                        XmlCommandProcessor.ProcessCommands(); // Process XML spawner commands from Editor
+
+                        UOR_Utility.SendMsg(ConsoleColor.Yellow, $"Respawn-[2/2]");
 
             SpawnManager.LoadSpawns(); // Load Spawn Data : Input to Server
 

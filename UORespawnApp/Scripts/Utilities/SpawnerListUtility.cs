@@ -35,34 +35,42 @@ namespace UORespawnApp.Scripts.Utilities
                     {
                         string[] parts = line.Split(':');
 
-                        // Format: MapId:X:Y:HomeRange:MaxCount:SpawnNames (SpawnNames are pipe-separated)
+                        // Format: Serial:MapId:X:Y:HomeRange:MaxCount:SpawnNames (SpawnNames are pipe-separated)
+                        // Also supports legacy format without Serial: MapId:X:Y:HomeRange:MaxCount:SpawnNames
                         if (parts.Length < 4) continue;
 
-                        // Parse map ID directly
-                        if (!int.TryParse(parts[0], out int mapId))
+                        // Detect format: if first part is numeric (serial), use new format
+                        // Legacy format starts with MapId (0-5), new format starts with Serial (large int)
+                        bool hasSerial = int.TryParse(parts[0], out int serialValue) && serialValue > 255;
+                        int offset = hasSerial ? 1 : 0;
+
+                        string serial = hasSerial ? parts[0] : string.Empty;
+
+                        // Parse map ID
+                        if (!int.TryParse(parts[offset], out int mapId))
                         {
                             continue; // Skip invalid map ID
                         }
 
-                        if (!int.TryParse(parts[1], out int x) ||
-                            !int.TryParse(parts[2], out int y) ||
-                            !int.TryParse(parts[3], out int range))
+                        if (!int.TryParse(parts[offset + 1], out int x) ||
+                            !int.TryParse(parts[offset + 2], out int y) ||
+                            !int.TryParse(parts[offset + 3], out int range))
                         {
                             continue; // Skip invalid coordinates
                         }
 
                         // Parse MaxCount (default to 0 if not present)
                         int maxCount = 0;
-                        if (parts.Length >= 5 && int.TryParse(parts[4], out int parsedMax))
+                        if (parts.Length >= offset + 5 && int.TryParse(parts[offset + 4], out int parsedMax))
                         {
                             maxCount = parsedMax;
                         }
 
                         // Parse SpawnNames (pipe-separated, default to empty list)
                         List<string> spawnNames = [];
-                        if (parts.Length >= 6 && !string.IsNullOrWhiteSpace(parts[5]))
+                        if (parts.Length >= offset + 6 && !string.IsNullOrWhiteSpace(parts[offset + 5]))
                         {
-                            spawnNames = [.. parts[5].Split('|', StringSplitOptions.RemoveEmptyEntries)];
+                            spawnNames = [.. parts[offset + 5].Split('|', StringSplitOptions.RemoveEmptyEntries)];
                         }
 
                         // Store center coordinates and radius for circle visualization
@@ -72,6 +80,7 @@ namespace UORespawnApp.Scripts.Utilities
 
                         Spawns.Add(new XMLSpawnPoint
                         {
+                            Serial = serial,
                             Map = mapId,
                             CenterX = x,
                             CenterY = y,
@@ -101,6 +110,22 @@ namespace UORespawnApp.Scripts.Utilities
         internal static List<XMLSpawnPoint> GetSpawnersForMap(int mapId)
         {
             return [.. Spawns.Where(s => s.Map == mapId)];
+        }
+
+        /// <summary>
+        /// Gets a spawner by its serial number.
+        /// </summary>
+        internal static XMLSpawnPoint? GetSpawnerBySerial(string serial)
+        {
+            return Spawns.FirstOrDefault(s => s.Serial == serial);
+        }
+
+        /// <summary>
+        /// Removes a spawner from the local list (after delete command sent).
+        /// </summary>
+        internal static void RemoveSpawnerLocally(string serial)
+        {
+            Spawns.RemoveAll(s => s.Serial == serial);
         }
     }
 }

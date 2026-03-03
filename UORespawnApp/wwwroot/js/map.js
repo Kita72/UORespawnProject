@@ -63,6 +63,11 @@ vendorMarkerTooltipMousePos: { x: 0, y: 0 },
 vendorMarkerDwellTimer: null,
 vendorMarkerDwellDelay: 500, // milliseconds to wait before showing tooltip
 
+// XML Spawner management state
+xKeyHeld: false,              // Track if X key is being held
+blazorHelper: null,           // DotNetObjectReference for callbacks to C#
+xmlToggleEnabled: false,      // Track if XML toggle is enabled
+
 // Settings from C#
 boxColor: '#8B0000',
 boxLineSize: 2,
@@ -598,6 +603,13 @@ panAnimationId: null,
                     }
                 }
 
+                // Add delete button row if serial is available
+                const hasSerial = spawner.serial && spawner.serial.length > 0;
+                if (hasSerial) {
+                    lines.push(''); // Spacer line
+                    lines.push('[🗑️ Delete Spawner]');
+                }
+
                 // Measure text for sizing
                 this.ctx.font = 'bold 12px Arial';
                 let maxWidth = 0;
@@ -623,6 +635,18 @@ panAnimationId: null,
                     tooltipY = mouseY - boxHeight - 10;
                 }
 
+                // Store tooltip bounds for click detection
+                this.xmlTooltipBounds = {
+                    x: tooltipX,
+                    y: tooltipY,
+                    width: boxWidth,
+                    height: boxHeight,
+                    deleteButtonY: hasSerial ? tooltipY + padding + (lines.length - 1) * lineHeight : -1,
+                    deleteButtonHeight: lineHeight,
+                    serial: spawner.serial,
+                    spawnerIdx: this.hoveredXmlSpawnerId
+                };
+
                 // Draw tooltip background
                 this.ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
                 this.ctx.strokeStyle = '#00FF00';
@@ -644,11 +668,18 @@ panAnimationId: null,
                         this.ctx.fillStyle = '#00BFFF'; // Creatures header in blue
                     } else if (line.startsWith('  •') || line.startsWith('  ...')) {
                         this.ctx.fillStyle = '#98FB98'; // Creature names in pale green
+                    } else if (line.includes('Delete Spawner')) {
+                        this.ctx.fillStyle = '#FF6B6B'; // Delete button in red
+                    } else if (line === '') {
+                        return; // Skip spacer
                     } else {
                         this.ctx.fillStyle = '#FFFFFF'; // Content in white
                     }
                     this.ctx.fillText(line, tooltipX + padding, tooltipY + padding + i * lineHeight);
                 });
+            } else {
+                // Clear tooltip bounds when not visible
+                this.xmlTooltipBounds = null;
             }
         }
 
@@ -1724,6 +1755,115 @@ panAnimationId: null,
         this.selectedRegionName = '';
         this.hoveredRegionName = '';
         this.redrawAll();
+    },
+
+    // ============================================
+    // XML Spawner Management Methods
+    // ============================================
+
+    // Set the Blazor helper reference for JS -> C# callbacks
+    setBlazorHelper: function(helper) {
+        this.blazorHelper = helper;
+        console.log('✅ Blazor helper registered for XML spawner management');
+    },
+
+    // Set XML toggle state (called from C#)
+    setXmlToggleEnabled: function(enabled) {
+        this.xmlToggleEnabled = enabled;
+        console.log(`🔧 XML toggle ${enabled ? 'enabled' : 'disabled'}`);
+    },
+
+    // Handle X key down - track that it's being held
+    onXKeyDown: function() {
+        if (!this.xKeyHeld) {
+            this.xKeyHeld = true;
+            console.log('🔑 X key held - click to add XML spawner');
+        }
+    },
+
+    // Handle X key up - stop tracking
+    onXKeyUp: function() {
+        if (this.xKeyHeld) {
+            this.xKeyHeld = false;
+            console.log('🔑 X key released');
+        }
+    },
+
+    // Check if we should handle click for adding XML spawner
+    shouldHandleXmlAdd: function() {
+        return this.xKeyHeld && this.xmlToggleEnabled && this.blazorHelper;
+    },
+
+    // Request to add XML spawner at world coordinates (called from mouse handler)
+    requestAddXmlSpawner: function(worldX, worldY) {
+        if (!this.blazorHelper) {
+            console.warn('❌ Cannot add XML spawner: No Blazor helper registered');
+            return false;
+        }
+
+        console.log(`➕ Requesting XML spawner at (${worldX}, ${worldY})`);
+        this.blazorHelper.invokeMethodAsync('OnRequestAddXmlSpawner', worldX, worldY);
+        return true;
+    },
+
+    // Request to delete XML spawner by serial (called from tooltip button)
+    requestDeleteXmlSpawner: function(serial, idx) {
+        if (!this.blazorHelper) {
+            console.warn('❌ Cannot delete XML spawner: No Blazor helper registered');
+            return false;
+        }
+
+        if (!serial) {
+            console.warn('❌ Cannot delete XML spawner: No serial provided');
+            return false;
+        }
+
+        console.log(`🗑️ Requesting delete of XML spawner: ${serial}`);
+        this.blazorHelper.invokeMethodAsync('OnRequestDeleteXmlSpawner', serial, idx);
+        return true;
+    },
+
+    // Get the currently hovered XML spawner data
+    getHoveredXmlSpawner: function() {
+        if (this.hoveredXmlSpawnerId >= 0 && this.xmlSpawners && this.hoveredXmlSpawnerId < this.xmlSpawners.length) {
+            return this.xmlSpawners[this.hoveredXmlSpawnerId];
+        }
+        return null;
+    },
+
+    // Remove a spawner from the local list (after delete confirmed)
+    removeXmlSpawnerLocally: function(idx) {
+        if (this.xmlSpawners && idx >= 0 && idx < this.xmlSpawners.length) {
+            this.xmlSpawners.splice(idx, 1);
+            this.hoveredXmlSpawnerId = -1;
+            this.xmlSpawnerTooltipVisible = false;
+            this.redrawAll();
+            console.log(`✅ Removed XML spawner at index ${idx} from local view`);
+        }
+    },
+
+    // Check if a click at screen coordinates hit the delete button in tooltip
+    // Returns { hit: true, serial, idx } if delete button was clicked, null otherwise
+    checkXmlDeleteButtonClick: function(screenX, screenY) {
+        if (!this.xmlTooltipBounds || this.xmlTooltipBounds.deleteButtonY < 0) {
+            return null;
+        }
+
+        const bounds = this.xmlTooltipBounds;
+
+        // Check if click is within delete button area
+        if (screenX >= bounds.x && 
+            screenX <= bounds.x + bounds.width &&
+            screenY >= bounds.deleteButtonY && 
+            screenY <= bounds.deleteButtonY + bounds.deleteButtonHeight) {
+            return {
+                hit: true,
+                serial: bounds.serial,
+                idx: bounds.spawnerIdx
+            };
+        }
+
+        return null;
     }
 };
 

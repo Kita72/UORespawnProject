@@ -2,6 +2,11 @@
 {
     internal class XMLSpawnPoint
     {
+        /// <summary>
+        /// Serial number of the spawner item (for identification in commands)
+        /// </summary>
+        public string Serial { get; set; } = string.Empty;
+
         public int Map { get; set; }
 
         // Center coordinates (original spawner location)

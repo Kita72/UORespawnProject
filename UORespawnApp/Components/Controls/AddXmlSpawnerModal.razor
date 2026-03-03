@@ -1,0 +1,221 @@
+@using UORespawnApp.Scripts.Utilities
+@using UORespawnApp.Scripts.Services
+@inject XmlSpawnerCommandService XmlSpawnerCommandService
+@inject ToastService ToastService
+
+<div class="modal-backdrop fade show"></div>
+<div class="modal fade show d-block" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content bg-dark text-white">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title">
+                    <span class="bi bi-plus-circle text-success me-2"></span>
+                    Add XML Spawner
+                </h5>
+                <button type="button" class="btn-close btn-close-white" @onclick="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Location Info -->
+                <div class="alert alert-info mb-3">
+                    <span class="bi bi-geo-alt me-2"></span>
+                    <strong>Location:</strong> Map @MapId at (@WorldX, @WorldY)
+                </div>
+
+                <!-- Home Range Setting -->
+                <div class="mb-3">
+                    <label class="form-label">
+                        <span class="bi bi-arrows-angle-expand me-1"></span>
+                        Home Range (Spawn Radius)
+                    </label>
+                    <div class="d-flex align-items-center gap-2">
+                        <input type="range" class="form-range flex-grow-1" min="5" max="50" @bind="homeRange" @bind:event="oninput" />
+                        <input type="number" class="form-control" style="width: 80px;" min="5" max="50" @bind="homeRange" />
+                    </div>
+                    <small class="text-muted">
+                        Estimated max spawns: @XmlSpawnerCommandService.CalculateMaxSpawnFromHomeRange(homeRange)
+                        (based on area)
+                    </small>
+                </div>
+
+                <!-- Creature Selection -->
+                <div class="mb-3">
+                    <label class="form-label">
+                        <span class="bi bi-list-ul me-1"></span>
+                        Creatures to Spawn
+                        <span class="badge bg-secondary ms-2">@selectedCreatures.Count selected</span>
+                    </label>
+                    <small class="text-muted d-block mb-2">
+                        Add creatures from the bestiary. Add the same creature multiple times for higher spawn weight.
+                    </small>
+
+                    <!-- Selected Creatures List -->
+                    @if (selectedCreatures.Count > 0)
+                    {
+                        <div class="selected-creatures mb-2 p-2 border border-secondary rounded" style="max-height: 150px; overflow-y: auto;">
+                            @foreach (var group in selectedCreatures.GroupBy(c => c).Select(g => new { Name = g.Key, Count = g.Count() }))
+                            {
+                                <div class="d-flex align-items-center justify-content-between py-1">
+                                    <span>
+                                        <span class="bi bi-bug me-1 text-success"></span>
+                                        @group.Name
+                                        @if (group.Count > 1)
+                                        {
+                                            <span class="badge bg-warning text-dark ms-1">x@group.Count</span>
+                                        }
+                                    </span>
+                                    <button class="btn btn-sm btn-outline-danger" @onclick="() => RemoveCreature(group.Name)" title="Remove one">
+                                        <span class="bi bi-dash"></span>
+                                    </button>
+                                </div>
+                            }
+                        </div>
+                        <button class="btn btn-sm btn-outline-secondary mb-2" @onclick="ClearCreatures">
+                            <span class="bi bi-x-circle me-1"></span>Clear All
+                        </button>
+                    }
+
+                    <!-- Bestiary Search and Add -->
+                    <div class="input-group">
+                        <span class="input-group-text bg-dark border-secondary">
+                            <span class="bi bi-search"></span>
+                        </span>
+                        <input type="text" class="form-control bg-dark text-white border-secondary" 
+                               placeholder="Search bestiary..." 
+                               @bind="searchText" 
+                               @bind:event="oninput" />
+                    </div>
+
+                    <!-- Bestiary List -->
+                    <div class="bestiary-list mt-2 border border-secondary rounded" style="max-height: 200px; overflow-y: auto;">
+                        @foreach (var creature in GetFilteredBestiary())
+                        {
+                            <div class="bestiary-item d-flex align-items-center justify-content-between p-2 border-bottom border-secondary" 
+                                 style="cursor: pointer;"
+                                 @onclick="() => AddCreature(creature)">
+                                <span>@creature</span>
+                                <span class="bi bi-plus-circle text-success"></span>
+                            </div>
+                        }
+                        @if (!GetFilteredBestiary().Any())
+                        {
+                            <div class="p-3 text-center text-muted">
+                                @if (string.IsNullOrEmpty(searchText))
+                                {
+                                    <span>Loading bestiary...</span>
+                                }
+                                else
+                                {
+                                    <span>No creatures found matching "@searchText"</span>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-secondary">
+                <button type="button" class="btn btn-secondary" @onclick="Close">Cancel</button>
+                <button type="button" class="btn btn-success" @onclick="CreateSpawner" disabled="@(selectedCreatures.Count == 0)">
+                    <span class="bi bi-plus-circle me-1"></span>Create Spawner
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int MapId { get; set; }
+    [Parameter] public int WorldX { get; set; }
+    [Parameter] public int WorldY { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private int homeRange = 10;
+    private string searchText = "";
+    private List<string> selectedCreatures = new();
+
+    private IEnumerable<string> GetFilteredBestiary()
+    {
+        var list = BestiaryListUtility.BestiaryNameList ?? new List<string>();
+        
+        if (string.IsNullOrWhiteSpace(searchText))
+        {
+            return list.Take(50); // Show first 50 by default
+        }
+
+        return list
+            .Where(c => c.Contains(searchText, StringComparison.OrdinalIgnoreCase))
+            .Take(50);
+    }
+
+    private void AddCreature(string name)
+    {
+        selectedCreatures.Add(name);
+        StateHasChanged();
+    }
+
+    private void RemoveCreature(string name)
+    {
+        // Remove one instance of this creature
+        var index = selectedCreatures.LastIndexOf(name);
+        if (index >= 0)
+        {
+            selectedCreatures.RemoveAt(index);
+        }
+        StateHasChanged();
+    }
+
+    private void ClearCreatures()
+    {
+        selectedCreatures.Clear();
+        StateHasChanged();
+    }
+
+    private async Task CreateSpawner()
+    {
+        if (selectedCreatures.Count == 0)
+        {
+            ToastService.ShowWarning("Please select at least one creature");
+            return;
+        }
+
+        // Z coordinate - server will adjust to terrain height
+        int z = 0;
+
+        // Write the add command
+        if (XmlSpawnerCommandService.WriteAddCommand(MapId, WorldX, WorldY, z, homeRange, selectedCreatures))
+        {
+            var creatureSummary = string.Join(", ", selectedCreatures
+                .GroupBy(c => c)
+                .Select(g => g.Count() > 1 ? $"{g.Key} x{g.Count()}" : g.Key)
+                .Take(3));
+            
+            if (selectedCreatures.GroupBy(c => c).Count() > 3)
+            {
+                creatureSummary += "...";
+            }
+
+            Logger.Info($"XML Spawner add command sent: Map {MapId} at ({WorldX},{WorldY}) HomeRange:{homeRange} Creatures:{creatureSummary}");
+            ToastService.ShowWarning($"Add command sent. Spawner will be created when server restarts.");
+            
+            await Close();
+        }
+        else
+        {
+            ToastService.ShowWarning("Failed to write add command");
+        }
+    }
+
+    private async Task Close()
+    {
+        await OnClose.InvokeAsync();
+    }
+}
+
+<style>
+    .bestiary-item:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    .selected-creatures .d-flex:hover {
+        background-color: rgba(255, 255, 255, 0.05);
+    }
+</style>

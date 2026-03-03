@@ -342,7 +342,8 @@ namespace Server.Custom.UORespawnServer.Managers
                         spawnNames = string.Join("|", s.SpawnObjects.Select(so => so.SpawnName));
                     }
 
-                    allSpawners.Add($"{s.Map}:{s.X}:{s.Y}:{spwnr.HomeRange}:{s.MaxCount}:{spawnNames}");
+                    // Format: Serial:MapId:X:Y:HomeRange:MaxCount:SpawnNames
+                    allSpawners.Add($"{s.Serial.Value}:{s.Map}:{s.X}:{s.Y}:{spwnr.HomeRange}:{s.MaxCount}:{spawnNames}");
                 }
 
                 if (spawner is XmlSpawner xml && xml is ISpawner xspwnr)
@@ -355,7 +356,8 @@ namespace Server.Custom.UORespawnServer.Managers
                         spawnNames = string.Join("|", xml.SpawnObjects.Select(so => so.TypeName));
                     }
 
-                    allSpawners.Add($"{xml.Map.MapID}:{xml.X}:{xml.Y}:{xspwnr.HomeRange}:{xml.MaxCount}:{spawnNames}");
+                    // Format: Serial:MapId:X:Y:HomeRange:MaxCount:SpawnNames
+                    allSpawners.Add($"{xml.Serial.Value}:{xml.Map.MapID}:{xml.X}:{xml.Y}:{xspwnr.HomeRange}:{xml.MaxCount}:{spawnNames}");
                 }
             }
 

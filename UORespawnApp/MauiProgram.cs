@@ -43,6 +43,9 @@ namespace UORespawnApp
             builder.Services.AddSingleton<FtpConnectionService>();
             builder.Services.AddSingleton<FtpSyncService>();
 
+            // XML Spawner Management
+            builder.Services.AddSingleton<XmlSpawnerCommandService>();
+
             try
             {
                 Logger.Info($"UORespawn v{Utility.Version} - Starting minimal initialization...");
