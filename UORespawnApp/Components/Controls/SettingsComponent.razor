@@ -132,6 +132,9 @@
                 </div>
             </div>
 
+            <!-- FTP Remote Server Integration -->
+            <FtpSettingsCard OnShowAccountModal="ShowAccountModal" />
+
             <!-- Spawn Settings -->
             <div class="card map-card mb-3">
                 <div class="card-header text-center">
@@ -752,6 +755,12 @@
                 </div>
             </div>
 
+            <!-- Account Login Modal -->
+            <AccountLoginModal 
+                IsVisible="@showAccountModal" 
+                OnClose="HideAccountModal" 
+                OnAccountSelected="OnAccountSelected" />
+
             <!-- Complete Reset Confirmation Modal -->
             @if (showCompleteResetModal)
             {
@@ -819,10 +828,12 @@
 @inject ToastService ToastService
 @inject DebugService DebugService
 @inject SpawnPackService SpawnPackService
+@inject AccountService AccountService
 @using System.IO.Compression
 @using UORespawnApp.Scripts.Constants
 @using UORespawnApp.Scripts.Utilities
 @using UORespawnApp.Scripts.Services
+@using UORespawnApp.Scripts.Entities
 @using UORespawnApp.Components.Controls
 @implements IDisposable
 
@@ -846,6 +857,7 @@ private bool cleanServerOnReset = false;
 private bool showBestiaryFavorites = false;
 private bool showVendorFavorites = false;
 private bool showAdvancedSettings = false;
+    private bool showAccountModal = false;
 
     private void ToggleAdvancedSettings()
     {
@@ -1701,6 +1713,22 @@ private bool showAdvancedSettings = false;
     private void ToggleRemoteServerSection()
     {
         showRemoteServerSection = !showRemoteServerSection;
+    }
+
+    private void ShowAccountModal()
+    {
+        showAccountModal = true;
+    }
+
+    private void HideAccountModal()
+    {
+        showAccountModal = false;
+    }
+
+    private void OnAccountSelected(UserAccount account)
+    {
+        showAccountModal = false;
+        StateHasChanged();
     }
 
     private void ResetToDefaults()

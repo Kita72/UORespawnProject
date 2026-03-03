@@ -1,0 +1,226 @@
+@using UORespawnApp.Scripts.Services
+
+@inject FtpSyncService SyncService
+
+@if (IsVisible)
+{
+    <div class="modal fade show d-block" style="background: rgba(0,0,0,0.7);" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bg-dark text-light border-secondary">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title">
+                        @switch (currentOperation)
+                        {
+                            case SyncOperation.Upload:
+                                <span class="bi bi-cloud-arrow-up text-success me-2"></span>
+                                <text>Uploading Spawn Data</text>
+                                break;
+                            case SyncOperation.Download:
+                                <span class="bi bi-cloud-arrow-down text-info me-2"></span>
+                                <text>Downloading Reference Data</text>
+                                break;
+                            default:
+                                <span class="bi bi-arrow-repeat text-warning me-2"></span>
+                                <text>Syncing with Server</text>
+                                break;
+                        }
+                    </h5>
+                    @if (isComplete)
+                    {
+                        <button type="button" class="btn-close btn-close-white" @onclick="Close"></button>
+                    }
+                </div>
+                <div class="modal-body">
+                    @if (!isComplete)
+                    {
+                        <!-- Progress Display -->
+                        <div class="text-center mb-3">
+                            <div class="spinner-border text-info mb-3" role="status" style="width: 3rem; height: 3rem;">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mb-2">@progressMessage</p>
+                        </div>
+
+                        <!-- Overall Progress Bar -->
+                        <div class="progress mb-2" style="height: 25px;">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated bg-info" 
+                                 role="progressbar" 
+                                 style="width: @overallProgress%"
+                                 aria-valuenow="@overallProgress" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100">
+                                @if (overallProgress > 10)
+                                {
+                                    <text>@overallProgress%</text>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="text-muted small text-center">
+                            File @currentFile of @totalFiles
+                        </div>
+                    }
+                    else
+                    {
+                        <!-- Result Display -->
+                        <div class="text-center">
+                            @if (result?.Success == true)
+                            {
+                                <span class="bi bi-check-circle-fill text-success" style="font-size: 4rem;"></span>
+                                <h5 class="mt-3 text-success">Sync Complete!</h5>
+                            }
+                            else
+                            {
+                                <span class="bi bi-exclamation-circle-fill text-warning" style="font-size: 4rem;"></span>
+                                <h5 class="mt-3 text-warning">Sync Completed with Issues</h5>
+                            }
+
+                            <p class="text-muted">@result?.Message</p>
+
+                            @if (result?.FileNames.Count > 0)
+                            {
+                                <div class="alert alert-secondary text-start mt-3">
+                                    <strong class="small">Files Transferred:</strong>
+                                    <ul class="mb-0 mt-2 small">
+                                        @foreach (var file in result.FileNames)
+                                        {
+                                            <li><span class="bi bi-check text-success me-1"></span>@file</li>
+                                        }
+                                    </ul>
+                                </div>
+                            }
+
+                            @if (result?.FilesFailed > 0)
+                            {
+                                <div class="text-warning small mt-2">
+                                    <span class="bi bi-exclamation-triangle me-1"></span>
+                                    @result.FilesFailed file(s) failed to transfer
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer border-secondary">
+                    @if (isComplete)
+                    {
+                        <button type="button" class="btn btn-secondary" @onclick="Close">
+                            <span class="bi bi-x-lg me-1"></span>Close
+                        </button>
+                    }
+                    else
+                    {
+                        <button type="button" class="btn btn-outline-secondary" disabled>
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                            Please wait...
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private SyncOperation currentOperation = SyncOperation.FullSync;
+    private string progressMessage = "Starting...";
+    private int overallProgress = 0;
+    private int currentFile = 0;
+    private int totalFiles = 0;
+    private bool isComplete = false;
+    private SyncResult? result;
+
+    protected override void OnInitialized()
+    {
+        SyncService.SyncStarted += OnSyncStarted;
+        SyncService.SyncProgress += OnSyncProgress;
+        SyncService.SyncCompleted += OnSyncCompleted;
+    }
+
+    public async Task StartUpload()
+    {
+        ResetState();
+        currentOperation = SyncOperation.Upload;
+        StateHasChanged();
+
+        var progress = new Progress<SyncProgressEventArgs>(OnProgressReport);
+        result = await SyncService.UploadSpawnDataAsync(progress);
+        isComplete = true;
+        StateHasChanged();
+    }
+
+    public async Task StartDownload()
+    {
+        ResetState();
+        currentOperation = SyncOperation.Download;
+        StateHasChanged();
+
+        var progress = new Progress<SyncProgressEventArgs>(OnProgressReport);
+        result = await SyncService.DownloadReferenceDataAsync(progress);
+        isComplete = true;
+        StateHasChanged();
+    }
+
+    public async Task StartFullSync()
+    {
+        ResetState();
+        currentOperation = SyncOperation.FullSync;
+        StateHasChanged();
+
+        var progress = new Progress<SyncProgressEventArgs>(OnProgressReport);
+        result = await SyncService.FullSyncAsync(progress);
+        isComplete = true;
+        StateHasChanged();
+    }
+
+    private void ResetState()
+    {
+        progressMessage = "Connecting...";
+        overallProgress = 0;
+        currentFile = 0;
+        totalFiles = 0;
+        isComplete = false;
+        result = null;
+    }
+
+    private void OnProgressReport(SyncProgressEventArgs args)
+    {
+        progressMessage = args.Message;
+        overallProgress = args.OverallProgress;
+        currentFile = args.CurrentFile;
+        totalFiles = args.TotalFiles;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnSyncStarted(object? sender, SyncOperation operation)
+    {
+        currentOperation = operation;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnSyncProgress(object? sender, SyncProgressEventArgs args)
+    {
+        OnProgressReport(args);
+    }
+
+    private void OnSyncCompleted(object? sender, SyncResultEventArgs args)
+    {
+        result = args.Result;
+        isComplete = true;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async Task Close()
+    {
+        await OnClose.InvokeAsync();
+    }
+
+    public void Dispose()
+    {
+        SyncService.SyncStarted -= OnSyncStarted;
+        SyncService.SyncProgress -= OnSyncProgress;
+        SyncService.SyncCompleted -= OnSyncCompleted;
+    }
+}

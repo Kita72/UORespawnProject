@@ -37,6 +37,12 @@ namespace UORespawnApp
             builder.Services.AddSingleton<WebViewService>();
             builder.Services.AddSingleton<DebugService>();
 
+            // FTP & Account Services
+            builder.Services.AddSingleton<AccountService>();
+            builder.Services.AddSingleton<FtpCredentialService>();
+            builder.Services.AddSingleton<FtpConnectionService>();
+            builder.Services.AddSingleton<FtpSyncService>();
+
             try
             {
                 Logger.Info($"UORespawn v{Utility.Version} - Starting minimal initialization...");

@@ -1,0 +1,266 @@
+@using UORespawnApp.Scripts.Services
+@using UORespawnApp.Scripts.Entities
+@using UORespawnApp.Scripts.Utilities
+
+@inject AccountService AccountService
+
+@if (IsVisible)
+{
+    <div class="modal fade show d-block" style="background: rgba(0,0,0,0.85);" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bg-dark text-light border-secondary">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title" style="color: goldenrod;">
+                        <span class="bi bi-person-badge me-2"></span>
+                        @(isCreatingAccount ? "Create Account" : "Select Account")
+                    </h5>
+                </div>
+                <div class="modal-body">
+                    @if (isCreatingAccount)
+                    {
+                        <!-- Create Account Form -->
+                        <div class="mb-3">
+                            <label class="form-label text-muted small">Account Name</label>
+                            <input type="text" 
+                                   class="form-control bg-secondary text-light border-dark" 
+                                   placeholder="e.g., Wilson, TestServer, Production"
+                                   @bind="newAccountName"
+                                   @bind:event="oninput" />
+                            <div class="form-text text-muted">
+                                A friendly name to identify this account
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label text-muted small">Credential Folder</label>
+                            <div class="input-group">
+                                <input type="text" 
+                                       class="form-control bg-secondary text-light border-dark" 
+                                       placeholder="Select a folder..."
+                                       @bind="newAccountFolder"
+                                       readonly />
+                                <button class="btn btn-outline-secondary" type="button" @onclick="BrowseForFolder">
+                                    <span class="bi bi-folder2-open"></span>
+                                </button>
+                            </div>
+                            <div class="form-text text-muted">
+                                <span class="bi bi-info-circle me-1"></span>
+                                FTP credentials will be stored here. Choose a secure location you control.
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info mb-0">
+                            <span class="bi bi-shield-check me-2"></span>
+                            <strong>Your Data, Your Control</strong>
+                            <p class="mb-0 mt-2 small">
+                                We only store the folder path - not your credentials. 
+                                You can move, backup, or delete the credential folder anytime.
+                            </p>
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(errorMessage))
+                        {
+                            <div class="alert alert-danger mt-3 mb-0">
+                                <span class="bi bi-exclamation-circle me-2"></span>@errorMessage
+                            </div>
+                        }
+                    }
+                    else if (AccountService.HasAccounts)
+                    {
+                        <!-- Account Selection -->
+                        <div class="mb-3">
+                            <label class="form-label text-muted small">Select an Account</label>
+                            <div class="list-group">
+                                @foreach (var account in AccountService.Accounts.OrderByDescending(a => a.LastUsedAt))
+                                {
+                                    <button type="button" 
+                                            class="list-group-item list-group-item-action bg-secondary text-light d-flex justify-content-between align-items-center"
+                                            @onclick="() => SelectAccount(account)">
+                                        <div>
+                                            <span class="bi bi-person-circle me-2"></span>
+                                            <strong>@account.Name</strong>
+                                            @if (account.HasCredentials)
+                                            {
+                                                <span class="badge bg-success ms-2">FTP Configured</span>
+                                            }
+                                        </div>
+                                        <small class="text-muted">
+                                            @account.LastUsedAt.ToString("MMM d")
+                                        </small>
+                                    </button>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="text-center">
+                            <button class="btn btn-outline-secondary btn-sm" @onclick="StartCreateAccount">
+                                <span class="bi bi-plus-lg me-1"></span>Add Account
+                            </button>
+                        </div>
+                    }
+                    else
+                    {
+                        <!-- First Time / No Accounts -->
+                        <div class="text-center mb-4">
+                            <span class="bi bi-person-plus-fill" style="font-size: 4rem; color: goldenrod;"></span>
+                            <h5 class="mt-3">Welcome to UORespawn!</h5>
+                            <p class="text-muted">
+                                Create an account to use FTP features, or continue without one.
+                            </p>
+                        </div>
+
+                        <div class="alert alert-secondary">
+                            <strong><span class="bi bi-question-circle me-2"></span>Why accounts?</strong>
+                            <ul class="mb-0 mt-2 small">
+                                <li>Store FTP credentials securely in a folder you control</li>
+                                <li>Multiple accounts for different servers</li>
+                                <li>Share the app with others (spouse, team) - each person has their own</li>
+                            </ul>
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer border-secondary">
+                    @if (isCreatingAccount)
+                    {
+                        <button type="button" class="btn btn-outline-secondary" @onclick="CancelCreateAccount">
+                            <span class="bi bi-arrow-left me-1"></span>Back
+                        </button>
+                        <button type="button" class="btn btn-success" @onclick="CreateAccount" disabled="@(!CanCreateAccount)">
+                            <span class="bi bi-check-lg me-1"></span>Create Account
+                        </button>
+                    }
+                    else
+                    {
+                        <button type="button" class="btn btn-outline-secondary" @onclick="SkipForNow" title="Continue without FTP features">
+                            <span class="bi bi-skip-forward me-1"></span>Skip
+                        </button>
+                        @if (!AccountService.HasAccounts)
+                        {
+                            <button type="button" class="btn btn-success" @onclick="StartCreateAccount">
+                                <span class="bi bi-person-plus me-1"></span>Create Account
+                            </button>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<UserAccount> OnAccountSelected { get; set; }
+
+    private bool isCreatingAccount = false;
+    private string newAccountName = "";
+    private string newAccountFolder = "";
+    private string errorMessage = "";
+
+    private bool CanCreateAccount => 
+        !string.IsNullOrWhiteSpace(newAccountName) && 
+        !string.IsNullOrWhiteSpace(newAccountFolder);
+
+    protected override void OnInitialized()
+    {
+        // If no accounts exist, show create form by default
+        if (!AccountService.HasAccounts)
+        {
+            // But don't auto-start create mode - let them see the welcome screen first
+        }
+    }
+
+    private void StartCreateAccount()
+    {
+        isCreatingAccount = true;
+        newAccountName = "";
+        newAccountFolder = "";
+        errorMessage = "";
+    }
+
+    private void CancelCreateAccount()
+    {
+        isCreatingAccount = false;
+        errorMessage = "";
+    }
+
+    private async Task BrowseForFolder()
+    {
+        try
+        {
+#if WINDOWS
+            // Use Windows folder picker
+            var folderPicker = new Windows.Storage.Pickers.FolderPicker();
+
+            // Get the current window handle
+            var window = (Application.Current?.Windows[0]?.Handler?.PlatformView as Microsoft.UI.Xaml.Window);
+            if (window != null)
+            {
+                var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(window);
+                WinRT.Interop.InitializeWithWindow.Initialize(folderPicker, hwnd);
+            }
+
+            folderPicker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary;
+            folderPicker.FileTypeFilter.Add("*");
+
+            var folder = await folderPicker.PickSingleFolderAsync();
+            if (folder != null)
+            {
+                newAccountFolder = folder.Path;
+                StateHasChanged();
+            }
+#else
+            // Platform not supported - show message
+            errorMessage = "Folder picker not available on this platform.";
+            await Task.CompletedTask;
+#endif
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning($"Folder picker error: {ex.Message}");
+            errorMessage = $"Error selecting folder: {ex.Message}";
+        }
+    }
+
+    private async Task CreateAccount()
+    {
+        if (!CanCreateAccount)
+            return;
+
+        errorMessage = "";
+
+        // Check for duplicate name
+        if (AccountService.GetAccount(newAccountName) != null)
+        {
+            errorMessage = $"An account named '{newAccountName}' already exists.";
+            return;
+        }
+
+        // Create the account
+        var account = AccountService.CreateAccount(newAccountName.Trim(), newAccountFolder);
+        if (account == null)
+        {
+            errorMessage = "Failed to create account. Please check the folder path.";
+            return;
+        }
+
+        // Set as active and close
+        AccountService.SetActiveAccount(account.Name);
+        await OnAccountSelected.InvokeAsync(account);
+        await OnClose.InvokeAsync();
+    }
+
+    private async Task SelectAccount(UserAccount account)
+    {
+        AccountService.SetActiveAccount(account.Name);
+        await OnAccountSelected.InvokeAsync(account);
+        await OnClose.InvokeAsync();
+    }
+
+    private async Task SkipForNow()
+    {
+        // Clear active account and close
+        AccountService.ClearActiveAccount();
+        await OnClose.InvokeAsync();
+    }
+}
