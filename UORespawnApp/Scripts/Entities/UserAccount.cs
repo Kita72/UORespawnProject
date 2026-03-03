@@ -1,88 +1,134 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
 namespace UORespawnApp.Scripts.Entities;
 
 /// <summary>
 /// Represents a user account in the UORespawn app.
-/// An account is simply a profile name linked to a folder where credentials are stored.
-/// The app only stores the account name and folder path - actual credentials live in the user's folder.
-/// This design gives users full control over their sensitive data.
+/// 
+/// SECURITY BY DESIGN:
+/// - Account data lives ONLY in the user's chosen folder (uor_account.json)
+/// - The app stores only folder paths - if user deletes folder, account is gone
+/// - No passwords needed for the app itself - just a friendly name
+/// - FTP/AI credentials are separate files the user controls
+/// 
+/// This gives users full control over their data with zero app-side storage of sensitive info.
 /// </summary>
 public class UserAccount
 {
+    private const string AccountFileName = "uor_account.json";
+
     /// <summary>
-    /// Display name for this account (e.g., "Wilson", "TestServer", "Wife").
-    /// Used to identify the account in the UI.
+    /// Display name for this account (e.g., "Wilson", "TestServer", "Production").
+    /// This is just a friendly label - no password required for the app.
     /// </summary>
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// Full path to the folder where this account's credentials are stored.
-    /// The user chooses this folder - it could be on an encrypted drive, USB, cloud folder, etc.
-    /// The app reads/writes credential files to this location.
-    /// </summary>
-    public string CredentialFolderPath { get; set; } = string.Empty;
-
-    /// <summary>
-    /// When this account was created (for sorting/display purposes).
+    /// When this account was created.
     /// </summary>
     public DateTime CreatedAt { get; set; } = DateTime.Now;
 
     /// <summary>
-    /// When this account was last used (for sorting/display purposes).
-    /// Updated when the account is selected as active.
+    /// When this account was last used.
     /// </summary>
     public DateTime LastUsedAt { get; set; } = DateTime.Now;
 
     /// <summary>
-    /// Checks if this account has a valid credential folder configured.
+    /// Full path to the folder where this account's data is stored.
+    /// This is set when loading, not serialized to JSON.
     /// </summary>
+    [JsonIgnore]
+    public string CredentialFolderPath { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Checks if this account has a valid folder.
+    /// </summary>
+    [JsonIgnore]
     public bool HasCredentialFolder => !string.IsNullOrEmpty(CredentialFolderPath) && Directory.Exists(CredentialFolderPath);
 
     /// <summary>
-    /// The expected path to the credentials file within this account's folder.
+    /// Path to the account file in this folder.
     /// </summary>
+    [JsonIgnore]
+    public string AccountFilePath => string.IsNullOrEmpty(CredentialFolderPath)
+        ? string.Empty
+        : Path.Combine(CredentialFolderPath, AccountFileName);
+
+    /// <summary>
+    /// Path to the FTP credentials file in this folder.
+    /// </summary>
+    [JsonIgnore]
     public string CredentialFilePath => string.IsNullOrEmpty(CredentialFolderPath)
         ? string.Empty
         : Path.Combine(CredentialFolderPath, "uor_credentials.json");
 
     /// <summary>
-    /// Checks if credentials exist for this account.
+    /// Checks if FTP credentials exist for this account.
     /// </summary>
+    [JsonIgnore]
     public bool HasCredentials => !string.IsNullOrEmpty(CredentialFilePath) && File.Exists(CredentialFilePath);
 
     /// <summary>
-    /// Creates a serializable representation for storage in Preferences.
-    /// Format: Name|CredentialFolderPath|CreatedAt|LastUsedAt
+    /// Saves this account to its folder.
     /// </summary>
-    public string Serialize()
+    public bool SaveToFolder()
     {
-        return $"{Name}|{CredentialFolderPath}|{CreatedAt:O}|{LastUsedAt:O}";
+        if (string.IsNullOrEmpty(CredentialFolderPath))
+            return false;
+
+        try
+        {
+            if (!Directory.Exists(CredentialFolderPath))
+                Directory.CreateDirectory(CredentialFolderPath);
+
+            var json = JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(AccountFilePath, json);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     /// <summary>
-    /// Creates a UserAccount from a serialized string.
+    /// Loads an account from a folder. Returns null if no valid account file exists.
     /// </summary>
-    public static UserAccount? Deserialize(string serialized)
+    public static UserAccount? LoadFromFolder(string folderPath)
     {
-        if (string.IsNullOrEmpty(serialized))
+        if (string.IsNullOrEmpty(folderPath) || !Directory.Exists(folderPath))
             return null;
 
-        var parts = serialized.Split('|');
-        if (parts.Length < 2)
+        var accountFile = Path.Combine(folderPath, AccountFileName);
+        if (!File.Exists(accountFile))
             return null;
 
-        var account = new UserAccount
+        try
         {
-            Name = parts[0],
-            CredentialFolderPath = parts[1]
-        };
+            var json = File.ReadAllText(accountFile);
+            var account = JsonSerializer.Deserialize<UserAccount>(json);
+            if (account != null)
+            {
+                account.CredentialFolderPath = folderPath;
+            }
+            return account;
+        }
+        catch
+        {
+            return null;
+        }
+    }
 
-        if (parts.Length >= 3 && DateTime.TryParse(parts[2], out var created))
-            account.CreatedAt = created;
+    /// <summary>
+    /// Checks if a folder contains a valid account file.
+    /// </summary>
+    public static bool IsValidAccountFolder(string folderPath)
+    {
+        if (string.IsNullOrEmpty(folderPath) || !Directory.Exists(folderPath))
+            return false;
 
-        if (parts.Length >= 4 && DateTime.TryParse(parts[3], out var lastUsed))
-            account.LastUsedAt = lastUsed;
-
-        return account;
+        return File.Exists(Path.Combine(folderPath, AccountFileName));
     }
 
     public override string ToString() => Name;

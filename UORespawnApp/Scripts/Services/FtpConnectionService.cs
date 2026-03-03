@@ -306,6 +306,18 @@ public class FtpConnectionService : IDisposable
     }
 
     /// <summary>
+    /// Lists only directories in a remote path.
+    /// </summary>
+    public async Task<List<string>> ListDirectoriesAsync(string remotePath)
+    {
+        var items = await ListDirectoryAsync(remotePath);
+        return items
+            .Where(i => i.Type == FtpObjectType.Directory)
+            .Select(i => i.FullName)
+            .ToList();
+    }
+
+    /// <summary>
     /// Creates the FTP client with configured settings.
     /// </summary>
     private AsyncFtpClient CreateClient(FtpCredentials credentials)

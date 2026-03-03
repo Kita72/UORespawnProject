@@ -1,8 +1,7 @@
 ﻿using UORespawnApp.Scripts.Constants;
-using UORespawnApp.Scripts.Services;
 using UORespawnApp.Scripts.Utilities;
 
-namespace UORespawnApp
+namespace UORespawnApp.Scripts.Services
 {
     internal partial class DataWatcher : IDisposable
     {

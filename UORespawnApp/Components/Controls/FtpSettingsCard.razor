@@ -6,32 +6,36 @@
 @inject FtpConnectionService ConnectionService
 @inject FtpSyncService SyncService
 
-<div class="card map-card mb-4">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <span>
-            <span class="bi bi-cloud-arrow-up me-2" style="color: #17a2b8;"></span>
-            <strong>FTP Remote Server</strong>
+<div class="card map-card mb-3">
+    <div class="card-header text-center">
+        <span class="text-primary" style="font-size: 1.25rem;">
+            <span class="bi bi-cloud-arrow-up me-2"></span>FTP Remote Server
         </span>
         @if (ConnectionService.Status == FtpConnectionStatus.Connected)
         {
-            <span class="badge bg-success">
+            <span class="badge bg-success ms-2">
                 <span class="bi bi-check-circle me-1"></span>Connected
             </span>
         }
         else if (hasCredentials)
         {
-            <span class="badge bg-secondary">Configured</span>
+            <span class="badge bg-secondary ms-2">Configured</span>
         }
+        <InfoIcon Text="Sync spawn data with a remote ServUO server via FTP" />
     </div>
-    <div class="card-body">
+    <div class="card-body text-center">
         @if (!AccountService.HasActiveAccount)
         {
             <!-- No Account Active -->
-            <div class="alert alert-warning mb-0">
+            <div class="alert alert-warning mb-3">
                 <span class="bi bi-person-exclamation me-2"></span>
-                <strong>No Account Active</strong>
+                <strong>No Account Selected</strong>
                 <p class="mb-2 mt-2">
-                    FTP features require an account. Accounts store credentials in a folder you control.
+                    FTP features require an account setup. Don't worry - <strong>no password needed for the app!</strong>
+                </p>
+                <p class="mb-2 small text-muted">
+                    Accounts are just friendly labels that point to a folder where YOUR FTP credentials are stored.
+                    You control the folder - delete it anytime and all data is gone.
                 </p>
                 <button class="btn btn-sm btn-warning" @onclick="ShowAccountModal">
                     <span class="bi bi-person-plus me-1"></span>Setup Account
@@ -102,12 +106,31 @@
 
                 <div class="col-12">
                     <label class="form-label text-muted small">Remote Path</label>
-                    <input type="text" 
-                           class="form-control form-control-sm bg-secondary text-light border-dark" 
-                           placeholder="/home/user/ServUO/Data/UORespawn"
-                           @bind="credentials.RemotePath" />
+                    <div class="input-group input-group-sm">
+                        <input type="text" 
+                               class="form-control bg-secondary text-light border-dark" 
+                               placeholder="/ServUO/Data/UORespawn"
+                               @bind="credentials.RemotePath" />
+                        <button class="btn btn-outline-info" type="button" @onclick="DetectRemotePath" disabled="@(isDetecting || !CanDetectPath)">
+                            @if (isDetecting)
+                            {
+                                <span class="spinner-border spinner-border-sm"></span>
+                            }
+                            else
+                            {
+                                <span class="bi bi-search"></span>
+                            }
+                        </button>
+                    </div>
                     <div class="form-text text-muted small">
-                        Path to the UORespawn data folder on your server (e.g., /home/user/ServUO/Data/UORespawn)
+                        <span class="bi bi-info-circle me-1"></span>
+                        Path <strong>relative to your FTP entry point</strong>. Most FTP logins start at a home folder 
+                        (e.g., <code>/home/user/</code> or <code>/public_html/</code>). Enter only what comes after.
+                        <br/>
+                        <span class="text-info">Example:</span> If your ServUO is at <code>/home/user/ServUO/</code> and FTP starts at <code>/home/user/</code>, 
+                        enter: <code>/ServUO/Data/UORespawn</code>
+                        <br/>
+                        <span class="text-info">Tip:</span> Click <span class="bi bi-search"></span> to auto-detect the path after entering host/credentials.
                     </div>
                 </div>
 
@@ -265,47 +288,82 @@
     private string statusAlertClass = "alert-info";
     private string statusIcon = "bi-info-circle";
 
+    // Path detection state
+    private bool isDetecting = false;
+    private bool CanDetectPath => !string.IsNullOrWhiteSpace(credentials.Host) && 
+                                   !string.IsNullOrWhiteSpace(credentials.Username) && 
+                                   !string.IsNullOrWhiteSpace(credentials.Password);
+
     // Sync state
     private bool isSyncing = false;
     private string syncOperation = "";
     private string syncMessage = "";
     private string syncAlertClass = "alert-info";
     private string syncIcon = "bi-info-circle";
+    private bool isLoadingCredentials = false; // Prevent recursive loading
 
     protected override void OnInitialized()
     {
-        LoadCredentials();
+        LoadCredentialsInternal();
         CredentialService.CredentialsChanged += OnCredentialsChanged;
         AccountService.ActiveAccountChanged += OnAccountChanged;
     }
 
     private void OnCredentialsChanged(object? sender, FtpCredentials? creds)
     {
-        LoadCredentials();
+        // Don't reload if we're already loading (prevents recursive loop)
+        if (isLoadingCredentials) return;
+
+        // Just update from the event data directly instead of reloading
+        if (creds != null)
+        {
+            credentials = creds;
+            hasCredentials = true;
+        }
+        else
+        {
+            credentials = new FtpCredentials();
+            hasCredentials = false;
+        }
+        statusMessage = "";
+        hasAttemptedSave = false;
         InvokeAsync(StateHasChanged);
     }
 
     private void OnAccountChanged(object? sender, UserAccount? account)
     {
-        LoadCredentials();
+        // Don't reload if we're already loading (prevents recursive loop)
+        if (isLoadingCredentials) return;
+
+        LoadCredentialsInternal();
         InvokeAsync(StateHasChanged);
     }
 
-    private void LoadCredentials()
+    private void LoadCredentialsInternal()
     {
-        var loaded = CredentialService.LoadCredentials();
-        if (loaded != null)
+        if (isLoadingCredentials) return;
+
+        isLoadingCredentials = true;
+        try
         {
-            credentials = loaded;
-            hasCredentials = true;
+            var loaded = CredentialService.LoadCredentials();
+            if (loaded != null)
+            {
+                credentials = loaded;
+                hasCredentials = true;
+            }
+            else
+            {
+                credentials = CredentialService.CreateNewCredentials();
+                hasCredentials = false;
+            }
+            statusMessage = "";
+            hasAttemptedSave = false;
         }
-        else
+        finally
         {
-            credentials = CredentialService.CreateNewCredentials();
-            hasCredentials = false;
+            isLoadingCredentials = false;
         }
-        statusMessage = "";
-        hasAttemptedSave = false;
     }
 
     private void TogglePassword() => showPassword = !showPassword;
@@ -388,6 +446,167 @@
             hasCredentials = false;
             SetStatus("Credentials deleted.", "alert-info", "bi-trash");
         }
+    }
+
+    private async Task DetectRemotePath()
+    {
+        if (!CanDetectPath) return;
+
+        isDetecting = true;
+        isBusy = true;
+        SetStatus("Searching for UORespawn folder...", "alert-info", "bi-hourglass-split");
+
+        try
+        {
+            // Common paths to search for UORespawn folder
+            var searchPaths = new List<string>
+            {
+                // Direct paths (FTP entry point is close to ServUO)
+                "/Data/UORespawn",
+                "/ServUO/Data/UORespawn",
+
+                // Common Linux/cPanel paths
+                "/home/ServUO/Data/UORespawn",
+                "/public_html/ServUO/Data/UORespawn",
+                "/var/www/ServUO/Data/UORespawn",
+
+                // Windows paths
+                "/ServUO/Data/UORespawn",
+                "/Server/Data/UORespawn",
+                "/UO/ServUO/Data/UORespawn",
+
+                // Also check if user's current path is close
+                $"{credentials.RemotePath?.TrimEnd('/')}/Data/UORespawn",
+                $"{credentials.RemotePath?.TrimEnd('/')}"
+            };
+
+            // Remove empty/invalid paths
+            searchPaths = searchPaths
+                .Where(p => !string.IsNullOrWhiteSpace(p))
+                .Distinct()
+                .ToList();
+
+            // Try to connect first
+            if (!await ConnectionService.ConnectAsync())
+            {
+                SetStatus($"Connection failed: {ConnectionService.LastError}", "alert-danger", "bi-x-circle");
+                return;
+            }
+
+            string? foundPath = null;
+
+            foreach (var path in searchPaths)
+            {
+                SetStatus($"Checking: {path}...", "alert-info", "bi-search");
+                StateHasChanged();
+
+                // Check if the path exists and has the INPUT subfolder (our marker for UORespawn)
+                if (await ConnectionService.DirectoryExistsAsync(path))
+                {
+                    // Also verify it has INPUT subfolder (required structure)
+                    var inputPath = $"{path.TrimEnd('/')}/INPUT";
+                    if (await ConnectionService.DirectoryExistsAsync(inputPath))
+                    {
+                        foundPath = path;
+                        break;
+                    }
+                    // Or check if it's a valid UORespawn folder without INPUT yet
+                    // (might be first setup - just having the folder is enough)
+                    foundPath = path;
+                    break;
+                }
+            }
+
+            // Also try crawling from root to find "UORespawn" folder
+            if (foundPath == null)
+            {
+                SetStatus("Deep searching for UORespawn folder...", "alert-info", "bi-search");
+                StateHasChanged();
+
+                foundPath = await CrawlForUORespawnFolder("/", 3); // Max 3 levels deep
+            }
+
+            await ConnectionService.DisconnectAsync();
+
+            if (foundPath != null)
+            {
+                credentials.RemotePath = foundPath;
+                SetStatus($"Found UORespawn folder: {foundPath}", "alert-success", "bi-check-circle");
+            }
+            else
+            {
+                SetStatus("UORespawn folder not found. You may need to create it on your server first, or enter the path manually.", "alert-warning", "bi-exclamation-triangle");
+            }
+        }
+        catch (Exception ex)
+        {
+            SetStatus($"Detection failed: {ex.Message}", "alert-danger", "bi-x-circle");
+        }
+        finally
+        {
+            isDetecting = false;
+            isBusy = false;
+        }
+    }
+
+    private async Task<string?> CrawlForUORespawnFolder(string startPath, int maxDepth)
+    {
+        if (maxDepth <= 0) return null;
+
+        try
+        {
+            var directories = await ConnectionService.ListDirectoriesAsync(startPath);
+
+            foreach (var dir in directories)
+            {
+                // Skip common system folders to speed up search
+                var dirName = Path.GetFileName(dir.TrimEnd('/'));
+                if (dirName.StartsWith('.') || 
+                    dirName.Equals("bin", StringComparison.OrdinalIgnoreCase) ||
+                    dirName.Equals("obj", StringComparison.OrdinalIgnoreCase) ||
+                    dirName.Equals("node_modules", StringComparison.OrdinalIgnoreCase) ||
+                    dirName.Equals("logs", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                var fullPath = startPath.TrimEnd('/') + "/" + dirName;
+
+                // Check if this is the UORespawn folder
+                if (dirName.Equals("UORespawn", StringComparison.OrdinalIgnoreCase))
+                {
+                    return fullPath;
+                }
+
+                // Check if this folder contains UORespawn
+                if (dirName.Equals("Data", StringComparison.OrdinalIgnoreCase))
+                {
+                    var uorPath = fullPath + "/UORespawn";
+                    if (await ConnectionService.DirectoryExistsAsync(uorPath))
+                    {
+                        return uorPath;
+                    }
+                }
+
+                // Recurse into promising directories
+                if (dirName.Equals("ServUO", StringComparison.OrdinalIgnoreCase) ||
+                    dirName.Equals("Server", StringComparison.OrdinalIgnoreCase) ||
+                    dirName.Equals("Data", StringComparison.OrdinalIgnoreCase) ||
+                    dirName.Equals("home", StringComparison.OrdinalIgnoreCase) ||
+                    dirName.Equals("public_html", StringComparison.OrdinalIgnoreCase) ||
+                    dirName.Equals("www", StringComparison.OrdinalIgnoreCase))
+                {
+                    var result = await CrawlForUORespawnFolder(fullPath, maxDepth - 1);
+                    if (result != null) return result;
+                }
+            }
+        }
+        catch
+        {
+            // Ignore errors during crawl (permission denied, etc.)
+        }
+
+        return null;
     }
 
     private void SetStatus(string message, string alertClass, string icon)

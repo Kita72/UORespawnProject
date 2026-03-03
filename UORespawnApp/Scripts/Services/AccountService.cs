@@ -5,14 +5,21 @@ namespace UORespawnApp.Scripts.Services;
 
 /// <summary>
 /// Manages user accounts in the UORespawn app.
-/// Accounts are lightweight profiles that link a name to a credential folder.
-/// The actual credentials are stored in the user's chosen folder, not here.
+/// 
+/// FILE-BASED SECURITY MODEL:
+/// - We only store FOLDER PATHS in app preferences (where to look)
+/// - Account details (name, dates) live in uor_account.json in user's folder
+/// - If user deletes their folder, account disappears - no leftover data in app
+/// - This is SRP security: the file IS the account
+/// 
+/// No passwords needed for app accounts - just friendly names.
+/// FTP/AI credentials are separate files the user controls.
 /// </summary>
 public class AccountService
 {
-    private const string AccountsKey = "UserAccounts";
-    private const string ActiveAccountKey = "ActiveAccountName";
-    private const string AccountSeparator = "|||";
+    private const string FolderPathsKey = "AccountFolderPaths";
+    private const string ActiveFolderKey = "ActiveAccountFolder";
+    private const string PathSeparator = "|||";
 
     private List<UserAccount> _accounts = [];
     private UserAccount? _activeAccount;
@@ -35,18 +42,21 @@ public class AccountService
         get => _activeAccount;
         private set
         {
-            if (_activeAccount?.Name != value?.Name)
+            var oldPath = _activeAccount?.CredentialFolderPath;
+            var newPath = value?.CredentialFolderPath;
+
+            if (oldPath != newPath)
             {
                 _activeAccount = value;
                 if (value != null)
                 {
                     value.LastUsedAt = DateTime.Now;
-                    SaveAccounts();
-                    Preferences.Set(ActiveAccountKey, value.Name);
+                    value.SaveToFolder(); // Save updated timestamp to file
+                    Preferences.Set(ActiveFolderKey, value.CredentialFolderPath);
                 }
                 else
                 {
-                    Preferences.Remove(ActiveAccountKey);
+                    Preferences.Remove(ActiveFolderKey);
                 }
                 ActiveAccountChanged?.Invoke(this, value);
             }
@@ -54,12 +64,12 @@ public class AccountService
     }
 
     /// <summary>
-    /// All registered accounts.
+    /// All registered accounts (validated on load).
     /// </summary>
     public IReadOnlyList<UserAccount> Accounts => _accounts.AsReadOnly();
 
     /// <summary>
-    /// Whether any accounts exist.
+    /// Whether any valid accounts exist.
     /// </summary>
     public bool HasAccounts => _accounts.Count > 0;
 
@@ -75,11 +85,10 @@ public class AccountService
 
     /// <summary>
     /// Creates a new account with the given name and credential folder.
+    /// The account data is stored in the user's folder, not in app preferences.
     /// </summary>
-    /// <returns>The created account, or null if validation fails.</returns>
     public UserAccount? CreateAccount(string name, string credentialFolderPath)
     {
-        // Validate name
         if (string.IsNullOrWhiteSpace(name))
         {
             Logger.Warning("Cannot create account: name is empty");
@@ -88,17 +97,23 @@ public class AccountService
 
         name = name.Trim();
 
-        // Check for duplicate names (case-insensitive)
-        if (_accounts.Any(a => a.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
-        {
-            Logger.Warning($"Cannot create account: '{name}' already exists");
-            return null;
-        }
-
-        // Validate folder path
         if (string.IsNullOrWhiteSpace(credentialFolderPath))
         {
             Logger.Warning("Cannot create account: credential folder path is empty");
+            return null;
+        }
+
+        // Check if folder already has an account
+        if (UserAccount.IsValidAccountFolder(credentialFolderPath))
+        {
+            Logger.Warning($"Cannot create account: folder already contains an account");
+            return null;
+        }
+
+        // Check for duplicate folder paths
+        if (_accounts.Any(a => a.CredentialFolderPath.Equals(credentialFolderPath, StringComparison.OrdinalIgnoreCase)))
+        {
+            Logger.Warning($"Cannot create account: folder already registered");
             return null;
         }
 
@@ -117,6 +132,7 @@ public class AccountService
             return null;
         }
 
+        // Create account and save to user's folder
         var account = new UserAccount
         {
             Name = name,
@@ -125,47 +141,76 @@ public class AccountService
             LastUsedAt = DateTime.Now
         };
 
+        if (!account.SaveToFolder())
+        {
+            Logger.Error("Failed to save account file to folder");
+            return null;
+        }
+
         _accounts.Add(account);
-        SaveAccounts();
+        SaveFolderPaths();
         AccountsChanged?.Invoke(this, EventArgs.Empty);
 
-        Logger.Info($"Created account '{name}' with credential folder: {credentialFolderPath}");
+        Logger.Info($"Created account '{name}' in folder: {credentialFolderPath}");
         return account;
     }
 
     /// <summary>
-    /// Removes an account from the app.
-    /// Note: This does NOT delete the credential folder - user manages that.
+    /// Removes an account from the app's tracked list.
+    /// The user's folder and files are NOT deleted - user controls that.
     /// </summary>
-    public bool RemoveAccount(string name)
+    public bool RemoveAccount(string folderPath)
     {
-        var account = _accounts.FirstOrDefault(a => a.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+        var account = _accounts.FirstOrDefault(a => 
+            a.CredentialFolderPath.Equals(folderPath, StringComparison.OrdinalIgnoreCase));
+
         if (account == null)
         {
-            Logger.Warning($"Cannot remove account: '{name}' not found");
+            Logger.Warning($"Cannot remove account: folder not found in list");
             return false;
         }
 
         // If removing the active account, clear it
-        if (_activeAccount?.Name == account.Name)
+        if (_activeAccount?.CredentialFolderPath == account.CredentialFolderPath)
         {
             ActiveAccount = null;
         }
 
         _accounts.Remove(account);
-        SaveAccounts();
+        SaveFolderPaths();
         AccountsChanged?.Invoke(this, EventArgs.Empty);
 
-        Logger.Info($"Removed account '{name}' (credential folder left intact at: {account.CredentialFolderPath})");
+        Logger.Info($"Removed account '{account.Name}' (folder left intact: {account.CredentialFolderPath})");
         return true;
     }
 
     /// <summary>
-    /// Sets the active account by name.
+    /// Sets the active account by folder path.
     /// </summary>
-    public bool SetActiveAccount(string name)
+    public bool SetActiveAccount(string folderPath)
     {
-        var account = _accounts.FirstOrDefault(a => a.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+        var account = _accounts.FirstOrDefault(a => 
+            a.CredentialFolderPath.Equals(folderPath, StringComparison.OrdinalIgnoreCase));
+
+        if (account == null)
+        {
+            Logger.Warning($"Cannot set active account: folder not found");
+            return false;
+        }
+
+        ActiveAccount = account;
+        Logger.Info($"Active account set to '{account.Name}'");
+        return true;
+    }
+
+    /// <summary>
+    /// Sets the active account by name (convenience method).
+    /// </summary>
+    public bool SetActiveAccountByName(string name)
+    {
+        var account = _accounts.FirstOrDefault(a => 
+            a.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+
         if (account == null)
         {
             Logger.Warning($"Cannot set active account: '{name}' not found");
@@ -173,12 +218,11 @@ public class AccountService
         }
 
         ActiveAccount = account;
-        Logger.Info($"Active account set to '{name}'");
         return true;
     }
 
     /// <summary>
-    /// Clears the active account (logs out).
+    /// Clears the active account.
     /// </summary>
     public void ClearActiveAccount()
     {
@@ -195,105 +239,81 @@ public class AccountService
     }
 
     /// <summary>
-    /// Updates an account's credential folder path.
+    /// Gets an account by folder path.
     /// </summary>
-    public bool UpdateCredentialFolder(string name, string newFolderPath)
+    public UserAccount? GetAccountByFolder(string folderPath)
     {
-        var account = GetAccount(name);
-        if (account == null)
-        {
-            Logger.Warning($"Cannot update account: '{name}' not found");
-            return false;
-        }
-
-        // Create folder if needed
-        try
-        {
-            if (!Directory.Exists(newFolderPath))
-            {
-                Directory.CreateDirectory(newFolderPath);
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.Error($"Cannot create credential folder: {ex.Message}");
-            return false;
-        }
-
-        account.CredentialFolderPath = newFolderPath;
-        SaveAccounts();
-
-        Logger.Info($"Updated credential folder for '{name}': {newFolderPath}");
-        return true;
+        return _accounts.FirstOrDefault(a => 
+            a.CredentialFolderPath.Equals(folderPath, StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>
-    /// Renames an account.
+    /// Refreshes the account list by re-validating all folders.
+    /// Removes accounts whose folders/files no longer exist.
     /// </summary>
-    public bool RenameAccount(string oldName, string newName)
+    public void RefreshAccounts()
     {
-        if (string.IsNullOrWhiteSpace(newName))
-        {
-            Logger.Warning("Cannot rename account: new name is empty");
-            return false;
-        }
-
-        newName = newName.Trim();
-
-        var account = GetAccount(oldName);
-        if (account == null)
-        {
-            Logger.Warning($"Cannot rename account: '{oldName}' not found");
-            return false;
-        }
-
-        // Check for duplicate
-        if (_accounts.Any(a => a.Name.Equals(newName, StringComparison.OrdinalIgnoreCase) && a != account))
-        {
-            Logger.Warning($"Cannot rename account: '{newName}' already exists");
-            return false;
-        }
-
-        var wasActive = _activeAccount?.Name == account.Name;
-        account.Name = newName;
-        SaveAccounts();
-
-        if (wasActive)
-        {
-            Preferences.Set(ActiveAccountKey, newName);
-        }
-
+        LoadAccounts();
         AccountsChanged?.Invoke(this, EventArgs.Empty);
-        Logger.Info($"Renamed account '{oldName}' to '{newName}'");
-        return true;
     }
 
-    // ==================== PERSISTENCE ====================
+    // ==================== FILE-BASED PERSISTENCE ====================
 
     private void LoadAccounts()
     {
         try
         {
-            var serialized = Preferences.Get(AccountsKey, "");
-            if (string.IsNullOrEmpty(serialized))
+            _accounts = [];
+
+            // Get stored folder paths
+            var pathsString = Preferences.Get(FolderPathsKey, "");
+            if (string.IsNullOrEmpty(pathsString))
             {
-                _accounts = [];
+                Logger.Info("No account folders registered");
                 return;
             }
 
-            var accountStrings = serialized.Split(AccountSeparator, StringSplitOptions.RemoveEmptyEntries);
-            _accounts = accountStrings
-                .Select(UserAccount.Deserialize)
-                .Where(a => a != null)
-                .Cast<UserAccount>()
-                .OrderByDescending(a => a.LastUsedAt)
-                .ToList();
+            var folderPaths = pathsString.Split(PathSeparator, StringSplitOptions.RemoveEmptyEntries);
+            var validPaths = new List<string>();
+
+            foreach (var folderPath in folderPaths)
+            {
+                // Try to load account from folder
+                var account = UserAccount.LoadFromFolder(folderPath);
+                if (account != null)
+                {
+                    _accounts.Add(account);
+                    validPaths.Add(folderPath);
+                    Logger.Info($"Loaded account '{account.Name}' from: {folderPath}");
+                }
+                else
+                {
+                    // Folder or file was deleted by user - skip it
+                    Logger.Info($"Account folder no longer valid, removing: {folderPath}");
+                }
+            }
+
+            // Update stored paths to only valid ones
+            if (validPaths.Count != folderPaths.Length)
+            {
+                Preferences.Set(FolderPathsKey, string.Join(PathSeparator, validPaths));
+            }
+
+            // Sort by last used
+            _accounts = [.. _accounts.OrderByDescending(a => a.LastUsedAt)];
 
             // Restore active account
-            var activeAccountName = Preferences.Get(ActiveAccountKey, "");
-            if (!string.IsNullOrEmpty(activeAccountName))
+            var activeFolderPath = Preferences.Get(ActiveFolderKey, "");
+            if (!string.IsNullOrEmpty(activeFolderPath))
             {
-                _activeAccount = _accounts.FirstOrDefault(a => a.Name.Equals(activeAccountName, StringComparison.OrdinalIgnoreCase));
+                _activeAccount = _accounts.FirstOrDefault(a => 
+                    a.CredentialFolderPath.Equals(activeFolderPath, StringComparison.OrdinalIgnoreCase));
+
+                if (_activeAccount == null)
+                {
+                    // Active account folder was deleted
+                    Preferences.Remove(ActiveFolderKey);
+                }
             }
 
             Logger.Info($"Loaded {_accounts.Count} account(s), active: {_activeAccount?.Name ?? "none"}");
@@ -305,16 +325,16 @@ public class AccountService
         }
     }
 
-    private void SaveAccounts()
+    private void SaveFolderPaths()
     {
         try
         {
-            var serialized = string.Join(AccountSeparator, _accounts.Select(a => a.Serialize()));
-            Preferences.Set(AccountsKey, serialized);
+            var paths = _accounts.Select(a => a.CredentialFolderPath);
+            Preferences.Set(FolderPathsKey, string.Join(PathSeparator, paths));
         }
         catch (Exception ex)
         {
-            Logger.Error($"Failed to save accounts: {ex.Message}");
+            Logger.Error($"Failed to save account folder paths: {ex.Message}");
         }
     }
 }

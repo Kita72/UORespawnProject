@@ -963,8 +963,71 @@
                         </div>
                     </div>
 
-                    <h6 class="text-primary mt-4"><span class="bi bi-download me-2"></span>Manual Server Setup (Remote Servers)</h6>
-                    <p>If you can't link (remote server), manually set up the server:</p>
+                    <h6 class="text-primary mt-4"><span class="bi bi-cloud-upload me-2"></span>FTP Remote Server (v2.0.0.9)</h6>
+                    <p>For remote servers, FTP integration automates file synchronization:</p>
+
+                    <div class="alert alert-info mb-3">
+                        <span class="bi bi-person-badge me-1"></span> <strong>Step 1: Create Your Account</strong>
+                        <p class="mb-2 mt-2">First, set up a local account to store your configurations:</p>
+                        <ol class="mb-0">
+                            <li>Go to <strong>Settings</strong> → <strong>FTP Remote Server</strong></li>
+                            <li>Click <strong>Setup Account</strong></li>
+                            <li>Create a new account (choose a username and folder location)</li>
+                        </ol>
+                        <p class="mb-0 mt-2 small text-info">
+                            <span class="bi bi-shield-check me-1"></span><strong>Security Note:</strong> These are local app accounts only - no password required! 
+                            Your FTP credentials are stored securely in your chosen folder, not in the application.
+                        </p>
+                    </div>
+
+                    <div class="alert alert-warning mb-3">
+                        <span class="bi bi-key me-1"></span> <strong>Step 2: Enter FTP Credentials</strong>
+                        <p class="mb-2 mt-2">After logging in, configure your FTP connection:</p>
+                        <ul class="mb-0">
+                            <li><strong>Host:</strong> Your FTP server address (e.g., <code>ftp.example.com</code> or IP address)</li>
+                            <li><strong>Port:</strong> Usually <code>21</code> for FTP, <code>22</code> for SFTP (enter numbers only)</li>
+                            <li><strong>Username:</strong> Your FTP login username</li>
+                            <li><strong>Password:</strong> Your FTP login password</li>
+                            <li><strong>Remote Path:</strong> Path to <code>Data/UORespawn/</code> on your server</li>
+                        </ul>
+                    </div>
+
+                    <div class="alert alert-success mb-3">
+                        <span class="bi bi-magic me-1"></span> <strong>Step 3: Auto-Detect Path</strong>
+                        <p class="mb-2 mt-2">Not sure of your remote path? Use <strong>Auto-Detect</strong>!</p>
+                        <ol class="mb-0">
+                            <li>Enter Host, Port, Username, and Password</li>
+                            <li>Click <strong>Auto-Detect</strong></li>
+                            <li>The editor will search common locations for <code>Data/UORespawn/</code></li>
+                            <li>If found, the path fills in automatically</li>
+                        </ol>
+                        <p class="mb-0 mt-2 small text-success">
+                            <span class="bi bi-search me-1"></span>Searches: home directory, <code>/home</code>, <code>/var</code>, <code>/srv</code>, and common ServUO paths.
+                        </p>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="alert alert-secondary">
+                                <strong><span class="bi bi-arrow-down-circle me-1"></span>Pull from Server</strong>
+                                <p class="mb-0 mt-2 small">Downloads server reference data (bestiary, regions, tiles, etc.) to your local editor.</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="alert alert-secondary">
+                                <strong><span class="bi bi-arrow-up-circle me-1"></span>Push to Server</strong>
+                                <p class="mb-0 mt-2 small">Uploads your spawn data (.bin files) to the server's INPUT folder.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <p class="small text-muted mb-4">
+                        <span class="bi bi-info-circle"></span> Your FTP credentials are stored only in your account folder - never in the app itself. 
+                        Each account can have different FTP configurations.
+                    </p>
+
+                    <h6 class="text-primary mt-4"><span class="bi bi-download me-2"></span>Manual Server Setup (No Link or FTP)</h6>
+                    <p>If you prefer manual control, set up the server scripts yourself:</p>
                     <ol>
                         <li>Go to <strong>Settings</strong> → expand <strong>For Remote Servers</strong></li>
                         <li>Click <strong>Export Server Scripts (.zip)</strong></li>
@@ -975,8 +1038,8 @@
                         Look for console messages: "|-|-|-|-|-|-|-| UORespawn |-|-|-|-|-|-|-|"
                     </p>
 
-                    <h6 class="text-primary mt-4"><span class="bi bi-cloud me-2"></span>Remote Server File Transfer</h6>
-                    <p>For remote servers, you'll need to manually transfer files between editor and server:</p>
+                    <h6 class="text-primary mt-4"><span class="bi bi-cloud me-2"></span>Manual File Transfer</h6>
+                    <p>Without Link or FTP, manually transfer files between editor and server:</p>
 
                     <div class="row">
                         <div class="col-md-6">

@@ -19,6 +19,12 @@
                     @if (isCreatingAccount)
                     {
                         <!-- Create Account Form -->
+                        <div class="alert alert-success mb-3 py-2">
+                            <span class="bi bi-shield-check me-2"></span>
+                            <strong>No password needed!</strong>
+                            <span class="small">Just a friendly name to identify your account.</span>
+                        </div>
+
                         <div class="mb-3">
                             <label class="form-label text-muted small">Account Name</label>
                             <input type="text" 
@@ -27,12 +33,12 @@
                                    @bind="newAccountName"
                                    @bind:event="oninput" />
                             <div class="form-text text-muted">
-                                A friendly name to identify this account
+                                A friendly name to identify this setup (no password required)
                             </div>
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label text-muted small">Credential Folder</label>
+                            <label class="form-label text-muted small">Data Folder</label>
                             <div class="input-group">
                                 <input type="text" 
                                        class="form-control bg-secondary text-light border-dark" 
@@ -45,16 +51,17 @@
                             </div>
                             <div class="form-text text-muted">
                                 <span class="bi bi-info-circle me-1"></span>
-                                FTP credentials will be stored here. Choose a secure location you control.
+                                Your FTP/AI credentials will be stored here. Choose any folder you control.
                             </div>
                         </div>
 
                         <div class="alert alert-info mb-0">
-                            <span class="bi bi-shield-check me-2"></span>
+                            <span class="bi bi-lock me-2"></span>
                             <strong>Your Data, Your Control</strong>
                             <p class="mb-0 mt-2 small">
-                                We only store the folder path - not your credentials. 
-                                You can move, backup, or delete the credential folder anytime.
+                                <strong>This app stores nothing sensitive.</strong> FTP and AI credentials 
+                                are saved as files in YOUR folder. Delete the folder = data is gone.
+                                No server, no cloud, no accounts database.
                             </p>
                         </div>
 
@@ -105,16 +112,23 @@
                             <span class="bi bi-person-plus-fill" style="font-size: 4rem; color: goldenrod;"></span>
                             <h5 class="mt-3">Welcome to UORespawn!</h5>
                             <p class="text-muted">
-                                Create an account to use FTP features, or continue without one.
+                                Set up an account to use FTP sync features, or skip for now.
                             </p>
+                        </div>
+
+                        <div class="alert alert-success mb-3 py-2">
+                            <span class="bi bi-shield-check me-2"></span>
+                            <strong>No password required!</strong>
+                            <span class="small">Accounts are just friendly labels.</span>
                         </div>
 
                         <div class="alert alert-secondary">
                             <strong><span class="bi bi-question-circle me-2"></span>Why accounts?</strong>
                             <ul class="mb-0 mt-2 small">
-                                <li>Store FTP credentials securely in a folder you control</li>
-                                <li>Multiple accounts for different servers</li>
-                                <li>Share the app with others (spouse, team) - each person has their own</li>
+                                <li><strong>FTP credentials</strong> stored in a folder YOU choose and control</li>
+                                <li><strong>Multiple setups</strong> - different servers, test vs production</li>
+                                <li><strong>Share the app</strong> - spouse/team each has their own config</li>
+                                <li><strong>Zero app storage</strong> - delete the folder, data is gone</li>
                             </ul>
                         </div>
                     }
@@ -245,14 +259,14 @@
         }
 
         // Set as active and close
-        AccountService.SetActiveAccount(account.Name);
+        AccountService.SetActiveAccount(account.CredentialFolderPath);
         await OnAccountSelected.InvokeAsync(account);
         await OnClose.InvokeAsync();
     }
 
     private async Task SelectAccount(UserAccount account)
     {
-        AccountService.SetActiveAccount(account.Name);
+        AccountService.SetActiveAccount(account.CredentialFolderPath);
         await OnAccountSelected.InvokeAsync(account);
         await OnClose.InvokeAsync();
     }
