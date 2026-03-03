@@ -106,6 +106,14 @@ namespace UORespawnApp.Scripts.Constants
         /// </summary>
         public const string SERVER_SUBFOLDER = "SERVER";
 
+        /// <summary>
+        /// Tile images subfolder in Data directory
+        /// Contains PNG images for tile type visualization
+        /// Images named as lowercase tile name (e.g., grass.png, water.png)
+        /// NO_DRAW.png used as fallback for tiles without images
+        /// </summary>
+        public const string TILES_SUBFOLDER = "TILES";
+
         // ==================== COMMAND EDIT FILE NAMES (.txt) ====================
         // Server generates these in COMMANDS/ folder for editor to consume
         // Editor reads, applies to pack, then deletes the file
@@ -435,7 +443,32 @@ namespace UORespawnApp.Scripts.Constants
                 return commandsPath;
             }
         }
-        
+
+        /// <summary>
+        /// Get the server SYS folder path (Server/Data/UORespawn/SYS/)
+        /// Contains internal tracking files including UOR_DebugLog.txt
+        /// Returns null if server folder not configured or SYS folder doesn't exist
+        /// </summary>
+        public static string? ServerSysPath
+        {
+            get
+            {
+                var serverDataPath = ServerDataPath;
+                if (serverDataPath == null)
+                    return null;
+
+                var sysPath = Path.Combine(serverDataPath, UOR_SYS_SUBFOLDER);
+
+                // Don't auto-create SYS - server creates this folder
+                if (!Directory.Exists(sysPath))
+                {
+                    return null;
+                }
+
+                return sysPath;
+            }
+        }
+
         /// <summary>
         /// Get the maps folder path (Data/maps/)
         /// Used for storing map image files (.bmp)
@@ -455,6 +488,27 @@ namespace UORespawnApp.Scripts.Constants
                 }
 
                 return mapsPath;
+            }
+        }
+
+        /// <summary>
+        /// Get the tiles folder path (Data/TILES/)
+        /// Contains PNG images for tile type visualization
+        /// Images named as lowercase tile name (e.g., grass.png, water.png)
+        /// NO_DRAW.png used as fallback for tiles without images
+        /// </summary>
+        public static string TilesPath
+        {
+            get
+            {
+                var tilesPath = Path.Combine(BASE_DIR, DATA_FOLDER, TILES_SUBFOLDER);
+
+                if (!Directory.Exists(tilesPath))
+                {
+                    Directory.CreateDirectory(tilesPath);
+                }
+
+                return tilesPath;
             }
         }
 

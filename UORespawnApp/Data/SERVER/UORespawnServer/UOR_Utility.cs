@@ -817,8 +817,6 @@ namespace Server.Custom.UORespawnServer
                     color == ConsoleColor.DarkMagenta ||
                     color == ConsoleColor.Blue ||
                     color == ConsoleColor.DarkBlue ||
-                    color == ConsoleColor.Green ||
-                    color == ConsoleColor.DarkGreen ||
                     color == ConsoleColor.Cyan ||
                     color == ConsoleColor.DarkCyan;
         }

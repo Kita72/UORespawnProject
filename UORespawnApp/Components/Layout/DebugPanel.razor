@@ -1,5 +1,6 @@
 @using UORespawnApp.Scripts.Services
 @using UORespawnApp.Scripts.Utilities
+@using UORespawnApp.Scripts.Constants
 @inject DebugService DebugService
 @inject IJSRuntime JS
 @implements IDisposable
@@ -13,7 +14,7 @@
         }
         <span class="bi @(IsCollapsed ? "bi-chevron-left" : "bi-chevron-right") collapse-icon"></span>
     </div>
-    
+
     @if (!IsCollapsed)
             {
                 <div class="debug-toolbar">
@@ -25,6 +26,13 @@
                     </button>
                     <button class="debug-btn" @onclick="EndTest" title="End test marker">
                         <span class="bi bi-stop-fill"></span>
+                    </button>
+                    <div class="toolbar-divider"></div>
+                    <button class="debug-btn @(IsServerLinked ? "" : "disabled")" 
+                            @onclick="OpenServerDebugLog" 
+                            title="@(IsServerLinked ? "View Server Debug Log" : "Server not linked")"
+                            disabled="@(!IsServerLinked)">
+                        <span class="bi bi-server"></span>
                     </button>
                     <div class="toolbar-divider"></div>
                     <button class="debug-btn" @onclick="CopyLog" title="Copy log to clipboard">
@@ -83,12 +91,68 @@
     }
 </div>
 
+@* Server Debug Log Modal *@
+@if (showServerDebugModal)
+{
+    <div class="modal-backdrop" @onclick="CloseServerDebugModal"></div>
+    <div class="server-debug-modal">
+        <div class="server-debug-header">
+            <span class="bi bi-server me-2"></span>
+            <span>Server Debug Log</span>
+            <div class="server-debug-actions">
+                <button class="debug-btn" @onclick="RefreshServerDebugLog" title="Refresh">
+                    <span class="bi bi-arrow-clockwise"></span>
+                </button>
+                <button class="debug-btn" @onclick="CopyServerDebugLog" title="Copy to clipboard">
+                    <span class="bi bi-clipboard"></span>
+                </button>
+                <button class="debug-btn debug-btn-close" @onclick="CloseServerDebugModal" title="Close">
+                    <span class="bi bi-x-lg"></span>
+                </button>
+            </div>
+        </div>
+        <div class="server-debug-content">
+            @if (isLoadingServerLog)
+            {
+                <div class="server-debug-loading">
+                    <span class="bi bi-hourglass-split"></span>
+                    <span>Loading server debug log...</span>
+                </div>
+            }
+            else if (string.IsNullOrEmpty(serverDebugLogContent))
+            {
+                <div class="server-debug-empty">
+                    <span class="bi bi-file-earmark-x"></span>
+                    <span>No debug log found or file is empty</span>
+                    <small>Server may not have generated any debug entries yet</small>
+                </div>
+            }
+            else
+            {
+                <pre class="server-debug-text">@serverDebugLogContent</pre>
+            }
+        </div>
+        <div class="server-debug-footer">
+            <span class="server-debug-path" title="@serverDebugLogPath">@serverDebugLogPath</span>
+        </div>
+    </div>
+}
+
 @code {
     [Parameter] public EventCallback<bool> OnCollapseChanged { get; set; }
 
     private bool IsCollapsed = false;
     private DateTime sessionStart = DateTime.Now;
     private int testCounter = 0;
+
+    // Server debug log modal state
+    private bool showServerDebugModal = false;
+    private bool isLoadingServerLog = false;
+    private string serverDebugLogContent = string.Empty;
+    private string serverDebugLogPath = string.Empty;
+
+    private bool IsServerLinked => !string.IsNullOrEmpty(Settings.ServerFolder) 
+                                   && Directory.Exists(Settings.ServerFolder);
 
     protected override void OnInitialized()
     {
@@ -167,5 +231,92 @@
         if (duration.TotalMinutes >= 1)
             return $"{(int)duration.TotalMinutes}m {duration.Seconds}s";
         return $"{(int)duration.TotalSeconds}s";
+    }
+
+    // Server Debug Log Methods
+    private async Task OpenServerDebugLog()
+    {
+        if (!IsServerLinked)
+            return;
+
+        showServerDebugModal = true;
+        await LoadServerDebugLog();
+    }
+
+    private void CloseServerDebugModal()
+    {
+        showServerDebugModal = false;
+        serverDebugLogContent = string.Empty;
+    }
+
+    private async Task RefreshServerDebugLog()
+    {
+        await LoadServerDebugLog();
+    }
+
+    private async Task LoadServerDebugLog()
+    {
+        isLoadingServerLog = true;
+        serverDebugLogContent = string.Empty;
+        StateHasChanged();
+
+        try
+        {
+            var sysPath = PathConstants.ServerSysPath;
+            if (sysPath == null)
+            {
+                serverDebugLogPath = "Server SYS folder not found";
+                return;
+            }
+
+            var debugLogFile = Path.Combine(sysPath, "UOR_DebugLog.txt");
+            serverDebugLogPath = debugLogFile;
+
+            if (!File.Exists(debugLogFile))
+            {
+                serverDebugLogContent = string.Empty;
+                return;
+            }
+
+            // Read file with retry for file locks
+            for (int i = 0; i < 3; i++)
+            {
+                try
+                {
+                    serverDebugLogContent = await File.ReadAllTextAsync(debugLogFile);
+                    break;
+                }
+                catch (IOException) when (i < 2)
+                {
+                    await Task.Delay(100);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            serverDebugLogContent = $"Error loading debug log: {ex.Message}";
+            DebugService.AddEntry(DebugLogLevel.Error, $"Failed to load server debug log: {ex.Message}", "DebugPanel");
+        }
+        finally
+        {
+            isLoadingServerLog = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task CopyServerDebugLog()
+    {
+        if (string.IsNullOrEmpty(serverDebugLogContent))
+            return;
+
+        try
+        {
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", serverDebugLogContent);
+            DebugService.AddEntry(DebugLogLevel.Info, "Server debug log copied to clipboard", "DebugPanel");
+        }
+        catch (Exception ex)
+        {
+            DebugService.AddEntry(DebugLogLevel.Error, $"Failed to copy server log: {ex.Message}", "DebugPanel");
+        }
     }
 }

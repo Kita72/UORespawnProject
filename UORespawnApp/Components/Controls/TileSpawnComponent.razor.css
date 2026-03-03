@@ -125,3 +125,185 @@ body.light-theme .tile-item.selected {
     background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
     border-color: #667eea;
 }
+
+/* ==================== TILE IMAGE VIEWER ==================== */
+
+/* Tile Image Container - Match tile list height */
+.tile-image-container {
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 180px);
+    min-height: 400px;
+    overflow: hidden;
+}
+
+/* Tile Image Body */
+.tile-image-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+/* Tile Image Wrapper - Contains the actual image */
+.tile-image-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    max-width: 200px;
+    aspect-ratio: 1 / 1;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    overflow: hidden;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* The actual tile image */
+.tile-image {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    image-rendering: pixelated; /* Keep pixel art crisp */
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+}
+
+/* Tile name label below image */
+.tile-image-label {
+    margin-top: 12px;
+    text-align: center;
+}
+
+.tile-display-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: goldenrod;
+    display: block;
+}
+
+.tile-subtitle {
+    font-size: 0.85rem;
+    color: #89b4fa;
+    font-style: italic;
+    display: block;
+    margin-top: 2px;
+}
+
+/* Tile Description Section */
+.tile-description-section {
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    text-align: left;
+}
+
+.tile-description-text {
+    font-size: 0.8rem;
+    line-height: 1.5;
+    color: #cdd6f4;
+    margin: 0;
+}
+
+.tile-no-image-note {
+    margin-top: 10px;
+    padding: 8px;
+    background-color: rgba(137, 180, 250, 0.1);
+    border-radius: 4px;
+    font-size: 0.75rem;
+    color: #89b4fa;
+}
+
+/* Category Badge */
+.tile-category-badge {
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.category-natural {
+    background-color: rgba(166, 227, 161, 0.2);
+    color: #a6e3a1;
+    border: 1px solid rgba(166, 227, 161, 0.3);
+}
+
+.category-constructed {
+    background-color: rgba(137, 180, 250, 0.2);
+    color: #89b4fa;
+    border: 1px solid rgba(137, 180, 250, 0.3);
+}
+
+.category-exotic {
+    background-color: rgba(203, 166, 247, 0.2);
+    color: #cba6f7;
+    border: 1px solid rgba(203, 166, 247, 0.3);
+}
+
+.category-custom {
+    background-color: rgba(249, 226, 175, 0.2);
+    color: #f9e2af;
+    border: 1px solid rgba(249, 226, 175, 0.3);
+}
+
+/* Placeholder when no tile selected */
+.tile-image-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    text-align: center;
+}
+
+.tile-image-placeholder p {
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+/* Dark Theme Support for Tile Image */
+body.dark-theme .tile-image-body {
+    background-color: rgba(0, 0, 0, 0.3);
+}
+
+body.dark-theme .tile-image-wrapper {
+    background-color: rgba(0, 0, 0, 0.4);
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* Light Theme Support for Tile Image */
+body.light-theme .tile-image-body {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+body.light-theme .tile-image-wrapper {
+    background-color: rgba(0, 0, 0, 0.1);
+    border-color: rgba(0, 0, 0, 0.1);
+}
+
+body.light-theme .tile-display-name {
+    color: #b8860b; /* Darker goldenrod for light theme */
+}
+
+body.light-theme .tile-subtitle {
+    color: #4a6fa5;
+}
+
+body.light-theme .tile-description-text {
+    color: #444;
+}
+
+body.light-theme .tile-description-section {
+    border-top-color: rgba(0, 0, 0, 0.1);
+}
+
+body.light-theme .tile-no-image-note {
+    background-color: rgba(74, 111, 165, 0.1);
+    color: #4a6fa5;
+}

@@ -7,7 +7,11 @@ namespace Server.Custom.UORespawnServer.Helpers
     {
         internal static string GetTileName(int id, Map map, Point3D location)
         {
-            if (InvalidTiles.Contains(id)) return string.Empty;
+            string name = TileData.LandTable[id].Name;
+
+            if (InvalidTileNames.Contains(name)) return string.Empty;
+
+            if (CloudTiles.Contains(id)) return "cloud";
 
             if (GrassTiles.Contains(id)) return "grass";
 
@@ -29,7 +33,9 @@ namespace Server.Custom.UORespawnServer.Helpers
 
             if (SandStoneTiles.Contains(id)) return "sand stone";
 
-            if (CloudTiles.Contains(id)) return "cloud";
+            if (!string.IsNullOrEmpty(name)) return name;
+
+            if (location == Point3D.Zero) return string.Empty;
 
             return new LandTarget(location, map).Name;
         }
@@ -307,16 +313,11 @@ namespace Server.Custom.UORespawnServer.Helpers
             "2028",
             "cave exit",
             "Cave exit",
-            "cloud_a",
-            "cloud_b",
-            "cloud_c",
-            "cloud_d",
+            "stone moss2",
             "NODRAW",
             "NoName",
-            "stone moss2",
             "TerrainFallback",
             "UNUSED",
-            "void",
             "VOID!!!!!!",
             "Voiddestruction",
             "VoidSwell"

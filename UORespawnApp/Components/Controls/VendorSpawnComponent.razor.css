@@ -79,8 +79,8 @@
 .right-column-container {
     display: flex;
     flex-direction: column;
-    height: calc(100vh - 150px);
-    min-height: 500px;
+    max-height: calc(100vh - 80px);
+    min-height: 600px;
 }
 
 /* Map card (fixed height) */
@@ -93,7 +93,7 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    min-height: 0;
+    min-height: 200px;
     overflow: hidden;
 }
 
@@ -104,7 +104,7 @@
 .spawn-list-body {
     flex: 1;
     overflow-y: auto;
-    min-height: 0;
+    overflow-x: hidden;
 }
 
 /* Spawn item styling */

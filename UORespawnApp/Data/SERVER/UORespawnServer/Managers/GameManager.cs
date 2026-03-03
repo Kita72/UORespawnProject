@@ -297,7 +297,7 @@ namespace Server.Custom.UORespawnServer.Managers
 
             for (int i = 0; i < TileData.MaxLandValue; i++)
             {
-                var name = TileData.LandTable[i].Name;
+                var name = TileHelper.GetTileName(i, Map.Felucca, Point3D.Zero);
 
                 if (!tileNames.Contains(name) && IsValidTile(name))
                 {

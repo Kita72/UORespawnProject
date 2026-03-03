@@ -84,7 +84,7 @@ namespace Server.Custom.UORespawnServer.Managers
                 sb.AppendLine("┌─────────────────────────────────────────────────────────────┐");
                 sb.AppendLine("│ SESSION INFO                                                 ");
                 sb.AppendLine("├─────────────────────────────────────────────────────────────┤");
-                sb.AppendLine($"│ Version      : {UOR_Settings.VERSION,-45} │");
+                sb.AppendLine($"│ Version      : {UOR_Settings.VERSION,-45}");
                 sb.AppendLine($"│ Session Start: {_SessionStart,-45:yyyy-MM-dd HH:mm:ss}");
                 sb.AppendLine($"│ Session End  : {DateTime.Now,-45:yyyy-MM-dd HH:mm:ss}");
                 sb.AppendLine($"│ Duration     : {(DateTime.Now - _SessionStart),-45:hh\\:mm\\:ss}");

@@ -32,10 +32,14 @@ namespace Server.Custom.UORespawnServer
     {
         private static void LoadLogo()
         {
-            UOR_Utility.SendMsg(ConsoleColor.DarkCyan, "*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*");
-            UOR_Utility.SendMsg(ConsoleColor.Blue, "|-|-|-|-|-|-|-| UORespawn |-|-|-|-|-|-|-|");
-            UOR_Utility.SendMsg(ConsoleColor.Blue, "|-|-|-|-|-|-|-|   ~*~*~   |-|-|-|-|-|-|-|");
-            UOR_Utility.SendMsg(ConsoleColor.DarkCyan, "*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*");
+            UOR_Utility.SendMsg(ConsoleColor.DarkBlue, $"*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{UOR_Settings.VERSION}~~*");
+            UOR_Utility.SendMsg(ConsoleColor.Blue, "*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*");
+            UOR_Utility.SendMsg(ConsoleColor.DarkMagenta, "|-|-|-|-|-|-|-| UORespawn |-|-|-|-|-|-|-|");
+            UOR_Utility.SendMsg(ConsoleColor.Magenta, "|-|-|-|-|-|-|-| ~~~*G*~~~ |-|-|-|-|-|-|-|");
+            UOR_Utility.SendMsg(ConsoleColor.Magenta, "|-|-|-|-|-|-|-|  ~~1#3~~  |-|-|-|-|-|-|-|");
+            UOR_Utility.SendMsg(ConsoleColor.Magenta, "|-|-|-|-|-|-|-|   ~*D*~   |-|-|-|-|-|-|-|");
+            UOR_Utility.SendMsg(ConsoleColor.Blue, "*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*");
+            UOR_Utility.SendMsg(ConsoleColor.DarkBlue, "*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Wilson~~*");
         }
 
         /// <summary>
@@ -144,7 +148,7 @@ namespace Server.Custom.UORespawnServer
             // Unsubscribe - one-time startup only
             EventSink.ServerStarted -= OnServerStarted;
 
-            UOR_Utility.SendMsg(ConsoleColor.Magenta, $"Respawn-[ServerStarted - Beginning Full Init]");
+            UOR_Utility.SendMsg(ConsoleColor.DarkCyan, $"Respawn-[ServerStarted - Beginning Full Init]");
 
             // PHASE 1: Reclaim spawner references (Mobile.Spawner is not serialized)
             ReclaimSpawners();
@@ -152,6 +156,7 @@ namespace Server.Custom.UORespawnServer
             UOR_Utility.SendMsg(ConsoleColor.Yellow, $"Respawn-[1/5]");
 
             // PHASE 2: Clean up mob spawn from previous session (fresh world)
+
             CleanupMobSpawn();
 
             UOR_Utility.SendMsg(ConsoleColor.Yellow, $"Respawn-[2/5]");
@@ -179,11 +184,7 @@ namespace Server.Custom.UORespawnServer
 
             UOR_Utility.SendMsg(ConsoleColor.Yellow, $"Respawn-[Sequence Complete]");
 
-            UOR_Utility.SendMsg(ConsoleColor.Cyan, $"FLAGS-[{TotalFlagsCleaned} Deleted]");
-
-            UOR_Utility.SendMsg(ConsoleColor.Cyan, $"GATES-[{TotalGatesCleaned} Deleted]");
-
-            UOR_Utility.SendMsg(ConsoleColor.Magenta, "STARTED - Running ...");
+            UOR_Utility.SendMsg(ConsoleColor.DarkBlue, "STARTED - Running ...");
         }
 
         /// <summary>
@@ -195,7 +196,17 @@ namespace Server.Custom.UORespawnServer
             int mobsReclaimed = UOR_MobSpawner.Instance.ReclaimAll();
             int vendorsReclaimed = UOR_VendorSpawner.Instance.ReclaimAll();
 
-            UOR_Utility.SendMsg(ConsoleColor.Cyan, $"RECLAIM-[Mobs: {mobsReclaimed}, Vendors: {vendorsReclaimed}]");
+            if (mobsReclaimed > 0)
+                UOR_Utility.SendMsg(ConsoleColor.Cyan, $"SPAWN-[{mobsReclaimed} Reclaimed]");
+
+            if (vendorsReclaimed > 0)
+                UOR_Utility.SendMsg(ConsoleColor.Cyan, $"VENDORS-[{vendorsReclaimed} Reclaimed]");
+
+            if (TotalFlagsCleaned > 0)
+                UOR_Utility.SendMsg(ConsoleColor.Cyan, $"FLAGS-[{TotalFlagsCleaned} Deleted]");
+
+            if (TotalGatesCleaned > 0)
+                UOR_Utility.SendMsg(ConsoleColor.Cyan, $"GATES-[{TotalGatesCleaned} Deleted]");
         }
 
         /// <summary>
@@ -206,7 +217,10 @@ namespace Server.Custom.UORespawnServer
         {
             int deleted = UOR_MobSpawner.CleanupAll();
 
-            UOR_Utility.SendMsg(ConsoleColor.Cyan, $"CLEANUP-[{deleted} Mobs Deleted - Fresh World Ready]");
+            if (deleted > 0)
+                UOR_Utility.SendMsg(ConsoleColor.Cyan, $"SPAWN-[{deleted} Deleted]");
+
+            UOR_Utility.SendMsg(ConsoleColor.Magenta, "Fresh World Ready!");
         }
 
         /// <summary>

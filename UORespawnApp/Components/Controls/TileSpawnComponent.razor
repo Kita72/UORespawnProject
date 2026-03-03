@@ -17,35 +17,51 @@
     </div>
 
     <div class="row">
-        <!-- Tile Selection -->
+        <!-- LEFT: Tile Image Viewer -->
         <div class="col-lg-3">
-            <div class="card map-card mb-3 tile-list-container">
+            <div class="card map-card mb-3 tile-image-container">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <strong style="color: goldenrod;">Tile Types</strong>
-                    <span class="badge bg-light text-dark" title="Total spawns across all tile types">@GetTotalAllTileSpawnCount() Spawns</span>
+                    <strong style="color: goldenrod;">Tile Preview</strong>
+                    @if (selectedTile != null)
+                    {
+                        <span class="tile-category-badge @GetCategoryClass(GetCurrentTileDescription().Category)">@GetCurrentTileDescription().Category</span>
+                    }
                 </div>
-                <div class="card-body p-2 tile-list-body">
-                    <div class="tile-list">
-                        @foreach (var tileName in TileListUtility.GetTileList())
-                        {
-                            var displayName = GetTileDisplayName(tileName);
-                            var totalSpawns = GetTileEntityTotalSpawnCount(tileName);
-                            <div class="tile-item @(selectedTile == tileName ? "selected" : "")" 
-                                 @onclick="() => SelectTile(tileName)">
-                                <span class="tile-name">@displayName</span>
-                                @if (totalSpawns > 0)
-                                {
-                                    <span class="badge bg-primary">@totalSpawns</span>
-                                }
-                            </div>
-                        }
-                    </div>
+                <div class="card-body tile-image-body">
+                    @if (selectedTile != null)
+                    {
+                        <div class="tile-image-wrapper">
+                            <img src="@GetTileImageUrl()" alt="@selectedTile" class="tile-image" />
+                        </div>
+                        <div class="tile-image-label">
+                            <span class="tile-display-name">@GetTileDisplayName(selectedTile)</span>
+                            <span class="tile-subtitle">@GetCurrentTileDescription().Title</span>
+                        </div>
+                        <div class="tile-description-section">
+                            <p class="tile-description-text">@GetCurrentTileDescription().Description</p>
+                            @if (!TileImageUtility.HasTileImage(selectedTile))
+                            {
+                                <div class="tile-no-image-note">
+                                    <span class="bi bi-info-circle me-1"></span>
+                                    <span>This tile group has multiple visual variants. The preview shows a placeholder image.</span>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="tile-image-placeholder">
+                            <span class="bi bi-grid-3x3-gap" style="font-size: 3rem; opacity: 0.3;"></span>
+                            <p class="text-muted mt-2 mb-0">Select a tile type</p>
+                            <small class="text-muted">from the list on the right</small>
+                        </div>
+                    }
                 </div>
             </div>
         </div>
 
-        <!-- Spawn Configuration -->
-        <div class="col-lg-9">
+        <!-- MIDDLE: Spawn Configuration -->
+        <div class="col-lg-6">
             @if (selectedTile != null)
             {
                 <div class="card map-card mb-3">
@@ -180,10 +196,37 @@
                 <div class="card map-card">
                     <div class="card-body text-center py-5">
                         <span class="bi bi-grid-3x3-gap" style="font-size: 3rem; opacity: 0.3;"></span>
-                        <p class="text-muted mt-3">Select a tile type from the left to configure spawns</p>
+                        <p class="text-muted mt-3">Select a tile type from the right to configure spawns</p>
                     </div>
                 </div>
             }
+        </div>
+
+        <!-- RIGHT: Tile Selection List -->
+        <div class="col-lg-3">
+            <div class="card map-card mb-3 tile-list-container">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <strong style="color: goldenrod;">Tile Types</strong>
+                    <span class="badge bg-light text-dark" title="Total spawns across all tile types">@GetTotalAllTileSpawnCount() Spawns</span>
+                </div>
+                <div class="card-body p-2 tile-list-body">
+                    <div class="tile-list">
+                        @foreach (var tileName in TileListUtility.GetTileList())
+                        {
+                            var displayName = GetTileDisplayName(tileName);
+                            var totalSpawns = GetTileEntityTotalSpawnCount(tileName);
+                            <div class="tile-item @(selectedTile == tileName ? "selected" : "")" 
+                                 @onclick="() => SelectTile(tileName)">
+                                <span class="tile-name">@displayName</span>
+                                @if (totalSpawns > 0)
+                                {
+                                    <span class="badge bg-primary">@totalSpawns</span>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -204,6 +247,7 @@
     private bool showModal = false;
     private Frequency currentFrequency = Frequency.Common;
     private List<string> currentCategorySpawns = new();
+    private string? currentTileImageUrl = null;
 
     protected override void OnInitialized()
     {
@@ -258,6 +302,9 @@
     {
         selectedTile = tileName;
 
+        // Update tile image URL
+        currentTileImageUrl = TileImageUtility.GetTileImageDataUrl(tileName);
+
         // Save selection to session for persistence during runtime
         if (Utility.SESSION != null)
         {
@@ -299,11 +346,37 @@
         StateHasChanged();
     }
 
+    private string GetTileImageUrl()
+    {
+        if (string.IsNullOrEmpty(currentTileImageUrl) && selectedTile != null)
+        {
+            currentTileImageUrl = TileImageUtility.GetTileImageDataUrl(selectedTile);
+        }
+        return currentTileImageUrl ?? string.Empty;
+    }
+
     private string GetTileDisplayName(string? tileName)
     {
         if (string.IsNullOrEmpty(tileName))
             return "Unknown";
         return tileName.Replace('_', ' ').ToTitleCase();
+    }
+
+    private string GetCategoryClass(string category)
+    {
+        return category.ToLowerInvariant() switch
+        {
+            "natural" => "category-natural",
+            "constructed" => "category-constructed",
+            "exotic" => "category-exotic",
+            "custom" => "category-custom",
+            _ => "category-custom"
+        };
+    }
+
+    private TileDescription GetCurrentTileDescription()
+    {
+        return TileImageUtility.GetTileDescription(selectedTile ?? string.Empty);
     }
 
     private int GetTileEntityTotalSpawnCount(string tileName)

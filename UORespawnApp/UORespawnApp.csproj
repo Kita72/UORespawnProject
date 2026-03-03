@@ -227,4 +227,12 @@
       </None>
     </ItemGroup>
 
+    <!-- TILES: Tile type images for visualization -->
+    <ItemGroup>
+      <None Include="Data\TILES\*.png">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        <Link>Data\TILES\%(Filename)%(Extension)</Link>
+      </None>
+    </ItemGroup>
+
 </Project>
