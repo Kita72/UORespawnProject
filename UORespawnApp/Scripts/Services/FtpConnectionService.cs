@@ -155,7 +155,11 @@ public class FtpConnectionService : IDisposable
     /// <summary>
     /// Uploads a file to the server.
     /// </summary>
-    public async Task<bool> UploadFileAsync(string localPath, string remotePath, IProgress<FtpProgress>? progress = null)
+    /// <param name="localPath">Local file path to upload</param>
+    /// <param name="remotePath">Remote destination path</param>
+    /// <param name="progress">Optional progress reporter</param>
+    /// <param name="cancellationToken">Cancellation token to cancel the operation</param>
+    public async Task<bool> UploadFileAsync(string localPath, string remotePath, IProgress<FtpProgress>? progress = null, CancellationToken cancellationToken = default)
     {
         if (_client == null || !_client.IsConnected)
         {
@@ -170,7 +174,8 @@ public class FtpConnectionService : IDisposable
                 remotePath,
                 FtpRemoteExists.Overwrite,
                 createRemoteDir: true,
-                progress: progress);
+                progress: progress,
+                token: cancellationToken);
 
             var success = status == FtpStatus.Success;
             if (success)
@@ -195,7 +200,11 @@ public class FtpConnectionService : IDisposable
     /// <summary>
     /// Downloads a file from the server.
     /// </summary>
-    public async Task<bool> DownloadFileAsync(string localPath, string remotePath, IProgress<FtpProgress>? progress = null)
+    /// <param name="localPath">Local destination path</param>
+    /// <param name="remotePath">Remote file path to download</param>
+    /// <param name="progress">Optional progress reporter</param>
+    /// <param name="cancellationToken">Cancellation token to cancel the operation</param>
+    public async Task<bool> DownloadFileAsync(string localPath, string remotePath, IProgress<FtpProgress>? progress = null, CancellationToken cancellationToken = default)
     {
         if (_client == null || !_client.IsConnected)
         {
@@ -216,7 +225,8 @@ public class FtpConnectionService : IDisposable
                 localPath,
                 remotePath,
                 FtpLocalExists.Overwrite,
-                progress: progress);
+                progress: progress,
+                token: cancellationToken);
 
             var success = status == FtpStatus.Success;
             if (success)
@@ -241,7 +251,9 @@ public class FtpConnectionService : IDisposable
     /// <summary>
     /// Checks if a remote file exists.
     /// </summary>
-    public async Task<bool> FileExistsAsync(string remotePath)
+    /// <param name="remotePath">Remote file path to check</param>
+    /// <param name="cancellationToken">Cancellation token to cancel the operation</param>
+    public async Task<bool> FileExistsAsync(string remotePath, CancellationToken cancellationToken = default)
     {
         if (_client == null || !_client.IsConnected)
         {
@@ -251,7 +263,7 @@ public class FtpConnectionService : IDisposable
 
         try
         {
-            return await _client!.FileExists(remotePath);
+            return await _client!.FileExists(remotePath, cancellationToken);
         }
         catch (Exception ex)
         {

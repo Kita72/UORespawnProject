@@ -1,0 +1,190 @@
+using UORespawnApp.Scripts.Constants;
+
+namespace UORespawnApp.Scripts.Utilities;
+
+/// <summary>
+/// Validates and ensures required application configuration (folders/files) exists at startup.
+/// Creates missing directories and provides diagnostic information about the app's data structure.
+/// </summary>
+public static class ConfigurationValidator
+{
+    /// <summary>
+    /// Result of configuration validation.
+    /// </summary>
+    public class ValidationResult
+    {
+        public bool IsValid { get; set; } = true;
+        public List<string> CreatedFolders { get; set; } = [];
+        public List<string> MissingFiles { get; set; } = [];
+        public List<string> Warnings { get; set; } = [];
+        public List<string> Errors { get; set; } = [];
+
+        public bool HasWarnings => Warnings.Count > 0;
+        public bool HasErrors => Errors.Count > 0;
+    }
+
+    /// <summary>
+    /// Required folders that must exist for the app to function.
+    /// These are created automatically if missing.
+    /// </summary>
+    private static readonly string[] RequiredFolders =
+    [
+        PathConstants.LocalDataPath,      // Data/UORespawn/ - local spawn data
+        PathConstants.MapsPath,           // Data/MAPS/ - map images
+        PathConstants.PacksPath,          // Data/PACKS/ - spawn packs root
+        PathConstants.PacksApprovedPath,  // Data/PACKS/Approved/
+        PathConstants.PacksCreatedPath,   // Data/PACKS/Created/
+        PathConstants.PacksImportedPath,  // Data/PACKS/Imported/
+    ];
+
+    /// <summary>
+    /// Validates the application configuration at startup.
+    /// Creates missing folders and reports any issues.
+    /// </summary>
+    /// <returns>Validation result with details about created folders and any issues</returns>
+    public static ValidationResult ValidateStartup()
+    {
+        var result = new ValidationResult();
+
+        Logger.Info("=== Configuration Validation Started ===");
+
+        // Validate and create required folders
+        ValidateFolders(result);
+
+        // Validate server link if configured
+        ValidateServerLink(result);
+
+        // Log summary
+        LogValidationSummary(result);
+
+        return result;
+    }
+
+    /// <summary>
+    /// Validates and creates required folders.
+    /// </summary>
+    private static void ValidateFolders(ValidationResult result)
+    {
+        foreach (var folderPath in RequiredFolders)
+        {
+            try
+            {
+                if (!Directory.Exists(folderPath))
+                {
+                    Directory.CreateDirectory(folderPath);
+                    result.CreatedFolders.Add(folderPath);
+                    Logger.Info($"[Config] Created folder: {folderPath}");
+                }
+            }
+            catch (Exception ex)
+            {
+                result.IsValid = false;
+                result.Errors.Add($"Cannot create folder '{folderPath}': {ex.Message}");
+                Logger.Error($"[Config] Failed to create folder: {folderPath}", ex);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Validates the server link configuration if one is set.
+    /// </summary>
+    private static void ValidateServerLink(ValidationResult result)
+    {
+        var serverFolder = Settings.ServerFolder;
+
+        if (string.IsNullOrEmpty(serverFolder))
+        {
+            // No server link configured - that's fine
+            Logger.Info("[Config] No server link configured (standalone mode)");
+            return;
+        }
+
+        // Check if linked server folder still exists
+        if (!Directory.Exists(serverFolder))
+        {
+            result.Warnings.Add($"Linked server folder no longer exists: {serverFolder}");
+            Logger.Warning($"[Config] Linked server folder missing: {serverFolder}");
+            return;
+        }
+
+        // Check for expected server subfolders
+        var serverDataPath = Path.Combine(serverFolder, "Data", "UORespawn");
+        if (!Directory.Exists(serverDataPath))
+        {
+            result.Warnings.Add("Server UORespawn data folder not found. Server may need initialization.");
+            Logger.Warning("[Config] Server Data/UORespawn folder not found");
+        }
+
+        var serverScriptsPath = Path.Combine(serverFolder, "Scripts", "Custom", "UORespawnServer");
+        if (!Directory.Exists(serverScriptsPath))
+        {
+            result.Warnings.Add("Server UORespawn scripts not installed. Run server setup.");
+            Logger.Warning("[Config] Server scripts not found");
+        }
+
+        Logger.Info($"[Config] Server link validated: {serverFolder}");
+    }
+
+    /// <summary>
+    /// Logs a summary of the validation results.
+    /// </summary>
+    private static void LogValidationSummary(ValidationResult result)
+    {
+        if (result.CreatedFolders.Count > 0)
+        {
+            Logger.Info($"[Config] Created {result.CreatedFolders.Count} missing folder(s)");
+        }
+
+        if (result.HasWarnings)
+        {
+            Logger.Warning($"[Config] Validation completed with {result.Warnings.Count} warning(s)");
+        }
+
+        if (result.HasErrors)
+        {
+            Logger.Error($"[Config] Validation completed with {result.Errors.Count} error(s)");
+        }
+
+        if (result.IsValid && !result.HasWarnings)
+        {
+            Logger.Info("[Config] Configuration validation passed");
+        }
+
+        Logger.Info("=== Configuration Validation Complete ===");
+    }
+
+    /// <summary>
+    /// Gets a diagnostic summary of the current configuration.
+    /// Useful for troubleshooting and support.
+    /// </summary>
+    /// <returns>Multi-line string with configuration details</returns>
+    public static string GetDiagnosticSummary()
+    {
+        var lines = new List<string>
+        {
+            $"UORespawn v{Utility.Version} - Configuration Summary",
+            $"────────────────────────────────────────",
+            $"Base Directory: {AppDomain.CurrentDomain.BaseDirectory}",
+            $"Local Data Path: {PathConstants.LocalDataPath}",
+            $"Maps Path: {PathConstants.MapsPath}",
+            $"Packs Path: {PathConstants.PacksPath}",
+            $"Server Folder: {Settings.ServerFolder ?? "(not linked)"}",
+            $"Current Pack: {Settings.CurrentPackName ?? "(none)"}",
+            $"Debug Mode: {Settings.IsDebugMode}",
+            $"────────────────────────────────────────",
+        };
+
+        // Check folder existence
+        lines.Add("Folder Status:");
+        lines.Add($"  Local Data: {(Directory.Exists(PathConstants.LocalDataPath) ? "✓" : "✗")}");
+        lines.Add($"  Maps: {(Directory.Exists(PathConstants.MapsPath) ? "✓" : "✗")}");
+        lines.Add($"  Packs: {(Directory.Exists(PathConstants.PacksPath) ? "✓" : "✗")}");
+
+        if (!string.IsNullOrEmpty(Settings.ServerFolder))
+        {
+            lines.Add($"  Server Link: {(Directory.Exists(Settings.ServerFolder) ? "✓" : "✗ MISSING")}");
+        }
+
+        return string.Join(Environment.NewLine, lines);
+    }
+}

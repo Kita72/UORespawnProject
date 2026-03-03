@@ -10,15 +10,23 @@ namespace UORespawnApp.Scripts.Services
     /// </summary>
     public class UpdateChecker
     {
-        private static readonly HttpClient _httpClient = new();
+        private static readonly HttpClient _httpClient;
         private const string GITHUB_API_URL = "https://api.github.com/repos/Kita72/UORespawnProject/releases/latest";
         private const string CURRENT_VERSION = Utility.Version;
-        
+
         // Cached JsonSerializerOptions for deserialization (reused across all calls)
         private static readonly JsonSerializerOptions _jsonOptions = new() 
         { 
             PropertyNameCaseInsensitive = true 
         };
+
+        // Static constructor - configure HttpClient headers once (not on every call)
+        static UpdateChecker()
+        {
+            _httpClient = new HttpClient();
+            _httpClient.DefaultRequestHeaders.Add("User-Agent", "UORespawn-UpdateChecker");
+            _httpClient.DefaultRequestHeaders.Add("Accept", "application/vnd.github.v3+json");
+        }
         
         // Cache results to avoid excessive API calls
         private DateTime _lastCheckTime = DateTime.MinValue;
@@ -43,13 +51,8 @@ namespace UORespawnApp.Scripts.Services
             try
             {
                 Logger.Info($"Checking for updates... Current version: {CURRENT_VERSION}");
-                
-                // Set user agent (GitHub API requires it)
-                _httpClient.DefaultRequestHeaders.Clear();
-                _httpClient.DefaultRequestHeaders.Add("User-Agent", "UORespawn-UpdateChecker");
-                _httpClient.DefaultRequestHeaders.Add("Accept", "application/vnd.github.v3+json");
-                
-                // Call GitHub API
+
+                // Call GitHub API (headers configured in static constructor)
                 var response = await _httpClient.GetAsync(GITHUB_API_URL);
                 response.EnsureSuccessStatusCode();
                 

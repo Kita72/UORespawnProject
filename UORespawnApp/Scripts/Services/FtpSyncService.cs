@@ -53,7 +53,9 @@ public class FtpSyncService
     /// Uploads spawn data files to the remote server.
     /// Files uploaded: UOR_BoxSpawn.bin, UOR_TileSpawn.bin, UOR_RegionSpawn.bin, UOR_VendorSpawn.bin, UOR_SpawnSettings.csv
     /// </summary>
-    public async Task<SyncResult> UploadSpawnDataAsync(IProgress<SyncProgressEventArgs>? progress = null)
+    /// <param name="progress">Optional progress reporter</param>
+    /// <param name="cancellationToken">Cancellation token to cancel the operation</param>
+    public async Task<SyncResult> UploadSpawnDataAsync(IProgress<SyncProgressEventArgs>? progress = null, CancellationToken cancellationToken = default)
     {
         if (!IsSyncAvailable || string.IsNullOrEmpty(RemotePath))
         {
@@ -89,6 +91,17 @@ public class FtpSyncService
 
             foreach (var (localPath, remotePath, displayName) in filesToUpload)
             {
+                // Check for cancellation before each file
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    await _ftpConnection.DisconnectAsync();
+                    return new SyncResult(false, "Upload cancelled by user")
+                    {
+                        FilesTransferred = uploadedFiles.Count,
+                        FileNames = uploadedFiles
+                    };
+                }
+
                 current++;
                 ReportProgress(progress, $"Uploading {displayName}...", current, total);
 
@@ -104,7 +117,7 @@ public class FtpSyncService
                     ReportProgress(progress, $"Uploading {displayName}... {percent}%", current, total, percent);
                 });
 
-                var success = await _ftpConnection.UploadFileAsync(localPath, remotePath, fileProgress);
+                var success = await _ftpConnection.UploadFileAsync(localPath, remotePath, fileProgress, cancellationToken);
                 if (success)
                 {
                     uploadedFiles.Add(displayName);
@@ -136,6 +149,15 @@ public class FtpSyncService
                 };
             }
         }
+        catch (OperationCanceledException)
+        {
+            Logger.Info("FTP upload cancelled by user");
+            result = new SyncResult(false, "Upload cancelled")
+            {
+                FilesTransferred = uploadedFiles.Count,
+                FileNames = uploadedFiles
+            };
+        }
         catch (Exception ex)
         {
             Logger.Error($"FTP upload failed: {ex.Message}");
@@ -153,7 +175,9 @@ public class FtpSyncService
     /// Downloads reference data files from the remote server.
     /// Files downloaded: UOR_BestiaryList.txt, UOR_RegionList.txt, UOR_TileList.txt, etc.
     /// </summary>
-    public async Task<SyncResult> DownloadReferenceDataAsync(IProgress<SyncProgressEventArgs>? progress = null)
+    /// <param name="progress">Optional progress reporter</param>
+    /// <param name="cancellationToken">Cancellation token to cancel the operation</param>
+    public async Task<SyncResult> DownloadReferenceDataAsync(IProgress<SyncProgressEventArgs>? progress = null, CancellationToken cancellationToken = default)
     {
         if (!IsSyncAvailable || string.IsNullOrEmpty(RemotePath))
         {
@@ -192,11 +216,22 @@ public class FtpSyncService
 
             foreach (var (localPath, remotePath, displayName) in filesToDownload)
             {
+                // Check for cancellation before each file
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    await _ftpConnection.DisconnectAsync();
+                    return new SyncResult(false, "Download cancelled by user")
+                    {
+                        FilesTransferred = downloadedFiles.Count,
+                        FileNames = downloadedFiles
+                    };
+                }
+
                 current++;
                 ReportProgress(progress, $"Downloading {displayName}...", current, total);
 
                 // Check if remote file exists first
-                if (!await _ftpConnection.FileExistsAsync(remotePath))
+                if (!await _ftpConnection.FileExistsAsync(remotePath, cancellationToken))
                 {
                     Logger.Info($"Skipping download - remote file not found: {remotePath}");
                     continue;
@@ -208,7 +243,7 @@ public class FtpSyncService
                     ReportProgress(progress, $"Downloading {displayName}... {percent}%", current, total, percent);
                 });
 
-                var success = await _ftpConnection.DownloadFileAsync(localPath, remotePath, fileProgress);
+                var success = await _ftpConnection.DownloadFileAsync(localPath, remotePath, fileProgress, cancellationToken);
                 if (success)
                 {
                     downloadedFiles.Add(displayName);
@@ -244,6 +279,15 @@ public class FtpSyncService
                 };
             }
         }
+        catch (OperationCanceledException)
+        {
+            Logger.Info("FTP download cancelled by user");
+            result = new SyncResult(false, "Download cancelled")
+            {
+                FilesTransferred = downloadedFiles.Count,
+                FileNames = downloadedFiles
+            };
+        }
         catch (Exception ex)
         {
             Logger.Error($"FTP download failed: {ex.Message}");
@@ -260,13 +304,21 @@ public class FtpSyncService
     /// <summary>
     /// Performs a full sync: downloads reference data, then uploads spawn data.
     /// </summary>
-    public async Task<SyncResult> FullSyncAsync(IProgress<SyncProgressEventArgs>? progress = null)
+    /// <param name="progress">Optional progress reporter</param>
+    /// <param name="cancellationToken">Cancellation token to cancel the operation</param>
+    public async Task<SyncResult> FullSyncAsync(IProgress<SyncProgressEventArgs>? progress = null, CancellationToken cancellationToken = default)
     {
         // First download reference data (bestiary, regions, etc.)
-        var downloadResult = await DownloadReferenceDataAsync(progress);
+        var downloadResult = await DownloadReferenceDataAsync(progress, cancellationToken);
+
+        // Check if cancelled or failed before continuing
+        if (cancellationToken.IsCancellationRequested || !downloadResult.Success)
+        {
+            return downloadResult;
+        }
 
         // Then upload spawn data
-        var uploadResult = await UploadSpawnDataAsync(progress);
+        var uploadResult = await UploadSpawnDataAsync(progress, cancellationToken);
 
         // Combine results
         var totalTransferred = downloadResult.FilesTransferred + uploadResult.FilesTransferred;

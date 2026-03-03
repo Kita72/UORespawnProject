@@ -3,7 +3,7 @@ using UORespawnApp.Scripts.Utilities;
 
 namespace UORespawnApp.Scripts.Services
 {
-    internal partial class DataWatcher : IDisposable
+    internal class DataWatcher : IDisposable
     {
         private readonly FileSystemWatcher? _outputWatcher;
         private readonly FileSystemWatcher? _commandsWatcher;

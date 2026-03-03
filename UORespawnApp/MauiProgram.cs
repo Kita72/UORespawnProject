@@ -47,8 +47,12 @@ namespace UORespawnApp
             {
                 Logger.Info($"UORespawn v{Utility.Version} - Starting minimal initialization...");
 
-                var localDataFolder = PathConstants.LocalDataPath;
-                Logger.Info($"Local data folder ready: {localDataFolder}");
+                // Validate configuration and create missing folders
+                var validationResult = ConfigurationValidator.ValidateStartup();
+                if (validationResult.HasErrors)
+                {
+                    Logger.Error("Configuration validation failed - app may not function correctly");
+                }
 
                 Utility.StartSession(new Session());
                 Utility.InitializeSpawnDictionary();
@@ -58,7 +62,7 @@ namespace UORespawnApp
             }
             catch (Exception ex)
             {
-                Logger.Error("Error during minimal initialization", ex);
+                ErrorHandler.Handle(ex, "Startup initialization", notifyUser: false);
                 System.Diagnostics.Debug.WriteLine($"Error during initialization: {ex.Message}");
             }
 
