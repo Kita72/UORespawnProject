@@ -1,5 +1,4 @@
-using System.Collections;
-
+using System.Collections.Generic;
 using Server.Custom.UORespawnServer.Enums;
 using Server.Custom.UORespawnServer.Interfaces;
 
@@ -14,12 +13,12 @@ namespace Server.Custom.UORespawnServer.Entities
         public WeatherTypes WeatherType { get; set; }
         public TimeTypes TimedType { get; set; }
 
-        public ArrayList WaterList { get; set; }
-        public ArrayList WeatherList { get; set; }
-        public ArrayList TimedList { get; set; }
-        public ArrayList CommonList { get; set; }
-        public ArrayList UnCommonList { get; set; }
-        public ArrayList RareList { get; set; }
+        public List<string> WaterList { get; set; }
+        public List<string> WeatherList { get; set; }
+        public List<string> TimedList { get; set; }
+        public List<string> CommonList { get; set; }
+        public List<string> UnCommonList { get; set; }
+        public List<string> RareList { get; set; }
 
         internal BoxEntity(int id, int priority, Rectangle2D box, WeatherTypes weather, TimeTypes time)
         {

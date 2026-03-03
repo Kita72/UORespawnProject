@@ -1,8 +1,5 @@
-using System;
 using System.Linq;
 using System.Collections.Generic;
-
-using Server.Mobiles;
 
 namespace Server.Custom.UORespawnServer.Services
 {
@@ -102,14 +99,13 @@ namespace Server.Custom.UORespawnServer.Services
         /// Remove and return a spawn from the recycle pool by type name.
         /// Returns null if none available.
         /// </summary>
-        internal Mobile Remove(Serial serial, string name = "")
+        internal Mobile Remove(string name = "")
         {
             if (!string.IsNullOrEmpty(name) && _RecycledList.TryGetValue(name, out var list) && list.Count > 0)
             {
-                serial = list.First();
-                list.RemoveAt(0);
+                var spawn = World.FindMobile(list.First());
 
-                var spawn = World.FindMobile(serial);
+                list.RemoveAt(0);
 
                 if (spawn == null || spawn.Deleted)
                     return null;

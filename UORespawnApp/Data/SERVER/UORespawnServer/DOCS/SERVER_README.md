@@ -1,8 +1,8 @@
 # UORespawnServer - Server Documentation
 
-> **Version:** 2.0.0.8
+> **Version:** 2.0.0.9
 > **Target:** .NET Framework 4.8  
-> **Last Updated:** Feb 2026
+> **Last Updated:** March 2026
 
 ---
 
@@ -607,7 +607,7 @@ The log file is written on server shutdown/crash and includes:
 ┌─────────────────────────────────────────────────────────────┐
 │ SESSION INFO                                                 
 ├─────────────────────────────────────────────────────────────┤
-│ Version      : 2.0.0.7                                       │
+│ Version      : 2.0.0.9                                       │
 │ Session Start: 2026-02-27 16:31:11                          
 │ Session End  : 2026-02-27 16:52:43                          
 │ Duration     : 00:21:32                                     
@@ -1107,6 +1107,13 @@ Events are subscribed only once via `_EventsSubscribed` flag. The `UnsubscribeEv
 
 | Version | Changes |
 |---------|---------|
+| 2.0.0.9 | **POLISH:** Code review and comment cleanup pass |
+| 2.0.0.9 | **FIX:** Spawner name no longer shows on creature hover (debug mode only) |
+| 2.0.0.9 | **FIX:** Queued location check now properly detects point inside rectangle |
+| 2.0.0.9 | **FIX:** VendorService uses reverse iteration for safe deletion |
+| 2.0.0.9 | **REFACTOR:** SpawnEditService/Gump converted from ArrayList to List<string> |
+| 2.0.0.9 | **DOCS:** Added XML documentation to TimedService, RespawnerEntity, SpawnEntity, SpawnManager, and all Timer classes |
+| 2.0.0.9 | **DOCS:** Fixed outdated TrackService reference in UOR_Spawner comment |
 | 2.0.0.8 | **BREAKING:** Replaced tracking lists with ISpawner pattern |
 | 2.0.0.8 | **NEW:** `UOR_MobSpawner` and `UOR_VendorSpawner` singletons |
 | 2.0.0.8 | **NEW:** Centralized startup to `EventSink.ServerStarted` |

@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 
 using Server.Mobiles;
 
@@ -26,7 +25,6 @@ namespace Server.Custom.UORespawnServer.Services
     {
         internal VendorService()
         {
-            // Startup vendor initialization moved to UOR_Core.OnServerStarted()
         }
 
         /// <summary>
@@ -84,7 +82,6 @@ namespace Server.Custom.UORespawnServer.Services
 
         internal void DeleteAllVendors()
         {
-            // Use ISpawner pattern - single call deletes all vendor spawn
             int totalDeleted = UOR_VendorSpawner.CleanupAll();
 
             UOR_Utility.SendMsg(ConsoleColor.Yellow, $"VENDORS-[{totalDeleted} Deleted via ISpawner]");
@@ -97,7 +94,6 @@ namespace Server.Custom.UORespawnServer.Services
 
         private void ToggleWorking(bool nightModeEnabled)
         {
-            // Use ISpawner-based query to get all vendor spawn
             var allVendorSpawn = UOR_VendorSpawner.GetAllSpawn();
 
             if (allVendorSpawn == null || allVendorSpawn.Count == 0)
@@ -147,10 +143,11 @@ namespace Server.Custom.UORespawnServer.Services
             // Find and delete existing vendors near this location using ISpawner
             var allVendors = UOR_VendorSpawner.GetAllSpawn();
             int deleted = 0;
-            int range = 8; // Search range for vendors at this location
+            int range = 8;
 
-            foreach (var vendor in allVendors.ToList())
+            for (int i = allVendors.Count - 1; i >= 0; i--)
             {
+                var vendor = allVendors[i];
                 if (vendor.Map == map && vendor.GetDistanceToSqrt(entity.Location) <= range)
                 {
                     vendor.Delete();
@@ -176,7 +173,6 @@ namespace Server.Custom.UORespawnServer.Services
 
         internal int GetTotalVendorCount()
         {
-            // Use ISpawner-based query instead of entity tracking lists
             return UOR_VendorSpawner.GetCount();
         }
 
@@ -216,10 +212,7 @@ namespace Server.Custom.UORespawnServer.Services
         /// </summary>
         internal void Save()
         {
-            // ISpawner pattern handles spawn tracking automatically
-            // No serial persistence needed
-            int count = GetTotalVendorCount();
-            UOR_Utility.SendMsg(ConsoleColor.Yellow, $"VENDORS-[{count} active]");
+            UOR_Utility.SendMsg(ConsoleColor.Yellow, $"VENDORS-[{GetTotalVendorCount()} active]");
         }
     }
 }

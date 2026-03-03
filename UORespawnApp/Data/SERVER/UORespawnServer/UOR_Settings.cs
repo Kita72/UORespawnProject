@@ -5,10 +5,7 @@ namespace Server.Custom.UORespawnServer
 {
     internal static class UOR_Settings
     {
-        internal const string VERSION = "2.0.0.8"; // Updated: Centralized ServerStarted startup
-
-        // Note: SPAWN_MARKER and VENDOR_MARKER removed - now using ISpawner pattern
-        // Spawn ownership tracked via creature.Spawner (UOR_MobSpawner/UOR_VendorSpawner)
+        internal const string VERSION = "2.0.0.9"; // Updated: Polish pass - code cleanup and documentation
 
         // System Scaler (exposed for ControlService)
         internal static double SCALE_MOD { get; private set; } = 1.0;
@@ -46,7 +43,6 @@ namespace Server.Custom.UORespawnServer
         internal static double CHANCE_COMMON { get; set; } = 1.0;
         internal static double CHANCE_UNCOMMON { get; set; } = 0.1;
         internal static double CHANCE_RARE { get; set; } = 0.01;
-
 
         // Spawn Toggles
         internal static bool ENABLE_SCALE_SPAWN { get; set; } = false;

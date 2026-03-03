@@ -6,6 +6,10 @@ using Server.Custom.UORespawnServer.Entities;
 
 namespace Server.Custom.UORespawnServer.Timers
 {
+    /// <summary>
+    /// Per-player timer that searches for valid spawn locations ahead of the player.
+    /// Queues SpawnEntity objects for later processing.
+    /// </summary>
     internal class SearchTimer : Timer
     {
         private readonly PlayerMobile _Player;

@@ -4,11 +4,18 @@ using Server.Custom.UORespawnServer.Timers;
 
 namespace Server.Custom.UORespawnServer.Services
 {
+    /// <summary>
+    /// Handles periodic time-based spawn updates.
+    /// Triggers day/night spawn transitions and timed spawn events.
+    /// </summary>
     internal class TimedService
     {
         private readonly TimedTimer _TimedTimer;
         private int _UpdateCount;
 
+        /// <summary>
+        /// Creates the timed service with configured interval.
+        /// </summary>
         internal TimedService()
         {
             _TimedTimer = new TimedTimer(this, TimeSpan.FromMinutes(UOR_Settings.TIMED_INTERVAL));

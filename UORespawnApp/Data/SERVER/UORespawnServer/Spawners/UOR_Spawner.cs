@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
-using Server.ContextMenus;
 using Server.Mobiles;
 
 namespace Server.Custom.UORespawnServer.Spawners
@@ -74,11 +72,16 @@ namespace Server.Custom.UORespawnServer.Spawners
         }
 
         /// <summary>
-        /// Override to add UOR-specific properties to creature property list.
+        /// Override to prevent default spawner properties from showing on creatures.
+        /// Only shows spawner info when debug mode is enabled.
         /// </summary>
         public override void GetSpawnProperties(ISpawnable spawn, ObjectPropertyList list)
         {
-            list.Add($"UOR Spawner: {SpawnerName}");
+            // Only show spawner info in debug mode
+            if (UOR_Settings.ENABLE_DEBUG)
+            {
+                list.Add($"UOR Spawner: {SpawnerName}");
+            }
         }
 
         /// <summary>
@@ -209,8 +212,8 @@ namespace Server.Custom.UORespawnServer.Spawners
                 }
             }
 
-            // NOTE: Reclaim is NOT done here - TrackService handles it
-            // to ensure proper ordering: reclaim first, then cleanup
+            // NOTE: Reclaim is NOT done here - UOR_Core.OnServerStarted handles it
+            // to ensure proper ordering: Reclaim → Cleanup → Vendor Init → Services
         }
 
         #region Static Query Methods
@@ -458,7 +461,7 @@ namespace Server.Custom.UORespawnServer.Spawners
         public override void Deserialize(GenericReader reader)
         {
             base.Deserialize(reader);
-            int version = reader.ReadInt();
+            _ = reader.ReadInt();
 
             // Restore singleton on deserialize
             _instance = this;
@@ -618,7 +621,7 @@ namespace Server.Custom.UORespawnServer.Spawners
         public override void Deserialize(GenericReader reader)
         {
             base.Deserialize(reader);
-            int version = reader.ReadInt();
+            _ = reader.ReadInt();
 
             // Restore singleton on deserialize
             _instance = this;

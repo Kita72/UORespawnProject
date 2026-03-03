@@ -1,5 +1,4 @@
 using Server.Mobiles;
-using Server.Targeting;
 
 namespace Server.Custom.UORespawnServer.Mobiles
 {
@@ -185,24 +184,38 @@ namespace Server.Custom.UORespawnServer.Mobiles
                         break;
                 }
 
-                var mobs = m.GetMobilesInRange(1);
-
-                foreach (var mob in mobs)
+                if (m is PlayerMobile p)
                 {
-                    if (mob is PlayerMobile pm)
+                    if (effect == UOREffects.Glow || effect == UOREffects.Confetti || effect == UOREffects.Magic)
                     {
-                        if (effect == UOREffects.Glow || effect == UOREffects.Confetti || effect == UOREffects.Magic)
-                        {
-                            pm.SendMessage(42, $"You gained {pm.Heal(Utility.Random(pm.Hits / 10))} hitpoints!");
-                        }
-                        else
-                        {
-                            pm.SendMessage(42, $"You lost {pm.Damage(Utility.Random(pm.Hits / 10))} hitpoints!");
-                        }
+                        p.SendMessage(42, $"You gained {p.Heal(Utility.Random(p.Hits / 10))} hitpoints!");
+                    }
+                    else
+                    {
+                        p.SendMessage(42, $"You lost {p.Damage(Utility.Random(p.Hits / 10))} hitpoints!");
                     }
                 }
+                else
+                {
+                    var mobs = m.Map.GetClientsInRange(m.Location, 3);
 
-                mobs.Free();
+                    foreach (var mob in mobs)
+                    {
+                        if (mob.Mobile is PlayerMobile pm)
+                        {
+                            if (effect == UOREffects.Glow || effect == UOREffects.Confetti || effect == UOREffects.Magic)
+                            {
+                                pm.SendMessage(42, $"You gained {pm.Heal(Utility.Random(pm.Hits / 10))} hitpoints!");
+                            }
+                            else
+                            {
+                                pm.SendMessage(42, $"You lost {pm.Damage(Utility.Random(pm.Hits / 10))} hitpoints!");
+                            }
+                        }
+                    }
+
+                    mobs.Free();
+                }
             }
         }
 

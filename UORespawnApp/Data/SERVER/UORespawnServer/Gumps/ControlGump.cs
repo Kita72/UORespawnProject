@@ -3,6 +3,7 @@ using Server.Mobiles;
 using Server.Network;
 
 using Server.Custom.UORespawnServer.Services;
+using Server.Custom.UORespawnServer.Helpers;
 
 namespace Server.Custom.UORespawnServer.Gumps
 {
@@ -107,7 +108,7 @@ namespace Server.Custom.UORespawnServer.Gumps
             AddImage(165, y, 30077);
 
             // Title
-            AddHtml(0, 25, width, 20, Bold(Center("<BASEFONT COLOR=#FFAA00>UORespawn Control Panel</BASEFONT>")), false, false);
+            AddHtml(0, 25, width, 20, GumpHelper.BoldCenter("<BASEFONT COLOR=#FFAA00>UORespawn Control Panel</BASEFONT>"), false, false);
             y += 25;
 
             // === STATS SECTION ===
@@ -219,12 +220,12 @@ namespace Server.Custom.UORespawnServer.Gumps
             y += 35;
 
             // Version
-            AddHtml(0, y, width, 20, Bold(Center($"<BASEFONT COLOR=#FFAA00>Version-[{UOR_Settings.VERSION}]-2026</BASEFONT>")), false, false);
+            AddHtml(0, y, width, 20, GumpHelper.BoldCenter($"<BASEFONT COLOR=#FFAA00>Version-[{UOR_Settings.VERSION}]-2026</BASEFONT>"), false, false);
         }
 
         private void AddSectionHeader(int x, int y, string text)
         {
-            AddHtml(x, y, 420, 20, Center($"<BASEFONT COLOR=#88AAFF>{text}</BASEFONT>"), false, false);
+            AddHtml(x, y, 420, 20, GumpHelper.Center($"<BASEFONT COLOR=#88AAFF>{text}</BASEFONT>"), false, false);
         }
 
         private void AddStatRow(int x, int y, string label, string value, int valueColor)
@@ -243,18 +244,8 @@ namespace Server.Custom.UORespawnServer.Gumps
         {
             AddLabel(x, y, COLOR_LABEL, $"{label}:");
             AddButton(x + 80, y, 5603, 5607, btnDown, GumpButtonType.Reply, 0);
-            AddHtml(x + 97, y, 50, 20, Center($"<BASEFONT COLOR=#00DDFF>{value}</BASEFONT>"), false, false);
+            AddHtml(x + 97, y, 50, 20, GumpHelper.Center($"<BASEFONT COLOR=#00DDFF>{value}</BASEFONT>"), false, false);
             AddButton(x + 150, y, 5601, 5605, btnUp, GumpButtonType.Reply, 0);
-        }
-
-        private string Center(string text)
-        {
-            return $"<CENTER>{text}</CENTER>";
-        }
-
-        private string Bold(string text)
-        {
-            return $"<b>{text}</b>";
         }
 
         public override void OnResponse(NetState sender, RelayInfo info)

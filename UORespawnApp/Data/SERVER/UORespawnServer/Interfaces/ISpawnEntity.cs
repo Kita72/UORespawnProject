@@ -1,16 +1,16 @@
 using Server.Custom.UORespawnServer.Enums;
-using System.Collections;
+using System.Collections.Generic;
 
 namespace Server.Custom.UORespawnServer.Interfaces
 {
     internal interface ISpawnEntity
     {
-        ArrayList WaterList { get; set; }
-        ArrayList WeatherList { get; set; }
-        ArrayList TimedList { get; set; }
-        ArrayList CommonList { get; set; }
-        ArrayList UnCommonList { get; set; }
-        ArrayList RareList { get; set; }
+        List<string> WaterList { get; set; }
+        List<string> WeatherList { get; set; }
+        List<string> TimedList { get; set; }
+        List<string> CommonList { get; set; }
+        List<string> UnCommonList { get; set; }
+        List<string> RareList { get; set; }
 
         WeatherTypes WeatherType { get; set; }
         TimeTypes TimedType { get; set; }

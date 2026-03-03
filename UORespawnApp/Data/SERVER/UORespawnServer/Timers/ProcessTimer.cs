@@ -6,6 +6,10 @@ using Server.Custom.UORespawnServer.Services;
 
 namespace Server.Custom.UORespawnServer.Timers
 {
+    /// <summary>
+    /// Global timer that processes queued spawn requests for all active players.
+    /// Creates or recycles mobs from the queue when spawn limits allow.
+    /// </summary>
     internal class ProcessTimer : Timer
     {
         private readonly ProcessService _Service;

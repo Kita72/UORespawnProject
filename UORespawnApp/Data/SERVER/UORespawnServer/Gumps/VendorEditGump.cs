@@ -5,6 +5,7 @@ using Server.Mobiles;
 using Server.Network;
 
 using Server.Custom.UORespawnServer.Services;
+using Server.Custom.UORespawnServer.Helpers;
 
 namespace Server.Custom.UORespawnServer.Gumps
 {
@@ -40,7 +41,6 @@ namespace Server.Custom.UORespawnServer.Gumps
         private const int ENTRY_NEW_VENDOR = 1;
 
         // Colors
-        private const int COLOR_LABEL = 0x480;
         private const int COLOR_VALUE = 0x34;
         private const int COLOR_TAB_ON = 0x40;
 
@@ -59,16 +59,16 @@ namespace Server.Custom.UORespawnServer.Gumps
 
         private void BuildGump()
         {
-            int y = 0;
+            int y;
 
             // Main background (starts at y=15 to leave room for title in shadow)
             AddBackground(0, 15, WIDTH, HEIGHT, 2620);
 
             // Title alpha region (above main background, in shadow - matches ControlGump style)
             AddAlphaRegion(5, 20, WIDTH - 10, 18);
-            string locationType = _Service.IsSign ? "Sign" : "Beehive";
+
             string locationInfo = _Service.GetLocationInfo();
-            AddHtml(0, 20, WIDTH, 18, Bold(Center($"<BASEFONT COLOR=#FFAA00>Vendor: {locationInfo}</BASEFONT>")), false, false);
+            AddHtml(0, 20, WIDTH, 18, GumpHelper.BoldCenter($"<BASEFONT COLOR=#FFAA00>Vendor: {locationInfo}</BASEFONT>"), false, false);
 
             // === VENDOR INFO SECTION ===
             y = 48;
@@ -77,12 +77,12 @@ namespace Server.Custom.UORespawnServer.Gumps
             
             string typeText = _Service.IsSign ? "Shop Sign Location" : "Beehive Location";
             int vendorCount = _Service.GetVendorCount();
-            AddHtml(0, y + 10, WIDTH, 20, Bold(Center($"<BASEFONT COLOR=#88AAFF>{typeText} ({vendorCount} vendors)</BASEFONT>")), false, false);
+            AddHtml(0, y + 10, WIDTH, 20, GumpHelper.BoldCenter($"<BASEFONT COLOR=#88AAFF>{typeText} ({vendorCount} vendors)</BASEFONT>"), false, false);
             y += 48;
 
             // Section header (vendor list title)
             AddAlphaRegion(5, y, WIDTH - 10, 20);
-            AddHtml(0, y, WIDTH, 20, Bold(Center("<BASEFONT COLOR=#88AAFF>Vendor Spawn List</BASEFONT>")), false, false);
+            AddHtml(0, y, WIDTH, 20, GumpHelper.BoldCenter("<BASEFONT COLOR=#88AAFF>Vendor Spawn List</BASEFONT>"), false, false);
             y += 28;
 
             // === VENDOR LIST ===
@@ -97,7 +97,7 @@ namespace Server.Custom.UORespawnServer.Gumps
 
             // === ADD NEW VENDOR SECTION ===
             AddAlphaRegion(5, y, WIDTH - 10, 20);
-            AddHtml(0, y, WIDTH, 20, Bold(Center("<BASEFONT COLOR=#88AAFF>Add New Vendor</BASEFONT>")), false, false);
+            AddHtml(0, y, WIDTH, 20, GumpHelper.BoldCenter("<BASEFONT COLOR=#88AAFF>Add New Vendor</BASEFONT>"), false, false);
             y += 28;
 
             // Text entry for new vendor name
@@ -119,7 +119,7 @@ namespace Server.Custom.UORespawnServer.Gumps
             // Version (in alpha region below footer solid - matches title style)
             y += 35;
             AddAlphaRegion(5, y, WIDTH - 10, 18);
-            AddHtml(0, y, WIDTH, 18, Bold(Center($"<BASEFONT COLOR=#FFAA00>Version-[{UOR_Settings.VERSION}]</BASEFONT>")), false, false);
+            AddHtml(0, y, WIDTH, 18, GumpHelper.BoldCenter($"<BASEFONT COLOR=#FFAA00>Version-[{UOR_Settings.VERSION}]</BASEFONT>"), false, false);
         }
 
         private void AddVendorList(int y)
@@ -192,9 +192,5 @@ namespace Server.Custom.UORespawnServer.Gumps
                 return;
             }
         }
-
-        // Helper methods for HTML formatting
-        private string Bold(string text) => $"<B>{text}</B>";
-        private string Center(string text) => $"<CENTER>{text}</CENTER>";
     }
 }

@@ -22,7 +22,7 @@ namespace Server.Custom.UORespawnServer.Services
         {
             if (SpawnStats == null) return;
 
-            if (SpawnStats?.Count > UOR_Settings.MAX_STAT_SIZE)
+            if (SpawnStats.Count > UOR_Settings.MAX_STAT_SIZE)
             {
                 SpawnStats.RemoveAt(0);
             }
@@ -46,7 +46,7 @@ namespace Server.Custom.UORespawnServer.Services
         {
             if (SpawnStats == null) return;
 
-            if (SpawnStats?.Count > 0)
+            if (SpawnStats.Count > 0)
             {
                 int count = SpawnStats.Count;
 

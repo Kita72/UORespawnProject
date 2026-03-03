@@ -1,4 +1,7 @@
-using System;
+using System.Collections.Generic;
+using System.Linq;
+
+using Server.Custom.UORespawnServer.Items;
 
 namespace Server.Custom.UORespawnServer.Services
 {
@@ -14,7 +17,28 @@ namespace Server.Custom.UORespawnServer.Services
     {
         internal TrackService()
         {
-            // Startup logic moved to UOR_Core.OnServerStarted() for centralized control
+            _TrashBin = new List<Item>();
+        }
+
+        private List<Item> _TrashBin;
+
+        internal void CleanUpItems()
+        {
+            if (_TrashBin != null) { _TrashBin = new List<Item>(); }
+
+            _TrashBin.Clear();
+
+            _TrashBin.AddRange(World.Items.Values.Where(g => g is RiftGate).ToList());
+            _TrashBin.AddRange(World.Items.Values.Where(g => g is DebugFlag).ToList());
+
+            if (_TrashBin.Count > 0)
+            {
+                foreach (var item in _TrashBin)
+                {
+                    if (item != null && !item.Deleted)
+                        item.Delete();
+                }
+            }
         }
     }
 }

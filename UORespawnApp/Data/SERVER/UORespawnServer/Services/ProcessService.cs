@@ -55,7 +55,7 @@ namespace Server.Custom.UORespawnServer.Services
             if (spawn == null)
             {
                 UOR_Utility.SendMsg(ConsoleColor.Yellow, $"PROCESS-[{entity.Name} Failed]");
-                entity.OnAfterSpawn();
+                entity.LocationQueryUpdate();
                 return;
             }
 
@@ -73,7 +73,7 @@ namespace Server.Custom.UORespawnServer.Services
             // AddSpawnToWorld assigns ISpawner ownership automatically
             Create(pm, spawn, entity.Facet, entity.Location);
 
-            entity.OnAfterSpawn();
+            entity.LocationQueryUpdate();
             _SpawnCount++;
 
             // Chance for extra spawns
@@ -105,12 +105,31 @@ namespace Server.Custom.UORespawnServer.Services
                 }
             }
 
-            if (UOR_Settings.ENABLE_RIFT_SPAWN && entity.IsWeather)
+            if (entity.IsWeather)
             {
                 if (Utility.RandomDouble() < UOR_Settings.CHANCE_WEATHER)
                 {
-                    extra = UOR_Utility.CreateSpawn(SpawnHelper.GetWeatherSpawn(entity.WeatherType));
-                    Create(pm, extra, entity.Facet, entity.Location);
+                    switch (entity.WeatherType)
+                    {
+                        case Enums.WeatherTypes.Rain:
+                            EffectUtility.TryRunEffect(pm, UOREffects.Electric);
+                            break;
+                        case Enums.WeatherTypes.Snow:
+                            EffectUtility.TryRunEffect(pm, UOREffects.Wind);
+                            break;
+                        case Enums.WeatherTypes.Storm:
+                            EffectUtility.TryRunEffect(pm, UOREffects.Electric);
+                            break;
+                        case Enums.WeatherTypes.Blizzard:
+                            EffectUtility.TryRunEffect(pm, UOREffects.Wind);
+                            break;
+                    }
+
+                    if (UOR_Settings.ENABLE_RIFT_SPAWN)
+                    {
+                        extra = UOR_Utility.CreateSpawn(SpawnHelper.GetWeatherSpawn(entity.WeatherType));
+                        Create(pm, extra, entity.Facet, entity.Location);
+                    }
                 }
             }
 

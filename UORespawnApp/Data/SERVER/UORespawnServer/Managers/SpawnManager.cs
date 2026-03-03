@@ -1,18 +1,20 @@
 using System;
 using System.IO;
 using System.Linq;
-using System.Collections;
 using System.Collections.Generic;
+
+using Server.Items;
 
 using Server.Custom.UORespawnServer.Entities;
 using Server.Custom.UORespawnServer.Enums;
 using Server.Custom.UORespawnServer.Interfaces;
 using Server.Custom.UORespawnServer.Models;
-using Server.Items;
 
 namespace Server.Custom.UORespawnServer.Managers
 {
-    // Manages Spawn Data : Files and Dirctories!
+    /// <summary>
+    /// Manages spawn data loading from binary files created by the Editor.
+    /// </summary>
     internal static class SpawnManager
     {
         // Binary File Paths (Editor creates, Server loads)
@@ -44,7 +46,6 @@ namespace Server.Custom.UORespawnServer.Managers
             LoadRegionSpawnData();
             LoadTileSpawnData();
             LoadVendorSpawnData();
-            // Note: Vendor tracking now uses ISpawner pattern - no serial persistence needed
 
             // Build O(1) lookup structures
             SpatialGridManager.Initialize(BoxSpawns);
@@ -188,12 +189,12 @@ namespace Server.Custom.UORespawnServer.Managers
 
             BoxEntity entity = new BoxEntity(position, priority, spawnBox, weather, time)
             {
-                WaterList = new ArrayList(ReadStringList(reader)),
-                WeatherList = new ArrayList(ReadStringList(reader)),
-                TimedList = new ArrayList(ReadStringList(reader)),
-                CommonList = new ArrayList(ReadStringList(reader)),
-                UnCommonList = new ArrayList(ReadStringList(reader)),
-                RareList = new ArrayList(ReadStringList(reader))
+                WaterList = new List<string>(ReadStringList(reader)),
+                WeatherList = new List<string>(ReadStringList(reader)),
+                TimedList = new List<string>(ReadStringList(reader)),
+                CommonList = new List<string>(ReadStringList(reader)),
+                UnCommonList = new List<string>(ReadStringList(reader)),
+                RareList = new List<string>(ReadStringList(reader))
             };
 
             return entity;
@@ -343,12 +344,12 @@ namespace Server.Custom.UORespawnServer.Managers
 
             RegionEntity entity = new RegionEntity(name, regionHandle, weather, time)
             {
-                WaterList = new ArrayList(waterSpawns),
-                WeatherList = new ArrayList(weatherSpawns),
-                TimedList = new ArrayList(timedSpawns),
-                CommonList = new ArrayList(commonSpawns),
-                UnCommonList = new ArrayList(uncommonSpawns),
-                RareList = new ArrayList(rareSpawns)
+                WaterList = new List<string>(waterSpawns),
+                WeatherList = new List<string>(weatherSpawns),
+                TimedList = new List<string>(timedSpawns),
+                CommonList = new List<string>(commonSpawns),
+                UnCommonList = new List<string>(uncommonSpawns),
+                RareList = new List<string>(rareSpawns)
             };
 
             return entity;
@@ -470,12 +471,12 @@ namespace Server.Custom.UORespawnServer.Managers
 
             TileEntity entity = new TileEntity(name, weather, time)
             {
-                WaterList = new ArrayList(ReadStringList(reader)),
-                WeatherList = new ArrayList(ReadStringList(reader)),
-                TimedList = new ArrayList(ReadStringList(reader)),
-                CommonList = new ArrayList(ReadStringList(reader)),
-                UnCommonList = new ArrayList(ReadStringList(reader)),
-                RareList = new ArrayList(ReadStringList(reader))
+                WaterList = new List<string>(ReadStringList(reader)),
+                WeatherList = new List<string>(ReadStringList(reader)),
+                TimedList = new List<string>(ReadStringList(reader)),
+                CommonList = new List<string>(ReadStringList(reader)),
+                UnCommonList = new List<string>(ReadStringList(reader)),
+                RareList = new List<string>(ReadStringList(reader))
             };
 
             return entity;
@@ -960,7 +961,7 @@ namespace Server.Custom.UORespawnServer.Managers
         /// </summary>
         private static bool ApplyToSpawnList(ISpawnEntity entity, EditCommand command)
         {
-            ArrayList targetList = GetSpawnList(entity, command.Section);
+            var targetList = GetSpawnList(entity, command.Section);
 
             if (targetList == null)
             {
@@ -1001,7 +1002,7 @@ namespace Server.Custom.UORespawnServer.Managers
         /// <summary>
         /// Gets the spawn list for a given section from an entity.
         /// </summary>
-        private static ArrayList GetSpawnList(ISpawnEntity entity, SpawnSection section)
+        private static List<string> GetSpawnList(ISpawnEntity entity, SpawnSection section)
         {
             switch (section)
             {

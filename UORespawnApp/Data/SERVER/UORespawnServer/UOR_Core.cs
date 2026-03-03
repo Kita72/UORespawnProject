@@ -38,8 +38,15 @@ namespace Server.Custom.UORespawnServer
             UOR_Utility.SendMsg(ConsoleColor.DarkCyan, "*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*");
         }
 
-        internal static bool IsPaused { get; private set; } = true; // false = IsLocked
-        internal static bool IsLocked { get; private set; } = false; // Staff Lock @ Respawn System Gump!
+        /// <summary>
+        /// Whether the respawn system is paused (no spawning occurs).
+        /// </summary>
+        internal static bool IsPaused { get; private set; } = true;
+
+        /// <summary>
+        /// Staff lock toggle from Respawn System Gump - prevents system state changes.
+        /// </summary>
+        internal static bool IsLocked { get; private set; } = false;
 
         internal static void ToggleLock()
         {
@@ -257,31 +264,31 @@ namespace Server.Custom.UORespawnServer
             }
 
             UOR_Utility.SendMsg(ConsoleColor.Yellow, $"VENDORS-[{totalSpawned} spawned across {totalEntities} locations]");
-            }
+        }
 
-            /// <summary>
-            /// Creates service instances. Called during ServerStarted.
-            /// Note: TrackService and VendorService functionality is now handled directly in OnServerStarted.
-            /// </summary>
-            private static void InitializeServices()
-            {
-                UOR_Utility.SendMsg(ConsoleColor.Yellow, $"Respawn-[Services Created]");
+        /// <summary>
+        /// Creates service instances. Called during ServerStarted.
+        /// Note: TrackService and VendorService functionality is now handled directly in OnServerStarted.
+        /// </summary>
+        private static void InitializeServices()
+        {
+            UOR_Utility.SendMsg(ConsoleColor.Yellow, $"Respawn-[Services Created]");
 
-                _ProcessService = new ProcessService();
-                _RecycleService = new RecycleService();
-                _TrackService = new TrackService();      // Now a simple service, no ServerStarted subscription
-                _ValidateService = new ValidateService();
-                _TimedService = new TimedService();
-                _StatsService = new StatsService();
-                _VendorService = new VendorService();    // Now a simple service, no ServerStarted subscription
-                _ControlService = new ControlService();
+            _ProcessService = new ProcessService();
+            _RecycleService = new RecycleService();
+            _TrackService = new TrackService();      // Now a simple service, no ServerStarted subscription
+            _ValidateService = new ValidateService();
+            _TimedService = new TimedService();
+            _StatsService = new StatsService();
+            _VendorService = new VendorService();    // Now a simple service, no ServerStarted subscription
+            _ControlService = new ControlService();
 
-                UOR_Utility.SendMsg(ConsoleColor.Green, "SERVICES-[Initialized]");
-            }
+            UOR_Utility.SendMsg(ConsoleColor.Green, "SERVICES-[Initialized]");
+        }
 
-            #endregion
+        #endregion
 
-            private static bool _EventsSubscribed = false;
+        private static bool _EventsSubscribed = false;
 
         private static void InitializeEvents()
         {
@@ -344,6 +351,7 @@ namespace Server.Custom.UORespawnServer
         private static void EventSink_MobileDeleted(MobileDeletedEventArgs e)
         {
             // ISpawner handles release automatically when mobile is deleted
+            UOR_Utility.SendMsg(ConsoleColor.Yellow, $"UORespawn-[{e.Mobile.Name} Deleted]");
         }
 
         private static void EventSink_BeforeWorldSave(BeforeWorldSaveEventArgs e)
@@ -359,6 +367,7 @@ namespace Server.Custom.UORespawnServer
 
             _StatsService.Save();
             _VendorService.Save();
+            _TrackService.CleanUpItems();
 
             UOR_Utility.SendMsg(ConsoleColor.Yellow, $"UORespawn-[Saved]");
         }
@@ -427,13 +436,12 @@ namespace Server.Custom.UORespawnServer
 
         internal static void SendToRecycled(Serial serial)
         {
-            // ISpawner releases ownership in RecycleService.Add()
             _RecycleService.Add(serial);
         }
 
         internal static Mobile GetRecycled(string name, out bool isRecycled)
         {
-            Mobile m = _RecycleService.Remove(0, name);
+            Mobile m = _RecycleService.Remove(name);
 
             if (m == null)
             {

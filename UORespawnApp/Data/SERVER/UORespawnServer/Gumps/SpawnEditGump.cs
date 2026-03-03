@@ -1,4 +1,4 @@
-using System.Collections;
+using System.Collections.Generic;
 
 using Server.Gumps;
 using Server.Mobiles;
@@ -6,6 +6,7 @@ using Server.Network;
 
 using Server.Custom.UORespawnServer.Enums;
 using Server.Custom.UORespawnServer.Services;
+using Server.Custom.UORespawnServer.Helpers;
 
 namespace Server.Custom.UORespawnServer.Gumps
 {
@@ -72,7 +73,7 @@ namespace Server.Custom.UORespawnServer.Gumps
 
         private void BuildGump()
         {
-            int y = 0;
+            int y;
 
             // Main background (starts at y=15 to leave room for title in shadow)
             AddBackground(0, 15, WIDTH, HEIGHT, 2620);
@@ -80,7 +81,7 @@ namespace Server.Custom.UORespawnServer.Gumps
             // Title alpha region (above main background, in shadow - matches ControlGump style)
             AddAlphaRegion(5, 20, WIDTH - 10, 18);
             string targetInfo = _Service.GetTargetInfo();
-            AddHtml(0, 20, WIDTH, 18, Bold(Center($"<BASEFONT COLOR=#FFAA00>{targetInfo}</BASEFONT>")), false, false);
+            AddHtml(0, 20, WIDTH, 18, GumpHelper.BoldCenter($"<BASEFONT COLOR=#FFAA00>{targetInfo}</BASEFONT>"), false, false);
 
             // === SECTION TABS (solid background with proper padding) ===
             AddBackground(0, 42, WIDTH, 85, 30546);
@@ -97,7 +98,7 @@ namespace Server.Custom.UORespawnServer.Gumps
 
             // Section header (spawn list title)
             AddAlphaRegion(5, y, WIDTH - 10, 20);
-            AddHtml(0, y, WIDTH, 20, Bold(Center($"<BASEFONT COLOR=#88AAFF>{_Service.CurrentSection} Spawn List</BASEFONT>")), false, false);
+            AddHtml(0, y, WIDTH, 20, GumpHelper.BoldCenter($"<BASEFONT COLOR=#88AAFF>{_Service.CurrentSection} Spawn List</BASEFONT>"), false, false);
             y += 28;
 
             // === SPAWN LIST ===
@@ -112,7 +113,7 @@ namespace Server.Custom.UORespawnServer.Gumps
 
             // === ADD NEW SPAWN SECTION ===
             AddAlphaRegion(5, y, WIDTH - 10, 20);
-            AddHtml(0, y, WIDTH, 20, Bold(Center("<BASEFONT COLOR=#88AAFF>Add New Spawn</BASEFONT>")), false, false);
+            AddHtml(0, y, WIDTH, 20, GumpHelper.BoldCenter("<BASEFONT COLOR=#88AAFF>Add New Spawn</BASEFONT>"), false, false);
             y += 28;
 
             // Text entry for new spawn name
@@ -134,7 +135,7 @@ namespace Server.Custom.UORespawnServer.Gumps
             // Version (in alpha region below footer solid - matches title style)
             y += 35;
             AddAlphaRegion(5, y, WIDTH - 10, 18);
-            AddHtml(0, y, WIDTH, 18, Bold(Center($"<BASEFONT COLOR=#FFAA00>Version-[{UOR_Settings.VERSION}]</BASEFONT>")), false, false);
+            AddHtml(0, y, WIDTH, 18, GumpHelper.BoldCenter($"<BASEFONT COLOR=#FFAA00>Version-[{UOR_Settings.VERSION}]</BASEFONT>"), false, false);
         }
 
         private void AddSectionTabs(int y)
@@ -172,7 +173,7 @@ namespace Server.Custom.UORespawnServer.Gumps
 
             // Current trigger value
             string triggerText = _Service.GetCurrentTriggerText();
-            AddHtml(100, y, 120, 20, Center($"<BASEFONT COLOR=#00DDFF>{triggerText}</BASEFONT>"), false, false);
+            AddHtml(100, y, 120, 20, GumpHelper.Center($"<BASEFONT COLOR=#00DDFF>{triggerText}</BASEFONT>"), false, false);
 
             // Next button
             AddButton(220, y, 5601, 5605, BTN_TRIGGER_NEXT, GumpButtonType.Reply, 0);
@@ -180,7 +181,7 @@ namespace Server.Custom.UORespawnServer.Gumps
 
         private void AddSpawnList(int y)
         {
-            ArrayList list = _Service.GetCurrentSpawnList();
+            List<string> list = _Service.GetCurrentSpawnList();
             int startIndex = _Service.ScrollOffset;
             int count = list?.Count ?? 0;
 
@@ -190,7 +191,7 @@ namespace Server.Custom.UORespawnServer.Gumps
 
                 if (dataIndex < count)
                 {
-                    string spawnName = list[dataIndex] as string ?? "Unknown";
+                    string spawnName = list[dataIndex] ?? "Unknown";
 
                     // Delete button
                     AddButton(15, y, 4017, 4018, BTN_DELETE_BASE + i, GumpButtonType.Reply, 0);
@@ -209,16 +210,6 @@ namespace Server.Custom.UORespawnServer.Gumps
 
             // Show total count
             AddLabel(15, y + 5, COLOR_LABEL, $"Total: {count}");
-        }
-
-        private string Center(string text)
-        {
-            return $"<CENTER>{text}</CENTER>";
-        }
-
-        private string Bold(string text)
-        {
-            return $"<b>{text}</b>";
         }
 
         public override void OnResponse(NetState sender, RelayInfo info)

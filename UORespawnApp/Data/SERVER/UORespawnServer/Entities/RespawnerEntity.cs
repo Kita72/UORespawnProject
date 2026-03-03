@@ -7,7 +7,10 @@ using Server.Custom.UORespawnServer.Timers;
 
 namespace Server.Custom.UORespawnServer.Entities
 {
-    // This is the players spawner, handles looking for spawn points ahead of the player and creating/loading a spawnentity to Que
+    /// <summary>
+    /// Per-player spawner entity. Handles searching for valid spawn points ahead of the player
+    /// and queuing SpawnEntity objects for the ProcessService to spawn.
+    /// </summary>
     internal class RespawnerEntity
     {
         internal readonly PlayerMobile _Player;

@@ -4,6 +4,10 @@ using Server.Custom.UORespawnServer.Services;
 
 namespace Server.Custom.UORespawnServer.Timers
 {
+    /// <summary>
+    /// Global timer that validates spawn health - cleans up deleted/controlled mobs
+    /// and removes stale player tracking.
+    /// </summary>
     internal class ValidateTimer : Timer
     {
         private readonly ValidateService _Service;

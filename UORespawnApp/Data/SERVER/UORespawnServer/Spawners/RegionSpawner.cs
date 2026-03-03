@@ -7,15 +7,10 @@ namespace Server.Custom.UORespawnServer
 {
     internal static class RegionSpawner
     {
-        private static int _LookupCount;
-        private static int _HitCount;
-
         internal static string TryRegionSpawn(SpawnEntity spawn)
         {
             if (spawn.RegionName == null || spawn.RegionName.Name == null) 
                 return string.Empty;
-
-            _LookupCount++;
 
             if (!SpawnManager.RegionLookup.TryGetValue(spawn.Facet, out var regionDict))
             {
@@ -26,8 +21,6 @@ namespace Server.Custom.UORespawnServer
             {
                 if (regionDict.TryGetValue(spawn.RegionName, out RegionEntity entity))
                 {
-                    _HitCount++;
-
                     string spawnName = UOR_Utility.GetSpawnName(entity, spawn);
 
                     return spawnName;

@@ -4,6 +4,10 @@ using Server.Custom.UORespawnServer.Services;
 
 namespace Server.Custom.UORespawnServer.Timers
 {
+    /// <summary>
+    /// Global timer that triggers time-of-day updates for the spawn system.
+    /// Handles day/night transitions and timed spawn events.
+    /// </summary>
     internal class TimedTimer : Timer
     {
         private readonly TimedService _Service;
@@ -17,7 +21,6 @@ namespace Server.Custom.UORespawnServer.Timers
 
         protected override void OnTick()
         {
-
             if (UOR_Core.IsPaused) return;
 
             if (_Service == null)

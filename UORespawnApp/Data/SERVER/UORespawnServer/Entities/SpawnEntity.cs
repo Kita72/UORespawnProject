@@ -1,32 +1,32 @@
+using System;
+
 using Server.Regions;
+using Server.Mobiles;
 
 using Server.Custom.UORespawnServer.Enums;
 using Server.Custom.UORespawnServer.Mobiles;
-using System;
-using Server.Mobiles;
 
 namespace Server.Custom.UORespawnServer.Entities
 {
-    // Used to hold spawn data while spawn active in the system!
-    internal class SpawnEntity
+    /// <summary>
+    /// Holds spawn data for a queued spawn while it is active in the system.
+    /// Contains location, environment, and frequency data used to determine what to spawn.
+    /// </summary>
+    internal class SpawnEntity 
     {
-        // Spawn
         internal string Name { get; private set; }
 
-        // Location Data
         internal Map Facet { get; private set; }
         internal Point3D Location { get; set; }
         internal Region RegionName { get; private set; }
         internal string TileName { get; private set; }
 
-        // Spawn Data
         internal FrequencyTypes FrequencyType { get; set; } = FrequencyTypes.Common;
         internal WaterTypes WaterType { get; set; } = WaterTypes.Shallow;
         internal WeatherTypes WeatherType { get; set; } = WeatherTypes.None;
         internal TimeTypes TimeType { get; set; } = TimeTypes.Noon;
         internal SpawnTypes SpawnType { get; set; } = SpawnTypes.None;
 
-        // Spawn Quick Checks
         internal bool IsWater { get; set; }
         internal bool IsWeather { get; set; }
         internal bool IsNight { get; set; }
@@ -145,7 +145,7 @@ namespace Server.Custom.UORespawnServer.Entities
             }
             else
             {
-                if (roll < UOR_Settings.CHANCE_COMMON)
+                if (roll < UOR_Settings.CHANCE_COMMON) // User can set < 100%! need to have fallback!
                 {
                     FrequencyType = FrequencyTypes.Common;
                 }
@@ -204,7 +204,7 @@ namespace Server.Custom.UORespawnServer.Entities
             }
         }
 
-        internal void OnAfterSpawn()
+        internal void LocationQueryUpdate()
         {
             UOR_Utility.ReleaseQueuedSpawnLocation(Facet, Location);
         }

@@ -1,5 +1,5 @@
 using System;
-using System.Collections;
+using System.Collections.Generic;
 
 using Server.Mobiles;
 
@@ -27,12 +27,12 @@ namespace Server.Custom.UORespawnServer.Services
         internal int ScrollOffset { get; private set; }
 
         // Working copies of spawn lists (edited in memory, written on save)
-        private ArrayList _WorkingWaterList;
-        private ArrayList _WorkingWeatherList;
-        private ArrayList _WorkingTimedList;
-        private ArrayList _WorkingCommonList;
-        private ArrayList _WorkingUncommonList;
-        private ArrayList _WorkingRareList;
+        private List<string> _WorkingWaterList;
+        private List<string> _WorkingWeatherList;
+        private List<string> _WorkingTimedList;
+        private List<string> _WorkingCommonList;
+        private List<string> _WorkingUncommonList;
+        private List<string> _WorkingRareList;
 
         // Working copies of triggers
         private WeatherTypes _WorkingWeatherType;
@@ -120,12 +120,12 @@ namespace Server.Custom.UORespawnServer.Services
             }
         }
 
-        private ArrayList CloneList(ArrayList source)
+        private List<string> CloneList(List<string> source)
         {
             if (source == null)
-                return new ArrayList();
+                return new List<string>();
 
-            return new ArrayList(source);
+            return new List<string>(source);
         }
 
         #region Gump Management
@@ -137,8 +137,6 @@ namespace Server.Custom.UORespawnServer.Services
 
         internal void RefreshGump()
         {
-            // The gump that triggered OnResponse is already closed by the server
-            // Just open a new gump - don't close others (we want multiple editors open)
             OpenGump();
         }
 
@@ -181,7 +179,7 @@ namespace Server.Custom.UORespawnServer.Services
         /// <summary>
         /// Gets the current spawn list based on selected section.
         /// </summary>
-        internal ArrayList GetCurrentSpawnList()
+        internal List<string> GetCurrentSpawnList()
         {
             switch (CurrentSection)
             {
@@ -216,7 +214,7 @@ namespace Server.Custom.UORespawnServer.Services
         /// </summary>
         internal void Scroll(int direction)
         {
-            ArrayList list = GetCurrentSpawnList();
+            List<string> list = GetCurrentSpawnList();
             int maxOffset = Math.Max(0, (list?.Count ?? 0) - 10);
 
             ScrollOffset += direction;
@@ -297,7 +295,7 @@ namespace Server.Custom.UORespawnServer.Services
             if (string.IsNullOrWhiteSpace(spawnName))
                 return;
 
-            ArrayList list = GetCurrentSpawnList();
+            List<string> list = GetCurrentSpawnList();
 
             // Check for duplicates (case-insensitive)
             foreach (string existing in list)
@@ -324,12 +322,12 @@ namespace Server.Custom.UORespawnServer.Services
         /// </summary>
         internal void RemoveSpawn(int index)
         {
-            ArrayList list = GetCurrentSpawnList();
+            List<string> list = GetCurrentSpawnList();
 
             if (index < 0 || index >= list.Count)
                 return;
 
-            string removedName = list[index] as string;
+            string removedName = list[index];
             list.RemoveAt(index);
             _HasChanges = true;
 
@@ -404,11 +402,11 @@ namespace Server.Custom.UORespawnServer.Services
             _HasChanges = false;
         }
 
-        private int GenerateListCommands(SpawnSection section, ArrayList original, ArrayList working)
+        private int GenerateListCommands(SpawnSection section, List<string> original, List<string> working)
         {
             int count = 0;
-            ArrayList originalList = original ?? new ArrayList();
-            ArrayList workingList = working ?? new ArrayList();
+            List<string> originalList = original ?? new List<string>();
+            List<string> workingList = working ?? new List<string>();
 
             // Find removed items (in original but not in working)
             foreach (string item in originalList)

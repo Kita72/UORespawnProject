@@ -1,18 +1,16 @@
 using System;
+using System.Linq;
 
+using Server.Items;
 using Server.Mobiles;
 using Server.Targeting;
 
-using Server.Custom.UORespawnServer.Entities;
 using Server.Custom.UORespawnServer.Enums;
 using Server.Custom.UORespawnServer.Gumps;
+using Server.Custom.UORespawnServer.Entities;
 using Server.Custom.UORespawnServer.Managers;
 using Server.Custom.UORespawnServer.Targets;
-using Server.Engines.Quests.Naturalist;
-using Server.Custom.UORespawnServer.Interfaces;
-using System.CodeDom;
-using Server.Items;
-using System.Linq;
+using Server.Custom.UORespawnServer.Helpers;
 
 namespace Server.Custom.UORespawnServer.Services
 {
@@ -370,7 +368,7 @@ namespace Server.Custom.UORespawnServer.Services
 
             Map map = m_Mobile.Map;
             Point3D location = land.Location;
-            string tileName = land.Name;
+            string tileName = TileHelper.GetTileName(land.TileID, map, location);
 
             int gumpsOpened = 0;
 
@@ -578,11 +576,6 @@ namespace Server.Custom.UORespawnServer.Services
                 }
             }
 
-            if (item.IsVirtualItem)
-            {
-                // future addition once we get Item Spawn Supported!
-            }
-
             return false;
         }
 
@@ -632,7 +625,7 @@ namespace Server.Custom.UORespawnServer.Services
                     continue;
 
                 // Reverse the offset to get original sign/hive location
-                Point3D originalLocation = GetOriginalLocation(vendor);
+                Point2D originalLocation = GetOriginalLocation(vendor);
 
                 if (originalLocation == targetLocation)
                     return vendor;
@@ -644,25 +637,25 @@ namespace Server.Custom.UORespawnServer.Services
         /// <summary>
         /// Reverses the GetInsideLocation calculation to get the original sign/hive world position.
         /// </summary>
-        private Point3D GetOriginalLocation(VendorEntity vendor)
+        private Point2D GetOriginalLocation(VendorEntity vendor)
         {
             if (vendor.IsSign)
             {
                 switch (vendor.Facing)
                 {
                     case SignFacing.West:
-                        return new Point3D(vendor.Location.X + 2, vendor.Location.Y, vendor.Location.Z);
+                        return new Point2D(vendor.Location.X + 2, vendor.Location.Y);
                     case SignFacing.North:
-                        return new Point3D(vendor.Location.X, vendor.Location.Y + 2, vendor.Location.Z);
+                        return new Point2D(vendor.Location.X, vendor.Location.Y + 2);
                 }
             }
             else
             {
                 // Beehive - reverse the +1, +1 offset
-                return new Point3D(vendor.Location.X - 1, vendor.Location.Y - 1, vendor.Location.Z);
+                return new Point2D(vendor.Location.X - 1, vendor.Location.Y - 1);
             }
 
-            return vendor.Location;
+            return new Point2D(vendor.Location.X, vendor.Location.Y);
         }
 
         /// <summary>

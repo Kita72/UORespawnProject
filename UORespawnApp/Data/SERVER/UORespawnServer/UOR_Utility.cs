@@ -207,24 +207,50 @@ namespace Server.Custom.UORespawnServer
             return null;
         }
 
+        private static Dictionary<int, List<StaticTarget>> AllStatics;
+
         internal static List<(int, Point3D)> GetStaticList(string name)
         {
             List<(int, Point3D)> locations = new List<(int, Point3D)>();
 
             StaticTarget staticTarg;
 
-            for (int l = 0; l < 6; l++)
+            if (AllStatics == null)
             {
-                for (int i = 0; i < Map.Maps[l].Width; i++)
-                {
-                    for (int j = 0; j < Map.Maps[l].Height; j++)
-                    {
-                        staticTarg = GetStatic(Map.Maps[l], new Point3D(i, j, 0), name);
+                AllStatics = new Dictionary<int, List<StaticTarget>>();
 
-                        if (staticTarg?.Name == name)
+                for (int m = 0; m < Map.Maps.Length; m++)
+                {
+                    if (Map.Maps[m] == null || Map.Maps[m] == Map.Internal)
+                        continue;
+
+                    AllStatics.Add(m, new List<StaticTarget>());
+
+                    for (int w = 0; w < Map.Maps[m].Width; w++)
+                    {
+                        for (int h = 0; h < Map.Maps[m].Height; h++)
                         {
-                            locations.Add((l, staticTarg.Location));
+                            staticTarg = GetStatic(Map.Maps[m], new Point3D(w, h, 0), name);
+
+                            AllStatics[m].Add(staticTarg);
+
+                            if (staticTarg?.Name == name)
+                            {
+                                locations.Add((m, staticTarg.Location));
+                            }
                         }
+                    }
+                }
+            }
+            else
+            {
+                for (int m = 0; m < AllStatics.Count; m++)
+                {
+                    staticTarg = AllStatics[m].Find(s => s.Name == name);
+
+                    if (staticTarg?.Name == name)
+                    {
+                        locations.Add((m, staticTarg.Location));
                     }
                 }
             }
@@ -295,7 +321,7 @@ namespace Server.Custom.UORespawnServer
                 {
                     entity.LOCATION = GetSpawnPoint(pm.Location, UOR_Settings.MIN_RANGE, maxRng, pm.Map, out bool isWater);
 
-                    if (isWater && !IsWaterLimit() && Utility.RandomDouble() > UOR_Settings.CHANCE_WATER)
+                    if (Utility.RandomDouble() > UOR_Settings.CHANCE_WATER && !IsWaterLimit(isWater))
                     {
                         if (UOR_Settings.ENABLE_DEBUG) entity.REASON = "[Skipped-Water]";
                         continue;
@@ -314,15 +340,14 @@ namespace Server.Custom.UORespawnServer
                         continue;
                     }
 
-                    // 3. Queue Check (The "Don't Spawn on top of recent spawn" check)
-                    // Optimization: Iterate backwards if you plan on removing items, 
-                    // otherwise, consider a HashSet of Points for O(1) lookups if possible.
+                    // 3. Queue Check - Don't spawn on top of recent spawn locations
                     bool isQueued = false;
-                    var list = QuedLocations[pm.Map];
+                    var queuedRects = QuedLocations[pm.Map];
+                    var checkPoint = new Point2D(entity.LOCATION.X, entity.LOCATION.Y);
 
-                    for (int i = 0; i < list.Count; i++)
+                    for (int i = 0; i < queuedRects.Count; i++)
                     {
-                        if (list[i].Contains(entity.LOCATION))
+                        if (queuedRects[i].Contains(checkPoint))
                         {
                             isQueued = true;
                             break;
@@ -352,22 +377,19 @@ namespace Server.Custom.UORespawnServer
                 }
                 else if (UOR_Settings.ENABLE_DEBUG)
                 {
-                    if (UOR_Settings.ENABLE_DEBUG)
+                    var flag = new DebugFlag()
                     {
-                        var flag = new DebugFlag()
-                        {
-                            Map = pm.Map,
-                            Location = entity.LOCATION
-                        };
+                        Map = pm.Map,
+                        Location = entity.LOCATION
+                    };
 
-                        if (entity.REGION != null && entity.REGION.Name != null)
-                        {
-                            flag.SetInfo(entity.PLAYER, entity.REGION.Name, GetTileName(pm.Map, entity.LOCATION), entity.REASON);
-                        }
-                        else
-                        {
-                            flag.SetInfo(entity.PLAYER, "NULL", GetTileName(pm.Map, entity.LOCATION), entity.REASON);
-                        }
+                    if (entity.REGION != null && entity.REGION.Name != null)
+                    {
+                        flag.SetInfo(entity.PLAYER, entity.REGION.Name, GetTileName(pm.Map, entity.LOCATION), entity.REASON);
+                    }
+                    else
+                    {
+                        flag.SetInfo(entity.PLAYER, "NULL", GetTileName(pm.Map, entity.LOCATION), entity.REASON);
                     }
                 }
             }
@@ -379,10 +401,14 @@ namespace Server.Custom.UORespawnServer
             return null;
         }
 
-        private static bool IsWaterLimit()
+        private static bool IsWaterLimit(bool isWater)
         {
-            // On-demand query using ISpawner pattern
-            return GetAllSpawn().Count(bc => bc.CanSwim) > (UOR_Settings.MAX_CROWD * UOR_Settings.SCALE_MOD);
+            if (isWater)
+            {
+                return GetAllSpawn().Count(bc => bc.CanSwim) > (UOR_Settings.MAX_CROWD * UOR_Settings.SCALE_MOD);
+            }
+
+            return isWater;
         }
 
         internal static Rectangle2D GetSpawnBox(Point3D loc, int rad)
