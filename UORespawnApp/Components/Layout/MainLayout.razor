@@ -15,6 +15,11 @@
     <PendingEditsModal OnClose="ClosePendingEditsModal" />
 }
 
+@if (_showServerUpdateModal && _serverUpdateInfo != null)
+{
+    <ServerUpdateModal UpdateInfo="_serverUpdateInfo" OnClose="CloseServerUpdateModal" />
+}
+
 @{
     // Hide debug panel on home page (splash screen)
     var showDebugPanel = DebugService.IsEnabled && ViewService.CurrentView != "home";
@@ -40,12 +45,15 @@
 @code {
     private bool isDebugCollapsed = false;
     private bool _showPendingEditsModal = false;
+    private bool _showServerUpdateModal = false;
+    private ServerUpdateService.ServerUpdateInfo? _serverUpdateInfo = null;
 
     protected override void OnInitialized()
     {
         DebugService.OnDebugModeChanged += OnDebugModeChanged;
         ViewService.OnViewChanged += OnViewChanged;
         BackgroundDataLoader.PendingCommandsDetected += OnPendingCommandsDetected;
+        BackgroundDataLoader.ServerUpdateAvailable += OnServerUpdateAvailable;
     }
 
     private void OnDebugModeChanged(bool enabled)
@@ -76,10 +84,25 @@
         StateHasChanged();
     }
 
+    private void OnServerUpdateAvailable(object? sender, ServerUpdateService.ServerUpdateInfo info)
+    {
+        _serverUpdateInfo = info;
+        _showServerUpdateModal = true;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void CloseServerUpdateModal()
+    {
+        _showServerUpdateModal = false;
+        _serverUpdateInfo = null;
+        StateHasChanged();
+    }
+
     public void Dispose()
     {
         DebugService.OnDebugModeChanged -= OnDebugModeChanged;
         ViewService.OnViewChanged -= OnViewChanged;
         BackgroundDataLoader.PendingCommandsDetected -= OnPendingCommandsDetected;
+        BackgroundDataLoader.ServerUpdateAvailable -= OnServerUpdateAvailable;
     }
 }

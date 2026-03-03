@@ -486,11 +486,15 @@ namespace UORespawnApp.Scripts.Utilities
         #region Startup Version Check
 
         /// <summary>
-        /// Check server version on startup and auto-update if needed.
-        /// Called by BackgroundDataLoader when server is linked.
+        /// [DEPRECATED] Old auto-update method - now just ensures data folders exist.
+        /// Version checking is now handled by ServerUpdateService which prompts the user.
+        /// 
+        /// This method is kept for backwards compatibility but NO LONGER auto-updates.
+        /// Use ServerUpdateService.CheckForServerUpdate() for version checking with user confirmation.
         /// </summary>
         /// <param name="servuoPath">Path to ServUO root folder</param>
-        /// <returns>True if server is ready to use (installed/updated), false if error</returns>
+        /// <returns>True if server folders are ready, false if error</returns>
+        [Obsolete("Use ServerUpdateService.CheckForServerUpdate() instead for version checking with user confirmation")]
         public static bool CheckAndUpdateServerOnStartup(string? servuoPath)
         {
             try
@@ -509,16 +513,22 @@ namespace UORespawnApp.Scripts.Utilities
 
                 if (!installStatus.IsInstalled)
                 {
-                    Logger.Info("Server not installed - performing full setup");
-                    var result = FullServerSetup(servuoPath);
-                    return result.success;
+                    // Server not installed - this is handled when user links server
+                    // We don't auto-install anymore
+                    Logger.Info("Server scripts not installed - will be installed when user links server");
+                    return true;
                 }
 
                 if (installStatus.NeedsUpdate)
                 {
-                    Logger.Info($"Server version mismatch (installed: {installStatus.InstalledVersion}, editor: {installStatus.EditorVersion}) - updating...");
-                    var result = FullServerSetup(servuoPath, forceReinstall: true);
-                    return result.success;
+                    // DO NOT AUTO-UPDATE - let ServerUpdateService handle this with user confirmation
+                    // This prevents silent replacement of user's custom modifications
+                    Logger.Info($"Server version mismatch detected (installed: {installStatus.InstalledVersion}, editor: {installStatus.EditorVersion})");
+                    Logger.Info("Update will be offered via ServerUpdateService - user confirmation required");
+
+                    // Still ensure data folders exist - this is non-destructive
+                    SetupServerDataFolders(servuoPath);
+                    return true;
                 }
 
                 Logger.Info($"Server version matches editor (v{installStatus.InstalledVersion})");
@@ -641,6 +651,27 @@ namespace UORespawnApp.Scripts.Utilities
         public static string GetServerDataPath(string servuoPath)
         {
             return Path.Combine(servuoPath, "Data", SERVER_DATA_FOLDER);
+        }
+
+        /// <summary>
+        /// Ensures server data folders exist without reinstalling scripts.
+        /// Safe to call even when server scripts are custom/modified.
+        /// Used when version matches but we want to ensure folder structure.
+        /// </summary>
+        /// <param name="servuoPath">Path to ServUO root folder</param>
+        public static void EnsureDataFoldersExist(string? servuoPath)
+        {
+            if (string.IsNullOrEmpty(servuoPath))
+                return;
+
+            try
+            {
+                SetupServerDataFolders(servuoPath);
+            }
+            catch (Exception ex)
+            {
+                Logger.Warning($"Error ensuring data folders exist: {ex.Message}");
+            }
         }
 
         #endregion

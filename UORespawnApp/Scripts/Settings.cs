@@ -452,6 +452,18 @@ namespace UORespawnApp
         }
 
         /// <summary>
+        /// Version string to skip server update prompts for.
+        /// When set, the editor won't prompt to update server scripts until the editor version changes.
+        /// This allows users to keep custom server modifications without repeated prompts.
+        /// Reset to empty when user accepts an update or when editor version changes.
+        /// </summary>
+        public static string SkipServerUpdateUntilVersion
+        {
+            get => Preferences.Get("SkipServerUpdateUntilVersion", "");
+            set => Preferences.Set("SkipServerUpdateUntilVersion", value);
+        }
+
+        /// <summary>
         /// List of favorite creature names from the bestiary.
         /// Stored as comma-separated values in preferences.
         /// </summary>

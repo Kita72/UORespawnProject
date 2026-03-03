@@ -49,15 +49,29 @@ namespace UORespawnApp.Scripts.Services
         public event EventHandler? AllDataLoaded;
         public event EventHandler? PendingCommandsDetected;
 
+        /// <summary>
+        /// Event raised when a server update is available and needs user confirmation.
+        /// MainLayout subscribes to this to show the ServerUpdateModal.
+        /// </summary>
+        public event EventHandler<ServerUpdateService.ServerUpdateInfo>? ServerUpdateAvailable;
+
         private DataWatcher? _dataWatcher;
         private readonly CommandService _commandService;
+        private readonly ServerUpdateService _serverUpdateService;
 
         /// <summary>
-        /// Constructor with DI injection of CommandService.
+        /// Constructor with DI injection of CommandService and ServerUpdateService.
         /// </summary>
-        public BackgroundDataLoader(CommandService commandService)
+        public BackgroundDataLoader(CommandService commandService, ServerUpdateService serverUpdateService)
         {
             _commandService = commandService;
+            _serverUpdateService = serverUpdateService;
+
+            // Forward server update events to our own event for MainLayout
+            _serverUpdateService.OnServerUpdateAvailable += (sender, info) =>
+            {
+                ServerUpdateAvailable?.Invoke(this, info);
+            };
         }
 
         /// <summary>
@@ -450,8 +464,9 @@ namespace UORespawnApp.Scripts.Services
         }
 
         /// <summary>
-        /// Check if server is linked and verify/update server installation.
-        /// Ensures server scripts match editor version before syncing data.
+        /// Check if server is linked and verify server installation status.
+        /// If an update is available, raises ServerUpdateAvailable event for UI to show confirmation modal.
+        /// Does NOT auto-update - user confirmation is always required.
         /// </summary>
         private async Task CheckAndUpdateServerAsync()
         {
@@ -468,15 +483,25 @@ namespace UORespawnApp.Scripts.Services
 
                 await Task.Run(() =>
                 {
-                    bool ready = ServerSetupUtility.CheckAndUpdateServerOnStartup(servuoPath);
+                    // Use ServerUpdateService for version checking
+                    // This will raise OnServerUpdateAvailable event if update is needed
+                    // The event is forwarded to ServerUpdateAvailable which MainLayout subscribes to
+                    bool checked_ok = _serverUpdateService.CheckForServerUpdate(servuoPath);
 
-                    if (ready)
+                    if (checked_ok)
                     {
-                        Logger.Info("[ServerCheck] Server is ready");
+                        if (_serverUpdateService.PendingUpdate != null)
+                        {
+                            Logger.Info("[ServerCheck] Update available - waiting for user confirmation");
+                        }
+                        else
+                        {
+                            Logger.Info("[ServerCheck] Server is ready");
+                        }
                     }
                     else
                     {
-                        Logger.Warning("[ServerCheck] Server setup may have issues - check logs");
+                        Logger.Warning("[ServerCheck] Server check encountered issues - check logs");
                     }
                 });
             }

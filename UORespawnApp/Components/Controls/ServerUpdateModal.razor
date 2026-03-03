@@ -1,0 +1,198 @@
+@using UORespawnApp.Scripts.Services
+@using UORespawnApp.Scripts.Utilities
+
+<div class="modal fade show d-block" style="background: rgba(0,0,0,0.7);" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content bg-dark text-light">
+            <div class="modal-header border-warning">
+                <h5 class="modal-title text-warning">
+                    <span class="bi bi-exclamation-triangle-fill me-2"></span>
+                    Server Script @(UpdateInfo.IsUpgrade ? "Update" : "Change") Available
+                </h5>
+            </div>
+            <div class="modal-body">
+                <!-- Version Comparison -->
+                <div class="text-center mb-4">
+                    <div class="d-inline-flex align-items-center gap-3" style="font-size: 1.2rem;">
+                        <div class="text-center">
+                            <div class="text-muted small mb-1">Installed</div>
+                            <span class="badge @(UpdateInfo.IsDowngrade ? "bg-success" : "bg-secondary") px-3 py-2" style="font-size: 1.1rem;">
+                                v@(UpdateInfo.InstalledVersion)
+                            </span>
+                        </div>
+                        <span class="bi bi-arrow-right text-warning" style="font-size: 1.5rem;"></span>
+                        <div class="text-center">
+                            <div class="text-muted small mb-1">Editor</div>
+                            <span class="badge @(UpdateInfo.IsUpgrade ? "bg-success" : "bg-secondary") px-3 py-2" style="font-size: 1.1rem;">
+                                v@(UpdateInfo.EditorVersion)
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                @if (UpdateInfo.IsUpgrade)
+                {
+                    <div class="alert alert-info mb-3">
+                        <span class="bi bi-info-circle me-2"></span>
+                        <strong>Upgrade Available:</strong> Your server has an older version of UORespawn scripts.
+                        Updating ensures compatibility with this editor version.
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-warning mb-3">
+                        <span class="bi bi-exclamation-triangle me-2"></span>
+                        <strong>Version Mismatch:</strong> Your server has a newer version than this editor.
+                        This may happen if you opened an older editor version.
+                    </div>
+                }
+
+                <!-- Warning about custom modifications -->
+                <div class="alert alert-danger mb-3">
+                    <strong><span class="bi bi-shield-exclamation me-2"></span>Important:</strong>
+                    <p class="mb-2 mt-2">
+                        Updating will <strong>replace all server scripts</strong> in 
+                        <code>Scripts/Custom/UORespawnServer/</code>
+                    </p>
+                    <p class="mb-0">
+                        <span class="bi bi-exclamation-octagon me-1"></span>
+                        If you've made <strong>custom modifications</strong> to the server scripts, 
+                        they will be <strong class="text-warning">overwritten</strong>!
+                    </p>
+                </div>
+
+                <!-- What gets replaced -->
+                <div class="card bg-secondary mb-3">
+                    <div class="card-header py-2">
+                        <strong><span class="bi bi-folder me-2"></span>Scripts that will be replaced:</strong>
+                    </div>
+                    <div class="card-body py-2">
+                        <code class="text-light">@(UpdateInfo.ScriptsPath ?? "Scripts/Custom/UORespawnServer/")</code>
+                    </div>
+                </div>
+
+                <!-- Options explanation -->
+                <div class="mb-3">
+                    <strong>Your options:</strong>
+                    <ul class="mt-2 mb-0">
+                        <li><strong class="text-success">Update Now</strong> - Replace server scripts with editor version</li>
+                        <li><strong class="text-warning">Skip This Session</strong> - Use current scripts, ask again next launch</li>
+                        <li><strong class="text-info">Don't Ask Again</strong> - Skip until you install a different editor version</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-footer border-secondary d-flex justify-content-between">
+                <div>
+                    <button type="button" class="btn btn-outline-info btn-sm" @onclick="SkipPermanently" title="Don't prompt again until editor version changes">
+                        <span class="bi bi-bell-slash me-1"></span>Don't Ask Again
+                    </button>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-warning" @onclick="SkipSession">
+                        <span class="bi bi-skip-forward me-1"></span>Skip This Session
+                    </button>
+                    <button type="button" class="btn btn-success" @onclick="AcceptUpdate" disabled="@isUpdating">
+                        @if (isUpdating)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                            <text>Updating...</text>
+                        }
+                        else
+                        {
+                            <span class="bi bi-download me-1"></span>
+                            <text>Update Now</text>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(resultMessage))
+{
+    <div class="modal fade show d-block" style="background: rgba(0,0,0,0.8);" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bg-dark text-light">
+                <div class="modal-header @(updateSuccess ? "border-success" : "border-danger")">
+                    <h5 class="modal-title @(updateSuccess ? "text-success" : "text-danger")">
+                        <span class="bi @(updateSuccess ? "bi-check-circle" : "bi-x-circle") me-2"></span>
+                        @(updateSuccess ? "Update Complete" : "Update Failed")
+                    </h5>
+                </div>
+                <div class="modal-body">
+                    <p>@resultMessage</p>
+                    @if (updateSuccess)
+                    {
+                        <div class="alert alert-info mb-0">
+                            <span class="bi bi-info-circle me-2"></span>
+                            <strong>Reminder:</strong> Restart your ServUO server to load the new scripts.
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-primary" @onclick="Close">
+                        <span class="bi bi-check me-1"></span>OK
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public ServerUpdateService.ServerUpdateInfo UpdateInfo { get; set; } = new();
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    [Inject]
+    private ServerUpdateService ServerUpdateService { get; set; } = default!;
+
+    private bool isUpdating = false;
+    private string resultMessage = "";
+    private bool updateSuccess = false;
+
+    private async Task AcceptUpdate()
+    {
+        isUpdating = true;
+        StateHasChanged();
+
+        try
+        {
+            var (success, message) = ServerUpdateService.AcceptUpdate();
+            updateSuccess = success;
+            resultMessage = message;
+        }
+        catch (Exception ex)
+        {
+            updateSuccess = false;
+            resultMessage = $"Error: {ex.Message}";
+            Logger.Error("Error during server update", ex);
+        }
+        finally
+        {
+            isUpdating = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SkipSession()
+    {
+        ServerUpdateService.DeclineForSession();
+        await OnClose.InvokeAsync();
+    }
+
+    private async Task SkipPermanently()
+    {
+        ServerUpdateService.SkipUntilNextVersion();
+        await OnClose.InvokeAsync();
+    }
+
+    private async Task Close()
+    {
+        resultMessage = "";
+        await OnClose.InvokeAsync();
+    }
+}

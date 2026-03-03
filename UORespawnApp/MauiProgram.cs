@@ -30,6 +30,7 @@ namespace UORespawnApp
             builder.Services.AddSingleton<ViewService>();
             builder.Services.AddSingleton<ToastService>();
             builder.Services.AddSingleton<CommandService>();
+            builder.Services.AddSingleton<ServerUpdateService>();
             builder.Services.AddSingleton<BackgroundDataLoader>();
             builder.Services.AddSingleton<UpdateChecker>();
             builder.Services.AddSingleton<SpawnPackService>();

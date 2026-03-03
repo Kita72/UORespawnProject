@@ -1,5 +1,4 @@
-﻿using UORespawnApp.Scripts.Constants;
-using UORespawnApp.Scripts.Entities;
+﻿using UORespawnApp.Scripts.Entities;
 using UORespawnApp.Scripts.Services;
 
 namespace UORespawnApp.Scripts.Utilities
@@ -11,7 +10,7 @@ namespace UORespawnApp.Scripts.Utilities
     /// </summary>
     public static class Utility
     {
-        internal const string Version = "2.0.0.8";
+        internal const string Version = "2.0.0.9";
 
         /// <summary>
         /// Current session (map, view state, etc.)

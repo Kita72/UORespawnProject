@@ -313,6 +313,20 @@
                         The editor shows only tiles that exist on your server.
                     </p>
 
+                    <h6 class="text-primary mt-4"><span class="bi bi-card-image me-2"></span>Tile Preview Card</h6>
+                    <p>
+                        When you select a tile type, a <strong>preview card</strong> appears showing:
+                    </p>
+                    <ul>
+                        <li><strong>Tile Image:</strong> Visual preview of the terrain texture</li>
+                        <li><strong>Tile Description:</strong> Lore-friendly description of the terrain and what typically inhabits it</li>
+                    </ul>
+                    <p class="small text-muted">
+                        <span class="bi bi-info-circle"></span> The preview helps you visualize what terrain you're configuring 
+                        and provides inspiration for appropriate creature selections. Tiles with bundled images display them directly;
+                        custom server tiles show a generic placeholder with "Custom Tile" styling.
+                    </p>
+
                     <h6 class="text-primary mt-4"><span class="bi bi-list-check me-2"></span>Example Setup</h6>
                     <p><strong>Forest Tile:</strong></p>
                     <ul>
@@ -883,14 +897,28 @@
                     </ol>
 
                     <div class="alert alert-success mb-4">
-                        <span class="bi bi-magic me-1"></span> <strong>Auto-Install & Auto-Update (v2.0.0.8):</strong>
+                        <span class="bi bi-magic me-1"></span> <strong>Auto-Install & Safe Updates (v2.0.0.9):</strong>
                         <p class="mb-2 mt-2">When you link your server folder, the editor automatically:</p>
                         <ul class="mb-0">
                             <li><strong>Cleans up</strong> any old UORespawn installations (legacy folders)</li>
                             <li><strong>Installs</strong> server scripts to <code>Scripts/Custom/UORespawnServer/</code></li>
                             <li><strong>Creates</strong> data folder structure at <code>Data/UORespawn/</code></li>
-                            <li><strong>Version checks</strong> on every editor launch - auto-updates if versions mismatch!</li>
+                            <li><strong>Version checks</strong> on every editor launch - prompts you before updating!</li>
                         </ul>
+                    </div>
+
+                    <div class="alert alert-warning mb-4">
+                        <span class="bi bi-shield-exclamation me-1"></span> <strong>Server Update Confirmation (v2.0.0.9):</strong>
+                        <p class="mb-2 mt-2">When a version mismatch is detected between the editor and your server scripts, a confirmation modal appears with three options:</p>
+                        <ul class="mb-0">
+                            <li><strong>Update Now:</strong> Replaces server scripts with the editor's version (recommended for most users)</li>
+                            <li><strong>Skip This Session:</strong> Dismiss for now - you'll be prompted again next time</li>
+                            <li><strong>Don't Ask Again:</strong> Skip this update permanently until a newer version is released</li>
+                        </ul>
+                        <p class="mb-0 mt-2 small text-warning">
+                            <span class="bi bi-exclamation-triangle me-1"></span>If you've made custom modifications to the server scripts, choose carefully! 
+                            Updating will replace your changes. Consider backing up your customizations first.
+                        </p>
                     </div>
 
                     <div class="alert alert-info mb-4">
@@ -1350,9 +1378,15 @@
                         <li><strong>In-Game Editing:</strong> Use <code>[EditBox</code>, <code>[EditRegion</code>, <code>[EditTile</code>, <code>[EditVendor</code> commands to queue spawn edits from in-game</li>
                         <li><strong>Pending Edits Modal:</strong> Editor detects and processes queued edit commands on launch</li>
                         <li><strong>Auto-Install Server Scripts:</strong> Linking your ServUO folder now automatically installs server scripts</li>
-                        <li><strong>Auto-Update Server:</strong> Editor checks version on startup and updates server scripts if needed</li>
                         <li><strong>Legacy Cleanup:</strong> Auto-removes old UORespawn installations when linking</li>
                         <li><strong>COMMANDS Folder:</strong> New folder structure for in-game edit command queuing</li>
+                    </ul>
+
+                    <h6 class="text-primary mt-4"><span class="bi bi-stars me-2"></span>New in v2.0.0.9</h6>
+                    <ul>
+                        <li><strong>Server Update Confirmation:</strong> Editor now prompts before updating server scripts (protects custom modifications)</li>
+                        <li><strong>Update Options:</strong> Choose to update now, skip this session, or skip until next version</li>
+                        <li><strong>Enhanced Tile Preview:</strong> Tile Spawn page now shows detailed descriptions for each tile type</li>
                     </ul>
 
                     <div class="alert alert-primary mt-3">
