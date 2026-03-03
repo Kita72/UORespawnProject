@@ -4,7 +4,6 @@ using System.Collections.Generic;
 
 using Server.Mobiles;
 
-using Server.Custom.UORespawnServer.Core;
 using Server.Custom.UORespawnServer.Entities;
 using Server.Custom.UORespawnServer.Managers;
 using Server.Custom.UORespawnServer.Services;
@@ -130,9 +129,7 @@ namespace Server.Custom.UORespawnServer
 
             GameManager.InitializeData(); // Create Game Data Files : Output to Editor
 
-                        XmlCommandProcessor.ProcessCommands(); // Process XML spawner commands from Editor
-
-                        UOR_Utility.SendMsg(ConsoleColor.Yellow, $"Respawn-[2/2]");
+            UOR_Utility.SendMsg(ConsoleColor.Yellow, $"Respawn-[2/2]");
 
             SpawnManager.LoadSpawns(); // Load Spawn Data : Input to Server
 
@@ -156,28 +153,33 @@ namespace Server.Custom.UORespawnServer
             // PHASE 1: Reclaim spawner references (Mobile.Spawner is not serialized)
             ReclaimSpawners();
 
-            UOR_Utility.SendMsg(ConsoleColor.Yellow, $"Respawn-[1/5]");
+            UOR_Utility.SendMsg(ConsoleColor.Yellow, $"Respawn-[1/6]");
 
             // PHASE 2: Clean up mob spawn from previous session (fresh world)
 
             CleanupMobSpawn();
 
-            UOR_Utility.SendMsg(ConsoleColor.Yellow, $"Respawn-[2/5]");
+            UOR_Utility.SendMsg(ConsoleColor.Yellow, $"Respawn-[2/6]");
 
             // PHASE 3: Initialize vendors (checks for existing, only spawns if needed)
             InitializeVendors();
 
-            UOR_Utility.SendMsg(ConsoleColor.Yellow, $"Respawn-[3/5]");
+            UOR_Utility.SendMsg(ConsoleColor.Yellow, $"Respawn-[3/6]");
 
-            // PHASE 4: Create services
+            // PHASE 4: Process XML spawner commands from editor (after data ready, before timers)
+            XMLManager.ProcessCommands();
+
+            UOR_Utility.SendMsg(ConsoleColor.Yellow, $"Respawn-[4/6]");
+
+            // PHASE 5: Create services
             InitializeServices();
 
-            UOR_Utility.SendMsg(ConsoleColor.Yellow, $"Respawn-[4/5]");
+            UOR_Utility.SendMsg(ConsoleColor.Yellow, $"Respawn-[5/6]");
 
-            // PHASE 5: Subscribe to game events
+            // PHASE 6: Subscribe to game events
             InitializeEvents();
 
-            UOR_Utility.SendMsg(ConsoleColor.Yellow, $"Respawn-[5/5]");
+            UOR_Utility.SendMsg(ConsoleColor.Yellow, $"Respawn-[6/6]");
 
             // PHASE 6: Start service timers
             StartTimers();

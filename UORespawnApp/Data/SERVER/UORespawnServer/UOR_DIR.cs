@@ -28,7 +28,6 @@ namespace Server.Custom.UORespawnServer
         internal static readonly string REGION_EDIT_FILE = Path.Combine(COMMANDS_DIR, "region_edits.txt");
         internal static readonly string TILE_EDIT_FILE = Path.Combine(COMMANDS_DIR, "tile_edits.txt");
         internal static readonly string VENDOR_EDIT_FILE = Path.Combine(COMMANDS_DIR, "vendor_edits.txt");
-        internal static readonly string XML_COMMANDS_FILE = Path.Combine(INPUT_DIR, "UOR_XmlCommands.txt");
 
         // Text File Paths (Sever creates, Editor loads)
         internal static readonly string MAP_LIST_FILE = Path.Combine(OUTPUT_DIR, "UOR_MapList.txt");

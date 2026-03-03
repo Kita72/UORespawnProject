@@ -5,7 +5,7 @@ namespace Server.Custom.UORespawnServer
 {
     internal static class UOR_Settings
     {
-        internal const string VERSION = "2.0.0.9"; // Updated: Polish pass - code cleanup and documentation
+        internal const string VERSION = "2.0.0.10";
 
         // System Scaler (exposed for ControlService)
         internal static double SCALE_MOD { get; private set; } = 1.0;

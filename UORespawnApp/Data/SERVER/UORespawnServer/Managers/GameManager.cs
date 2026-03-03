@@ -49,9 +49,9 @@ namespace Server.Custom.UORespawnServer.Managers
             // Process settings commands
             if (CommandManager.HasPendingCommands(CommandTarget.Settings))
             {
-                var result = ApplySettingsCommands();
-                totalApplied += result.applied;
-                totalFailed += result.failed;
+                var (applied, failed) = ApplySettingsCommands();
+                totalApplied += applied;
+                totalFailed += failed;
             }
 
             // Process spawn commands (Box, Region, Tile, Vendor)
@@ -61,9 +61,9 @@ namespace Server.Custom.UORespawnServer.Managers
             {
                 if (CommandManager.HasPendingCommands(target))
                 {
-                    var result = ApplySpawnCommands(target);
-                    totalApplied += result.applied;
-                    totalFailed += result.failed;
+                    var (applied, failed) = ApplySpawnCommands(target);
+                    totalApplied += applied;
+                    totalFailed += failed;
                 }
             }
 
@@ -343,7 +343,7 @@ namespace Server.Custom.UORespawnServer.Managers
                     }
 
                     // Format: Serial:MapId:X:Y:HomeRange:MaxCount:SpawnNames
-                    allSpawners.Add($"{s.Serial.Value}:{s.Map}:{s.X}:{s.Y}:{spwnr.HomeRange}:{s.MaxCount}:{spawnNames}");
+                    allSpawners.Add($"{s.Serial.Value}:{s.Map.MapID}:{s.X}:{s.Y}:{spwnr.HomeRange}:{s.MaxCount}:{spawnNames}");
                 }
 
                 if (spawner is XmlSpawner xml && xml is ISpawner xspwnr)
