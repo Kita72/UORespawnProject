@@ -1508,6 +1508,15 @@
 @code {
     [Inject] private IJSRuntime JS { get; set; } = default!;
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Scroll to top when page loads
+            await JS.InvokeVoidAsync("scrollTo", new { top = 0, behavior = "instant" });
+        }
+    }
+
     private async Task ScrollToTop()
     {
         await JS.InvokeVoidAsync("scrollTo", new { top = 0, behavior = "smooth" });
