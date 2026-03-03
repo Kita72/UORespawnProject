@@ -20,11 +20,6 @@ public class FtpConnectionService : IDisposable
     public event EventHandler<FtpConnectionStatus>? ConnectionStatusChanged;
 
     /// <summary>
-    /// Event raised during file transfer progress.
-    /// </summary>
-    public event EventHandler<FtpProgress>? TransferProgress;
-
-    /// <summary>
     /// Current connection status.
     /// </summary>
     public FtpConnectionStatus Status { get; private set; } = FtpConnectionStatus.Disconnected;
