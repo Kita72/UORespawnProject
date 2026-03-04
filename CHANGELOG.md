@@ -5,9 +5,97 @@ All notable changes to UORespawn will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.0.0.10] - 2025-06-14
+## [2.0.1.0] - 2026-03-04
 
 ### Added
+
+#### Dependency Injection Architecture
+- **SpawnDataService** - Centralized spawn data management via DI
+  - Thread-safe spawn dictionaries with proper locking
+  - Singleton service for consistent state across components
+  - Methods: AddBoxSpawn, ClearBoxSpawns, InitializeBoxSpawns, etc.
+- **SessionService** - DI-injectable session management
+  - Wraps Session with proper lifecycle management
+  - MapImageCacheService integration for base64 caching
+  - Thread-safe map image retrieval
+- **MapImageCacheService** - Efficient map image caching
+  - Lazy loading with LRU eviction (max 6 maps)
+  - Thread-safe concurrent dictionary storage
+  - Base64 data URL generation for Blazor rendering
+
+#### Thread Safety Improvements
+- **Session Lock** - Added .NET 9+ Lock type for thread-safe operations
+  - Protected MapId, LinkedServerPath, and ServerMode properties
+  - Safe concurrent access from multiple components
+- **DataWatcher Lock** - Thread-safe file monitoring
+  - Protected _isRunning state with proper locking
+  - Safe start/stop operations from any thread
+- **SpawnDataService Lock** - Protected spawn dictionary operations
+  - All CRUD operations properly synchronized
+
+#### File Operations
+- **FileUtility** - Robust file operations with retry logic
+  - WriteAllTextWithRetry: 3 attempts with 100ms delays
+  - WriteAllBytesWithRetry: Handles transient file locks
+  - Proper exception handling and logging
+
+#### Constants & Configuration
+- **ViewportConstants** - Centralized viewport dimensions
+  - DEFAULT_WIDTH = 800, DEFAULT_HEIGHT = 600
+  - Consistent sizing across all map components
+
+#### UI Components
+- **FrequencyButtonsComponent** - Reusable frequency selector
+  - Extracted from TileSpawnComponent for reuse
+  - All 6 frequency types: Water, Weather, Timed, Common, Uncommon, Rare
+  - Proper styling with theme support
+
+#### Visual Improvements
+- **Trigger Dashboard** - Weather/Time indicators on TileSpawnComponent
+  - Visual icons (cloud, clock) showing active triggers
+  - Appears when IsWeather or IsTimed is enabled
+  - Subtle styling that doesn't distract from main content
+- **NavMenu Icon Updates** - Improved spawn type icons
+  - Box Spawns: bi-bounding-box (was bi-box)
+  - Tile Spawns: bi-grid-3x3-gap (was bi-geo-alt)
+
+### Changed
+
+#### Architecture Refactoring
+- **Utility.cs Delegation Pattern** - Static class now delegates to DI services
+  - BoxSpawns, TileSpawns, RegionSpawns, VendorSpawns → SpawnDataService
+  - SESSION → SessionService
+  - Backward compatible: existing code works unchanged
+  - Migration path: new code should inject services directly
+
+#### Navigation & Layout
+- **Map Selector Moved** - From NavMenu to individual page headers
+  - Box, Region, and Vendor spawn pages now have map selector in header
+  - Cleaner NavMenu without map-specific controls
+  - Consistent placement across spawn editor pages
+- **NavMenu Reordered** - Logical grouping of features
+  - Order: Spawn Packs → Spawn Section → Settings → Instructions → Theme
+  - Spawn Packs at top for quick access
+  - Settings/Instructions grouped together
+
+#### Styling
+- **Tile Name Color** - Blue (#6ea8fe) in frequency card header only
+  - Matches frequency theme for consistency
+  - Proper scoping to avoid affecting other elements
+- **NavMenu Spacing** - Fixed gap between active pack and nav items
+  - Added margin-bottom to active-pack-header
+
+### Fixed
+- **CSS Warning** - Removed invalid `crisp-edges` value from image-rendering
+  - Changed to standard `-webkit-optimize-contrast` and `pixelated`
+- **Frequency Enum Accessibility** - Changed from internal to public
+  - Required for component parameter binding
+
+### Technical
+- Registered new services in MauiProgram.cs as singletons
+- MainPage.xaml.cs calls Utility.SetServices() during startup
+- Added map-header-select styling in app.css
+- Build verified with .NET 10 - no warnings or errors
 
 #### XML Spawner Management
 - **Add XML Spawner** - Create new XML spawners directly from the map editor
