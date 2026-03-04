@@ -1,82 +1,109 @@
 /**
- * Map Module - Simple pan and draw spawn boxes
- * Map supports 1x (actual size) and 2x (zoomed) viewing
+ * Map Module - Canvas-based map rendering with pan, zoom, and spawn management
+ * Supports 1x (actual size), 2x, and 4x zoom levels
+ * Used by: BoxSpawnComponent, RegionSpawnComponent, VendorSpawnComponent
  */
 window.mapModule = {
-canvas: null,
-ctx: null,
-img: null,
-    
-imageWidth: 0,
-imageHeight: 0,
-viewportWidth: 800,
-viewportHeight: 600,
-scale: 2.0, // Default 2x zoom, can be changed to 1.0 for actual size
-    
-// Pan offset (how much the map has moved)
-panX: 0,
-panY: 0,
-    
-// Drawing state
-isDrawing: false,
-drawStartWorld: { x: 0, y: 0 },
-drawCurrentWorld: { x: 0, y: 0 },
-    
-// Panning state
-isPanning: false,
-panStartScreen: { x: 0, y: 0 },
-panStartOffset: { x: 0, y: 0 },
-    
-// Stored spawns for redrawing
-currentSpawns: [],
+    // ============================================
+    // Core Canvas State
+    // ============================================
+    canvas: null,
+    ctx: null,
+    img: null,
 
-// Region data for region spawn page
-regions: null,
-selectedRegionName: '',
-hoveredRegionName: '',
-hoveredAreaIndex: -1,  // Index of hovered area within region (-1 = none)
+    imageWidth: 0,
+    imageHeight: 0,
+    viewportWidth: 800,
+    viewportHeight: 600,
+    scale: 2.0, // Zoom level: 1.0 = actual size, 2.0 = 2x, 4.0 = 4x
 
-// Hovered spawn for box spawn page
-hoveredSpawnId: null,
+    // Pan offset (how much the map has moved)
+    panX: 0,
+    panY: 0,
 
-// XML spawner hover state (hover-based like spawn data)
-hoveredXmlSpawnerId: null,
-xmlSpawnerTooltipVisible: false,
-xmlTooltipMousePos: { x: 0, y: 0 },
-xmlSpawnerDwellTimer: null,
-xmlSpawnerDwellDelay: 500, // milliseconds to wait before showing tooltip
+    // ============================================
+    // Drawing State (Box Creation)
+    // ============================================
+    isDrawing: false,
+    drawStartWorld: { x: 0, y: 0 },
+    drawCurrentWorld: { x: 0, y: 0 },
 
-// Server spawn (stats) hover state
-hoveredServerSpawnIdx: -1,
-serverSpawnTooltipVisible: false,
-serverSpawnTooltipMousePos: { x: 0, y: 0 },
-serverSpawnDwellTimer: null,
-serverSpawnDwellDelay: 500, // milliseconds to wait before showing tooltip
-serverSpawnFlashAnimationId: null, // Animation frame ID for spawn dot flashing
+    // ============================================
+    // Panning State (Mouse Drag)
+    // ============================================
+    isPanning: false,
+    panStartScreen: { x: 0, y: 0 },
+    panStartOffset: { x: 0, y: 0 },
 
-// Vendor marker state
-vendorMarkers: null,
-selectedVendorSignType: '',
-hoveredVendorMarkerIdx: -1,
-vendorMarkerTooltipVisible: false,
-vendorMarkerTooltipMousePos: { x: 0, y: 0 },
-vendorMarkerDwellTimer: null,
-vendorMarkerDwellDelay: 500, // milliseconds to wait before showing tooltip
+    // ============================================
+    // Spawn Box State
+    // ============================================
+    currentSpawns: [],
+    hoveredSpawnId: null,
 
-// XML Spawner management state
-tildeKeyHeld: false,          // Track if tilde (`) key is being held for add mode
-blazorHelper: null,           // DotNetObjectReference for callbacks to C#
-xmlToggleEnabled: false,      // Track if XML toggle is enabled
+    // ============================================
+    // Region State (Region Spawn Page)
+    // ============================================
+    regions: null,
+    selectedRegionName: '',
+    hoveredRegionName: '',
+    hoveredAreaIndex: -1, // Index of hovered area within region (-1 = none)
 
-// Settings from C#
-boxColor: '#8B0000',
-boxLineSize: 2,
-boxColorInc: 0.3,
+    // ============================================
+    // XML Spawner State
+    // ============================================
+    xmlSpawners: null,
+    hoveredXmlSpawnerId: null,
+    xmlSpawnerTooltipVisible: false,
+    xmlTooltipMousePos: { x: 0, y: 0 },
+    xmlSpawnerDwellTimer: null,
+    xmlSpawnerDwellDelay: 500,
+    xmlTooltipBounds: null,
+    tildeKeyHeld: false,      // Track if tilde (`) key is held for add mode
+    blazorHelper: null,       // DotNetObjectReference for C# callbacks
+    xmlToggleEnabled: false,
 
-// Keyboard panning state
-keyStates: new Set(),
-panAnimationId: null,
+    // ============================================
+    // Server Spawn Stats State (Heatmap)
+    // ============================================
+    serverSpawns: null,
+    hoveredServerSpawnIdx: -1,
+    serverSpawnTooltipVisible: false,
+    serverSpawnTooltipMousePos: { x: 0, y: 0 },
+    serverSpawnDwellTimer: null,
+    serverSpawnDwellDelay: 500,
+    serverSpawnFlashAnimationId: null,
 
+    // ============================================
+    // Vendor Marker State
+    // ============================================
+    vendorMarkers: null,
+    selectedVendorSignType: '',
+    hoveredVendorMarkerIdx: -1,
+    vendorMarkerTooltipVisible: false,
+    vendorMarkerTooltipMousePos: { x: 0, y: 0 },
+    vendorMarkerDwellTimer: null,
+    vendorMarkerDwellDelay: 500,
+
+    // ============================================
+    // Settings (from C#)
+    // ============================================
+    boxColor: '#8B0000',
+    boxLineSize: 2,
+    boxColorInc: 0.3,
+
+    // ============================================
+    // Keyboard Panning State
+    // ============================================
+    keyStates: new Set(),
+    panAnimationId: null,
+    onPanUpdate: null,
+    lastPanUpdateTime: 0,
+    panUpdateThrottleMs: 50,
+
+    // ============================================
+    // Initialization
+    // ============================================
     init: function(imgWidth, imgHeight, canvasId, imgId) {
         this.canvas = document.getElementById(canvasId || 'mapCanvas');
         this.img = document.getElementById(imgId || 'mapImg');
@@ -124,6 +151,10 @@ panAnimationId: null,
         return true;
     },
 
+    // ============================================
+    // State Setters (called from C#)
+    // ============================================
+
     // Set hovered region area for highlighting
     setHoveredRegionArea: function(regionName, areaIndex) {
         if (this.hoveredRegionName !== regionName || this.hoveredAreaIndex !== areaIndex) {
@@ -146,20 +177,24 @@ panAnimationId: null,
         this.boxColor = boxColor || '#8B0000';
         this.boxLineSize = boxLineSize || 2;
         this.boxColorInc = boxColorInc || 0.3;
-        console.log(`? Settings updated: color=${this.boxColor}, lineSize=${this.boxLineSize}, colorInc=${this.boxColorInc}`);
+        console.log(`⚙️ Settings updated: color=${this.boxColor}, lineSize=${this.boxLineSize}, colorInc=${this.boxColorInc}`);
 
         // Redraw with new settings
         this.redrawAll();
     },
-    
-    // Set zoom level (1.0 = actual size, 2.0 = 2x zoomed)
+
+    // Set zoom level (1.0 = actual size, 2.0 = 2x, 4.0 = 4x)
     setZoomLevel: function(zoomLevel) {
-        console.log(`? Zoom level changed from ${this.scale}x to ${zoomLevel}x`);
+        console.log(`🔍 Zoom level changed from ${this.scale}x to ${zoomLevel}x`);
         this.scale = zoomLevel;
 
         // Redraw everything at new scale
         this.redrawAll();
     },
+
+    // ============================================
+    // Utility Functions (Colors, Coordinates)
+    // ============================================
 
     // Calculate color based on priority using hue rotation for distinct visual levels
     // Supports up to 25 priority levels with clearly distinguishable colors
@@ -192,52 +227,49 @@ panAnimationId: null,
             '#FF4500', // 18 - Orange Red
             '#FFA500', // 19 - Orange
             '#98FB98', // 20 - Pale Green
-                '#87CEEB', // 21 - Sky Blue
-                    '#DDA0DD', // 22 - Plum
-                    '#F0E68C', // 23 - Khaki
-                    '#FFFFFF'  // 24 - White (maximum priority)
-                ];
+            '#87CEEB', // 21 - Sky Blue
+            '#DDA0DD', // 22 - Plum
+            '#F0E68C', // 23 - Khaki
+            '#FFFFFF'  // 24 - White (maximum priority)
+        ];
 
-                // Priority 1 uses index 0, Priority 2 uses index 1, etc.
-                const colorIndex = Math.min(priority - 1, priorityColors.length - 1);
-                const resultColor = priorityColors[Math.max(0, colorIndex)];
+        const colorIndex = Math.min(priority - 1, priorityColors.length - 1);
+        const resultColor = priorityColors[Math.max(0, colorIndex)];
 
-                console.log(`Priority ${priority}: Using color ${resultColor}`);
+        return resultColor;
+    },
 
-                return resultColor;
-            },
+    // Get color for XML spawner based on type
+    // Type enum: 0=Regular (green), 1=Empty (red), 2=Treasure (purple), 3=Quest (blue)
+    getSpawnerColor: function(spawnerType) {
+        switch (spawnerType) {
+            case 0: return '#00FF00'; // Regular - Green
+            case 1: return '#FF4444'; // Empty - Red
+            case 2: return '#9932CC'; // Treasure - Purple (DarkOrchid)
+            case 3: return '#4169E1'; // Quest - Blue (RoyalBlue)
+            default: return '#00FF00'; // Default to green
+        }
+    },
 
-            // Get color for XML spawner based on type
-            // Type enum: 0=Regular (green), 1=Empty (red), 2=Treasure (purple), 3=Quest (blue)
-            getSpawnerColor: function(spawnerType) {
-                switch (spawnerType) {
-                    case 0: return '#00FF00'; // Regular - Green
-                    case 1: return '#FF4444'; // Empty - Red
-                    case 2: return '#9932CC'; // Treasure - Purple (DarkOrchid)
-                    case 3: return '#4169E1'; // Quest - Blue (RoyalBlue)
-                    default: return '#00FF00'; // Default to green
-                }
-            },
+    // Get display name for spawner type
+    getSpawnerTypeName: function(spawnerType) {
+        switch (spawnerType) {
+            case 0: return 'Creature Spawner';
+            case 1: return 'Empty Spawner';
+            case 2: return 'Treasure Spawner';
+            case 3: return 'Quest Spawner';
+            default: return 'XML Spawner';
+        }
+    },
 
-            // Get display name for spawner type
-            getSpawnerTypeName: function(spawnerType) {
-                switch (spawnerType) {
-                    case 0: return 'Creature Spawner';
-                    case 1: return 'Empty Spawner';
-                    case 2: return 'Treasure Spawner';
-                    case 3: return 'Quest Spawner';
-                    default: return 'XML Spawner';
-                }
-            },
+    // Convert screen pixel to world (map) pixel
+    screenToWorld: function(screenX, screenY) {
+        const worldX = Math.round((screenX - this.panX) / this.scale);
+        const worldY = Math.round((screenY - this.panY) / this.scale);
+        return { x: worldX, y: worldY };
+    },
 
-            // Convert screen pixel to world (map) pixel - accounting for 2x scale
-            screenToWorld: function(screenX, screenY) {
-                const worldX = Math.round((screenX - this.panX) / this.scale);
-                const worldY = Math.round((screenY - this.panY) / this.scale);
-                return { x: worldX, y: worldY };
-            },
-    
-    // Convert world (map) pixel to screen pixel - accounting for 2x scale
+    // Convert world (map) pixel to screen pixel
     worldToScreen: function(worldX, worldY) {
         const screenX = (worldX * this.scale) + this.panX;
         const screenY = (worldY * this.scale) + this.panY;
@@ -266,13 +298,17 @@ panAnimationId: null,
             this.panY = minPanY;
         }
     },
-    
+
+    // ============================================
+    // Drawing Functions (Box Creation)
+    // ============================================
+
     startDrawing: function(screenX, screenY) {
         const world = this.screenToWorld(screenX, screenY);
         this.isDrawing = true;
         this.drawStartWorld = { x: world.x, y: world.y };
         this.drawCurrentWorld = { x: world.x, y: world.y };
-        console.log(`??? Draw start: world (${world.x}, ${world.y})`);
+        console.log(`✏️ Draw start: world (${world.x}, ${world.y})`);
     },
     
     updateDrawing: function(screenX, screenY) {
@@ -297,10 +333,10 @@ panAnimationId: null,
         
         const width = x2 - x1;
         const height = y2 - y1;
-        
-        // Minimum 3x3 pixels (since we're at 2x scale, this gives 6x6 screen pixels)
+
+        // Minimum 3x3 world pixels required
         if (width < 3 || height < 3) {
-            console.log('? Box too small, rejected');
+            console.log('❌ Box too small, rejected');
             this.redrawAll();
             return null;
         }
@@ -312,10 +348,14 @@ panAnimationId: null,
             Height: height
         };
         
-        console.log(`? Box created: (${x1}, ${y1}) ${width}x${height}`);
+        console.log(`✅ Box created: (${x1}, ${y1}) ${width}x${height}`);
         return result;
     },
-    
+
+    // ============================================
+    // Panning Functions (Mouse Drag)
+    // ============================================
+
     startPanning: function(screenX, screenY) {
         this.isPanning = true;
         this.panStartScreen = { x: screenX, y: screenY };
@@ -365,7 +405,11 @@ panAnimationId: null,
         // Redraw canvas
         this.redrawAll();
     },
-    
+
+    // ============================================
+    // Rendering (Canvas Drawing)
+    // ============================================
+
     clearCanvas: function() {
         if (this.ctx && this.canvas) {
             this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -373,7 +417,7 @@ panAnimationId: null,
     },
     
     redraw: function(spawns) {
-        console.log(`?? Redraw called with ${spawns ? spawns.length : 0} spawns`);
+        console.log(`🎨 Redraw called with ${spawns ? spawns.length : 0} spawns`);
         
         // Store spawns for future redraws
         this.currentSpawns = spawns || [];
@@ -1079,8 +1123,8 @@ panAnimationId: null,
                 const y = box.y || box.Y;
                 const w = box.width || box.Width;
                 const h = box.height || box.Height;
-                
-                // Convert world to screen (accounting for 2x scale)
+
+                // Convert world to screen coordinates
                 const topLeft = this.worldToScreen(x, y);
                 const bottomRight = this.worldToScreen(x + w, y + h);
                 
@@ -1149,10 +1193,13 @@ panAnimationId: null,
             this.ctx.globalAlpha = 1.0;
         }
     },
-    
-    // XML Spawner methods
+
+    // ============================================
+    // XML Spawner Display Methods
+    // ============================================
+
     showXMLSpawners: function(spawners) {
-        console.log(`??? Showing ${spawners.length} XML spawners`);
+        console.log(`📍 Showing ${spawners.length} XML spawners`);
         this.xmlSpawners = spawners;
         this.hoveredXmlSpawnerId = null;
         this.xmlSpawnerTooltipVisible = false;
@@ -1164,7 +1211,7 @@ panAnimationId: null,
     },
 
     hideXMLSpawners: function() {
-        console.log(`??????? Hiding XML spawners`);
+        console.log(`📍 Hiding XML spawners`);
         this.xmlSpawners = null;
         this.hoveredXmlSpawnerId = null;
         this.xmlSpawnerTooltipVisible = false;
@@ -1272,16 +1319,19 @@ panAnimationId: null,
         containingSpawners.sort((a, b) => a.radius - b.radius);
         return containingSpawners[0].idx;
     },
-    
-    // Server Spawn methods (heatmap)
+
+    // ============================================
+    // Server Spawn Stats Methods (Heatmap)
+    // ============================================
+
     showServerSpawns: function(spawnData) {
-        console.log(`?? Showing ${spawnData.length} server spawn statistics`);
+        console.log(`📊 Showing ${spawnData.length} server spawn statistics`);
         this.serverSpawns = spawnData;
         this.redrawAll();
     },
     
     hideServerSpawns: function() {
-        console.log(`?? Hiding server spawns`);
+        console.log(`📊 Hiding server spawns`);
         this.serverSpawns = null;
         this.hoveredServerSpawnIdx = -1;
         this.serverSpawnTooltipVisible = false;
@@ -1391,6 +1441,10 @@ panAnimationId: null,
             this.redrawAll();
         }
     },
+
+    // ============================================
+    // Vendor Marker Methods
+    // ============================================
 
     // Vendor icon info helper - returns color and icon type based on sign type
     getVendorIconInfo: function(signType, isHive, hasVendors, isFocused) {
@@ -1722,7 +1776,10 @@ panAnimationId: null,
         return -1;
     },
 
-    // Smooth keyboard panning functions
+    // ============================================
+    // Keyboard Panning Methods
+    // ============================================
+
     addKey: function(key) {
         const wasEmpty = this.keyStates.size === 0;
         this.keyStates.add(key.toLowerCase());
@@ -1736,11 +1793,6 @@ panAnimationId: null,
     removeKey: function(key) {
         this.keyStates.delete(key.toLowerCase());
     },
-
-    // Callback for pan updates during key panning (set by C#)
-    onPanUpdate: null,
-    lastPanUpdateTime: 0,
-    panUpdateThrottleMs: 50, // Update minimap at ~20fps max
 
     startKeyPanning: function() {
         if (this.panAnimationId !== null) return; // Already running
@@ -1803,6 +1855,10 @@ panAnimationId: null,
         const worldY = Math.floor((screenY - this.panY) / this.scale);
         return [worldX, worldY];
     },
+
+    // ============================================
+    // Region Display Methods
+    // ============================================
 
     showRegions: function(regions, selectedName, hoveredName) {
         console.log(`🗺️ Showing ${regions ? regions.length : 0} regions`);
@@ -1887,14 +1943,6 @@ panAnimationId: null,
         return true;
     },
 
-    // Get the currently hovered XML spawner data
-    getHoveredXmlSpawner: function() {
-        if (this.hoveredXmlSpawnerId >= 0 && this.xmlSpawners && this.hoveredXmlSpawnerId < this.xmlSpawners.length) {
-            return this.xmlSpawners[this.hoveredXmlSpawnerId];
-        }
-        return null;
-    },
-
     // Remove a spawner from the local list (after delete confirmed)
     removeXmlSpawnerLocally: function(idx) {
         if (this.xmlSpawners && idx >= 0 && idx < this.xmlSpawners.length) {
@@ -1931,11 +1979,7 @@ panAnimationId: null,
     }
 };
 
-console.log('??? Map module loaded');
-
-
-
-
+console.log('🗺️ Map module loaded');
 
 /**
  * Draw regions on the region map canvas
