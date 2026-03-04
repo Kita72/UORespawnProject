@@ -53,8 +53,10 @@ public static class Logger
             }
             catch
             {
-                // If initialization fails, remain uninitialized but don't crash
-                _initialized = true; // Mark as initialized to avoid repeated failures
+                // If initialization fails, mark as initialized to avoid repeated failures
+                // but leave _currentLogFile as null - Write() will handle gracefully
+                _initialized = true;
+                _currentLogFile = null; // Explicitly null - Write() checks for this
             }
         }
     }
@@ -102,13 +104,17 @@ public static class Logger
 
     private static void Write(string level, string message)
     {
+        // Skip file logging if initialization failed (log directory couldn't be created)
+        if (_currentLogFile == null)
+            return;
+
         try
         {
             var logEntry = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] [{level,-5}] {message}";
 
             lock (_lock)
             {
-                File.AppendAllText(_currentLogFile!, logEntry + Environment.NewLine);
+                File.AppendAllText(_currentLogFile, logEntry + Environment.NewLine);
             }
         }
         catch
