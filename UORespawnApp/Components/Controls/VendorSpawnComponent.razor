@@ -16,7 +16,7 @@
 <div class="container-fluid p-3">
     <div class="row">
         <div class="col-lg-9">
-            <div class="alert alert-dark mb-2 d-flex justify-content-between align-items-center" style="width:800px;">
+            <div class="alert alert-dark mb-2 d-flex justify-content-between align-items-center" style="width:@(ViewportConstants.ViewportWidth)px;">
                 <div>
                     <span class="bi bi-shop me-1" style="color: goldenrod;"></span><strong style="color: goldenrod;">Vendor Spawn</strong> | @MapUtility.GetMapName(ViewService.CurrentMapId) | Size: @imageDim | Mouse: (@mouseWorldX, @mouseWorldY)
                 </div>
@@ -28,7 +28,7 @@
                     </button>
                 </div>
             </div>
-            <div style="position:relative; overflow:hidden; width:800px; height:600px; background:#1a1a1a; border:1px solid #333;" 
+            <div style="position:relative; overflow:hidden; width:@(ViewportConstants.ViewportWidth)px; height:@(ViewportConstants.ViewportHeight)px; background:#1a1a1a; border:1px solid #333;" 
                  tabindex="0" 
                  @onkeydown="OnKeyDown"
                  @onkeyup="OnKeyUp"
@@ -37,7 +37,7 @@
                 <img id="vendorMapImg" src="@imageSrc" 
                      style="position:absolute; left:0; top:0; image-rendering:pixelated; transform-origin: top left; transform: scale(@(zoomLevel.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)));"
                      @onload="OnImageLoaded" />
-                <canvas id="vendorMapCanvas" width="800" height="600"
+                <canvas id="vendorMapCanvas" width="@ViewportConstants.ViewportWidth" height="@ViewportConstants.ViewportHeight"
                         style="position:absolute; top:0; left:0; cursor:pointer;"
                         @onmousedown="OnMouseDown"
                         @onmousemove="OnMouseMove"
@@ -45,7 +45,7 @@
                         @onmouseleave="OnMouseLeave"
                         @oncontextmenu:preventDefault />
             </div>
-            <div class="card mt-2 shadow-sm" style="width:800px;">
+            <div class="card mt-2 shadow-sm" style="width:@(ViewportConstants.ViewportWidth)px;">
                 <div class="card-body py-2">
                     <small class="text-muted">
                         <strong>Controls:</strong> Left-Click Sign/Hive = Select | Right-Drag = Pan | Arrow Keys/WASD = Pan
@@ -574,8 +574,8 @@
     
     private async Task ToggleZoom()
     {
-        double centerWorldX = (-panX / zoomLevel) + (800.0 / 2.0 / zoomLevel);
-        double centerWorldY = (-panY / zoomLevel) + (600.0 / 2.0 / zoomLevel);
+        double centerWorldX = (-panX / zoomLevel) + (ViewportConstants.ViewportWidth / 2.0 / zoomLevel);
+        double centerWorldY = (-panY / zoomLevel) + (ViewportConstants.ViewportHeight / 2.0 / zoomLevel);
 
         double oldZoom = zoomLevel;
         // Cycle through 1x → 2x → 4x → 1x
@@ -586,8 +586,8 @@
             _ => 1.0
         };
 
-        panX = -(centerWorldX * zoomLevel) + 400;
-        panY = -(centerWorldY * zoomLevel) + 300;
+        panX = -(centerWorldX * zoomLevel) + ViewportConstants.ViewportHalfWidth;
+        panY = -(centerWorldY * zoomLevel) + ViewportConstants.ViewportHalfHeight;
 
         await JS.InvokeVoidAsync("eval", $"window.mapModule.setZoomLevel({zoomLevel.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)})");
         await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
@@ -1044,8 +1044,8 @@
     {
         try
         {
-            double newPanX = -(x * zoomLevel) + 400;
-            double newPanY = -(y * zoomLevel) + 300;
+            double newPanX = -(x * zoomLevel) + ViewportConstants.ViewportHalfWidth;
+            double newPanY = -(y * zoomLevel) + ViewportConstants.ViewportHalfHeight;
 
             panX = newPanX;
             panY = newPanY;

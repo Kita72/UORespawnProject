@@ -212,8 +212,8 @@
         try
         {
             // Calculate viewport in world coordinates
-            double viewportWidthWorld = 800.0 / zoom;
-            double viewportHeightWorld = 600.0 / zoom;
+            double viewportWidthWorld = ViewportConstants.ViewportWidth / zoom;
+            double viewportHeightWorld = ViewportConstants.ViewportHeight / zoom;
             double viewportWorldX = -panX / zoom;
             double viewportWorldY = -panY / zoom;
 
@@ -343,15 +343,15 @@
 
             // Calculate pan position to center the viewport on this world position
             // Pan formula: panX = -(worldX * zoom) + viewportCenterX
-            double newPanX = -(worldX * ZoomLevel) + 400; // Center horizontally (800/2)
-            double newPanY = -(worldY * ZoomLevel) + 300; // Center vertically (600/2)
+            double newPanX = -(worldX * ZoomLevel) + ViewportConstants.ViewportHalfWidth;
+            double newPanY = -(worldY * ZoomLevel) + ViewportConstants.ViewportHalfHeight;
 
             // Clamp pan so viewport stays within map bounds
-            // Viewport dimensions in world coords: 800/zoom x 600/zoom
+            // Viewport dimensions in world coords
             // Max pan (showing top-left corner): panX = 0, panY = 0
-            // Min pan (showing bottom-right corner): panX = -(imageWidth * zoom - 800), panY = -(imageHeight * zoom - 600)
-            double minPanX = -(imageWidth * ZoomLevel - 800);
-            double minPanY = -(imageHeight * ZoomLevel - 600);
+            // Min pan (showing bottom-right corner)
+            double minPanX = -(imageWidth * ZoomLevel - ViewportConstants.ViewportWidth);
+            double minPanY = -(imageHeight * ZoomLevel - ViewportConstants.ViewportHeight);
 
             // Clamp: don't let pan go positive (would show past top-left)
             // and don't let pan go below minimum (would show past bottom-right)

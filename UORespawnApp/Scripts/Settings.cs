@@ -205,8 +205,8 @@ namespace UORespawnApp
             get => _cachedBoxColorInc ?? 0.3;
             set
             {
-                _cachedBoxColorInc = value;
-                Preferences.Set("BoxColorInc", value);
+                _cachedBoxColorInc = Math.Clamp(value, 0.0, 1.0);
+                Preferences.Set("BoxColorInc", _cachedBoxColorInc.Value);
             }
         }
 

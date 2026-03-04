@@ -14,7 +14,7 @@
 <div class="container-fluid p-3">
     <div class="row">
         <div class="col-lg-9">
-            <div class="alert alert-dark mb-2 d-flex justify-content-between align-items-center" style="width:800px;">
+            <div class="alert alert-dark mb-2 d-flex justify-content-between align-items-center" style="width:@(ViewportConstants.ViewportWidth)px;">
                 <div>
                     <span class="bi bi-map me-1" style="color: goldenrod;"></span><strong style="color: goldenrod;">Region Spawn</strong> | @MapUtility.GetMapName(ViewService.CurrentMapId) | Size: @imageDim | Mouse: (@mouseWorldX, @mouseWorldY)
                 </div>
@@ -26,7 +26,7 @@
                     </button>
                 </div>
             </div>
-            <div style="position:relative; overflow:hidden; width:800px; height:600px; background:#1a1a1a; border:1px solid #333;" 
+            <div style="position:relative; overflow:hidden; width:@(ViewportConstants.ViewportWidth)px; height:@(ViewportConstants.ViewportHeight)px; background:#1a1a1a; border:1px solid #333;" 
                  tabindex="0" 
                  @onkeydown="OnKeyDown"
                  @onkeyup="OnKeyUp"
@@ -35,7 +35,7 @@
                 <img id="regionMapImg" src="@imageSrc" 
                      style="position:absolute; left:0; top:0; image-rendering:pixelated; transform-origin: top left; transform: scale(@(zoomLevel.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)));"
                      @onload="OnImageLoaded" />
-                <canvas id="regionMapCanvas" width="800" height="600"
+                <canvas id="regionMapCanvas" width="@ViewportConstants.ViewportWidth" height="@ViewportConstants.ViewportHeight"
                         style="position:absolute; top:0; left:0; cursor:pointer;"
                         @onmousedown="OnMouseDown"
                         @onmousemove="OnMouseMove"
@@ -43,7 +43,7 @@
                         @onmouseleave="OnMouseLeave"
                         @oncontextmenu:preventDefault />
             </div>
-            <div class="card mt-2 shadow-sm" style="width:800px;">
+            <div class="card mt-2 shadow-sm" style="width:@(ViewportConstants.ViewportWidth)px;">
                 <div class="card-body py-2">
                     <small class="text-muted">
                         <strong>Controls:</strong> Left-Click Region = Select | Right-Drag = Pan | Arrow Keys/WASD = Pan
@@ -544,8 +544,8 @@
     {
         // Calculate the current center of the viewport in world coordinates
         // This is what we want to keep centered after zoom changes
-        double centerWorldX = (-panX / zoomLevel) + (800.0 / 2.0 / zoomLevel);
-        double centerWorldY = (-panY / zoomLevel) + (600.0 / 2.0 / zoomLevel);
+        double centerWorldX = (-panX / zoomLevel) + (ViewportConstants.ViewportWidth / 2.0 / zoomLevel);
+        double centerWorldY = (-panY / zoomLevel) + (ViewportConstants.ViewportHeight / 2.0 / zoomLevel);
 
         Logger.Info($"Current center before zoom: world ({centerWorldX:F0}, {centerWorldY:F0}) at {zoomLevel}x");
 
@@ -560,8 +560,8 @@
 
         // Recalculate pan to keep the same world position centered
         // Formula: panX = -(centerWorldX * newZoom) + (viewport_width / 2)
-        panX = -(centerWorldX * zoomLevel) + 400; // 800/2
-        panY = -(centerWorldY * zoomLevel) + 300; // 600/2
+        panX = -(centerWorldX * zoomLevel) + ViewportConstants.ViewportHalfWidth;
+        panY = -(centerWorldY * zoomLevel) + ViewportConstants.ViewportHalfHeight;
 
         Logger.Info($"New center after zoom: world ({centerWorldX:F0}, {centerWorldY:F0}) at {zoomLevel}x, pan=({panX:F0}, {panY:F0})");
 
@@ -1002,8 +1002,8 @@
 
             // Center the viewport on this position
             // Account for current zoom level and viewport size
-            double newPanX = -(centerX * zoomLevel) + 400; // Center horizontally (800/2)
-            double newPanY = -(centerY * zoomLevel) + 300; // Center vertically (600/2)
+            double newPanX = -(centerX * zoomLevel) + ViewportConstants.ViewportHalfWidth;
+            double newPanY = -(centerY * zoomLevel) + ViewportConstants.ViewportHalfHeight;
 
             panX = newPanX;
             panY = newPanY;
