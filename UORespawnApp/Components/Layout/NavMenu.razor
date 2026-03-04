@@ -6,7 +6,7 @@
 
 <div class="top-row navbar navbar-dark">
     <div class="container-fluid" style="display: flex; justify-content: center; align-items: center; padding: 0;">
-        <a class="navbar-brand" href="" style="margin: 0; display: flex; justify-content: center; align-items: center;">
+        <a class="navbar-brand" @onclick="ShowHome" @onclick:preventDefault style="margin: 0; display: flex; justify-content: center; align-items: center; cursor: pointer;">
             <img src="logo.png" alt="UORespawn" style="height: 5.5rem; width: auto; display: block;" />
         </a>
     </div>
@@ -16,11 +16,6 @@
 
 <div class="nav-scrollable" @onclick="ToggleMenu">
     <nav class="flex-column">
-        <div class="nav-item px-3">
-            <button class="nav-link btn btn-link @GetActiveClass("home")" @onclick="ShowHome">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
-            </button>
-        </div>
         <div class="nav-item px-3">
             <button class="nav-link btn btn-link @GetActiveClass("settings")" @onclick="ShowSettings">
                 <span class="bi bi-gear-fill-nav-menu" aria-hidden="true"></span> Settings
