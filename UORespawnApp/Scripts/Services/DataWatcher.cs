@@ -104,16 +104,23 @@ namespace UORespawnApp.Scripts.Services
 
         private async void OnOutputChanged(object sender, FileSystemEventArgs e)
         {
-            // Cancel and dispose any existing delay if file changes again
-            _outputDelayTokenSource?.Cancel();
-            _outputDelayTokenSource?.Dispose();
-            _outputDelayTokenSource = new CancellationTokenSource();
+            // Thread-safe token swap: atomically replace the old source with a new one
+            // This prevents race conditions where Dispose() is called while Task.Delay is still using the token
+            var newSource = new CancellationTokenSource();
+            var oldSource = Interlocked.Exchange(ref _outputDelayTokenSource, newSource);
+
+            // Cancel and dispose the old source (if any) after the swap
+            if (oldSource != null)
+            {
+                oldSource.Cancel();
+                oldSource.Dispose();
+            }
 
             try
             {
                 // Wait 1 second - resets if another change happens during this time
                 // This buffers for server file generation to complete
-                await Task.Delay(DELAY_MILLISECONDS, _outputDelayTokenSource.Token).ConfigureAwait(false);
+                await Task.Delay(DELAY_MILLISECONDS, newSource.Token).ConfigureAwait(false);
 
                 if (string.IsNullOrEmpty(e.Name))
                 {
@@ -407,15 +414,22 @@ namespace UORespawnApp.Scripts.Services
         /// </summary>
         private async void OnCommandsChanged(object sender, FileSystemEventArgs e)
         {
-            // Cancel and dispose any existing delay if file changes again
-            _commandsDelayTokenSource?.Cancel();
-            _commandsDelayTokenSource?.Dispose();
-            _commandsDelayTokenSource = new CancellationTokenSource();
+            // Thread-safe token swap: atomically replace the old source with a new one
+            // This prevents race conditions where Dispose() is called while Task.Delay is still using the token
+            var newSource = new CancellationTokenSource();
+            var oldSource = Interlocked.Exchange(ref _commandsDelayTokenSource, newSource);
+
+            // Cancel and dispose the old source (if any) after the swap
+            if (oldSource != null)
+            {
+                oldSource.Cancel();
+                oldSource.Dispose();
+            }
 
             try
             {
                 // Wait 1 second - resets if another change happens during this time
-                await Task.Delay(DELAY_MILLISECONDS, _commandsDelayTokenSource.Token).ConfigureAwait(false);
+                await Task.Delay(DELAY_MILLISECONDS, newSource.Token).ConfigureAwait(false);
 
                 if (string.IsNullOrEmpty(e.Name))
                     return;
@@ -445,10 +459,20 @@ namespace UORespawnApp.Scripts.Services
 
         public void Dispose()
         {
-            _outputDelayTokenSource?.Cancel();
-            _outputDelayTokenSource?.Dispose();
-            _commandsDelayTokenSource?.Cancel();
-            _commandsDelayTokenSource?.Dispose();
+            // Thread-safe disposal of token sources
+            var outputSource = Interlocked.Exchange(ref _outputDelayTokenSource, null);
+            if (outputSource != null)
+            {
+                outputSource.Cancel();
+                outputSource.Dispose();
+            }
+
+            var commandsSource = Interlocked.Exchange(ref _commandsDelayTokenSource, null);
+            if (commandsSource != null)
+            {
+                commandsSource.Cancel();
+                commandsSource.Dispose();
+            }
 
             if (_outputWatcher != null)
             {
