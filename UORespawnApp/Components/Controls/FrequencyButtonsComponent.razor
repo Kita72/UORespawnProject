@@ -1,0 +1,104 @@
+@using UORespawnApp.Scripts
+@using UORespawnApp.Scripts.Enums
+
+@* 
+    FrequencyButtonsComponent - Reusable 6-category spawn frequency buttons
+    Used by TileSpawnComponent and RegionSpawnComponent for consistent UI
+*@
+
+<div class="freq-button-container">
+    <div class="row g-3 mb-3">
+        <!-- Water -->
+        <div class="col-4">
+            <button class="btn btn-primary w-100 freq-button" style="border: 2px solid;" 
+                    @onclick="() => OnButtonClick.InvokeAsync(Frequency.Water)" 
+                    title="Water (@((Settings.WaterChance * 100).ToString("0"))% chance)">
+                <i class="bi bi-droplet-fill frequency-icon frequency-icon-water" style="font-size: 1.8em;"></i>@WaterCount
+            </button>
+        </div>
+
+        <!-- Weather -->
+        <div class="col-4">
+            <button class="btn btn-primary w-100 freq-button" style="border: 2px solid;" 
+                    @onclick="() => OnButtonClick.InvokeAsync(Frequency.Weather)" 
+                    title="Weather (@((Settings.WeatherChance * 100).ToString("0"))% chance)">
+                <i class="bi bi-cloud-lightning-rain-fill frequency-icon frequency-icon-weather" style="font-size: 1.8em;"></i>@WeatherCount
+            </button>
+        </div>
+
+        <!-- Timed -->
+        <div class="col-4">
+            <button class="btn btn-primary w-100 freq-button" style="border: 2px solid;" 
+                    @onclick="() => OnButtonClick.InvokeAsync(Frequency.Timed)" 
+                    title="Timed (@((Settings.TimedChance * 100).ToString("0"))% chance)">
+                <i class="bi bi-clock-fill frequency-icon frequency-icon-timed" style="font-size: 1.8em;"></i>@TimedCount
+            </button>
+        </div>
+    </div>
+    
+    <div class="row g-3">
+        <!-- Common -->
+        <div class="col-4">
+            <button class="btn btn-secondary w-100 freq-button" style="border: 2px solid white; color: white;" 
+                    @onclick="() => OnButtonClick.InvokeAsync(Frequency.Common)" 
+                    title="Common (@((Settings.CommonChance * 100).ToString("0"))% chance)">
+                <i class="bi bi-people-fill frequency-icon frequency-icon-common" style="font-size: 1.8em;"></i>@CommonCount
+            </button>
+        </div>
+
+        <!-- Uncommon -->
+        <div class="col-4">
+            <button class="btn btn-success w-100 freq-button" style="border: 2px solid white; color: white;" 
+                    @onclick="() => OnButtonClick.InvokeAsync(Frequency.UnCommon)" 
+                    title="Uncommon (@((Settings.UnCommonChance * 100).ToString("0"))% chance)">
+                <i class="bi bi-person-fill frequency-icon frequency-icon-uncommon" style="font-size: 1.8em;"></i>@UncommonCount
+            </button>
+        </div>
+
+        <!-- Rare -->
+        <div class="col-4">
+            <button class="btn btn-danger w-100 freq-button" style="border: 2px solid white; color: white;" 
+                    @onclick="() => OnButtonClick.InvokeAsync(Frequency.Rare)" 
+                    title="Rare (@((Settings.RareChance * 100).ToString("0"))% chance)">
+                <i class="bi bi-star-fill frequency-icon frequency-icon-rare" style="font-size: 1.8em;"></i>@RareCount
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    /// <summary>
+    /// Count of Water spawns to display
+    /// </summary>
+    [Parameter] public int WaterCount { get; set; }
+
+    /// <summary>
+    /// Count of Weather spawns to display
+    /// </summary>
+    [Parameter] public int WeatherCount { get; set; }
+
+    /// <summary>
+    /// Count of Timed spawns to display
+    /// </summary>
+    [Parameter] public int TimedCount { get; set; }
+
+    /// <summary>
+    /// Count of Common spawns to display
+    /// </summary>
+    [Parameter] public int CommonCount { get; set; }
+
+    /// <summary>
+    /// Count of Uncommon spawns to display
+    /// </summary>
+    [Parameter] public int UncommonCount { get; set; }
+
+    /// <summary>
+    /// Count of Rare spawns to display
+    /// </summary>
+    [Parameter] public int RareCount { get; set; }
+
+    /// <summary>
+    /// Callback when a frequency button is clicked
+    /// </summary>
+    [Parameter] public EventCallback<Frequency> OnButtonClick { get; set; }
+}

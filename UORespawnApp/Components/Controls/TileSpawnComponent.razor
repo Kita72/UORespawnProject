@@ -80,66 +80,15 @@
                         }
                     </div>
                     <div class="card-body">
-                        <!-- 6 Spawn Category Sections - Matching BoxSpawn Design -->
-                        <div class="freq-button-container">
-                        <div class="row g-3 mb-3">
-                            <!-- Water -->
-                            <div class="col-4">
-                                <button class="btn btn-primary w-100 freq-button" style="border: 2px solid;" 
-                                        @onclick="() => OpenModal(Frequency.Water)" 
-                                        title="Water (@((Settings.WaterChance * 100).ToString("0"))% chance)">
-                                    <i class="bi bi-droplet-fill frequency-icon frequency-icon-water" style="font-size: 1.8em;"></i>@currentEntity.WaterSpawns.Count
-                                </button>
-                            </div>
-
-                            <!-- Weather -->
-                            <div class="col-4">
-                                <button class="btn btn-primary w-100 freq-button" style="border: 2px solid;" 
-                                        @onclick="() => OpenModal(Frequency.Weather)" 
-                                        title="Weather (@((Settings.WeatherChance * 100).ToString("0"))% chance)">
-                                    <i class="bi bi-cloud-lightning-rain-fill frequency-icon frequency-icon-weather" style="font-size: 1.8em;"></i>@currentEntity.WeatherSpawns.Count
-                                </button>
-                            </div>
-
-                            <!-- Timed -->
-                            <div class="col-4">
-                                <button class="btn btn-primary w-100 freq-button" style="border: 2px solid;" 
-                                        @onclick="() => OpenModal(Frequency.Timed)" 
-                                        title="Timed (@((Settings.TimedChance * 100).ToString("0"))% chance)">
-                                    <i class="bi bi-clock-fill frequency-icon frequency-icon-timed" style="font-size: 1.8em;"></i>@currentEntity.TimedSpawns.Count
-                                </button>
-                            </div>
-
-                            </div>
-                            <div class="row g-3">
-                                <!-- Common -->
-                                <div class="col-4">
-                                    <button class="btn btn-secondary w-100 freq-button" style="border: 2px solid white; color: white;" 
-                                            @onclick="() => OpenModal(Frequency.Common)" 
-                                            title="Common (@((Settings.CommonChance * 100).ToString("0"))% chance)">
-                                        <i class="bi bi-people-fill frequency-icon frequency-icon-common" style="font-size: 1.8em;"></i>@currentEntity.CommonSpawns.Count
-                                    </button>
-                                </div>
-
-                            <!-- Uncommon -->
-                            <div class="col-4">
-                                <button class="btn btn-success w-100 freq-button" style="border: 2px solid white; color: white;" 
-                                        @onclick="() => OpenModal(Frequency.UnCommon)" 
-                                        title="Uncommon (@((Settings.UnCommonChance * 100).ToString("0"))% chance)">
-                                    <i class="bi bi-person-fill frequency-icon frequency-icon-uncommon" style="font-size: 1.8em;"></i>@currentEntity.UncommonSpawns.Count
-                                </button>
-                            </div>
-
-                            <!-- Rare -->
-                            <div class="col-4">
-                                <button class="btn btn-danger w-100 freq-button" style="border: 2px solid white; color: white;" 
-                                        @onclick="() => OpenModal(Frequency.Rare)" 
-                                        title="Rare (@((Settings.RareChance * 100).ToString("0"))% chance)">
-                                    <i class="bi bi-star-fill frequency-icon frequency-icon-rare" style="font-size: 1.8em;"></i>@currentEntity.RareSpawns.Count
-                                </button>
-                            </div>
-                        </div>
-                        </div>
+                        <!-- 6 Spawn Category Buttons -->
+                        <FrequencyButtonsComponent
+                            WaterCount="@currentEntity.WaterSpawns.Count"
+                            WeatherCount="@currentEntity.WeatherSpawns.Count"
+                            TimedCount="@currentEntity.TimedSpawns.Count"
+                            CommonCount="@currentEntity.CommonSpawns.Count"
+                            UncommonCount="@currentEntity.UncommonSpawns.Count"
+                            RareCount="@currentEntity.RareSpawns.Count"
+                            OnButtonClick="OpenModal" />
 
                         <!-- Trigger Dropdowns - Below Cards like BoxSpawn -->
                         <div class="row g-2 mt-3">

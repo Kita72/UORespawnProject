@@ -1,6 +1,6 @@
-﻿namespace UORespawnApp
+namespace UORespawnApp
 {
-    internal enum Frequency
+    public enum Frequency
     {
         None,
         Water,
