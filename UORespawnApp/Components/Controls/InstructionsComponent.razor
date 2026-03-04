@@ -505,11 +505,13 @@
                         <li>Press the <strong>Backtick (`) key</strong> on your keyboard</li>
                         <li>The <strong>Add Spawner</strong> modal appears with:
                             <ul>
-                                <li><strong>HomeRange slider:</strong> Set the spawn radius (5-50 tiles)</li>
-                                <li><strong>Bestiary picker:</strong> Search and select creatures to spawn</li>
-                                <li><strong>Count per creature:</strong> How many of each creature to spawn</li>
+                                <li><strong>Home Range slider (10-250):</strong> How far creatures can roam from the spawn point</li>
+                                <li><strong>Max Count slider (1-100):</strong> Maximum number of creatures alive at once from this spawner</li>
+                                <li><strong>Bestiary picker:</strong> Search and select creatures to spawn (left panel)</li>
+                                <li><strong>Selected list:</strong> Review your selections before creating (right panel)</li>
                             </ul>
                         </li>
+                        <li>Add the same creature multiple times for higher spawn weight</li>
                         <li>Click <strong>Create Spawner</strong> to queue the command</li>
                     </ol>
 
@@ -521,7 +523,7 @@
                         <li><strong>File Location:</strong> <code>Data/UORespawn/INPUT/UOR_XmlCommands.txt</code></li>
                         <li><strong>Processing:</strong> Server processes commands during startup, then deletes the file</li>
                         <li><strong>DELETE:</strong> Finds the spawner by serial, removes all spawned creatures, deletes the spawner</li>
-                        <li><strong>ADD:</strong> Creates a new XmlSpawner at the specified location with your creature configuration</li>
+                        <li><strong>ADD:</strong> Creates a new XmlSpawner at the specified location with your creature list, home range, and max count settings</li>
                     </ul>
 
                     <div class="alert alert-warning mt-3">
