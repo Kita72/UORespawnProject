@@ -12,6 +12,11 @@ main {
     background: linear-gradient(180deg, #1a1a1a 0%, #0f0f0f 70%);
 }
 
+/* Light theme sidebar */
+body.light-theme .sidebar {
+    background: linear-gradient(180deg, #e8e8e8 0%, #d8d8d8 70%);
+}
+
 .top-row {
     background-color: rgba(0,0,0,0.4);
     border-bottom: 1px solid #2a2a2a;
@@ -21,11 +26,22 @@ main {
     align-items: center;
 }
 
+/* Light theme top row */
+body.light-theme .top-row {
+    background-color: rgba(0,0,0,0.1);
+    border-bottom: 1px solid #dee2e6;
+}
+
     .top-row ::deep a, .top-row ::deep .btn-link {
         white-space: nowrap;
         margin-left: 1.5rem;
         text-decoration: none;
         color: #e0e0e0;
+    }
+
+    body.light-theme .top-row ::deep a, 
+    body.light-theme .top-row ::deep .btn-link {
+        color: #212529;
     }
 
         .top-row ::deep a:hover, .top-row ::deep .btn-link:hover {

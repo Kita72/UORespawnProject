@@ -103,9 +103,7 @@ body.light-theme .sidebar {
     background: linear-gradient(180deg, #e0e0e0 0%, #d0d0d0 70%) !important;
 }
 
-body.light-theme .top-row {
-    background-color: rgba(255,255,255,0.8) !important;
-}
+/* Brand area always stays dark to highlight logo - override removed */
 
 body.light-theme .navbar-brand {
     color: #212529 !important;
@@ -269,6 +267,29 @@ body.light-theme .btn-close {
 }
 
 /* ============================================ */
+
+/* Light theme text color utilities */
+body.light-theme .text-muted {
+    color: #6c757d !important;
+}
+
+body.light-theme h1, body.light-theme h2, body.light-theme h3,
+body.light-theme h4, body.light-theme h5, body.light-theme h6 {
+    color: #212529;
+}
+
+body.light-theme .text-secondary {
+    color: #6c757d !important;
+}
+
+/* Badge adjustments for light theme */
+body.light-theme .badge.bg-secondary {
+    background-color: #6c757d !important;
+}
+
+body.light-theme .badge.bg-info {
+    color: #fff;
+}
 
 a, .btn-link {
     color: #006bb7;

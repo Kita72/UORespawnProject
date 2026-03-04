@@ -135,8 +135,36 @@
     font-weight: normal;
 }
 
+/* Minimap Body - Theme aware */
 .minimap-body {
     background: #000;
+}
+
+body.light-theme .minimap-body {
+    background: #e9ecef;
+}
+
+/* Dark header - Theme aware */
+body.light-theme .map-card .card-header.dark-header {
+    background: #f8f9fa !important;
+    border-bottom: 1px solid #dee2e6 !important;
+    color: #212529;
+}
+
+/* Search input - Light theme */
+body.light-theme .spawn-search-input {
+    background: rgba(0, 0, 0, 0.05);
+    border-color: #dee2e6;
+    color: #212529;
+}
+
+body.light-theme .spawn-search-input::placeholder {
+    color: rgba(0, 0, 0, 0.4);
+}
+
+body.light-theme .spawn-search-input:focus {
+    background: rgba(0, 0, 0, 0.08);
+    border-color: #667eea;
 }
 
 body.dark-theme .map-card {
@@ -212,6 +240,29 @@ body.dark-theme .spawn-item.selected {
 
 body.dark-theme .spawn-item .text-muted {
     color: #999 !important;
+}
+
+/* Light Theme Support for Spawn Items */
+body.light-theme .spawn-item {
+    background-color: #ffffff;
+    border-color: #dee2e6;
+    color: #212529;
+}
+
+body.light-theme .spawn-item:hover {
+    background-color: #f8f9fa;
+    border-color: #c0c0c0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+}
+
+body.light-theme .spawn-item.selected {
+    background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+}
+
+body.light-theme .spawn-item .text-muted {
+    color: #6c757d !important;
 }
 
 /* Global Button Styling - Remove ugly focus borders */

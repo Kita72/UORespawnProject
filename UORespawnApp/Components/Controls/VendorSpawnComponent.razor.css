@@ -176,3 +176,126 @@
 .spawn-search-input[type=number] {
     -moz-appearance: textfield;
 }
+
+/* ============================================
+   DARK THEME
+   ============================================ */
+body.dark-theme .map-card {
+    background-color: #1a1a1a;
+    border-color: #3a3a3a;
+}
+
+body.dark-theme .map-card .card-body {
+    background-color: #1a1a1a;
+    color: #e0e0e0;
+}
+
+body.dark-theme .spawn-item {
+    background-color: #252525;
+    border-color: #3a3a3a;
+    color: #e0e0e0;
+}
+
+body.dark-theme .spawn-item:hover {
+    background-color: #2d2d2d;
+    border-color: rgba(255, 193, 7, 0.4);
+}
+
+body.dark-theme .spawn-item.selected {
+    background-color: rgba(255, 193, 7, 0.15);
+    border-color: rgba(255, 193, 7, 0.5);
+}
+
+body.dark-theme .spawn-controls {
+    border-top-color: rgba(255, 255, 255, 0.1);
+}
+
+body.dark-theme .locations-list {
+    border-top-color: rgba(255, 255, 255, 0.1);
+}
+
+body.dark-theme .minimap-body {
+    background-color: rgba(0, 0, 0, 0.3);
+}
+
+body.dark-theme .dark-header {
+    background-color: rgba(0, 0, 0, 0.3);
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+body.dark-theme .spawn-search-input {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* ============================================
+   LIGHT THEME
+   ============================================ */
+body.light-theme .map-card {
+    background-color: #ffffff;
+    border-color: #dee2e6;
+}
+
+body.light-theme .map-card .card-body {
+    background-color: #ffffff;
+    color: #212529;
+}
+
+body.light-theme .spawn-item {
+    background-color: #ffffff;
+    border-color: #dee2e6;
+    color: #212529;
+}
+
+body.light-theme .spawn-item:hover {
+    background-color: #f8f9fa;
+    border-color: rgba(218, 165, 32, 0.4);
+}
+
+body.light-theme .spawn-item.selected {
+    background-color: rgba(218, 165, 32, 0.1);
+    border-color: rgba(218, 165, 32, 0.5);
+}
+
+body.light-theme .spawn-controls {
+    border-top-color: rgba(0, 0, 0, 0.1);
+}
+
+body.light-theme .locations-list {
+    border-top-color: rgba(0, 0, 0, 0.1);
+}
+
+body.light-theme .minimap-body {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+body.light-theme .dark-header {
+    background-color: #f8f9fa;
+    border-bottom-color: #dee2e6;
+    color: #212529;
+}
+
+body.light-theme .spawn-search-input {
+    background-color: rgba(0, 0, 0, 0.05);
+    border-color: #dee2e6;
+    color: #212529;
+}
+
+body.light-theme .location-item {
+    background-color: rgba(23, 162, 184, 0.08);
+}
+
+body.light-theme .location-item:hover {
+    background-color: rgba(23, 162, 184, 0.15);
+}
+
+body.light-theme .location-item.focused {
+    background-color: rgba(255, 69, 0, 0.15);
+    border-color: rgba(255, 69, 0, 0.4);
+}
+
+body.light-theme .card-index {
+    color: #6c757d;
+    background-color: rgba(0, 0, 0, 0.05);
+    border-color: rgba(0, 0, 0, 0.1);
+}

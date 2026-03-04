@@ -25,6 +25,21 @@
     margin-top: 2px;
 }
 
+/* Light theme support for stats */
+body.light-theme .spawn-packs-page .stat-tile {
+    background: #f5f5f5;
+    color: #212529;
+    border: 1px solid #dee2e6;
+}
+
+body.light-theme .spawn-packs-page .stat-label {
+    color: #6c757d;
+}
+
+body.light-theme .spawn-packs-page .stat-sublabel {
+    color: #adb5bd;
+}
+
 .spawn-packs-page .spawn-type-list {
     display: grid;
     gap: 8px;
@@ -43,9 +58,19 @@
     padding: 16px;
 }
 
+body.light-theme .spawn-packs-page .submission-card {
+    background: #ffffff;
+    border: 1px solid #dee2e6;
+}
+
 .spawn-pack-dashboard-footer {
     background: #0f0f0f;
     border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+body.light-theme .spawn-pack-dashboard-footer {
+    background: #f8f9fa;
+    border-top: 1px solid #dee2e6;
 }
 
 .spawn-pack-modal .modal-content {
@@ -55,9 +80,21 @@
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
 }
 
+body.light-theme .spawn-pack-modal .modal-content {
+    background: #ffffff;
+    color: #212529;
+    border: 1px solid #dee2e6;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
 .spawn-pack-modal .modal-header,
 .spawn-pack-modal .modal-footer {
     border-color: rgba(255, 255, 255, 0.08);
+}
+
+body.light-theme .spawn-pack-modal .modal-header,
+body.light-theme .spawn-pack-modal .modal-footer {
+    border-color: #dee2e6;
 }
 
 /* Toggle buttons for Approved/Imported */
@@ -138,6 +175,41 @@
     background: rgba(247, 201, 72, 0.2);
 }
 
+/* Light theme toggle buttons */
+body.light-theme .pack-toggle-btn {
+    border-color: #dee2e6;
+    color: #6c757d;
+}
+
+body.light-theme .pack-toggle-btn:hover {
+    background: rgba(0, 0, 0, 0.05);
+    color: #495057;
+    border-color: #ced4da;
+}
+
+body.light-theme .pack-toggle-btn.active {
+    background: rgba(218, 165, 32, 0.15);
+    color: #b8860b;
+    border-color: rgba(218, 165, 32, 0.4);
+}
+
+body.light-theme .pack-toggle-btn.active:hover {
+    background: rgba(218, 165, 32, 0.2);
+}
+
+body.light-theme .pack-loaded-indicator {
+    background: rgba(40, 167, 69, 0.08);
+    border-color: rgba(40, 167, 69, 0.2);
+}
+
+body.light-theme .pack-loaded-indicator .loaded-label {
+    color: #6c757d;
+}
+
+body.light-theme .pack-loaded-indicator .loaded-pack-name {
+    color: #b8860b;
+}
+
 /* Flexbox grid for spawn pack cards - auto-aligns as cards are added */
 .spawn-pack-grid {
     display: flex;
@@ -176,4 +248,10 @@
     color: #d0d0d0;
     max-height: 300px;
     overflow-y: auto;
+}
+
+body.light-theme .pack-description {
+    background: #f8f9fa;
+    color: #495057;
+    border: 1px solid #dee2e6;
 }
