@@ -56,7 +56,7 @@ namespace UORespawnApp.Scripts.Services
                 }
 
                 var destFilePath = Path.Combine(activePackPath, fileName);
-                File.Copy(sourceFilePath, destFilePath, overwrite: true);
+                FileUtility.Copy(sourceFilePath, destFilePath, overwrite: true);
 
                 Logger.Info($"Synced {fileName} to active pack: {activePackPath}");
             }
@@ -182,7 +182,8 @@ namespace UORespawnApp.Scripts.Services
 
         private static int WriteBoxSpawns(string filePath)
         {
-            using var writer = new BinaryWriter(File.Open(filePath, FileMode.Create));
+            using var stream = FileUtility.OpenWrite(filePath);
+            using var writer = new BinaryWriter(stream);
 
             writer.Write(BOX_SPAWN_VERSION);
             writer.Write(Utility.Version);
@@ -269,7 +270,8 @@ namespace UORespawnApp.Scripts.Services
 
         private static int ReadBoxSpawns(string filePath)
         {
-            using var reader = new BinaryReader(File.Open(filePath, FileMode.Open));
+            using var stream = FileUtility.OpenRead(filePath);
+            using var reader = new BinaryReader(stream);
 
             int version = reader.ReadInt32();
             string fileVersion = reader.ReadString();
@@ -377,7 +379,8 @@ namespace UORespawnApp.Scripts.Services
 
         private static int WriteTileSpawns(string filePath)
         {
-            using var writer = new BinaryWriter(File.Open(filePath, FileMode.Create));
+            using var stream = FileUtility.OpenWrite(filePath);
+            using var writer = new BinaryWriter(stream);
 
             writer.Write(TILE_SPAWN_VERSION);
             writer.Write(Utility.Version);
@@ -456,7 +459,8 @@ namespace UORespawnApp.Scripts.Services
 
         private static int ReadTileSpawns(string filePath)
         {
-            using var reader = new BinaryReader(File.Open(filePath, FileMode.Open));
+            using var stream = FileUtility.OpenRead(filePath);
+            using var reader = new BinaryReader(stream);
 
             int version = reader.ReadInt32();
             string fileVersion = reader.ReadString();
@@ -568,7 +572,8 @@ namespace UORespawnApp.Scripts.Services
 
         private static int WriteRegionSpawns(string filePath)
         {
-            using var writer = new BinaryWriter(File.Open(filePath, FileMode.Create));
+            using var stream = FileUtility.OpenWrite(filePath);
+            using var writer = new BinaryWriter(stream);
 
             writer.Write(REGION_SPAWN_VERSION);
             writer.Write(Utility.Version);
@@ -647,7 +652,8 @@ namespace UORespawnApp.Scripts.Services
 
         private static int ReadRegionSpawns(string filePath)
         {
-            using var reader = new BinaryReader(File.Open(filePath, FileMode.Open));
+            using var stream = FileUtility.OpenRead(filePath);
+            using var reader = new BinaryReader(stream);
 
             int version = reader.ReadInt32();
             string fileVersion = reader.ReadString();
@@ -761,7 +767,8 @@ namespace UORespawnApp.Scripts.Services
 
         private static int WriteVendorSpawns(string filePath)
         {
-            using var writer = new BinaryWriter(File.Open(filePath, FileMode.Create));
+            using var stream = FileUtility.OpenWrite(filePath);
+            using var writer = new BinaryWriter(stream);
 
             // Write version info (bump to version 2 for new simplified format)
             writer.Write(VENDOR_SPAWN_VERSION);
@@ -798,7 +805,8 @@ namespace UORespawnApp.Scripts.Services
 
         private static int ReadVendorSpawns(string filePath)
         {
-            using var reader = new BinaryReader(File.Open(filePath, FileMode.Open));
+            using var stream = FileUtility.OpenRead(filePath);
+            using var reader = new BinaryReader(stream);
 
             // Read and validate version
             int version = reader.ReadInt32();

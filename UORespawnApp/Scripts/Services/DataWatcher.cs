@@ -194,7 +194,7 @@ namespace UORespawnApp.Scripts.Services
                         Directory.CreateDirectory(rawDir);
                     }
 
-                    File.Copy(serverBestiaryPath, localBestiaryPath, overwrite: true);
+                    FileUtility.Copy(serverBestiaryPath, localBestiaryPath, overwrite: true);
                     Logger.Info($"Copied bestiary from server OUTPUT to: {localBestiaryPath}");
                 }
 
@@ -245,7 +245,7 @@ namespace UORespawnApp.Scripts.Services
                         Directory.CreateDirectory(rawDir);
                     }
 
-                    File.Copy(serverVendorPath, localVendorPath, overwrite: true);
+                    FileUtility.Copy(serverVendorPath, localVendorPath, overwrite: true);
                     Logger.Info($"Copied vendor list from server OUTPUT to: {localVendorPath}");
                 }
 
@@ -279,7 +279,7 @@ namespace UORespawnApp.Scripts.Services
                         Directory.CreateDirectory(rawDir);
                     }
 
-                    File.Copy(serverSignPath, localSignPath, overwrite: true);
+                    FileUtility.Copy(serverSignPath, localSignPath, overwrite: true);
                     Logger.Info($"Copied sign data from server OUTPUT to: {localSignPath}");
                 }
 
@@ -318,7 +318,7 @@ namespace UORespawnApp.Scripts.Services
                         Directory.CreateDirectory(rawDir);
                     }
 
-                    File.Copy(serverHivePath, localHivePath, overwrite: true);
+                    FileUtility.Copy(serverHivePath, localHivePath, overwrite: true);
                     Logger.Info($"Copied hive data from server OUTPUT to: {localHivePath}");
                 }
 
@@ -357,7 +357,7 @@ namespace UORespawnApp.Scripts.Services
                         Directory.CreateDirectory(rawDir);
                     }
 
-                    File.Copy(serverMapListPath, localMapListPath, overwrite: true);
+                    FileUtility.Copy(serverMapListPath, localMapListPath, overwrite: true);
                     Logger.Info($"Copied map list from server OUTPUT to: {localMapListPath}");
                 }
 
@@ -391,7 +391,7 @@ namespace UORespawnApp.Scripts.Services
                         Directory.CreateDirectory(rawDir);
                     }
 
-                    File.Copy(serverTileListPath, localTileListPath, overwrite: true);
+                    FileUtility.Copy(serverTileListPath, localTileListPath, overwrite: true);
                     Logger.Info($"Copied tile list from server OUTPUT to: {localTileListPath}");
                 }
 
