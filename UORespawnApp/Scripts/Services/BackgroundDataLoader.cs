@@ -6,11 +6,14 @@ namespace UORespawnApp.Scripts.Services
     /// <summary>
     /// Service for loading application data in the background after UI initialization.
     /// This prevents blocking the UI thread during app startup.
+    /// Supports cancellation for graceful shutdown.
     /// </summary>
-    public class BackgroundDataLoader
+    public class BackgroundDataLoader : IDisposable
     {
         private bool _isLoading = false;
         private bool _isComplete = false;
+        private CancellationTokenSource? _cancellationTokenSource;
+        private bool _disposed = false;
 
         // Loading state flags
         public bool IsMapListLoaded { get; private set; }
@@ -238,13 +241,18 @@ namespace UORespawnApp.Scripts.Services
         /// Loads all application data asynchronously in the background.
         /// Should be called after the UI has rendered.
         /// </summary>
-        public async Task LoadAllDataAsync()
+        /// <param name="cancellationToken">Optional cancellation token for graceful shutdown</param>
+        public async Task LoadAllDataAsync(CancellationToken cancellationToken = default)
         {
             if (_isLoading || _isComplete)
             {
                 Logger.Info("Background data loading already in progress or complete");
                 return;
             }
+
+            // Create internal cancellation source that can be cancelled via Cancel() or the passed token
+            _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            var token = _cancellationTokenSource.Token;
 
             _isLoading = true;
             CompletedSteps = 0;
@@ -258,68 +266,86 @@ namespace UORespawnApp.Scripts.Services
                 // Load data in logical order (some dependencies exist)
 
                 // Step 0: Load Settings (FIRST - other systems may depend on settings)
-                await LoadSettingsAsync();
+                await LoadSettingsAsync(token);
+                token.ThrowIfCancellationRequested();
 
                 // Step 0.25: Check and update server installation if linked
                 // This MUST happen BEFORE syncing server data to ensure scripts are current
-                await CheckAndUpdateServerAsync();
+                await CheckAndUpdateServerAsync(token);
+                token.ThrowIfCancellationRequested();
 
                 // Step 0.5: Sync server OUTPUT data to Resources/Raw if linked
                 // This MUST happen BEFORE loading map/tile lists and other server-generated data
-                await SyncServerOutputDataAsync();
+                await SyncServerOutputDataAsync(token);
+                token.ThrowIfCancellationRequested();
 
                 // Step 0.6: Check for and sync pending commands from server
-                await SyncAndCheckPendingCommandsAsync();
+                await SyncAndCheckPendingCommandsAsync(token);
+                token.ThrowIfCancellationRequested();
 
                 // Step 1: Load Map List (needed for map name lookups)
-                await LoadMapListAsync();
+                await LoadMapListAsync(token);
+                token.ThrowIfCancellationRequested();
 
                 // Step 2: Load Tile List (needed for tile spawn page)
-                await LoadTileListAsync();
+                await LoadTileListAsync(token);
+                token.ThrowIfCancellationRequested();
 
                 // Step 2.5: Ensure approved packs are unpacked from Backup folder
                 // This MUST happen BEFORE InitializeActivePackPath so the pack exists in Approved
-                await BackgroundDataLoader.EnsureApprovedPacksUnpackedAsync();
+                await BackgroundDataLoader.EnsureApprovedPacksUnpackedAsync(token);
+                token.ThrowIfCancellationRequested();
 
                 // Initialize active pack path from saved CurrentPackName setting
                 // Now the pack will exist in Approved (either from Backup ZIP or folder)
                 BackgroundDataLoader.InitializeActivePackPath();
 
                 // Step 3: Load Box Spawn Data (Binary)
-                await LoadBoxSpawnDataAsync();
+                await LoadBoxSpawnDataAsync(token);
+                token.ThrowIfCancellationRequested();
 
                 // Step 4: Load Tile Spawn Data (Binary)
-                await LoadTileSpawnDataAsync();
+                await LoadTileSpawnDataAsync(token);
+                token.ThrowIfCancellationRequested();
 
                 // Step 5: Load Region Spawn Data (Binary)
-                await LoadRegionSpawnDataAsync();
+                await LoadRegionSpawnDataAsync(token);
+                token.ThrowIfCancellationRequested();
 
                 // Step 6: Load Vendor Spawn Data (Binary)
-                await LoadVendorSpawnDataAsync();
+                await LoadVendorSpawnDataAsync(token);
+                token.ThrowIfCancellationRequested();
 
                 // Step 7: Load Bestiary (creature list from server-generated text file)
-                await LoadBestiaryAsync();
+                await LoadBestiaryAsync(token);
+                token.ThrowIfCancellationRequested();
 
                 // Step 8: Load Vendor List (vendor names from server-generated text file)
-                await LoadVendorListAsync();
+                await LoadVendorListAsync(token);
+                token.ThrowIfCancellationRequested();
 
                 // Step 9: Load Sign Data (shop sign locations for vendor spawning)
-                await LoadSignDataAsync();
+                await LoadSignDataAsync(token);
+                token.ThrowIfCancellationRequested();
 
                 // Step 10: Load Hive Data (bee hive locations for beekeeper spawning)
-                await LoadHiveDataAsync();
+                await LoadHiveDataAsync(token);
+                token.ThrowIfCancellationRequested();
 
                 // Step 11: Load XML Spawner List
-                await LoadXMLSpawnerListAsync();
+                await LoadXMLSpawnerListAsync(token);
+                token.ThrowIfCancellationRequested();
 
                 // Step 12: Sync spawn packs with server data (remove invalid creatures, regions, locations)
-                await SyncSpawnPacksWithServerDataAsync();
+                await SyncSpawnPacksWithServerDataAsync(token);
+                token.ThrowIfCancellationRequested();
 
                 // Step 13: Verify Map Files exist in Data/MAPS
-                await CopyMapFilesAsync();
+                await CopyMapFilesAsync(token);
+                token.ThrowIfCancellationRequested();
 
                 // Step 14: Start DataWatcher (LAST - after all data is loaded)
-                await StartDataWatcherAsync();
+                await StartDataWatcherAsync(token);
 
                 _isComplete = true;
                 var elapsed = DateTime.Now - startTime;
@@ -327,6 +353,10 @@ namespace UORespawnApp.Scripts.Services
                 Logger.Info($"Background data loading completed in {elapsed.TotalSeconds:F2} seconds");
 
                 AllDataLoaded?.Invoke(this, EventArgs.Empty);
+            }
+            catch (OperationCanceledException)
+            {
+                Logger.Info("Background data loading was cancelled");
             }
             catch (Exception ex)
             {
@@ -339,6 +369,22 @@ namespace UORespawnApp.Scripts.Services
         }
 
         /// <summary>
+        /// Cancels any ongoing background loading operation.
+        /// </summary>
+        public void Cancel()
+        {
+            try
+            {
+                _cancellationTokenSource?.Cancel();
+                Logger.Info("Background data loading cancellation requested");
+            }
+            catch (ObjectDisposedException)
+            {
+                // Already disposed, ignore
+            }
+        }
+
+        /// <summary>
         /// Ensures approved packs are unpacked from Backup folder to Approved folder.
         /// Must be called BEFORE InitializeActivePackPath so the packs exist.
         /// 
@@ -346,7 +392,7 @@ namespace UORespawnApp.Scripts.Services
         ///   Backup/DefaultPack.zip  → Approved/DefaultPack/ (for releases)
         ///   Backup/DefaultPack/     → Approved/DefaultPack/ (for Git repo/dev)
         /// </summary>
-        private static async Task EnsureApprovedPacksUnpackedAsync()
+        private static async Task EnsureApprovedPacksUnpackedAsync(CancellationToken cancellationToken = default)
         {
             Logger.Info("[Startup] Ensuring approved packs are unpacked from Backup...");
 
@@ -372,7 +418,7 @@ namespace UORespawnApp.Scripts.Services
         /// This ensures we always load the latest server-generated data on startup.
         /// Files synced: MapList, TileList, BestiaryList, VendorList, RegionList, SpawnerList, SignData, HiveData
         /// </summary>
-        private static async Task SyncServerOutputDataAsync()
+        private static async Task SyncServerOutputDataAsync(CancellationToken cancellationToken = default)
         {
             try
             {
@@ -430,7 +476,7 @@ namespace UORespawnApp.Scripts.Services
         /// Syncs pending command files from server COMMANDS folder and checks for local command files.
         /// If commands are found, raises PendingCommandsDetected event for UI to show modal.
         /// </summary>
-        private async Task SyncAndCheckPendingCommandsAsync()
+        private async Task SyncAndCheckPendingCommandsAsync(CancellationToken cancellationToken = default)
         {
             try
             {
@@ -468,7 +514,7 @@ namespace UORespawnApp.Scripts.Services
         /// If an update is available, raises ServerUpdateAvailable event for UI to show confirmation modal.
         /// Does NOT auto-update - user confirmation is always required.
         /// </summary>
-        private async Task CheckAndUpdateServerAsync()
+        private async Task CheckAndUpdateServerAsync(CancellationToken cancellationToken = default)
         {
             try
             {
@@ -520,7 +566,7 @@ namespace UORespawnApp.Scripts.Services
         /// Loads the map list from file (Resources/Raw/UOR_MapList.txt).
         /// This provides map IDs and names including custom maps from server.
         /// </summary>
-        private async Task LoadMapListAsync()
+        private async Task LoadMapListAsync(CancellationToken cancellationToken = default)
         {
             Logger.Info("[Startup] Loading map list...");
 
@@ -547,7 +593,7 @@ namespace UORespawnApp.Scripts.Services
         /// Loads the tile list from file (Resources/Raw/UOR_TileList.txt).
         /// This provides valid tile type names for tile spawning.
         /// </summary>
-        private async Task LoadTileListAsync()
+        private async Task LoadTileListAsync(CancellationToken cancellationToken = default)
         {
             Logger.Info("[Startup] Loading tile list...");
 
@@ -567,7 +613,7 @@ namespace UORespawnApp.Scripts.Services
             }
         }
 
-        private async Task LoadSettingsAsync()
+        private async Task LoadSettingsAsync(CancellationToken cancellationToken = default)
         {
             Logger.Info("[Startup Step 0/7] Loading settings...");
 
@@ -600,7 +646,7 @@ namespace UORespawnApp.Scripts.Services
             }
         }
 
-        private async Task LoadBoxSpawnDataAsync()
+        private async Task LoadBoxSpawnDataAsync(CancellationToken cancellationToken = default)
         {
             Logger.Info("[Startup Step 1/7] Loading box spawn data...");
 
@@ -632,7 +678,7 @@ namespace UORespawnApp.Scripts.Services
             }
         }
 
-        private async Task LoadTileSpawnDataAsync()
+        private async Task LoadTileSpawnDataAsync(CancellationToken cancellationToken = default)
         {
             Logger.Info("[Startup Step 2/7] Loading tile spawn data...");
 
@@ -664,7 +710,7 @@ namespace UORespawnApp.Scripts.Services
             }
         }
 
-        private async Task LoadRegionSpawnDataAsync()
+        private async Task LoadRegionSpawnDataAsync(CancellationToken cancellationToken = default)
         {
             Logger.Info("[Startup Step 3/12] Loading region spawn data...");
 
@@ -696,7 +742,7 @@ namespace UORespawnApp.Scripts.Services
             }
         }
 
-        private async Task LoadVendorSpawnDataAsync()
+        private async Task LoadVendorSpawnDataAsync(CancellationToken cancellationToken = default)
         {
             Logger.Info("[Startup Step 4/12] Loading vendor spawn data...");
 
@@ -728,7 +774,7 @@ namespace UORespawnApp.Scripts.Services
             }
         }
 
-        private async Task LoadBestiaryAsync()
+        private async Task LoadBestiaryAsync(CancellationToken cancellationToken = default)
         {
             Logger.Info("[Startup Step 5/12] Loading bestiary...");
 
@@ -748,7 +794,7 @@ namespace UORespawnApp.Scripts.Services
             }
         }
 
-        private async Task LoadVendorListAsync()
+        private async Task LoadVendorListAsync(CancellationToken cancellationToken = default)
         {
             Logger.Info("[Startup Step 5/10] Loading vendor list...");
 
@@ -768,7 +814,7 @@ namespace UORespawnApp.Scripts.Services
             }
         }
 
-        private async Task LoadSignDataAsync()
+        private async Task LoadSignDataAsync(CancellationToken cancellationToken = default)
         {
             Logger.Info("[Startup Step 6/10] Loading sign data...");
 
@@ -834,7 +880,7 @@ namespace UORespawnApp.Scripts.Services
             }
         }
 
-        private async Task LoadHiveDataAsync()
+        private async Task LoadHiveDataAsync(CancellationToken cancellationToken = default)
         {
             Logger.Info("[Startup Step 7/10] Loading hive data...");
 
@@ -900,7 +946,7 @@ namespace UORespawnApp.Scripts.Services
             }
         }
 
-        private async Task LoadXMLSpawnerListAsync()
+        private async Task LoadXMLSpawnerListAsync(CancellationToken cancellationToken = default)
         {
             Logger.Info("[Startup Step 8/10] Loading XML spawner list...");
             try
@@ -932,7 +978,7 @@ namespace UORespawnApp.Scripts.Services
         /// Removes invalid creatures, regions, and vendor locations from all packs.
         /// This ensures packs stay aligned when server data changes.
         /// </summary>
-        private async Task SyncSpawnPacksWithServerDataAsync()
+        private async Task SyncSpawnPacksWithServerDataAsync(CancellationToken cancellationToken = default)
         {
             Logger.Info("[Startup Step 10/13] Syncing spawn packs with server data...");
             try
@@ -949,7 +995,7 @@ namespace UORespawnApp.Scripts.Services
             }
         }
 
-        private async Task CopyMapFilesAsync()
+        private async Task CopyMapFilesAsync(CancellationToken cancellationToken = default)
         {
             Logger.Info("[Startup Step 9/10] Checking map files...");
             try
@@ -987,7 +1033,7 @@ namespace UORespawnApp.Scripts.Services
             }
         }
 
-        private async Task StartDataWatcherAsync()
+        private async Task StartDataWatcherAsync(CancellationToken cancellationToken = default)
         {
             Logger.Info("[Startup Step 10/10] Starting DataWatcher...");
                 try
@@ -1094,11 +1140,23 @@ namespace UORespawnApp.Scripts.Services
         }
 
         /// <summary>
-        /// Cleanup resources
+        /// Cleanup resources including cancellation token and data watcher.
         /// </summary>
         public void Dispose()
         {
+            if (_disposed)
+                return;
+
+            _disposed = true;
+
+            // Cancel any ongoing loading
+            Cancel();
+
+            // Dispose resources
+            _cancellationTokenSource?.Dispose();
             _dataWatcher?.Dispose();
+
+            Logger.Info("BackgroundDataLoader disposed");
         }
     }
 }
