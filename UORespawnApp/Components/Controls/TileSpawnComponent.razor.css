@@ -169,8 +169,6 @@ body.light-theme .tile-item.selected {
     max-height: 100%;
     object-fit: contain;
     image-rendering: pixelated; /* Keep pixel art crisp */
-    image-rendering: -moz-crisp-edges;
-    image-rendering: crisp-edges;
 }
 
 /* Tile name label below image */
