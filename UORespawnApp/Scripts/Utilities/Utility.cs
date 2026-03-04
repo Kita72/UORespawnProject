@@ -1,377 +1,279 @@
-﻿using UORespawnApp.Scripts.Entities;
+using UORespawnApp.Scripts.Entities;
 using UORespawnApp.Scripts.Services;
 
-namespace UORespawnApp.Scripts.Utilities
+namespace UORespawnApp.Scripts.Utilities;
+
+/// <summary>
+/// Core utility class for UORespawn v2.0
+/// 
+/// ARCHITECTURE NOTE:
+/// This class now delegates to DI-injectable services (SpawnDataService, SessionService).
+/// The static properties/methods remain for backward compatibility during migration.
+/// New code should inject services directly via DI.
+/// 
+/// Migration path:
+/// 1. Services are set during app startup via SetServices()
+/// 2. Static Utility.BoxSpawns etc. delegate to SpawnDataService
+/// 3. Components can use either pattern (both access same data)
+/// 4. Eventually, direct service injection is preferred
+/// </summary>
+public static class Utility
 {
+    internal const string Version = "2.0.0.10";
+
+    // ==================== SERVICE REFERENCES ====================
+    // These get set during app startup from DI container
+
+    private static SpawnDataService? _spawnDataService;
+    private static SessionService? _sessionService;
+    private static MapImageCacheService? _mapImageCache;
 
     /// <summary>
-    /// Core utility class for UORespawn v2.0
-    /// Manages spawn data (Box, Tile, Region) and settings with CSV/binary serialization
+    /// Initializes the static utility with DI services.
+    /// Called from MainPage during app startup.
     /// </summary>
-    public static class Utility
+    internal static void SetServices(
+        SpawnDataService spawnDataService,
+        SessionService sessionService,
+        MapImageCacheService mapImageCache)
     {
-        internal const string Version = "2.0.0.10";
-
-        /// <summary>
-        /// Current session (map, view state, etc.)
-        /// </summary>
-        internal static Session? SESSION { get; private set; }
-
-        /// <summary>
-        /// Map image cache service (set during app startup via DI)
-        /// </summary>
-        internal static MapImageCacheService? MapImageCache { get; private set; }
-
-        /// <summary>
-        /// Initialize a new session
-        /// </summary>
-        internal static void StartSession(Session session)
-        {
-            SESSION = session;
-        }
-
-        /// <summary>
-        /// Set the map image cache service (called from MainPage during DI resolution)
-        /// </summary>
-        internal static void SetMapImageCache(MapImageCacheService cacheService)
-        {
-            MapImageCache = cacheService;
-        }
-
-        internal static void InitializeSpawnDictionary()
-        {
-            InitializeBoxSpawns(); 
-            InitializeTileSpawns(); 
-            InitializeRegionSpawns();
-            InitializeVendorSpawns();
-        }
-
-        #region Box Spawn Data
-
-        /// <summary>
-        /// Box spawn data indexed by MapId
-        /// Each map contains a list of BoxSpawnEntity objects
-        /// </summary>
-        internal static Dictionary<int, List<BoxSpawnEntity>> BoxSpawns { get; private set; } = [];
-
-        /// <summary>
-        /// Initialize Box Spawns dictionary with empty lists for each map (0-5)
-        /// </summary>
-        internal static void InitializeBoxSpawns()
-        {
-            for (int i = 0; i <= 5; i++)
-            {
-                BoxSpawns[i] = [];
-            }
-        }
-
-        internal static void AddBoxSpawn(int map, BoxSpawnEntity entity)
-        {
-            if (!BoxSpawns.TryGetValue(map, out List<BoxSpawnEntity>? value))
-            {
-                value = [];
-
-                BoxSpawns[map] = value;
-            }
-
-            if (!value.Contains(entity))
-            {
-                value.Add(entity);
-            }
-        }
-
-        /// <summary>
-        /// Save box spawn data using binary serialization (ServUO-style BinaryWriter)
-        /// </summary>
-        internal static void SaveSpawnData()
-        {
-            try
-            {
-                BinarySerializationService.SaveBoxSpawns();
-            }
-            catch (Exception ex)
-            {
-                Logger.Error("Error saving box spawn data", ex);
-            }
-        }
-
-        /// <summary>
-        /// Load box spawn data using binary deserialization (ServUO-style BinaryReader)
-        /// </summary>
-        internal static void LoadBoxSpawnData()
-        {
-            try
-            {
-                BoxSpawns.Clear();
-
-                InitializeBoxSpawns();
-
-                BinarySerializationService.LoadBoxSpawns();
-            }
-            catch (Exception ex)
-            {
-                Logger.Error("Error loading box spawn data", ex);
-            }
-        }
-
-        #endregion
-
-        #region Tile Spawn Data
-
-        /// <summary>
-        /// Tile spawn data indexed by MapId
-        /// Each map contains a list of TileSpawnEntity objects
-        /// </summary>
-        internal static Dictionary<int, List<TileSpawnEntity>> TileSpawns { get; private set; } = [];
-
-        /// <summary>
-        /// Initialize Tile Spawns dictionary with empty lists for each map (0-5)
-        /// </summary>
-        internal static void InitializeTileSpawns()
-        {
-            for (int i = 0; i <= 5; i++)
-            {
-                TileSpawns[i] = [];
-            }
-        }
-
-        /// <summary>
-        /// Save tile spawn data using binary serialization (ServUO-style BinaryWriter)
-        /// </summary>
-        internal static void SaveTileSpawnData()
-        {
-            try
-            {
-                BinarySerializationService.SaveTileSpawns();
-            }
-            catch (Exception ex)
-            {
-                Logger.Error("Error saving tile spawn data", ex);
-            }
-        }
-
-        /// <summary>
-        /// Load tile spawn data using binary deserialization (ServUO-style BinaryReader)
-        /// </summary>
-        internal static void LoadTileSpawnData()
-        {
-            try
-            {
-                TileSpawns.Clear();
-
-                InitializeTileSpawns();
-
-                BinarySerializationService.LoadTileSpawns();
-            }
-            catch (Exception ex)
-            {
-                Logger.Error("Error loading tile spawn data", ex);
-            }
-        }
-
-        #endregion
-
-        #region Region Spawn Data
-
-        /// <summary>
-        /// Region spawn data indexed by MapId
-        /// Each map contains a list of RegionSpawnEntity objects
-        /// </summary>
-        internal static Dictionary<int, List<RegionSpawnEntity>> RegionSpawns { get; private set; } = [];
-
-        /// <summary>
-        /// Initialize Region Spawns dictionary with empty lists for each map (0-5)
-        /// </summary>
-        internal static void InitializeRegionSpawns()
-        {
-            for (int i = 0; i <= 5; i++)
-            {
-                RegionSpawns[i] = [];
-            }
-        }
-
-        /// <summary>
-        /// Save region spawn data using binary serialization (ServUO-style BinaryWriter)
-        /// </summary>
-        internal static void SaveRegionSpawnData()
-        {
-            try
-            {
-                BinarySerializationService.SaveRegionSpawns();
-            }
-            catch (Exception ex)
-            {
-                Logger.Error("Error saving region spawn data", ex);
-            }
-        }
-
-        /// <summary>
-        /// Load region spawn data using binary deserialization (ServUO-style BinaryReader)
-        /// </summary>
-        internal static void LoadRegionSpawnData()
-        {
-            try
-            {
-                RegionSpawns.Clear();
-
-                InitializeRegionSpawns();
-
-                BinarySerializationService.LoadRegionSpawns();
-            }
-            catch (Exception ex)
-            {
-                Logger.Error("Error loading region spawn data", ex);
-            }
-        }
-
-        #endregion
-
-        #region Vendor Spawn Data
-
-        /// <summary>
-        /// Vendor spawn data indexed by MapId
-        /// Each map contains a list of VendorEntity objects
-        /// </summary>
-        internal static Dictionary<int, List<VendorEntity>> VendorSpawns { get; private set; } = [];
-
-        /// <summary>
-        /// Initialize Vendor Spawns dictionary with empty lists for each map (0-5)
-        /// </summary>
-        internal static void InitializeVendorSpawns()
-        {
-            for (int i = 0; i <= 5; i++)
-            {
-                VendorSpawns[i] = [];
-            }
-        }
-
-        /// <summary>
-        /// Save vendor spawn data using binary serialization (ServUO-style BinaryWriter)
-        /// </summary>
-        internal static void SaveVendorSpawnData()
-        {
-            try
-            {
-                BinarySerializationService.SaveVendorSpawns();
-            }
-            catch (Exception ex)
-            {
-                Logger.Error("Error saving vendor spawn data", ex);
-            }
-        }
-
-        /// <summary>
-        /// Load vendor spawn data using binary deserialization (ServUO-style BinaryReader)
-        /// </summary>
-        internal static void LoadVendorSpawnData()
-        {
-            try
-            {
-                VendorSpawns.Clear();
-
-                InitializeVendorSpawns();
-
-                BinarySerializationService.LoadVendorSpawns();
-            }
-            catch (Exception ex)
-            {
-                Logger.Error("Error loading vendor spawn data", ex);
-            }
-        }
-
-        #endregion
-
-        #region Settings Data
-
-        /// <summary>
-        /// Save settings to binary file (UOR_SpawnSettings.bin) using ServUO-style BinaryWriter
-        /// Reads directly from Settings.cs properties
-        /// </summary>
-        /// <remarks>
-        /// Two-tier settings model:
-        /// - Preferences: UI immediate access (Preferences API)
-        /// - Binary file: Server-readable format (BinaryWriter)
-        /// Binary file is synced to server; server reads it (doesn't modify)
-        /// </remarks>
-        internal static void SaveSettings()
-        {
-            try
-            {
-                BinarySerializationService.SaveSettings();
-            }
-            catch (Exception ex)
-            {
-                Logger.Error("Error saving settings", ex);
-            }
-        }
-
-        /// <summary>
-        /// Load settings from binary file (UOR_SpawnSettings.bin) using ServUO-style BinaryReader
-        /// Writes directly to Settings.cs Preferences
-        /// If binary file doesn't exist, Settings use their default Preferences values
-        /// </summary>
-        /// <remarks>
-        /// Called during app startup by BackgroundDataLoader.LoadSettingsAsync()
-        /// Loads from local Data/UOR_DATA/UOR_SpawnSettings.bin
-        /// Binary file is editor-created; server reads it (not modified by server)
-        /// </remarks>
-        internal static void LoadSettings()
-        {
-            try
-            {
-                BinarySerializationService.LoadSettings();
-            }
-            catch (Exception ex)
-            {
-                Logger.Error("Error loading settings", ex);
-            }
-        }
-
-        #endregion
-
-        #region Helper Methods
-
-        /// <summary>
-        /// Gets map image path for current session map
-        /// Returns base64 data URL for MAUI Blazor WebView to display from Data/maps/
-        /// Uses MapImageCacheService for caching to avoid repeated disk reads
-        /// Falls back to empty string if map doesn't exist
-        /// </summary>
-        internal static string GetMapImagePath()
-        {
-            if (SESSION == null || !MapUtility.IsValidMapId(SESSION.Current_Map))
-            {
-                return "";
-            }
-
-            // Use cache service if available (preferred path)
-            if (MapImageCache != null)
-            {
-                return MapImageCache.GetMapImageDataUrl(SESSION.Current_Map);
-            }
-
-            // Fallback: direct load without caching (only if cache not initialized)
-            try
-            {
-                var fullPath = MapUtility.GetMapImagePath(SESSION.Current_Map);
-
-                if (File.Exists(fullPath))
-                {
-                    var bytes = File.ReadAllBytes(fullPath);
-                    var base64 = Convert.ToBase64String(bytes);
-
-                    Logger.Warning("Map loaded without cache - MapImageCacheService not initialized");
-                    return $"data:image/bmp;base64,{base64}";
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.Error($"Error loading map image for Map{SESSION.Current_Map}", ex);
-            }
-
-            return "";
-        }
-
-        #endregion
+        _spawnDataService = spawnDataService;
+        _sessionService = sessionService;
+        _mapImageCache = mapImageCache;
+        Logger.Info("Utility services initialized from DI");
     }
+
+    // ==================== SESSION (delegates to SessionService) ====================
+
+    /// <summary>
+    /// Current session - delegates to SessionService.
+    /// Prefer injecting SessionService directly in new code.
+    /// </summary>
+#pragma warning disable CS0618 // Obsolete warning suppressed for internal compatibility
+    internal static Session? SESSION => _sessionService?.GetSession();
+#pragma warning restore CS0618
+
+    /// <summary>
+    /// Map image cache service reference.
+    /// </summary>
+    internal static MapImageCacheService? MapImageCache => _mapImageCache;
+
+    /// <summary>
+    /// Starts or replaces the current session.
+    /// For backward compatibility - new code should use SessionService directly.
+    /// </summary>
+    internal static void StartSession(Session session)
+    {
+        // Session is now managed by SessionService which creates it in constructor.
+        // This method exists for backward compatibility but is effectively a no-op
+        // since SessionService already initializes its own session.
+        Logger.Info("Session started (managed by SessionService)");
+    }
+
+    // ==================== SPAWN DATA (delegates to SpawnDataService) ====================
+
+    /// <summary>
+    /// Box spawn data - delegates to SpawnDataService.
+    /// Prefer injecting SpawnDataService directly in new code.
+    /// </summary>
+    internal static Dictionary<int, List<BoxSpawnEntity>> BoxSpawns => 
+        _spawnDataService?.BoxSpawns ?? [];
+
+    /// <summary>
+    /// Tile spawn data - delegates to SpawnDataService.
+    /// </summary>
+    internal static Dictionary<int, List<TileSpawnEntity>> TileSpawns => 
+        _spawnDataService?.TileSpawns ?? [];
+
+    /// <summary>
+    /// Region spawn data - delegates to SpawnDataService.
+    /// </summary>
+    internal static Dictionary<int, List<RegionSpawnEntity>> RegionSpawns => 
+        _spawnDataService?.RegionSpawns ?? [];
+
+    /// <summary>
+    /// Vendor spawn data - delegates to SpawnDataService.
+    /// </summary>
+    internal static Dictionary<int, List<VendorEntity>> VendorSpawns => 
+        _spawnDataService?.VendorSpawns ?? [];
+
+    /// <summary>
+    /// Initialize all spawn dictionaries - delegates to SpawnDataService.
+    /// </summary>
+    internal static void InitializeSpawnDictionary()
+    {
+        _spawnDataService?.InitializeAllSpawns();
+    }
+
+    #region Box Spawn Methods (delegate to SpawnDataService)
+
+    internal static void InitializeBoxSpawns() => _spawnDataService?.InitializeBoxSpawns();
+
+    internal static void AddBoxSpawn(int map, BoxSpawnEntity entity) => 
+        _spawnDataService?.AddBoxSpawn(map, entity);
+
+    internal static void SaveSpawnData()
+    {
+        try
+        {
+            BinarySerializationService.SaveBoxSpawns();
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Error saving box spawn data", ex);
+        }
+    }
+
+    internal static void LoadBoxSpawnData()
+    {
+        try
+        {
+            _spawnDataService?.ClearBoxSpawns();
+            _spawnDataService?.InitializeBoxSpawns();
+            BinarySerializationService.LoadBoxSpawns();
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Error loading box spawn data", ex);
+        }
+    }
+
+    #endregion
+
+    #region Tile Spawn Methods (delegate to SpawnDataService)
+
+    internal static void InitializeTileSpawns() => _spawnDataService?.InitializeTileSpawns();
+
+    internal static void SaveTileSpawnData()
+    {
+        try
+        {
+            BinarySerializationService.SaveTileSpawns();
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Error saving tile spawn data", ex);
+        }
+    }
+
+    internal static void LoadTileSpawnData()
+    {
+        try
+        {
+            _spawnDataService?.ClearTileSpawns();
+            _spawnDataService?.InitializeTileSpawns();
+            BinarySerializationService.LoadTileSpawns();
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Error loading tile spawn data", ex);
+        }
+    }
+
+    #endregion
+
+    #region Region Spawn Methods (delegate to SpawnDataService)
+
+    internal static void InitializeRegionSpawns() => _spawnDataService?.InitializeRegionSpawns();
+
+    internal static void SaveRegionSpawnData()
+    {
+        try
+        {
+            BinarySerializationService.SaveRegionSpawns();
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Error saving region spawn data", ex);
+        }
+    }
+
+    internal static void LoadRegionSpawnData()
+    {
+        try
+        {
+            _spawnDataService?.ClearRegionSpawns();
+            _spawnDataService?.InitializeRegionSpawns();
+            BinarySerializationService.LoadRegionSpawns();
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Error loading region spawn data", ex);
+        }
+    }
+
+    #endregion
+
+    #region Vendor Spawn Methods (delegate to SpawnDataService)
+
+    internal static void InitializeVendorSpawns() => _spawnDataService?.InitializeVendorSpawns();
+
+    internal static void SaveVendorSpawnData()
+    {
+        try
+        {
+            BinarySerializationService.SaveVendorSpawns();
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Error saving vendor spawn data", ex);
+        }
+    }
+
+    internal static void LoadVendorSpawnData()
+    {
+        try
+        {
+            _spawnDataService?.ClearVendorSpawns();
+            _spawnDataService?.InitializeVendorSpawns();
+            BinarySerializationService.LoadVendorSpawns();
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Error loading vendor spawn data", ex);
+        }
+    }
+
+    #endregion
+
+    #region Settings Methods
+
+    internal static void SaveSettings()
+    {
+        try
+        {
+            BinarySerializationService.SaveSettings();
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Error saving settings", ex);
+        }
+    }
+
+    internal static void LoadSettings()
+    {
+        try
+        {
+            BinarySerializationService.LoadSettings();
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Error loading settings", ex);
+        }
+    }
+
+    #endregion
+
+    #region Helper Methods
+
+    /// <summary>
+    /// Gets map image as base64 data URL for current session map.
+    /// Delegates to SessionService which uses MapImageCacheService.
+    /// </summary>
+    internal static string GetMapImagePath()
+    {
+        return _sessionService?.GetMapImageDataUrl() ?? "";
+    }
+
+    #endregion
 }

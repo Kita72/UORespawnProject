@@ -31,11 +31,13 @@ namespace UORespawnApp
                 _webViewService.OnWebViewToggle += OnWebViewToggle;
             }
 
-            // Initialize map image cache service for static Utility access
+            // Initialize services for static Utility access (backward compatibility during DI migration)
+            var spawnDataService = App.Current?.Handler?.MauiContext?.Services.GetService<SpawnDataService>();
+            var sessionService = App.Current?.Handler?.MauiContext?.Services.GetService<SessionService>();
             var mapImageCache = App.Current?.Handler?.MauiContext?.Services.GetService<MapImageCacheService>();
-            if (mapImageCache != null)
+            if (spawnDataService != null && sessionService != null && mapImageCache != null)
             {
-                Utility.SetMapImageCache(mapImageCache);
+                Utility.SetServices(spawnDataService, sessionService, mapImageCache);
             }
         }
 

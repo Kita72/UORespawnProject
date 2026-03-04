@@ -38,6 +38,10 @@ namespace UORespawnApp
             builder.Services.AddSingleton<DebugService>();
             builder.Services.AddSingleton<MapImageCacheService>();
 
+            // Core Data Services (replaces static Utility state)
+            builder.Services.AddSingleton<SpawnDataService>();
+            builder.Services.AddSingleton<SessionService>();
+
             // FTP & Account Services
             builder.Services.AddSingleton<AccountService>();
             builder.Services.AddSingleton<FtpCredentialService>();
