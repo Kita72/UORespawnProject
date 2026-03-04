@@ -307,3 +307,27 @@ body.light-theme .tile-no-image-note {
     background-color: rgba(74, 111, 165, 0.1);
     color: #4a6fa5;
 }
+
+/* Trigger Dashboard Styles */
+.trigger-indicator {
+    padding: 1rem 0;
+}
+
+.trigger-indicator i {
+    transition: all 0.3s ease;
+}
+
+.trigger-indicator:hover i {
+    transform: scale(1.1);
+}
+
+.bg-purple {
+    background-color: #9b59b6;
+    color: white;
+}
+
+/* Light Theme - Trigger Dashboard */
+body.light-theme .trigger-indicator .badge.bg-secondary {
+    background-color: #adb5bd !important;
+}
+

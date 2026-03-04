@@ -137,6 +137,40 @@
                                 </select>
                             </div>
                         </div>
+
+                        <!-- Visual Trigger Dashboard -->
+                        <div class="card mt-3" style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border: 1px solid #333;">
+                            <div class="card-body p-3">
+                                <div class="row">
+                                    <!-- Weather Indicator -->
+                                    <div class="col-6 text-center" style="border-right: 1px solid #333;">
+                                        <div class="trigger-indicator">
+                                            <i class="bi @GetWeatherIcon(currentEntity.WeatherSpawn)" 
+                                               style="font-size: 3.5rem; @GetWeatherIconColor(currentEntity.WeatherSpawn)"></i>
+                                            <div class="mt-2">
+                                                <span class="badge @GetWeatherBadgeClass(currentEntity.WeatherSpawn)">
+                                                    @(currentEntity.WeatherSpawn == WeatherTypes.None ? "No Weather" : currentEntity.WeatherSpawn.ToString())
+                                                </span>
+                                            </div>
+                                            <small class="text-muted d-block mt-1">Weather Trigger</small>
+                                        </div>
+                                    </div>
+                                    <!-- Time Indicator -->
+                                    <div class="col-6 text-center">
+                                        <div class="trigger-indicator">
+                                            <i class="bi @GetTimeIcon(currentEntity.TimedSpawn)" 
+                                               style="font-size: 3.5rem; @GetTimeIconColor(currentEntity.TimedSpawn)"></i>
+                                            <div class="mt-2">
+                                                <span class="badge @GetTimeBadgeClass(currentEntity.TimedSpawn)">
+                                                    @(currentEntity.TimedSpawn == TimeNames.None ? "No Time" : currentEntity.TimedSpawn.ToString().Replace("_", " "))
+                                                </span>
+                                            </div>
+                                            <small class="text-muted d-block mt-1">Timed Trigger</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             }
@@ -322,6 +356,74 @@
             _ => "category-custom"
         };
     }
+
+    #region Trigger Dashboard Helpers
+
+    private string GetWeatherIcon(WeatherTypes weather) => weather switch
+    {
+        WeatherTypes.Rain => "bi-cloud-rain-fill",
+        WeatherTypes.Snow => "bi-snow",
+        WeatherTypes.Storm => "bi-cloud-lightning-fill",
+        WeatherTypes.Blizzard => "bi-cloud-snow",
+        _ => "bi-cloud"
+    };
+
+    private string GetWeatherIconColor(WeatherTypes weather) => weather switch
+    {
+        WeatherTypes.Rain => "color: #6ea8fe;",
+        WeatherTypes.Snow => "color: #e0e0e0;",
+        WeatherTypes.Storm => "color: #ffc107;",
+        WeatherTypes.Blizzard => "color: #b8d4e8;",
+        _ => "color: #6c757d; opacity: 0.5;"
+    };
+
+    private string GetWeatherBadgeClass(WeatherTypes weather) => weather switch
+    {
+        WeatherTypes.None => "bg-secondary",
+        WeatherTypes.Rain => "bg-primary",
+        WeatherTypes.Snow => "bg-light text-dark",
+        WeatherTypes.Storm => "bg-warning text-dark",
+        WeatherTypes.Blizzard => "bg-info",
+        _ => "bg-secondary"
+    };
+
+    private string GetTimeIcon(TimeNames time) => time switch
+    {
+        TimeNames.Witching_Hour => "bi-moon-stars-fill",
+        TimeNames.Middle_of_Night => "bi-moon-fill",
+        TimeNames.Late_at_Night => "bi-moon-fill",
+        TimeNames.Early_Morning => "bi-sunrise-fill",
+        TimeNames.Late_Morning => "bi-sun-fill",
+        TimeNames.Noon => "bi-brightness-high-fill",
+        TimeNames.Afternoon => "bi-sun-fill",
+        TimeNames.Early_Evening => "bi-sunset-fill",
+        _ => "bi-clock"
+    };
+
+    private string GetTimeIconColor(TimeNames time) => time switch
+    {
+        TimeNames.Witching_Hour => "color: #9b59b6;",
+        TimeNames.Middle_of_Night => "color: #3498db;",
+        TimeNames.Late_at_Night => "color: #2c3e50;",
+        TimeNames.Early_Morning => "color: #f39c12;",
+        TimeNames.Late_Morning => "color: #f1c40f;",
+        TimeNames.Noon => "color: #f1c40f;",
+        TimeNames.Afternoon => "color: #e67e22;",
+        TimeNames.Early_Evening => "color: #e74c3c;",
+        _ => "color: #6c757d; opacity: 0.5;"
+    };
+
+    private string GetTimeBadgeClass(TimeNames time) => time switch
+    {
+        TimeNames.None => "bg-secondary",
+        TimeNames.Witching_Hour => "bg-purple",
+        TimeNames.Middle_of_Night or TimeNames.Late_at_Night => "bg-dark",
+        TimeNames.Early_Morning or TimeNames.Early_Evening => "bg-warning text-dark",
+        TimeNames.Late_Morning or TimeNames.Noon or TimeNames.Afternoon => "bg-warning text-dark",
+        _ => "bg-secondary"
+    };
+
+    #endregion
 
     private TileDescription GetCurrentTileDescription()
     {

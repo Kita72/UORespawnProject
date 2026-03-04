@@ -384,3 +384,40 @@ h1:focus {
         padding-left: env(safe-area-inset-left);
     }
 }
+
+/* Map Header Select Dropdown */
+.map-header-select {
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid goldenrod;
+    color: goldenrod;
+    font-weight: 600;
+    padding: 0.25rem 2rem 0.25rem 0.5rem;
+}
+
+.map-header-select:focus {
+    background-color: rgba(255, 255, 255, 0.15);
+    border-color: goldenrod;
+    box-shadow: 0 0 0 0.2rem rgba(218, 165, 32, 0.25);
+    color: goldenrod;
+}
+
+.map-header-select option {
+    background-color: #1a1a1a;
+    color: #fff;
+}
+
+/* Light theme support */
+body.light-theme .map-header-select {
+    background-color: rgba(0, 0, 0, 0.05);
+    color: #b8860b;
+}
+
+body.light-theme .map-header-select:focus {
+    background-color: rgba(0, 0, 0, 0.08);
+    color: #b8860b;
+}
+
+body.light-theme .map-header-select option {
+    background-color: #fff;
+    color: #333;
+}

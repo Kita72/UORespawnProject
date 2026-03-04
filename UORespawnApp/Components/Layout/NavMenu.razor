@@ -38,20 +38,6 @@
                 <span class="pack-name" title="@Settings.CurrentPackName">@Settings.CurrentPackName</span>
             </div>
 
-            <div class="spawn-section-header px-3">
-                <div class="map-selector-row">
-                    <span class="bi bi-globe-americas-nav-menu map-icon" aria-hidden="true"></span>
-                    <select class="form-select form-select-sm" 
-                        @bind:get="ViewService.CurrentMapId" 
-                        @bind:set="(int value) => ViewService.SetMap(value)">
-                        @foreach (var mapId in GetAvailableMaps())
-                        {
-                            <option value="@mapId">@MapUtility.GetMapName(mapId)</option>
-                        }
-                    </select>
-                </div>
-            </div>
-
             <div class="nav-item px-3">
                 <button class="nav-link btn btn-link @GetActiveClass("vendorspawn")" @onclick="ShowVendorSpawn">
                     <span class="bi bi-shop-nav-menu" aria-hidden="true"></span> Vendor Spawn
@@ -59,7 +45,7 @@
             </div>
             <div class="nav-item px-3">
                 <button class="nav-link btn btn-link @GetActiveClass("boxspawn")" @onclick="ShowBoxSpawn">
-                    <span class="bi bi-map-fill-nav-menu" aria-hidden="true"></span> Box Spawn
+                    <span class="bi bi-bounding-box-nav-menu" aria-hidden="true"></span> Box Spawn
                 </button>
             </div>
             <div class="nav-item px-3">
@@ -69,7 +55,7 @@
             </div>
             <div class="nav-item px-3">
                 <button class="nav-link btn btn-link @GetActiveClass("tilespawn")" @onclick="ShowWorldSpawn">
-                    <span class="bi bi-globe-nav-menu" aria-hidden="true"></span> Tile Spawn
+                    <span class="bi bi-grid-3x3-gap-nav-menu" aria-hidden="true"></span> Tile Spawn
                 </button>
             </div>
             <div class="nav-item px-3">
