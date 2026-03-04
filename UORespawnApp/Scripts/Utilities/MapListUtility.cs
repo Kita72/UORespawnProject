@@ -154,7 +154,7 @@ namespace UORespawnApp.Scripts.Utilities
         internal static IEnumerable<int> GetMapIds()
         {
             if (MapList == null || MapList.Count == 0)
-                return Enumerable.Empty<int>();
+                return [];
 
             return MapList.Keys.OrderBy(k => k);
         }
