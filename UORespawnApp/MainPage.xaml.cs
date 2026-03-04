@@ -1,4 +1,5 @@
 ﻿using UORespawnApp.Scripts.Services;
+using UORespawnApp.Scripts.Utilities;
 
 namespace UORespawnApp
 {
@@ -28,6 +29,13 @@ namespace UORespawnApp
             if (_webViewService != null)
             {
                 _webViewService.OnWebViewToggle += OnWebViewToggle;
+            }
+
+            // Initialize map image cache service for static Utility access
+            var mapImageCache = App.Current?.Handler?.MauiContext?.Services.GetService<MapImageCacheService>();
+            if (mapImageCache != null)
+            {
+                Utility.SetMapImageCache(mapImageCache);
             }
         }
 

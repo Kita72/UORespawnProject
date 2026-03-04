@@ -869,6 +869,7 @@
 @inject DebugService DebugService
 @inject SpawnPackService SpawnPackService
 @inject AccountService AccountService
+@inject MapImageCacheService MapImageCache
 @using System.IO.Compression
 @using UORespawnApp.Scripts.Constants
 @using UORespawnApp.Scripts.Utilities
@@ -1335,6 +1336,9 @@ private bool showAdvancedSettings = false;
                               (File.Exists(backupPath) ? " - Original backed up" : "");
             mapUploadSuccess = true;
 
+            // Invalidate cache so next load gets new image
+            MapImageCache.InvalidateMap(mapId);
+
             Logger.Info($"Map {action} successfully: {destinationPath}");
             Logger.Info($"File size: {new FileInfo(destinationPath).Length / 1024 / 1024:F2} MB");
 
@@ -1455,6 +1459,9 @@ private bool showAdvancedSettings = false;
             // Copy backup over current map
             File.Copy(backupPath, mapPath, true);
 
+            // Invalidate cache so next load gets restored image
+            int mapId = int.Parse(selectedMapToReplace.Replace("Map", ""));
+            MapImageCache.InvalidateMap(mapId);
 
             mapUploadMessage = $"{selectedMapToReplace} restored from backup successfully!";
             mapUploadSuccess = true;
@@ -1506,6 +1513,9 @@ private bool showAdvancedSettings = false;
                 File.Delete(backupPath);
                 Logger.Info($"Deleted Map{mapId} backup");
             }
+
+            // Invalidate cache for deleted map
+            MapImageCache.InvalidateMap(mapId);
 
             mapUploadMessage = $"Map{mapId} deleted successfully!";
             mapUploadSuccess = true;

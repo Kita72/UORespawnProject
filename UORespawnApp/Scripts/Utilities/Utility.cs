@@ -18,11 +18,24 @@ namespace UORespawnApp.Scripts.Utilities
         internal static Session? SESSION { get; private set; }
 
         /// <summary>
+        /// Map image cache service (set during app startup via DI)
+        /// </summary>
+        internal static MapImageCacheService? MapImageCache { get; private set; }
+
+        /// <summary>
         /// Initialize a new session
         /// </summary>
         internal static void StartSession(Session session)
         {
             SESSION = session;
+        }
+
+        /// <summary>
+        /// Set the map image cache service (called from MainPage during DI resolution)
+        /// </summary>
+        internal static void SetMapImageCache(MapImageCacheService cacheService)
+        {
+            MapImageCache = cacheService;
         }
 
         internal static void InitializeSpawnDictionary()
@@ -321,28 +334,39 @@ namespace UORespawnApp.Scripts.Utilities
         /// <summary>
         /// Gets map image path for current session map
         /// Returns base64 data URL for MAUI Blazor WebView to display from Data/maps/
+        /// Uses MapImageCacheService for caching to avoid repeated disk reads
         /// Falls back to empty string if map doesn't exist
         /// </summary>
         internal static string GetMapImagePath()
         {
-            if (SESSION != null && MapUtility.IsValidMapId(SESSION.Current_Map))
+            if (SESSION == null || !MapUtility.IsValidMapId(SESSION.Current_Map))
             {
-                try
-                {
-                    var fullPath = MapUtility.GetMapImagePath(SESSION.Current_Map);
+                return "";
+            }
 
-                    if (File.Exists(fullPath))
-                    {
-                        var bytes = File.ReadAllBytes(fullPath);
-                        var base64 = Convert.ToBase64String(bytes);
+            // Use cache service if available (preferred path)
+            if (MapImageCache != null)
+            {
+                return MapImageCache.GetMapImageDataUrl(SESSION.Current_Map);
+            }
 
-                        return $"data:image/bmp;base64,{base64}";
-                    }
-                }
-                catch (Exception ex)
+            // Fallback: direct load without caching (only if cache not initialized)
+            try
+            {
+                var fullPath = MapUtility.GetMapImagePath(SESSION.Current_Map);
+
+                if (File.Exists(fullPath))
                 {
-                    Logger.Error($"Error loading map image for Map{SESSION.Current_Map}", ex);
+                    var bytes = File.ReadAllBytes(fullPath);
+                    var base64 = Convert.ToBase64String(bytes);
+
+                    Logger.Warning("Map loaded without cache - MapImageCacheService not initialized");
+                    return $"data:image/bmp;base64,{base64}";
                 }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error loading map image for Map{SESSION.Current_Map}", ex);
             }
 
             return "";

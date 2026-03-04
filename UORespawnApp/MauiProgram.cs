@@ -36,6 +36,7 @@ namespace UORespawnApp
             builder.Services.AddSingleton<SpawnPackService>();
             builder.Services.AddSingleton<WebViewService>();
             builder.Services.AddSingleton<DebugService>();
+            builder.Services.AddSingleton<MapImageCacheService>();
 
             // FTP & Account Services
             builder.Services.AddSingleton<AccountService>();
