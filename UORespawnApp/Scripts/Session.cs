@@ -1,36 +1,60 @@
 namespace UORespawnApp
 {
     /// <summary>
-    /// Session state manager for in-memory application state
-    /// Tracks map selection and UI component states during runtime
-    /// State is lost on app restart (not persisted)
+    /// Session state manager for in-memory application state.
+    /// Tracks map selection and UI component states during runtime.
+    /// State is lost on app restart (not persisted).
+    /// Thread-safe: all property access is synchronized via lock.
     /// </summary>
-    public class Session()
+    public class Session
     {
+        private readonly Lock _lock = new();
+
         // ==================== MAP STATE ====================
 
+        private int _currentMap = 0; // Default to Map0 (Felucca)
+
         /// <summary>
-        /// Currently selected map (0-5 for standard maps, 6+ for custom)
+        /// Currently selected map (0-5 for standard maps, 6+ for custom).
+        /// Thread-safe property.
         /// </summary>
-        public int Current_Map { get; set; } = 0; // Default to Map0 (Felucca)
+        public int Current_Map
+        {
+            get { lock (_lock) { return _currentMap; } }
+            set { lock (_lock) { _currentMap = value; } }
+        }
 
         internal void SetMap(int mapId)
         {
-            Current_Map = mapId;
+            lock (_lock)
+            {
+                _currentMap = mapId;
+            }
         }
 
         // ==================== UI STATE (In-Memory Only) ====================
 
-        /// <summary>
-        /// Last selected tile name in Tile Spawn page (null = not yet visited)
-        /// Uses string to match file-based tile list from UOR_TileList.txt
-        /// Persists during session to maintain user's position
-        /// </summary>
-        public string? LastSelectedTile { get; set; } = null;
+        private string? _lastSelectedTile = null;
 
         /// <summary>
-        /// Check if Tile Spawn page has been visited in this session
+        /// Last selected tile name in Tile Spawn page (null = not yet visited).
+        /// Uses string to match file-based tile list from UOR_TileList.txt.
+        /// Persists during session to maintain user's position.
+        /// Thread-safe property.
         /// </summary>
-        public bool HasVisitedTileSpawnPage => LastSelectedTile != null;
+        public string? LastSelectedTile
+        {
+            get { lock (_lock) { return _lastSelectedTile; } }
+            set { lock (_lock) { _lastSelectedTile = value; } }
+        }
+
+        /// <summary>
+        /// Check if Tile Spawn page has been visited in this session.
+        /// Thread-safe property.
+        /// </summary>
+        public bool HasVisitedTileSpawnPage
+        {
+            get { lock (_lock) { return _lastSelectedTile != null; } }
+        }
     }
 }
