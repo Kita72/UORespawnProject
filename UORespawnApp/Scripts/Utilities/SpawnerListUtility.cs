@@ -13,10 +13,6 @@ namespace UORespawnApp.Scripts.Utilities
         [GeneratedRegex(@",?\{RND,\d+,\d+\}", RegexOptions.IgnoreCase)]
         private static partial Regex RndPatternRegex();
 
-        // Patterns for detecting special spawner types
-        private const string TreasureLevelPattern = "TreasureLevel";
-        private const string QuestNpcPattern = "xmlquestnpc";
-
         internal static void LoadSpawnerList()
         {
             string fileLoc = SpawnersFile;
@@ -78,11 +74,9 @@ namespace UORespawnApp.Scripts.Utilities
                         // Parse SpawnNames (pipe-separated, default to empty list)
                         // Also clean {RND,x,y} patterns from names
                         List<string> rawNames = [];
-                        string rawSpawnData = string.Empty;
                         if (parts.Length >= offset + 6 && !string.IsNullOrWhiteSpace(parts[offset + 5]))
                         {
-                            rawSpawnData = parts[offset + 5];
-                            rawNames = [.. rawSpawnData.Split('|', StringSplitOptions.RemoveEmptyEntries)];
+                            rawNames = [.. parts[offset + 5].Split('|', StringSplitOptions.RemoveEmptyEntries)];
                         }
 
                         // Clean spawn names by removing {RND,x,y} patterns
@@ -95,9 +89,6 @@ namespace UORespawnApp.Scripts.Utilities
                                 cleanedNames.Add(cleaned);
                             }
                         }
-
-                        // Classify the spawner type based on spawn data
-                        SpawnerType spawnerType = ClassifySpawnerType(rawSpawnData, cleanedNames);
 
                         // Store center coordinates and radius for circle visualization
                         // Also keep legacy X/Y adjusted to top-left for backward compatibility
@@ -113,7 +104,6 @@ namespace UORespawnApp.Scripts.Utilities
                             Radius = range,
                             MaxCount = maxCount,
                             SpawnNames = cleanedNames,
-                            Type = spawnerType,
                             X = adjustedX,
                             Y = adjustedY,
                             Width = range,
@@ -121,12 +111,7 @@ namespace UORespawnApp.Scripts.Utilities
                         });
                     }
 
-                    // Log summary by type
-                    int regular = Spawns.Count(s => s.Type == SpawnerType.Regular);
-                    int empty = Spawns.Count(s => s.Type == SpawnerType.Empty);
-                    int treasure = Spawns.Count(s => s.Type == SpawnerType.Treasure);
-                    int quest = Spawns.Count(s => s.Type == SpawnerType.Quest);
-                    Logger.Info($"Loaded {Spawns.Count} XML spawners (Regular: {regular}, Empty: {empty}, Treasure: {treasure}, Quest: {quest})");
+                    Logger.Info($"Loaded {Spawns.Count} XML spawners");
                 }
                 catch (Exception ex)
                 {
@@ -159,48 +144,5 @@ namespace UORespawnApp.Scripts.Utilities
         {
             Spawns.RemoveAll(s => s.Serial == serial);
         }
-
-        /// <summary>
-        /// Classifies a spawner based on its spawn data content.
-        /// </summary>
-        /// <param name="rawSpawnData">The raw spawn data string before cleaning</param>
-        /// <param name="cleanedNames">The cleaned list of spawn names</param>
-        /// <returns>The classified SpawnerType</returns>
-        private static SpawnerType ClassifySpawnerType(string rawSpawnData, List<string> cleanedNames)
-        {
-            // Check for quest spawners first (look for xmlquestnpc pattern in raw data)
-            if (!string.IsNullOrEmpty(rawSpawnData) &&
-                rawSpawnData.Contains(QuestNpcPattern, StringComparison.OrdinalIgnoreCase))
-            {
-                return SpawnerType.Quest;
-            }
-
-            // Check for treasure spawners (TreasureLevel1, TreasureLevel2, etc.)
-            if (cleanedNames.Any(name => name.StartsWith(TreasureLevelPattern, StringComparison.OrdinalIgnoreCase)))
-            {
-                return SpawnerType.Treasure;
-            }
-
-            // Check for empty spawners (no creatures defined)
-            if (cleanedNames.Count == 0)
-            {
-                return SpawnerType.Empty;
-            }
-
-            // Default to regular spawner
-            return SpawnerType.Regular;
-        }
-
-        /// <summary>
-        /// Gets the display name for a spawner type.
-        /// </summary>
-        internal static string GetSpawnerTypeName(SpawnerType type) => type switch
-        {
-            SpawnerType.Regular => "Creature Spawner",
-            SpawnerType.Empty => "Empty Spawner",
-            SpawnerType.Treasure => "Treasure Spawner",
-            SpawnerType.Quest => "Quest Spawner",
-            _ => "Unknown"
-        };
     }
 }

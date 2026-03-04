@@ -239,27 +239,14 @@ window.mapModule = {
         return resultColor;
     },
 
-    // Get color for XML spawner based on type
-    // Type enum: 0=Regular (green), 1=Empty (red), 2=Treasure (purple), 3=Quest (blue)
-    getSpawnerColor: function(spawnerType) {
-        switch (spawnerType) {
-            case 0: return '#00FF00'; // Regular - Green
-            case 1: return '#FF4444'; // Empty - Red
-            case 2: return '#9932CC'; // Treasure - Purple (DarkOrchid)
-            case 3: return '#4169E1'; // Quest - Blue (RoyalBlue)
-            default: return '#00FF00'; // Default to green
-        }
+    // Get color for XML spawner (green for all creature spawners)
+    getSpawnerColor: function() {
+        return '#00FF00'; // Green
     },
 
-    // Get display name for spawner type
-    getSpawnerTypeName: function(spawnerType) {
-        switch (spawnerType) {
-            case 0: return 'Creature Spawner';
-            case 1: return 'Empty Spawner';
-            case 2: return 'Treasure Spawner';
-            case 3: return 'Quest Spawner';
-            default: return 'XML Spawner';
-        }
+    // Get display name for spawner
+    getSpawnerTypeName: function() {
+        return 'Creature Spawner';
     },
 
     // Convert screen pixel to world (map) pixel
@@ -598,10 +585,8 @@ window.mapModule = {
                 // Check if this spawner is hovered (hover-based like spawn data)
                 const isHovered = this.hoveredXmlSpawnerId === idx;
 
-                // Get color based on spawner type
-                // Type enum: 0=Regular (green), 1=Empty (red), 2=Treasure (purple), 3=Quest (blue)
-                const spawnerType = spawner.type || 0;
-                const spawnerColor = this.getSpawnerColor(spawnerType);
+                // Get spawner color (green for all creature spawners)
+                const spawnerColor = this.getSpawnerColor();
 
                 // Draw XML spawner circle
                 if (isHovered) {
@@ -649,11 +634,10 @@ window.mapModule = {
                 const mouseX = this.xmlTooltipMousePos.x;
                 const mouseY = this.xmlTooltipMousePos.y;
 
-                // Get spawner type info
-                const spawnerType = spawner.type || 0;
-                const typeName = this.getSpawnerTypeName(spawnerType);
-                const typeColor = this.getSpawnerColor(spawnerType);
-                const canModify = spawner.canModify !== false && (spawnerType === 0 || spawnerType === 1); // Regular or Empty
+                // Get spawner display info
+                const typeName = this.getSpawnerTypeName();
+                const typeColor = this.getSpawnerColor();
+                const canModify = spawner.canModify !== false;
 
                 // Tooltip content
                 const lines = [
@@ -667,7 +651,7 @@ window.mapModule = {
                     lines.push(`Max Count: ${spawner.maxCount}`);
                 }
 
-                // Add spawn names if available (and not empty spawner)
+                // Add spawn names if available
                 if (spawner.spawnNames && spawner.spawnNames.length > 0) {
                     lines.push(`Creatures:`);
                     // Show up to 8 creatures, then "and X more..."
@@ -679,21 +663,17 @@ window.mapModule = {
                     if (spawner.spawnNames.length > maxToShow) {
                         lines.push(`  ...and ${spawner.spawnNames.length - maxToShow} more`);
                     }
-                } else if (spawnerType === 1) {
-                    // Empty spawner - show helpful message
+                } else {
+                    // No creatures defined - show helpful message
                     lines.push(`(No creatures defined)`);
                 }
 
-                // Add action hint based on spawner type
+                // Add action hint based on spawner
                 const hasSerial = spawner.serial && spawner.serial.length > 0;
                 const showDeleteHint = hasSerial && canModify;
                 if (showDeleteHint) {
                     lines.push(''); // Spacer line
                     lines.push('Press DEL to delete');
-                } else if (hasSerial && !canModify) {
-                    // Show read-only indicator for treasure/quest spawners
-                    lines.push(''); // Spacer line
-                    lines.push('(Read-only)');
                 }
 
                 // Measure text for sizing
@@ -750,15 +730,15 @@ window.mapModule = {
                 this.ctx.textBaseline = 'top';
                 lines.forEach((line, i) => {
                     if (i === 0) {
-                        this.ctx.fillStyle = typeColor; // Title in spawner type color
+                        this.ctx.fillStyle = typeColor; // Title in spawner color
                     } else if (line === 'Creatures:') {
                         this.ctx.fillStyle = '#00BFFF'; // Creatures header in blue
                     } else if (line.startsWith('  •') || line.startsWith('  ...')) {
                         this.ctx.fillStyle = '#98FB98'; // Creature names in pale green
                     } else if (line.includes('Press DEL')) {
                         this.ctx.fillStyle = '#FFD700'; // Delete hint in gold
-                    } else if (line.includes('Read-only') || line.includes('No creatures defined')) {
-                        this.ctx.fillStyle = '#888888'; // Read-only/empty message in gray
+                    } else if (line.includes('No creatures defined')) {
+                        this.ctx.fillStyle = '#888888'; // Empty message in gray
                     } else if (line === '') {
                         return; // Skip spacer
                     } else {

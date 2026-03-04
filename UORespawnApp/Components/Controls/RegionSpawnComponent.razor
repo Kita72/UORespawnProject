@@ -1254,15 +1254,6 @@
             return;
         }
 
-        // Verify spawner can be modified (Regular or Empty only)
-        var spawner = SpawnerListUtility.GetSpawnerBySerial(serial);
-        if (spawner != null && !spawner.CanModify)
-        {
-            var typeName = SpawnerListUtility.GetSpawnerTypeName(spawner.Type);
-            ToastService.ShowWarning($"Cannot delete: {typeName} spawners are read-only and cannot be modified.");
-            return;
-        }
-
         if (!XmlSpawnerCommandService.CanWriteCommands())
         {
             ToastService.ShowWarning("Cannot delete: Server not linked. Link your server in Settings first.");
