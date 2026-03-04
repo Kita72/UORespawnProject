@@ -124,7 +124,7 @@ namespace Server.Custom.UORespawnServer.Managers
                     xmlSpawner.RemoveSpawnObjects();
                     xmlSpawner.Delete();
 
-                    UOR_Utility.SendMsg(ConsoleColor.Cyan, $"XMLCMD-[DELETE: Removed XmlSpawner {serialValue}]");
+                    UOR_Utility.SendMsg(ConsoleColor.Cyan, $"XMLCMD-[DELETE: XmlSpawner({serialValue})]");
                     return true;
                 }
 
@@ -134,7 +134,7 @@ namespace Server.Custom.UORespawnServer.Managers
                     spawner.RemoveSpawned();
                     spawner.Delete();
 
-                    UOR_Utility.SendMsg(ConsoleColor.Cyan, $"XMLCMD-[DELETE: Removed Spawner {serialValue}]");
+                    UOR_Utility.SendMsg(ConsoleColor.Cyan, $"XMLCMD-[DELETE: Spawner({serialValue})]");
                     return true;
                 }
 
@@ -151,12 +151,12 @@ namespace Server.Custom.UORespawnServer.Managers
 
         /// <summary>
         /// Processes an ADD command.
-        /// Format: ADD|MapId|X|Y|Z|HomeRange|Creature1:Count1|Creature2:Count2|...
+        /// Format: ADD|MapId|X|Y|Z|HomeRange|MaxCount|Creature1:Count1|Creature2:Count2|...
         /// </summary>
         private static bool ProcessAddCommand(string[] parts)
         {
-            // Minimum: ADD|MapId|X|Y|Z|HomeRange|Creature:Count = 7 parts
-            if (parts.Length < 7)
+            // Minimum: ADD|MapId|X|Y|Z|HomeRange|MaxCount|Creature:Count = 8 parts
+            if (parts.Length < 8)
             {
                 UOR_Utility.SendMsg(ConsoleColor.Red, "XMLCMD-[ADD: Insufficient parameters]");
                 return false;
@@ -167,9 +167,10 @@ namespace Server.Custom.UORespawnServer.Managers
                 !int.TryParse(parts[2], out int x) ||
                 !int.TryParse(parts[3], out int y) ||
                 !int.TryParse(parts[4], out int z) ||
-                !int.TryParse(parts[5], out int homeRange))
+                !int.TryParse(parts[5], out int homeRange) ||
+                !int.TryParse(parts[6], out int maxCount))
             {
-                UOR_Utility.SendMsg(ConsoleColor.Red, "XMLCMD-[ADD: Invalid location/range parameters]");
+                UOR_Utility.SendMsg(ConsoleColor.Red, "XMLCMD-[ADD: Invalid location/range/maxcount parameters]");
                 return false;
             }
 
@@ -181,11 +182,10 @@ namespace Server.Custom.UORespawnServer.Managers
                 return false;
             }
 
-            // Parse creature list (parts 6 onwards)
+            // Parse creature list (parts 7 onwards)
             var creatures = new List<(string typeName, int count)>();
-            int totalCreatureCount = 0;
 
-            for (int i = 6; i < parts.Length; i++)
+            for (int i = 7; i < parts.Length; i++)
             {
                 string[] creatureParts = parts[i].Split(':');
 
@@ -204,7 +204,6 @@ namespace Server.Custom.UORespawnServer.Managers
                 }
 
                 creatures.Add((typeName, count));
-                totalCreatureCount += count;
             }
 
             if (creatures.Count == 0)
@@ -215,15 +214,10 @@ namespace Server.Custom.UORespawnServer.Managers
 
             try
             {
-                // Calculate MaxCount: base count at HomeRange 10, +10% per additional 10 range
-                double rangeMultiplier = 1.0 + ((homeRange - 10) / 10.0) * 0.1;
-                rangeMultiplier = Math.Max(1.0, rangeMultiplier); // Minimum multiplier of 1.0
-                int maxCount = (int)Math.Ceiling(totalCreatureCount * rangeMultiplier);
-
                 // Create XmlSpawner
                 XmlSpawner spawner = new XmlSpawner
                 {
-                    Name = "XmlSpawner",
+                    Name = "XmlRespawner",
                     HomeRange = homeRange
                 };
 
@@ -245,7 +239,7 @@ namespace Server.Custom.UORespawnServer.Managers
                 // Start spawning
                 spawner.DoRespawn = true;
 
-                UOR_Utility.SendMsg(ConsoleColor.Cyan, $"XMLCMD-[ADD: Created spawner at {location} on {map.Name} with {creatures.Count} creature types, MaxCount={maxCount}]");
+                UOR_Utility.SendMsg(ConsoleColor.Cyan, $"XMLCMD-[ADD: {map.Name}|{location}|Spawn({creatures.Count})|Max({maxCount})|Range({homeRange})");
                 return true;
             }
             catch (Exception ex)

@@ -6,6 +6,7 @@ using System.Collections.Generic;
 
 using Server.Mobiles;
 using Server.Engines.Doom;
+
 using Server.Custom.UORespawnServer.Mobiles;
 using Server.Custom.UORespawnServer.Helpers;
 using Server.Custom.UORespawnServer.Enums;
@@ -15,6 +16,9 @@ namespace Server.Custom.UORespawnServer.Managers
     // Manages our Game Data : Lists of Required Data for Editor!
     internal static class GameManager
     {
+        // Cache of valid creature names from bestiary (case-insensitive for matching)
+        private static HashSet<string> _BestiaryCache = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
         internal static void InitializeData()
         {
             UOR_Utility.SendMsg(ConsoleColor.Green, "DATA-[Initializing...");
@@ -169,6 +173,9 @@ namespace Server.Custom.UORespawnServer.Managers
         {
             try
             {
+                // Clear any existing cache
+                _BestiaryCache.Clear();
+
                 var allTypes = Assembly.GetExecutingAssembly().GetTypes();
 
                 var types = allTypes.Where(t => IsValidSpawn(t)).Select(t => t.Name).ToList();
@@ -177,10 +184,16 @@ namespace Server.Custom.UORespawnServer.Managers
 
                 if (types.Count > 0)
                 {
+                    // Populate cache for cross-referencing during spawner list generation
+                    foreach (var type in types)
+                    {
+                        _BestiaryCache.Add(type);
+                    }
+
                     File.WriteAllLines(UOR_DIR.BESTIARY_LIST_FILE, types);
                 }
 
-                UOR_Utility.SendMsg(ConsoleColor.Green, $"BESTIARY-[Generated]");
+                UOR_Utility.SendMsg(ConsoleColor.Green, $"BESTIARY-[Generated: {_BestiaryCache.Count} creatures]");
             }
             catch (Exception ex)
             {
@@ -327,6 +340,7 @@ namespace Server.Custom.UORespawnServer.Managers
         private static void GenSpawnerList()
         {
             List<string> allSpawners = new List<string>();
+            int filtered = 0;
 
             var spawnerList = World.Items.Values.Where(s => s is ISpawner);
 
@@ -334,6 +348,13 @@ namespace Server.Custom.UORespawnServer.Managers
             {
                 if (spawner is Spawner s && s is ISpawner spwnr)
                 {
+                    // Skip internal map
+                    if (s.Map == null || s.Map == Map.Internal)
+                    {
+                        filtered++;
+                        continue;
+                    }
+
                     // Get spawn names from the spawner's spawn objects
                     string spawnNames = string.Empty;
 
@@ -342,12 +363,28 @@ namespace Server.Custom.UORespawnServer.Managers
                         spawnNames = string.Join("|", s.SpawnObjects.Select(so => so.SpawnName));
                     }
 
+                    // Clean XmlSpawner syntax and validate creatures exist in bestiary
+                    string cleanedNames = CleanAndValidateSpawnNames(spawnNames);
+
+                    if (cleanedNames == null)
+                    {
+                        filtered++;
+                        continue;
+                    }
+
                     // Format: Serial:MapId:X:Y:HomeRange:MaxCount:SpawnNames
-                    allSpawners.Add($"{s.Serial.Value}:{s.Map.MapID}:{s.X}:{s.Y}:{spwnr.HomeRange}:{s.MaxCount}:{spawnNames}");
+                    allSpawners.Add($"{s.Serial.Value}:{s.Map.MapID}:{s.X}:{s.Y}:{spwnr.HomeRange}:{s.MaxCount}:{cleanedNames}");
                 }
 
                 if (spawner is XmlSpawner xml && xml is ISpawner xspwnr)
                 {
+                    // Skip internal map
+                    if (xml.Map == null || xml.Map == Map.Internal)
+                    {
+                        filtered++;
+                        continue;
+                    }
+
                     // Get spawn names from the XmlSpawner's spawn objects
                     string spawnNames = string.Empty;
 
@@ -356,8 +393,17 @@ namespace Server.Custom.UORespawnServer.Managers
                         spawnNames = string.Join("|", xml.SpawnObjects.Select(so => so.TypeName));
                     }
 
+                    // Clean XmlSpawner syntax and validate creatures exist in bestiary
+                    string cleanedNames = CleanAndValidateSpawnNames(spawnNames);
+
+                    if (cleanedNames == null)
+                    {
+                        filtered++;
+                        continue;
+                    }
+
                     // Format: Serial:MapId:X:Y:HomeRange:MaxCount:SpawnNames
-                    allSpawners.Add($"{xml.Serial.Value}:{xml.Map.MapID}:{xml.X}:{xml.Y}:{xspwnr.HomeRange}:{xml.MaxCount}:{spawnNames}");
+                    allSpawners.Add($"{xml.Serial.Value}:{xml.Map.MapID}:{xml.X}:{xml.Y}:{xspwnr.HomeRange}:{xml.MaxCount}:{cleanedNames}");
                 }
             }
 
@@ -365,12 +411,83 @@ namespace Server.Custom.UORespawnServer.Managers
             {
                 File.WriteAllLines(UOR_DIR.SPAWNERS_LIST_FILE, allSpawners);
 
-                UOR_Utility.SendMsg(ConsoleColor.Green, "SPAWNERS-[Generated]");
+                UOR_Utility.SendMsg(ConsoleColor.Green, $"SPAWNERS-[Generated: {allSpawners.Count} valid, {filtered} filtered]");
             }
             else
             {
-                UOR_Utility.SendMsg(ConsoleColor.Green, "SPAWNERS-[Empty]");
+                UOR_Utility.SendMsg(ConsoleColor.Green, $"SPAWNERS-[Empty, {filtered} filtered]");
             }
+
+            _BestiaryCache.Clear();
+        }
+
+        /// <summary>
+        /// Cleans and validates spawn names, extracting pure creature names from XmlSpawner syntax.
+        /// Returns cleaned pipe-separated names if ALL creatures are valid, null otherwise.
+        /// </summary>
+        /// <param name="spawnNames">Pipe-separated spawn names (may contain XmlSpawner syntax)</param>
+        /// <returns>Cleaned spawn names string, or null if any creature is invalid</returns>
+        private static string CleanAndValidateSpawnNames(string spawnNames)
+        {
+            if (string.IsNullOrWhiteSpace(spawnNames))
+                return null;
+
+            string[] creatures = spawnNames.Split('|');
+            List<string> cleanedNames = new List<string>();
+
+            foreach (string creature in creatures)
+            {
+                if (string.IsNullOrWhiteSpace(creature))
+                    continue;
+
+                string cleanName = ExtractCleanTypeName(creature);
+
+                if (string.IsNullOrWhiteSpace(cleanName))
+                    continue;
+
+                if (!_BestiaryCache.Contains(cleanName))
+                    return null; // Invalid creature found, reject entire entry
+
+                cleanedNames.Add(cleanName);
+            }
+
+            if (cleanedNames.Count == 0)
+                return null;
+
+            return string.Join("|", cleanedNames);
+        }
+
+        /// <summary>
+        /// Extracts a clean creature type name from XmlSpawner syntax.
+        /// Handles patterns like:
+        /// - "Orc" -> "Orc"
+        /// - "tribewarrior,Kurak" -> "tribewarrior"
+        /// - "TribeWarrior,Barako/Z/100" -> "TribeWarrior"
+        /// - "GargoyleDestroyer, /blessed/true/..." -> "GargoyleDestroyer"
+        /// - "MyrmidexQueen/Cantwalk/true" -> "MyrmidexQueen"
+        /// </summary>
+        private static string ExtractCleanTypeName(string rawName)
+        {
+            if (string.IsNullOrWhiteSpace(rawName))
+                return null;
+
+            string name = rawName.Trim();
+
+            // Handle comma first (e.g., "tribewarrior,Kurak" or "GargoyleDestroyer, /blessed")
+            int commaIndex = name.IndexOf(',');
+            if (commaIndex > 0)
+            {
+                name = name.Substring(0, commaIndex).Trim();
+            }
+
+            // Handle slash (e.g., "MyrmidexQueen/Cantwalk/true" or "TribeWarrior/Z/100")
+            int slashIndex = name.IndexOf('/');
+            if (slashIndex > 0)
+            {
+                name = name.Substring(0, slashIndex).Trim();
+            }
+
+            return name;
         }
 
         private static void GenVendorData()

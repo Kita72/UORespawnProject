@@ -32,7 +32,7 @@ public class XmlSpawnerCommandService
     /// </summary>
     /// <param name="serial">The serial number of the spawner to delete (e.g., "0x12345678")</param>
     /// <returns>True if command was written successfully</returns>
-    public bool WriteDeleteCommand(string serial)
+    public static bool WriteDeleteCommand(string serial)
     {
         if (string.IsNullOrEmpty(serial))
         {
@@ -69,7 +69,7 @@ public class XmlSpawnerCommandService
     /// <param name="maxCount">Maximum spawn count (1-100)</param>
     /// <param name="creatures">List of creature names (duplicates count as quantity)</param>
     /// <returns>True if command was written successfully</returns>
-    public bool WriteAddCommand(int mapId, int x, int y, int z, int homeRange, int maxCount, List<string> creatures)
+    public static bool WriteAddCommand(int mapId, int x, int y, int z, int homeRange, int maxCount, List<string> creatures)
     {
         if (creatures == null || creatures.Count == 0)
         {

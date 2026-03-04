@@ -5,6 +5,85 @@ All notable changes to UORespawn will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0.10] - 2025-06-14
+
+### Added
+
+#### XML Spawner Management
+- **Add XML Spawner** - Create new XML spawners directly from the map editor
+  - Right-click context menu option on Box Spawn and Region Spawn pages
+  - Side-by-side modal layout: bestiary list (left) + selected spawns (right)
+  - HomeRange slider (10-250 tiles) for spawn radius configuration
+  - MaxCount slider (1-100) for maximum creature count
+  - Click-to-add from bestiary with instant visual feedback
+  - Favorites support in bestiary for quick access
+- **Delete XML Spawner** - Remove XML spawners via map editor
+  - Right-click context menu option when clicking on existing spawner
+  - Confirmation modal showing spawner details before deletion
+  - Server command integration for immediate removal
+
+#### Light/Dark Theme Polish
+- **MiniMapComponent** - Full light theme support
+  - Header adapts to theme (light gray in light mode)
+  - Body background theme-aware
+  - SVG icons switch between white (dark) and dark (light) fills
+  - Map icon uses appropriate goldenrod shade per theme
+- **SpawnPacksComponent** - Complete light theme support
+  - Stat tiles, submission cards, dashboard footer
+  - Modal dialogs with proper theming
+  - Toggle buttons (Approved/Imported) with theme variants
+  - Pack description areas with proper backgrounds
+- **VendorSpawnComponent** - Full theme support
+  - Spawn item lists with proper colors
+  - Location items and focused states
+  - Minimap body and dark header variants
+  - Search input styling per theme
+- **BoxSpawn & RegionSpawn Lists** - Light theme support
+  - Spawn item backgrounds and borders
+  - Hover and selected states
+  - Text muted colors
+  - Search inputs with theme-aware styling
+
+### Changed
+
+#### Navigation & Branding
+- **Logo Navigation** - Clicking the logo now navigates to Home (replaces Home button)
+- **Home Button Removed** - Freed up nav slot for future feature
+  - Settings is now the first navigation item
+  - Logo serves as Home navigation
+- **Brand Area Polish** - Improved light theme appearance
+  - Uses neutral dark gray (#3a3a3a) instead of near-black
+  - Logo maximized to 5.5rem height (from 80px)
+  - Reduced padding for better logo prominence
+  - Perfectly centered within brand element
+
+#### Theme Consistency
+- **Centralized Theme Utilities** - Added to app.css
+  - Light theme text-muted, heading, and text-secondary colors
+  - Badge adjustments for proper contrast
+- **Minimap Styling** - Unified across all spawn editor pages
+  - Dark header styling now theme-aware
+  - Consistent icon treatment across pages
+
+### Fixed
+- **Minimap stuck in dark mode** - All three spawn pages now properly theme
+- **Spawn lists not theming** - Box and Region spawn lists now respond to theme changes
+- **Logo off-center** - Removed padding that caused horizontal offset
+- **Brand area too dark in light mode** - Now uses softer gray for better harmony
+
+### Technical
+- `AddXmlSpawnerModal.razor` with HomeRange/MaxCount sliders and side-by-side layout
+- `DeleteXmlSpawnerModal.razor` for spawner removal confirmation
+- `XmlSpawnerCommandService` for server communication
+- Light theme CSS sections added to:
+  - `MiniMapComponent.razor.css`
+  - `SpawnPacksComponent.razor.css`
+  - `VendorSpawnComponent.razor.css`
+  - `BoxSpawnComponent.razor.css`
+  - `RegionSpawnComponent.razor.css`
+- Removed unused `.bi-house-door-fill-nav-menu` icon definitions
+- Build verified with .NET 10 - no warnings or errors
+
 ## [2.0.0.9] - 2026-03-03
 
 ### Added
