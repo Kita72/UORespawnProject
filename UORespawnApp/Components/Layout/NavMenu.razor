@@ -17,16 +17,6 @@
 <div class="nav-scrollable" @onclick="ToggleMenu">
     <nav class="flex-column">
         <div class="nav-item px-3">
-            <button class="nav-link btn btn-link @GetActiveClass("settings")" @onclick="ShowSettings">
-                <span class="bi bi-gear-fill-nav-menu" aria-hidden="true"></span> Settings
-            </button>
-        </div>
-        <div class="nav-item px-3">
-            <button class="nav-link btn btn-link @GetActiveClass("instructions")" @onclick="ShowInstructions">
-                <span class="bi bi-book-fill-nav-menu" aria-hidden="true"></span> Instructions
-            </button>
-        </div>
-        <div class="nav-item px-3">
             <button class="nav-link btn btn-link @GetActiveClass("spawnpacks")" @onclick="ShowSpawnPacks">
                 <span class="bi bi-boxes-nav-menu" aria-hidden="true"></span> Spawn Packs
             </button>
@@ -63,6 +53,17 @@
                     <span class="bi bi-save-nav-menu" aria-hidden="true"></span> Save All
                 </button>
             </div>
+        </div>
+
+        <div class="nav-item px-3">
+            <button class="nav-link btn btn-link @GetActiveClass("settings")" @onclick="ShowSettings">
+                <span class="bi bi-gear-fill-nav-menu" aria-hidden="true"></span> Settings
+            </button>
+        </div>
+        <div class="nav-item px-3">
+            <button class="nav-link btn btn-link @GetActiveClass("instructions")" @onclick="ShowInstructions">
+                <span class="bi bi-book-fill-nav-menu" aria-hidden="true"></span> Instructions
+            </button>
         </div>
 
         <div class="nav-item px-3">
