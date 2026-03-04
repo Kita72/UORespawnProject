@@ -127,6 +127,8 @@
                         </li>
                         <li><strong>Mini-Map:</strong> Click anywhere to jump to that location</li>
                         <li><strong>Reset Button:</strong> Return to map origin (0, 0) at 1x zoom</li>
+                        <li><strong>Backtick (`) Key:</strong> Add an XML spawner at the mouse cursor position (requires XML toggle ON)</li>
+                        <li><strong>Delete Key:</strong> Remove the XML spawner currently under the mouse cursor (requires XML toggle ON)</li>
                     </ul>
 
                     <h6 class="text-primary mt-4"><span class="bi bi-plus-circle me-2"></span>Adding Creatures</h6>
@@ -171,6 +173,8 @@
                             <ul>
                                 <li>Hover over a spawner to highlight it</li>
                                 <li>Click to show tooltip with location and home range</li>
+                                <li>Press <strong>Backtick (`)</strong> to add a new XML spawner at the cursor</li>
+                                <li>Press <strong>Delete</strong> while hovering to remove an XML spawner</li>
                             </ul>
                         </li>
                         <li><strong>Spawns Toggle:</strong> Show server spawn statistics (colored dots per player)
@@ -487,8 +491,8 @@
                     <h6 class="text-primary mt-4"><span class="bi bi-trash me-2"></span>Deleting a Spawner</h6>
                     <ol>
                         <li>Enable the <strong>XML toggle</strong> to show spawners</li>
-                        <li>Hover over a spawner circle until the <strong>tooltip appears</strong></li>
-                        <li>Click the <strong class="text-danger">[🗑️ Delete Spawner]</strong> button in the tooltip</li>
+                        <li>Hover over a spawner circle on the map</li>
+                        <li>Press the <strong>Delete key</strong> while hovering</li>
                         <li>Confirm the deletion in the modal dialog</li>
                         <li>The spawner is removed from the map view immediately</li>
                         <li>A <strong>DELETE command</strong> is queued for the server</li>
@@ -497,8 +501,8 @@
                     <h6 class="text-primary mt-4"><span class="bi bi-plus-circle me-2"></span>Adding a Spawner</h6>
                     <ol>
                         <li>Enable the <strong>XML toggle</strong> to activate spawner mode</li>
-                        <li>Hold the <strong>X key</strong> on your keyboard</li>
-                        <li>While holding X, <strong>left-click</strong> anywhere on the map</li>
+                        <li>Position your mouse cursor where you want the new spawner</li>
+                        <li>Press the <strong>Backtick (`) key</strong> on your keyboard</li>
                         <li>The <strong>Add Spawner</strong> modal appears with:
                             <ul>
                                 <li><strong>HomeRange slider:</strong> Set the spawn radius (5-50 tiles)</li>
@@ -533,8 +537,8 @@
                         <span class="bi bi-lightning-charge"></span> <strong>Quick Workflow:</strong>
                         <ol class="mb-0 mt-2">
                             <li>Enable XML toggle to see existing spawners</li>
-                            <li>Delete any unwanted spawners via hover tooltip</li>
-                            <li>Hold X + click to add new spawners where needed</li>
+                            <li>Delete unwanted spawners: hover + press <strong>Delete key</strong></li>
+                            <li>Add new spawners: position mouse + press <strong>Backtick (`)</strong></li>
                             <li>Restart your server to apply changes</li>
                         </ol>
                     </div>

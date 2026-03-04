@@ -46,7 +46,11 @@
             <div class="card mt-2 shadow-sm" style="width:800px;">
                 <div class="card-body py-2">
                     <small class="text-muted">
-                        <strong>Controls:</strong> Left-Drag = Draw Spawn Box | Right-Drag = Pan Map | Arrow Keys/WASD = Pan Map
+                        <strong>Controls:</strong> Left-Drag = Draw Spawn Box | Right-Drag = Pan | Arrow Keys/WASD = Pan
+                        @if (ViewService.ShowXMLSpawners)
+                        {
+                            <span style="color: #28a745;"> | XML Keys - Add[`] | Delete[DEL]</span>
+                        }
                     </small>
                 </div>
             </div>
@@ -425,7 +429,7 @@ private int addXmlWorldY = 0;
 
                     // Register Blazor helper for JS -> C# callbacks (XML spawner management)
                     dotNetRef ??= DotNetObjectReference.Create(this);
-                    await JS.InvokeVoidAsync("eval", "window.mapModule.setBlazorHelper", dotNetRef);
+                    await JS.InvokeVoidAsync("window.mapModule.setBlazorHelper", dotNetRef);
                     await JS.InvokeVoidAsync("eval", $"window.mapModule.setXmlToggleEnabled({(ViewService.ShowXMLSpawners ? "true" : "false")})");
 
                     // Set the zoom level in JavaScript BEFORE any coordinate calculations
@@ -531,56 +535,25 @@ private int addXmlWorldY = 0;
         Logger.Info($"Mini-map click: pan to ({panX:F0}, {panY:F0})");
     }
 
-    private async Task OnMouseDown(MouseEventArgs e)
-    {
-        // Update mouse world coordinates
-        await UpdateMouseCoordinates(e.OffsetX, e.OffsetY);
-
-        // Track mouse down position for click detection
-        mouseDownX = e.OffsetX;
-        mouseDownY = e.OffsetY;
-
-        if (e.Button == 0) // Left click
+        private async Task OnMouseDown(MouseEventArgs e)
         {
-            // Check if X key is held and XML toggle is on - add XML spawner mode
-            var shouldAddXml = await JS.InvokeAsync<bool>("eval", "window.mapModule.shouldHandleXmlAdd()");
-            if (shouldAddXml)
-            {
-                // Request add spawner at current world coordinates
-                await JS.InvokeVoidAsync("eval", $"window.mapModule.requestAddXmlSpawner({mouseWorldX}, {mouseWorldY})");
-                return; // Don't start drawing
-            }
+            // Update mouse world coordinates
+            await UpdateMouseCoordinates(e.OffsetX, e.OffsetY);
 
-            // Check if clicking on XML spawner delete button
-            if (ViewService.ShowXMLSpawners)
-            {
-                var deleteCheck = await JS.InvokeAsync<string>("eval", 
-                    $"JSON.stringify(window.mapModule.checkXmlDeleteButtonClick({e.OffsetX}, {e.OffsetY}))");
-                if (!string.IsNullOrEmpty(deleteCheck) && deleteCheck != "null")
-                {
-                    var result = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(deleteCheck);
-                    if (result != null && result.ContainsKey("hit"))
-                    {
-                        var serial = result["serial"]?.ToString();
-                        var idx = result.ContainsKey("idx") ? Convert.ToInt32(result["idx"]) : -1;
-                        if (!string.IsNullOrEmpty(serial))
-                        {
-                            await OnRequestDeleteXmlSpawner(serial, idx);
-                            return; // Don't start drawing
-                        }
-                    }
-                }
-            }
+            // Track mouse down position for click detection
+            mouseDownX = e.OffsetX;
+            mouseDownY = e.OffsetY;
 
-            // Normal draw mode
-            isDrawing = true;
-            await JS.InvokeVoidAsync("eval", $"window.mapModule.startDrawing({e.OffsetX}, {e.OffsetY})");
-        }
-        else if (e.Button == 2) // Right - pan
-        {
-            isPanning = true;
-            await JS.InvokeVoidAsync("eval", $"window.mapModule.startPanning({e.OffsetX}, {e.OffsetY})");
-        }
+            if (e.Button == 0) // Left click - draw mode
+            {
+                isDrawing = true;
+                await JS.InvokeVoidAsync("eval", $"window.mapModule.startDrawing({e.OffsetX}, {e.OffsetY})");
+            }
+            else if (e.Button == 2) // Right - pan
+            {
+                isPanning = true;
+                await JS.InvokeVoidAsync("eval", $"window.mapModule.startPanning({e.OffsetX}, {e.OffsetY})");
+            }
     }
     
     private async Task OnMouseMove(MouseEventArgs e)
@@ -818,10 +791,17 @@ private int addXmlWorldY = 0;
     {
         var key = e.Key.ToLower();
 
-        // Handle X key for XML spawner add mode
-        if (key == "x" && ViewService.ShowXMLSpawners)
+        // Handle backtick (`) key for XML spawner add - uses current mouse position
+        if (key == "`" && ViewService.ShowXMLSpawners)
         {
-            await JS.InvokeVoidAsync("eval", "window.mapModule.onXKeyDown()");
+            await TryAddXmlSpawnerAtMousePosition();
+            return;
+        }
+
+        // Handle DEL key for XML spawner delete
+        if (key == "delete" && ViewService.ShowXMLSpawners)
+        {
+            await TryDeleteHoveredXmlSpawner();
             return;
         }
 
@@ -840,12 +820,6 @@ private int addXmlWorldY = 0;
     private async Task OnKeyUp(KeyboardEventArgs e)
     {
         var key = e.Key.ToLower();
-
-        // Handle X key release
-        if (key == "x")
-        {
-            await JS.InvokeVoidAsync("eval", "window.mapModule.onXKeyUp()");
-        }
 
         // Remove key from active set
         await JS.InvokeVoidAsync("eval", $"window.mapModule.removeKey('{key}')");
@@ -1588,6 +1562,54 @@ private int addXmlWorldY = 0;
     // ============================================
 
     /// <summary>
+    /// Attempts to add an XML spawner at the current mouse position via backtick (`) key.
+    /// </summary>
+    private async Task TryAddXmlSpawnerAtMousePosition()
+    {
+        // Use the current mouse world coordinates (already tracked by OnMouseMove)
+        await OnRequestAddXmlSpawner(mouseWorldX, mouseWorldY);
+    }
+
+    /// <summary>
+    /// Attempts to delete the currently hovered XML spawner via DEL key.
+    /// </summary>
+    private async Task TryDeleteHoveredXmlSpawner()
+    {
+        try
+        {
+            // Get hovered XML spawner from JavaScript
+            var result = await JS.InvokeAsync<string>("eval", "JSON.stringify(window.mapModule.getHoveredXmlSpawner())");
+            if (string.IsNullOrEmpty(result) || result == "null")
+            {
+                // No spawner hovered, do nothing
+                return;
+            }
+
+            // Parse the spawner data
+            using var doc = System.Text.Json.JsonDocument.Parse(result);
+            var root = doc.RootElement;
+
+            var serial = root.TryGetProperty("serial", out var serialProp) ? serialProp.GetString() : null;
+            var idx = root.TryGetProperty("idx", out var idxProp) ? idxProp.GetInt32() : -1;
+
+            // If no idx in JSON, get the hovered index directly
+            if (idx < 0)
+            {
+                idx = await JS.InvokeAsync<int>("eval", "window.mapModule.hoveredXmlSpawnerId ?? -1");
+            }
+
+            if (!string.IsNullOrEmpty(serial))
+            {
+                await OnRequestDeleteXmlSpawner(serial, idx);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Error getting hovered XML spawner for delete", ex);
+        }
+    }
+
+    /// <summary>
     /// Called from JavaScript when user clicks delete button in XML spawner tooltip.
     /// Shows confirmation dialog before proceeding.
     /// </summary>
@@ -1597,6 +1619,15 @@ private int addXmlWorldY = 0;
         if (string.IsNullOrEmpty(serial))
         {
             ToastService.ShowWarning("Cannot delete: Spawner has no serial ID");
+            return;
+        }
+
+        // Verify spawner can be modified (Regular or Empty only)
+        var spawner = SpawnerListUtility.GetSpawnerBySerial(serial);
+        if (spawner != null && !spawner.CanModify)
+        {
+            var typeName = SpawnerListUtility.GetSpawnerTypeName(spawner.Type);
+            ToastService.ShowWarning($"Cannot delete: {typeName} spawners are read-only and cannot be modified.");
             return;
         }
 

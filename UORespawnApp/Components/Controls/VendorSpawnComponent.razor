@@ -10,6 +10,7 @@
 @inject IJSRuntime JS
 @inject ViewService ViewService
 @inject ToastService ToastService
+@inject XmlSpawnerCommandService XmlSpawnerCommandService
 @implements IDisposable
 
 <div class="container-fluid p-3">
@@ -47,7 +48,11 @@
             <div class="card mt-2 shadow-sm" style="width:800px;">
                 <div class="card-body py-2">
                     <small class="text-muted">
-                        <strong>Controls:</strong> Left-Click Sign/Hive = Select | Right-Drag = Pan Map | Arrow Keys/WASD = Pan Map
+                        <strong>Controls:</strong> Left-Click Sign/Hive = Select | Right-Drag = Pan | Arrow Keys/WASD = Pan
+                        @if (ViewService.ShowXMLSpawners)
+                        {
+                            <span style="color: #28a745;"> | XML Keys - Add[`] | Delete[DEL]</span>
+                        }
                     </small>
                 </div>
             </div>
@@ -221,6 +226,47 @@
                     OnClose="@CloseModal"
                     OnSave="@SaveModal" />
 
+<!-- XML Spawner Delete Confirmation Modal -->
+@if (showDeleteConfirmation)
+{
+    <div class="modal-backdrop fade show"></div>
+    <div class="modal fade show d-block" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content bg-dark text-white">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title">
+                        <span class="bi bi-exclamation-triangle text-warning me-2"></span>
+                        Delete XML Spawner?
+                    </h5>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete this XML spawner?</p>
+                    <p class="text-muted small mb-0">
+                        <span class="bi bi-info-circle me-1"></span>
+                        The delete command will be sent to the server and processed on next restart.
+                    </p>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-secondary" @onclick="CancelDeleteXmlSpawner">Cancel</button>
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmDeleteXmlSpawner">
+                        <span class="bi bi-trash me-1"></span>Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Add XML Spawner Modal -->
+@if (showAddXmlModal)
+{
+    <AddXmlSpawnerModal 
+        MapId="@ViewService.CurrentMapId"
+        WorldX="@addXmlWorldX"
+        WorldY="@addXmlWorldY"
+        OnClose="@CancelAddXmlSpawner" />
+}
+
 @code {
     private string imageSrc = "";
     private string imageDim = "Loading...";
@@ -269,6 +315,17 @@
     private bool currentIsHive = false;
     private List<string> currentVendorList = new();
     private List<string> originalBulkVendorList = new(); // Track original common vendors for diff calculation
+
+    // DotNetObjectReference for JS -> C# callbacks (XML spawner management)
+    private DotNetObjectReference<VendorSpawnComponent>? dotNetRef;
+
+    // XML Spawner management state
+    private bool showDeleteConfirmation = false;
+    private string? pendingDeleteSerial = null;
+    private int pendingDeleteIdx = -1;
+    private bool showAddXmlModal = false;
+    private int addXmlWorldX = 0;
+    private int addXmlWorldY = 0;
 
     // Sign type group for UI display
     private class SignTypeGroup
@@ -378,6 +435,11 @@
 
                     // Initialize map module with custom canvas/img IDs
                     await JS.InvokeVoidAsync("eval", $"window.mapModule.init({w}, {h}, 'vendorMapCanvas', 'vendorMapImg')");
+
+                    // Register Blazor helper for JS -> C# callbacks (XML spawner management)
+                    dotNetRef ??= DotNetObjectReference.Create(this);
+                    await JS.InvokeVoidAsync("window.mapModule.setBlazorHelper", dotNetRef);
+                    await JS.InvokeVoidAsync("eval", $"window.mapModule.setXmlToggleEnabled({(ViewService.ShowXMLSpawners ? "true" : "false")})");
 
                     // Set zoom level BEFORE any coordinate calculations
                     await JS.InvokeVoidAsync("eval", $"window.mapModule.setZoomLevel({zoomLevel.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)})");
@@ -551,33 +613,33 @@
     }
 
     // ===================== MOUSE EVENTS =====================
-    
-    private async Task OnMouseDown(MouseEventArgs e)
-    {
-        if (e.Button == 0) // Left-click for marker selection
-        {
-            var coords = await JS.InvokeAsync<int[]>("eval", $"window.mapModule.getWorldCoordinates({e.OffsetX}, {e.OffsetY})");
-            if (coords.Length == 2)
-            {
-                mouseWorldX = coords[0];
-                mouseWorldY = coords[1];
 
-                // Find closest marker to click - returns SignType and the marker's actual coordinates
-                var clickedMarker = FindClosestMarkerWithCoords(mouseWorldX, mouseWorldY);
-                if (clickedMarker != null)
+        private async Task OnMouseDown(MouseEventArgs e)
+        {
+            if (e.Button == 0) // Left-click
+            {
+                var coords = await JS.InvokeAsync<int[]>("eval", $"window.mapModule.getWorldCoordinates({e.OffsetX}, {e.OffsetY})");
+                if (coords.Length == 2)
                 {
-                    // Select the sign type but DON'T jump to a different location
-                    // Stay centered on the marker that was clicked
-                    await SelectSignTypeAtPosition(clickedMarker.Value.signType, clickedMarker.Value.x, clickedMarker.Value.y, clickedMarker.Value.z, clickedMarker.Value.isHive);
+                    mouseWorldX = coords[0];
+                    mouseWorldY = coords[1];
+
+                    // Normal marker selection - find closest marker to click
+                    var clickedMarker = FindClosestMarkerWithCoords(mouseWorldX, mouseWorldY);
+                    if (clickedMarker != null)
+                    {
+                        // Select the sign type but DON'T jump to a different location
+                        // Stay centered on the marker that was clicked
+                        await SelectSignTypeAtPosition(clickedMarker.Value.signType, clickedMarker.Value.x, clickedMarker.Value.y, clickedMarker.Value.z, clickedMarker.Value.isHive);
+                    }
                 }
             }
+            else if (e.Button == 2) // Right-click for panning
+            {
+                isPanning = true;
+                await JS.InvokeVoidAsync("eval", $"window.mapModule.startPanning({e.OffsetX}, {e.OffsetY})");
+            }
         }
-        else if (e.Button == 2) // Right-click for panning
-        {
-            isPanning = true;
-            await JS.InvokeVoidAsync("eval", $"window.mapModule.startPanning({e.OffsetX}, {e.OffsetY})");
-        }
-    }
     
     private async Task OnMouseMove(MouseEventArgs e)
     {
@@ -713,6 +775,21 @@
     private async Task OnKeyDown(KeyboardEventArgs e)
     {
         var key = e.Key.ToLower();
+
+        // Handle backtick (`) key for XML spawner add - uses current mouse position
+        if (key == "`" && ViewService.ShowXMLSpawners)
+        {
+            await TryAddXmlSpawnerAtMousePosition();
+            return;
+        }
+
+        // Handle DEL key for XML spawner delete
+        if (key == "delete" && ViewService.ShowXMLSpawners)
+        {
+            await TryDeleteHoveredXmlSpawner();
+            return;
+        }
+
         if (key == "w" || key == "a" || key == "s" || key == "d" ||
             key == "arrowup" || key == "arrowdown" || key == "arrowleft" || key == "arrowright")
         {
@@ -726,6 +803,7 @@
     private async Task OnKeyUp(KeyboardEventArgs e)
     {
         var key = e.Key.ToLower();
+
         await JS.InvokeVoidAsync("eval", $"window.mapModule.removeKey('{key}')");
 
         // Check if all keys are released
@@ -1517,9 +1595,165 @@
             .Count(s => s.SignType == signType);
     }
 
+        // ============================================
+        // XML Spawner Management (JSInvokable callbacks)
+        // ============================================
+
+        /// <summary>
+        /// Attempts to add an XML spawner at the current mouse position via backtick (`) key.
+        /// </summary>
+        private async Task TryAddXmlSpawnerAtMousePosition()
+        {
+            // Use the current mouse world coordinates (already tracked by OnMouseMove)
+            await OnRequestAddXmlSpawner(mouseWorldX, mouseWorldY);
+        }
+
+        /// <summary>
+        /// Attempts to delete the currently hovered XML spawner via DEL key.
+        /// </summary>
+        private async Task TryDeleteHoveredXmlSpawner()
+        {
+            try
+            {
+                // Get hovered XML spawner from JavaScript
+                var result = await JS.InvokeAsync<string>("eval", "JSON.stringify(window.mapModule.getHoveredXmlSpawner())");
+                if (string.IsNullOrEmpty(result) || result == "null")
+            {
+                // No spawner hovered, do nothing
+                return;
+            }
+
+            // Parse the spawner data
+            using var doc = System.Text.Json.JsonDocument.Parse(result);
+            var root = doc.RootElement;
+
+            var serial = root.TryGetProperty("serial", out var serialProp) ? serialProp.GetString() : null;
+            var idx = root.TryGetProperty("idx", out var idxProp) ? idxProp.GetInt32() : -1;
+
+            // If no idx in JSON, get the hovered index directly
+            if (idx < 0)
+            {
+                idx = await JS.InvokeAsync<int>("eval", "window.mapModule.hoveredXmlSpawnerId ?? -1");
+            }
+
+            if (!string.IsNullOrEmpty(serial))
+            {
+                await OnRequestDeleteXmlSpawner(serial, idx);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Error getting hovered XML spawner for delete", ex);
+        }
+    }
+
+    /// <summary>
+    /// Called from JavaScript when user clicks delete button in XML spawner tooltip.
+    /// Shows confirmation dialog before proceeding.
+    /// </summary>
+    [JSInvokable]
+    public async Task OnRequestDeleteXmlSpawner(string serial, int idx)
+    {
+        if (string.IsNullOrEmpty(serial))
+        {
+            ToastService.ShowWarning("Cannot delete: Spawner has no serial ID");
+            return;
+        }
+
+        // Verify spawner can be modified (Regular or Empty only)
+        var spawner = SpawnerListUtility.GetSpawnerBySerial(serial);
+        if (spawner != null && !spawner.CanModify)
+        {
+            var typeName = SpawnerListUtility.GetSpawnerTypeName(spawner.Type);
+            ToastService.ShowWarning($"Cannot delete: {typeName} spawners are read-only and cannot be modified.");
+            return;
+        }
+
+        if (!XmlSpawnerCommandService.CanWriteCommands())
+        {
+            ToastService.ShowWarning("Cannot delete: Server not linked. Link your server in Settings first.");
+            return;
+        }
+
+        // Store pending delete info and show confirmation
+        pendingDeleteSerial = serial;
+        pendingDeleteIdx = idx;
+        showDeleteConfirmation = true;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// Called from JavaScript when user holds X + clicks on map to add XML spawner.
+    /// Opens the add spawner modal with bestiary picker.
+    /// </summary>
+    [JSInvokable]
+    public async Task OnRequestAddXmlSpawner(int worldX, int worldY)
+    {
+        if (!XmlSpawnerCommandService.CanWriteCommands())
+        {
+            ToastService.ShowWarning("Cannot add spawner: Server not linked. Link your server in Settings first.");
+            return;
+        }
+
+        // Store coordinates and show add modal
+        addXmlWorldX = worldX;
+        addXmlWorldY = worldY;
+        showAddXmlModal = true;
+        await InvokeAsync(StateHasChanged);
+
+        Logger.Info($"Opening Add XML Spawner modal at ({worldX}, {worldY})");
+    }
+
+    private async Task ConfirmDeleteXmlSpawner()
+    {
+        if (string.IsNullOrEmpty(pendingDeleteSerial))
+        {
+            showDeleteConfirmation = false;
+            return;
+        }
+
+        // Write delete command
+        if (XmlSpawnerCommandService.WriteDeleteCommand(pendingDeleteSerial))
+        {
+            // Remove from local view
+            await JS.InvokeVoidAsync("eval", $"window.mapModule.removeXmlSpawnerLocally({pendingDeleteIdx})");
+            SpawnerListUtility.RemoveSpawnerLocally(pendingDeleteSerial);
+
+            Logger.Info($"XML Spawner delete command sent: {pendingDeleteSerial}");
+            ToastService.ShowWarning($"Delete command sent. Spawner will be removed when server restarts.");
+        }
+        else
+        {
+            ToastService.ShowWarning("Failed to write delete command");
+        }
+
+        // Clear state
+        showDeleteConfirmation = false;
+        pendingDeleteSerial = null;
+        pendingDeleteIdx = -1;
+        StateHasChanged();
+    }
+
+    private void CancelDeleteXmlSpawner()
+    {
+        showDeleteConfirmation = false;
+        pendingDeleteSerial = null;
+        pendingDeleteIdx = -1;
+        StateHasChanged();
+    }
+
+    private void CancelAddXmlSpawner()
+    {
+        showAddXmlModal = false;
+        addXmlWorldX = 0;
+        addXmlWorldY = 0;
+        StateHasChanged();
+    }
+
     public void Dispose()
     {
         ViewService.OnViewChanged -= OnViewChanged;
         keyPanTimer?.Dispose();
+        dotNetRef?.Dispose();
     }
 }

@@ -64,7 +64,7 @@ vendorMarkerDwellTimer: null,
 vendorMarkerDwellDelay: 500, // milliseconds to wait before showing tooltip
 
 // XML Spawner management state
-xKeyHeld: false,              // Track if X key is being held
+tildeKeyHeld: false,          // Track if tilde (`) key is being held for add mode
 blazorHelper: null,           // DotNetObjectReference for callbacks to C#
 xmlToggleEnabled: false,      // Track if XML toggle is enabled
 
@@ -192,27 +192,50 @@ panAnimationId: null,
             '#FF4500', // 18 - Orange Red
             '#FFA500', // 19 - Orange
             '#98FB98', // 20 - Pale Green
-            '#87CEEB', // 21 - Sky Blue
-            '#DDA0DD', // 22 - Plum
-            '#F0E68C', // 23 - Khaki
-            '#FFFFFF'  // 24 - White (maximum priority)
-        ];
+                '#87CEEB', // 21 - Sky Blue
+                    '#DDA0DD', // 22 - Plum
+                    '#F0E68C', // 23 - Khaki
+                    '#FFFFFF'  // 24 - White (maximum priority)
+                ];
 
-        // Priority 1 uses index 0, Priority 2 uses index 1, etc.
-        const colorIndex = Math.min(priority - 1, priorityColors.length - 1);
-        const resultColor = priorityColors[Math.max(0, colorIndex)];
+                // Priority 1 uses index 0, Priority 2 uses index 1, etc.
+                const colorIndex = Math.min(priority - 1, priorityColors.length - 1);
+                const resultColor = priorityColors[Math.max(0, colorIndex)];
 
-        console.log(`Priority ${priority}: Using color ${resultColor}`);
+                console.log(`Priority ${priority}: Using color ${resultColor}`);
 
-        return resultColor;
-    },
+                return resultColor;
+            },
 
-    // Convert screen pixel to world (map) pixel - accounting for 2x scale
-    screenToWorld: function(screenX, screenY) {
-        const worldX = Math.round((screenX - this.panX) / this.scale);
-        const worldY = Math.round((screenY - this.panY) / this.scale);
-        return { x: worldX, y: worldY };
-    },
+            // Get color for XML spawner based on type
+            // Type enum: 0=Regular (green), 1=Empty (red), 2=Treasure (purple), 3=Quest (blue)
+            getSpawnerColor: function(spawnerType) {
+                switch (spawnerType) {
+                    case 0: return '#00FF00'; // Regular - Green
+                    case 1: return '#FF4444'; // Empty - Red
+                    case 2: return '#9932CC'; // Treasure - Purple (DarkOrchid)
+                    case 3: return '#4169E1'; // Quest - Blue (RoyalBlue)
+                    default: return '#00FF00'; // Default to green
+                }
+            },
+
+            // Get display name for spawner type
+            getSpawnerTypeName: function(spawnerType) {
+                switch (spawnerType) {
+                    case 0: return 'Creature Spawner';
+                    case 1: return 'Empty Spawner';
+                    case 2: return 'Treasure Spawner';
+                    case 3: return 'Quest Spawner';
+                    default: return 'XML Spawner';
+                }
+            },
+
+            // Convert screen pixel to world (map) pixel - accounting for 2x scale
+            screenToWorld: function(screenX, screenY) {
+                const worldX = Math.round((screenX - this.panX) / this.scale);
+                const worldY = Math.round((screenY - this.panY) / this.scale);
+                return { x: worldX, y: worldY };
+            },
     
     // Convert world (map) pixel to screen pixel - accounting for 2x scale
     worldToScreen: function(worldX, worldY) {
@@ -502,7 +525,7 @@ panAnimationId: null,
             });
         }
 
-        // Draw XML spawners (green circles, underneath user spawns)
+        // Draw XML spawners (color-coded circles by type, underneath user spawns)
         // Sort by radius descending so smaller circles are drawn on top (more accessible)
         if (this.xmlSpawners && Array.isArray(this.xmlSpawners)) {
             // Create indexed array and sort by radius (largest first = drawn first = bottom layer)
@@ -531,6 +554,11 @@ panAnimationId: null,
                 // Check if this spawner is hovered (hover-based like spawn data)
                 const isHovered = this.hoveredXmlSpawnerId === idx;
 
+                // Get color based on spawner type
+                // Type enum: 0=Regular (green), 1=Empty (red), 2=Treasure (purple), 3=Quest (blue)
+                const spawnerType = spawner.type || 0;
+                const spawnerColor = this.getSpawnerColor(spawnerType);
+
                 // Draw XML spawner circle
                 if (isHovered) {
                     // Draw golden glow for hover
@@ -549,17 +577,17 @@ panAnimationId: null,
                     this.ctx.fill();
                 }
 
-                // Normal circle outline
-                this.ctx.strokeStyle = '#00FF00';
+                // Normal circle outline with type-based color
+                this.ctx.strokeStyle = spawnerColor;
                 this.ctx.lineWidth = isHovered ? 2 : 1;
                 this.ctx.globalAlpha = isHovered ? 0.8 : 0.4;
                 this.ctx.beginPath();
                 this.ctx.arc(screenCenter.x, screenCenter.y, screenRadius, 0, 2 * Math.PI);
                 this.ctx.stroke();
 
-                // Draw "X" marker in center
+                // Draw "X" marker in center with type-based color
                 const markerSize = isHovered ? 5 : 3;
-                this.ctx.strokeStyle = '#00FF00';
+                this.ctx.strokeStyle = spawnerColor;
                 this.ctx.lineWidth = isHovered ? 3 : 2;
                 this.ctx.globalAlpha = isHovered ? 0.9 : 0.6;
                 this.ctx.beginPath();
@@ -577,9 +605,15 @@ panAnimationId: null,
                 const mouseX = this.xmlTooltipMousePos.x;
                 const mouseY = this.xmlTooltipMousePos.y;
 
+                // Get spawner type info
+                const spawnerType = spawner.type || 0;
+                const typeName = this.getSpawnerTypeName(spawnerType);
+                const typeColor = this.getSpawnerColor(spawnerType);
+                const canModify = spawner.canModify !== false && (spawnerType === 0 || spawnerType === 1); // Regular or Empty
+
                 // Tooltip content
                 const lines = [
-                    `XML Spawner`,
+                    typeName,
                     `Location: (${spawner.centerX}, ${spawner.centerY})`,
                     `Home Range: ${spawner.radius}`
                 ];
@@ -589,7 +623,7 @@ panAnimationId: null,
                     lines.push(`Max Count: ${spawner.maxCount}`);
                 }
 
-                // Add spawn names if available
+                // Add spawn names if available (and not empty spawner)
                 if (spawner.spawnNames && spawner.spawnNames.length > 0) {
                     lines.push(`Creatures:`);
                     // Show up to 8 creatures, then "and X more..."
@@ -601,13 +635,21 @@ panAnimationId: null,
                     if (spawner.spawnNames.length > maxToShow) {
                         lines.push(`  ...and ${spawner.spawnNames.length - maxToShow} more`);
                     }
+                } else if (spawnerType === 1) {
+                    // Empty spawner - show helpful message
+                    lines.push(`(No creatures defined)`);
                 }
 
-                // Add delete button row if serial is available
+                // Add action hint based on spawner type
                 const hasSerial = spawner.serial && spawner.serial.length > 0;
-                if (hasSerial) {
+                const showDeleteHint = hasSerial && canModify;
+                if (showDeleteHint) {
                     lines.push(''); // Spacer line
-                    lines.push('[🗑️ Delete Spawner]');
+                    lines.push('Press DEL to delete');
+                } else if (hasSerial && !canModify) {
+                    // Show read-only indicator for treasure/quest spawners
+                    lines.push(''); // Spacer line
+                    lines.push('(Read-only)');
                 }
 
                 // Measure text for sizing
@@ -635,21 +677,22 @@ panAnimationId: null,
                     tooltipY = mouseY - boxHeight - 10;
                 }
 
-                // Store tooltip bounds for click detection
+                // Store tooltip bounds for click detection (only if delete is available)
                 this.xmlTooltipBounds = {
                     x: tooltipX,
                     y: tooltipY,
                     width: boxWidth,
                     height: boxHeight,
-                    deleteButtonY: hasSerial ? tooltipY + padding + (lines.length - 1) * lineHeight : -1,
+                    deleteButtonY: showDeleteHint ? tooltipY + padding + (lines.length - 1) * lineHeight : -1,
                     deleteButtonHeight: lineHeight,
                     serial: spawner.serial,
-                    spawnerIdx: this.hoveredXmlSpawnerId
+                    spawnerIdx: this.hoveredXmlSpawnerId,
+                    canModify: canModify
                 };
 
-                // Draw tooltip background
+                // Draw tooltip background with type-colored border
                 this.ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
-                this.ctx.strokeStyle = '#00FF00';
+                this.ctx.strokeStyle = typeColor;
                 this.ctx.lineWidth = 2;
                 this.ctx.beginPath();
                 this.ctx.roundRect(tooltipX, tooltipY, boxWidth, boxHeight, 5);
@@ -663,13 +706,15 @@ panAnimationId: null,
                 this.ctx.textBaseline = 'top';
                 lines.forEach((line, i) => {
                     if (i === 0) {
-                        this.ctx.fillStyle = '#FFD700'; // Title in gold
+                        this.ctx.fillStyle = typeColor; // Title in spawner type color
                     } else if (line === 'Creatures:') {
                         this.ctx.fillStyle = '#00BFFF'; // Creatures header in blue
                     } else if (line.startsWith('  •') || line.startsWith('  ...')) {
                         this.ctx.fillStyle = '#98FB98'; // Creature names in pale green
-                    } else if (line.includes('Delete Spawner')) {
-                        this.ctx.fillStyle = '#FF6B6B'; // Delete button in red
+                    } else if (line.includes('Press DEL')) {
+                        this.ctx.fillStyle = '#FFD700'; // Delete hint in gold
+                    } else if (line.includes('Read-only') || line.includes('No creatures defined')) {
+                        this.ctx.fillStyle = '#888888'; // Read-only/empty message in gray
                     } else if (line === '') {
                         return; // Skip spacer
                     } else {
@@ -1171,6 +1216,24 @@ panAnimationId: null,
             this.xmlSpawnerTooltipVisible = false;
             this.redrawAll();
         }
+    },
+
+    // Get the currently hovered XML spawner data (for DEL key deletion)
+    getHoveredXmlSpawner: function() {
+        if (this.hoveredXmlSpawnerId < 0 || !this.xmlSpawners || 
+            this.hoveredXmlSpawnerId >= this.xmlSpawners.length) {
+            return null;
+        }
+        const spawner = this.xmlSpawners[this.hoveredXmlSpawnerId];
+        if (!spawner) return null;
+
+        // Return spawner data with index
+        return {
+            serial: spawner.serial || '',
+            idx: this.hoveredXmlSpawnerId,
+            type: spawner.type || 0,
+            canModify: spawner.canModify !== false && (spawner.type === 0 || spawner.type === 1)
+        };
     },
 
     // Find XML spawner at world coordinates (returns index or -1)
@@ -1773,25 +1836,26 @@ panAnimationId: null,
         console.log(`🔧 XML toggle ${enabled ? 'enabled' : 'disabled'}`);
     },
 
-    // Handle X key down - track that it's being held
-    onXKeyDown: function() {
-        if (!this.xKeyHeld) {
-            this.xKeyHeld = true;
-            console.log('🔑 X key held - click to add XML spawner');
+    // Handle tilde (`) key down - track that it's being held for add mode
+    onTildeKeyDown: function() {
+        if (!this.tildeKeyHeld) {
+            this.tildeKeyHeld = true;
+            console.log('🔑 Tilde key held - click to add XML spawner');
         }
     },
 
-    // Handle X key up - stop tracking
-    onXKeyUp: function() {
-        if (this.xKeyHeld) {
-            this.xKeyHeld = false;
-            console.log('🔑 X key released');
+    // Handle tilde (`) key up - stop tracking
+    onTildeKeyUp: function() {
+        if (this.tildeKeyHeld) {
+            this.tildeKeyHeld = false;
+            console.log('🔑 Tilde key released');
         }
     },
 
     // Check if we should handle click for adding XML spawner
     shouldHandleXmlAdd: function() {
-        return this.xKeyHeld && this.xmlToggleEnabled && this.blazorHelper;
+        // Force boolean return (!! converts to boolean) - needed for C# interop
+        return !!(this.tildeKeyHeld && this.xmlToggleEnabled && this.blazorHelper);
     },
 
     // Request to add XML spawner at world coordinates (called from mouse handler)
