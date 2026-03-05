@@ -38,7 +38,7 @@ body.light-theme .ecology-banner-title {
    TILE COLUMN CARDS - Fixed height for all 3 columns
    ============================================ */
 .tile-column-card {
-    height: calc(100vh - 230px); /* Fixed height: viewport minus header, padding, and ecology banner */
+    height: calc(100vh - 240px); /* Fixed height: viewport minus header, padding, and ecology banner */
     min-height: 450px;
     display: flex;
     flex-direction: column;

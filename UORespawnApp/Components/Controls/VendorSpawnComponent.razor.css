@@ -128,25 +128,28 @@
     overflow-x: hidden;
 }
 
-/* Spawn item styling */
+/* Spawn item styling - Matches Box/Region spawn list styling */
 .spawn-item {
     padding: 8px 10px;
     margin-bottom: 6px;
-    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid #dee2e6;
     border-radius: 6px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: all 0.2s ease;
+    background-color: #ffffff;
+    user-select: none;
 }
 
 .spawn-item:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 193, 7, 0.3);
+    background-color: #f8f9fa;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+    border-color: #c0c0c0;
 }
 
 .spawn-item.selected {
-    background-color: rgba(255, 193, 7, 0.15);
-    border-color: rgba(255, 193, 7, 0.5);
+    background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
 }
 
 /* Spawn controls inside selected card */
@@ -161,10 +164,11 @@
     background-color: rgba(0, 0, 0, 0.2);
 }
 
-/* Dark header styling */
-.dark-header {
-    background-color: rgba(0, 0, 0, 0.3);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+/* Dark header styling - Matches Box/Region */
+.map-card .card-header.dark-header {
+    background: #212529 !important;
+    border-bottom: 1px solid #3a3a3a !important;
+    font-weight: normal;
     padding: 8px 12px;
 }
 
@@ -219,12 +223,14 @@ body.dark-theme .spawn-item {
 
 body.dark-theme .spawn-item:hover {
     background-color: #2d2d2d;
-    border-color: rgba(255, 193, 7, 0.4);
+    border-color: #4a4a4a;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
 }
 
 body.dark-theme .spawn-item.selected {
-    background-color: rgba(255, 193, 7, 0.15);
-    border-color: rgba(255, 193, 7, 0.5);
+    background: linear-gradient(135deg, #667eea20 0%, #764ba220 100%);
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
 }
 
 body.dark-theme .spawn-controls {
@@ -239,9 +245,9 @@ body.dark-theme .minimap-body {
     background-color: rgba(0, 0, 0, 0.3);
 }
 
-body.dark-theme .dark-header {
-    background-color: rgba(0, 0, 0, 0.3);
-    border-bottom-color: rgba(255, 255, 255, 0.1);
+body.dark-theme .map-card .card-header.dark-header {
+    background: #212529 !important;
+    border-bottom: 1px solid #3a3a3a !important;
 }
 
 body.dark-theme .spawn-search-input {
@@ -270,12 +276,14 @@ body.light-theme .spawn-item {
 
 body.light-theme .spawn-item:hover {
     background-color: #f8f9fa;
-    border-color: rgba(218, 165, 32, 0.4);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+    border-color: #c0c0c0;
 }
 
 body.light-theme .spawn-item.selected {
-    background-color: rgba(218, 165, 32, 0.1);
-    border-color: rgba(218, 165, 32, 0.5);
+    background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
 }
 
 body.light-theme .spawn-controls {
@@ -290,9 +298,9 @@ body.light-theme .minimap-body {
     background-color: rgba(0, 0, 0, 0.05);
 }
 
-body.light-theme .dark-header {
-    background-color: #f8f9fa;
-    border-bottom-color: #dee2e6;
+body.light-theme .map-card .card-header.dark-header {
+    background: #f8f9fa !important;
+    border-bottom: 1px solid #dee2e6 !important;
     color: #212529;
 }
 
