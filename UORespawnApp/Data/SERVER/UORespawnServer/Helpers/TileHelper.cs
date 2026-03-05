@@ -9,8 +9,6 @@ namespace Server.Custom.UORespawnServer.Helpers
         {
             string name = TileData.LandTable[id & TileData.MaxItemValue].Name;
 
-            if (InvalidTileNames.Contains(name)) return string.Empty;
-
             if (InvalidTiles.Contains(id)) return string.Empty;
 
             if (CloudTiles.Contains(id)) return "cloud";
@@ -36,6 +34,8 @@ namespace Server.Custom.UORespawnServer.Helpers
             if (SandStoneTiles.Contains(id)) return "sand stone";
 
             if (!string.IsNullOrEmpty(name)) return name;
+
+            if (InvalidTileNames.Contains(name)) return string.Empty;
 
             if (location == Point3D.Zero) return string.Empty;
 
@@ -317,6 +317,7 @@ namespace Server.Custom.UORespawnServer.Helpers
             "Cave exit",
             "stone moss2",
             "NODRAW",
+            "NoName",
             "TerrainFallback",
             "UNUSED",
             "VOID!!!!!!",
