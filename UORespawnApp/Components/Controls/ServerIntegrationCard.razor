@@ -1,0 +1,875 @@
+@using UORespawnApp.Scripts.Services
+@using UORespawnApp.Scripts.Entities
+@using UORespawnApp.Scripts.Utilities
+@using UORespawnApp.Scripts.Constants
+@using System.IO.Compression
+
+@inject AccountService AccountService
+@inject FtpCredentialService CredentialService
+@inject FtpConnectionService ConnectionService
+@inject FtpSyncService SyncService
+
+<div class="card map-card mb-3">
+    <div class="card-header text-center">
+        <span class="text-primary" style="font-size: 1.25rem;">
+            <span class="bi bi-hdd-network me-2"></span>ServUO Server Integration
+        </span>
+        <InfoIcon Text="Connect to your ServUO server for automatic file sync" />
+    </div>
+    <div class="card-body">
+        
+        <!-- Connection Type Selector -->
+        <div class="d-flex justify-content-center gap-2 mb-4">
+            <button class="btn @(connectionType == ConnectionType.Local ? "btn-success" : "btn-outline-secondary")" 
+                    style="min-width: 140px;"
+                    @onclick="() => SetConnectionType(ConnectionType.Local)">
+                <span class="bi bi-pc-display me-2"></span>Local Link
+            </button>
+            <button class="btn @(connectionType == ConnectionType.Remote ? "btn-info" : "btn-outline-secondary")" 
+                    style="min-width: 140px;"
+                    @onclick="() => SetConnectionType(ConnectionType.Remote)">
+                <span class="bi bi-cloud me-2"></span>Remote Server
+            </button>
+        </div>
+
+        <!-- LOCAL LINK SECTION -->
+        @if (connectionType == ConnectionType.Local)
+        {
+            <div class="text-center">
+                @if (!DataWatcher.IsSupported)
+                {
+                    <div class="alert alert-warning mb-3">
+                        <span class="bi bi-exclamation-triangle me-2"></span>
+                        <strong>Not Supported on This Platform</strong>
+                    </div>
+                }
+
+                @if (isLocalConfigured)
+                {
+                    <div class="mb-3">
+                        <span class="badge bg-success d-inline-block text-center" style="font-size: 1rem; padding: 10px 20px; min-width: 200px;">
+                            <span class="bi bi-check-circle me-2"></span>Active
+                        </span>
+                    </div>
+                    <p class="text-muted mb-3"><small>@Settings.ServerFolder</small></p>
+                    <button class="btn btn-danger btn-lg" 
+                            style="min-width: 200px;"
+                            @onclick="UnlinkServer"
+                            disabled="@(!DataWatcher.IsSupported)">
+                        <span class="bi bi-x-circle me-2"></span>Unlink
+                    </button>
+                }
+                else
+                {
+                    <p class="text-muted mb-3">Select your main ServUO folder to enable automatic sync</p>
+                    <button class="btn btn-success btn-lg" 
+                            style="min-width: 200px;"
+                            @onclick="BrowseServUOFolder"
+                            disabled="@(!DataWatcher.IsSupported)">
+                        <span class="bi bi-link-45deg me-2"></span>Add Link
+                    </button>
+
+                    <div class="alert alert-info mt-3" style="max-width: 500px; margin: 0 auto;">
+                        <span class="bi bi-info-circle me-2"></span>
+                        <small>This will install UORespawn server scripts to your ServUO folder and enable automatic file synchronization.</small>
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(localSetupMessage))
+                {
+                    <div class="alert @(localSetupSuccess ? "alert-success" : "alert-danger") mt-3">
+                        @localSetupMessage
+                    </div>
+                }
+            </div>
+        }
+
+        <!-- REMOTE SERVER SECTION -->
+        @if (connectionType == ConnectionType.Remote)
+        {
+            <!-- Remote Method Selector -->
+            <div class="d-flex justify-content-center gap-2 mb-4">
+                <button class="btn btn-sm @(remoteMethod == RemoteMethod.FTP ? "btn-info" : "btn-outline-info")" 
+                        @onclick="() => remoteMethod = RemoteMethod.FTP">
+                    <span class="bi bi-cloud-arrow-up me-2"></span>FTP Sync
+                </button>
+                <button class="btn btn-sm @(remoteMethod == RemoteMethod.Manual ? "btn-warning" : "btn-outline-warning")" 
+                        @onclick="() => remoteMethod = RemoteMethod.Manual">
+                    <span class="bi bi-download me-2"></span>Manual Transfer
+                </button>
+            </div>
+
+            <!-- FTP SYNC METHOD -->
+            @if (remoteMethod == RemoteMethod.FTP)
+            {
+                @if (!AccountService.HasActiveAccount)
+                {
+                    <!-- No Account Active -->
+                    <div class="alert alert-warning mb-3 text-center">
+                        <span class="bi bi-person-exclamation me-2"></span>
+                        <strong>No Account Selected</strong>
+                        <p class="mb-2 mt-2">
+                            FTP features require an account setup. <strong>No password needed for the app!</strong>
+                        </p>
+                        <p class="mb-2 small text-muted">
+                            Accounts are friendly labels that point to a folder where YOUR FTP credentials are stored securely.
+                        </p>
+                        <button class="btn btn-sm btn-warning" @onclick="ShowAccountModal">
+                            <span class="bi bi-person-plus me-1"></span>Setup Account
+                        </button>
+                    </div>
+                }
+                else
+                {
+                    <!-- Account Info Bar -->
+                    <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom border-secondary">
+                        <div>
+                            <span class="bi bi-person-circle me-2 text-info"></span>
+                            <strong>@AccountService.ActiveAccount?.Name</strong>
+                            <small class="text-muted ms-2">
+                                <span class="bi bi-folder2 me-1"></span>
+                                @TruncatePath(AccountService.ActiveAccount?.CredentialFolderPath ?? "")
+                            </small>
+                        </div>
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="ShowAccountModal" title="Switch Account">
+                            <span class="bi bi-arrow-repeat"></span>
+                        </button>
+                    </div>
+
+                    @if (!hasCredentials)
+                    {
+                        <div class="alert alert-info mb-3 small">
+                            <span class="bi bi-info-circle me-2"></span>
+                            No FTP credentials configured. Fill in the details below to enable sync.
+                        </div>
+                    }
+
+                    <!-- FTP Configuration Form -->
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <label class="form-label text-muted small">Host</label>
+                            <input type="text" 
+                                   class="form-control form-control-sm bg-secondary text-light border-dark" 
+                                   placeholder="ftp.yourserver.com"
+                                   @bind="credentials.Host" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label text-muted small">Port</label>
+                            <input type="number" 
+                                   class="form-control form-control-sm bg-secondary text-light border-dark" 
+                                   @bind="credentials.Port" />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small">Username</label>
+                            <input type="text" 
+                                   class="form-control form-control-sm bg-secondary text-light border-dark" 
+                                   placeholder="ftpuser"
+                                   @bind="credentials.Username" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small">Password</label>
+                            <div class="input-group input-group-sm">
+                                <input type="@(showPassword ? "text" : "password")" 
+                                       class="form-control bg-secondary text-light border-dark" 
+                                       placeholder="••••••••"
+                                       @bind="credentials.Password" />
+                                <button class="btn btn-outline-secondary" type="button" @onclick="TogglePassword">
+                                    <span class="bi @(showPassword ? "bi-eye-slash" : "bi-eye")"></span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label text-muted small">Remote Path</label>
+                            <div class="input-group input-group-sm">
+                                <input type="text" 
+                                       class="form-control bg-secondary text-light border-dark" 
+                                       placeholder="/ServUO/Data/UORespawn"
+                                       @bind="credentials.RemotePath" />
+                                <button class="btn btn-outline-info" type="button" @onclick="DetectRemotePath" disabled="@(isDetecting || !CanDetectPath)">
+                                    @if (isDetecting)
+                                    {
+                                        <span class="spinner-border spinner-border-sm"></span>
+                                    }
+                                    else
+                                    {
+                                        <span class="bi bi-search"></span>
+                                    }
+                                </button>
+                            </div>
+                            <div class="form-text text-muted small">
+                                Path to <code>Data/UORespawn/</code> on your server. Click <span class="bi bi-search"></span> to auto-detect.
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" @bind="credentials.UseTls" id="ftpTls">
+                                <label class="form-check-label small" for="ftpTls">
+                                    <span class="bi bi-shield-lock me-1"></span>Use TLS/SSL
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" @bind="credentials.UsePassiveMode" id="ftpPassive">
+                                <label class="form-check-label small" for="ftpPassive">
+                                    <span class="bi bi-arrow-down-up me-1"></span>Passive Mode
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Validation Errors -->
+                    @if (credentials.ValidationErrors.Count > 0 && hasAttemptedSave)
+                    {
+                        <div class="alert alert-warning mt-3 mb-0 py-2">
+                            <small>
+                                @foreach (var error in credentials.ValidationErrors)
+                                {
+                                    <div><span class="bi bi-exclamation-triangle me-1"></span>@error</div>
+                                }
+                            </small>
+                        </div>
+                    }
+
+                    <!-- Status Messages -->
+                    @if (!string.IsNullOrEmpty(statusMessage))
+                    {
+                        <div class="alert @statusAlertClass mt-3 mb-0 py-2">
+                            <span class="bi @statusIcon me-2"></span>@statusMessage
+                        </div>
+                    }
+
+                    <!-- Action Buttons -->
+                    <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top border-secondary">
+                        <div>
+                            @if (hasCredentials)
+                            {
+                                <button class="btn btn-sm btn-outline-danger" @onclick="DeleteCredentials" disabled="@isBusy">
+                                    <span class="bi bi-trash me-1"></span>Delete
+                                </button>
+                            }
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-info" @onclick="TestConnection" disabled="@isBusy">
+                                @if (isTesting)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                    <text>Testing...</text>
+                                }
+                                else
+                                {
+                                    <span class="bi bi-plug me-1"></span>
+                                    <text>Test</text>
+                                }
+                            </button>
+                            <button class="btn btn-sm btn-success" @onclick="SaveCredentials" disabled="@isBusy">
+                                <span class="bi bi-floppy me-1"></span>Save
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Sync Operations -->
+                    @if (hasCredentials && credentials.IsConfigured)
+                    {
+                        <div class="mt-3 pt-3 border-top border-secondary">
+                            <div class="text-muted small mb-2 text-center">
+                                <span class="bi bi-arrow-repeat me-1"></span>Sync Operations
+                            </div>
+                            <div class="d-flex gap-2 flex-wrap">
+                                <button class="btn btn-sm btn-outline-success flex-fill" @onclick="UploadSpawnData" disabled="@isSyncing">
+                                    @if (isSyncing && syncOperation == "upload")
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-1"></span>
+                                    }
+                                    else
+                                    {
+                                        <span class="bi bi-cloud-arrow-up me-1"></span>
+                                    }
+                                    Push Spawns
+                                </button>
+                                <button class="btn btn-sm btn-outline-info flex-fill" @onclick="DownloadReferenceData" disabled="@isSyncing">
+                                    @if (isSyncing && syncOperation == "download")
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-1"></span>
+                                    }
+                                    else
+                                    {
+                                        <span class="bi bi-cloud-arrow-down me-1"></span>
+                                    }
+                                    Pull References
+                                </button>
+                            </div>
+                            @if (!string.IsNullOrEmpty(syncMessage))
+                            {
+                                <div class="alert @syncAlertClass mt-2 mb-0 py-2 small">
+                                    <span class="bi @syncIcon me-1"></span>@syncMessage
+                                </div>
+                            }
+                        </div>
+                    }
+                }
+            }
+
+            <!-- MANUAL TRANSFER METHOD -->
+            @if (remoteMethod == RemoteMethod.Manual)
+            {
+                <div class="text-center">
+                    <p class="text-muted small mb-3">
+                        <span class="bi bi-info-circle me-1"></span>
+                        Export scripts and data files, then manually transfer them to your server.
+                    </p>
+
+                    <!-- Export Server Scripts -->
+                    <div class="mb-3">
+                        <button class="btn btn-info w-100" style="max-width: 350px;" @onclick="ExportServerScripts" disabled="@isExporting">
+                            @if (isExporting)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                                <text>Exporting...</text>
+                            }
+                            else
+                            {
+                                <span class="bi bi-file-earmark-zip me-2"></span>
+                                <text>Export Server Scripts (.zip)</text>
+                            }
+                        </button>
+                        <small class="text-muted d-block mt-1">Extract to: <code>Scripts/Custom/UORespawnServer/</code></small>
+                    </div>
+
+                    <!-- Export Data Pack -->
+                    <SpawnPackExportCard />
+
+                    @if (!string.IsNullOrEmpty(exportMessage))
+                    {
+                        <div class="alert @(exportSuccess ? "alert-success" : "alert-danger") small mt-3">
+                            @exportMessage
+                        </div>
+                    }
+
+                    <!-- Help Section -->
+                    <div class="alert alert-secondary mt-3 text-start small">
+                        <strong><span class="bi bi-question-circle me-1"></span>Manual Setup Steps:</strong>
+                        <ol class="mb-0 mt-2 ps-3">
+                            <li>Export and extract <strong>Server Scripts</strong> to your server's <code>Scripts/Custom/</code></li>
+                            <li>Start your server once - it will create the <code>Data/UORespawn/</code> folder</li>
+                            <li>Copy reference files from server's <code>OUTPUT/</code> to editor's <code>Data/UOR_DATA/</code></li>
+                            <li>Configure spawns in the editor</li>
+                            <li>Export and copy spawn data to server's <code>INPUT/</code> folder</li>
+                            <li>Restart your server to load the spawns</li>
+                        </ol>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public EventCallback OnShowAccountModal { get; set; }
+
+    // Connection type selection
+    private enum ConnectionType { Local, Remote }
+    private enum RemoteMethod { FTP, Manual }
+    
+    private ConnectionType connectionType = ConnectionType.Local;
+    private RemoteMethod remoteMethod = RemoteMethod.FTP;
+
+    // Local link state
+    private bool isLocalConfigured => ServerSetupUtility.IsServerConfigured(Settings.ServerFolder);
+    private string localSetupMessage = "";
+    private bool localSetupSuccess = false;
+
+    // FTP state
+    private FtpCredentials credentials = new();
+    private bool hasCredentials = false;
+    private bool showPassword = false;
+    private bool isBusy = false;
+    private bool isTesting = false;
+    private bool hasAttemptedSave = false;
+    private string statusMessage = "";
+    private string statusAlertClass = "alert-info";
+    private string statusIcon = "bi-info-circle";
+
+    // Path detection state
+    private bool isDetecting = false;
+    private bool CanDetectPath => !string.IsNullOrWhiteSpace(credentials.Host) && 
+                                   !string.IsNullOrWhiteSpace(credentials.Username) && 
+                                   !string.IsNullOrWhiteSpace(credentials.Password);
+
+    // Sync state
+    private bool isSyncing = false;
+    private string syncOperation = "";
+    private string syncMessage = "";
+    private string syncAlertClass = "alert-info";
+    private string syncIcon = "bi-info-circle";
+    private bool isLoadingCredentials = false;
+
+    // Manual export state
+    private bool isExporting = false;
+    private string exportMessage = "";
+    private bool exportSuccess = false;
+
+    protected override void OnInitialized()
+    {
+        // Determine initial connection type based on current configuration
+        if (isLocalConfigured)
+        {
+            connectionType = ConnectionType.Local;
+        }
+        else if (AccountService.HasActiveAccount)
+        {
+            connectionType = ConnectionType.Remote;
+            remoteMethod = RemoteMethod.FTP;
+        }
+
+        LoadCredentialsInternal();
+        CredentialService.CredentialsChanged += OnCredentialsChanged;
+        AccountService.ActiveAccountChanged += OnAccountChanged;
+    }
+
+    private void SetConnectionType(ConnectionType type)
+    {
+        connectionType = type;
+        // Clear messages when switching
+        localSetupMessage = "";
+        statusMessage = "";
+        exportMessage = "";
+        syncMessage = "";
+    }
+
+    // ==================== LOCAL LINK METHODS ====================
+
+    private async Task BrowseServUOFolder()
+    {
+        try
+        {
+#if WINDOWS
+            var folderPicker = new Windows.Storage.Pickers.FolderPicker();
+            var window = (Application.Current?.Windows[0]?.Handler?.PlatformView as Microsoft.UI.Xaml.Window);
+            if (window != null)
+            {
+                var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(window);
+                WinRT.Interop.InitializeWithWindow.Initialize(folderPicker, hwnd);
+            }
+
+            folderPicker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.ComputerFolder;
+            folderPicker.FileTypeFilter.Add("*");
+
+            var folder = await folderPicker.PickSingleFolderAsync();
+            if (folder != null)
+            {
+                var validation = ServerSetupUtility.ValidateServUOFolder(folder.Path);
+
+                if (validation != null && validation.IsValid)
+                {
+                    var (success, message) = ServerSetupUtility.FullServerSetup(folder.Path);
+
+                    if (success)
+                    {
+                        Settings.ServerFolder = folder.Path;
+                        localSetupMessage = $"✓ {message}";
+                        localSetupSuccess = true;
+                        Logger.Info($"ServUO server linked successfully: {folder.Path}");
+                    }
+                    else
+                    {
+                        localSetupMessage = $"✗ {message}";
+                        localSetupSuccess = false;
+                    }
+                }
+                else
+                {
+                    var errorDetails = new List<string>();
+                    if (validation != null)
+                    {
+                        if (!validation.HasServUOExe) errorDetails.Add("Missing ServUO.exe");
+                        if (!validation.HasDataFolder) errorDetails.Add("Missing Data folder");
+                        if (!validation.HasScriptsFolder) errorDetails.Add("Missing Scripts folder");
+                    }
+                    localSetupMessage = $"✗ Invalid ServUO folder: {string.Join(", ", errorDetails)}";
+                    localSetupSuccess = false;
+                }
+                StateHasChanged();
+            }
+#else
+            localSetupMessage = "✗ Folder picker not available on this platform.";
+            localSetupSuccess = false;
+            await Task.CompletedTask;
+#endif
+        }
+        catch (Exception ex)
+        {
+            localSetupMessage = $"✗ Error: {ex.Message}";
+            localSetupSuccess = false;
+            Logger.Error("Error browsing ServUO folder", ex);
+            StateHasChanged();
+        }
+    }
+
+    private void UnlinkServer()
+    {
+        try
+        {
+            var (success, message) = ServerSetupUtility.UnlinkServer(Settings.ServerFolder);
+            Settings.ServerFolder = string.Empty;
+
+            if (success)
+            {
+                localSetupMessage = $"✓ {message}";
+                localSetupSuccess = true;
+            }
+            else
+            {
+                localSetupMessage = $"✗ {message}";
+                localSetupSuccess = false;
+            }
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            localSetupMessage = $"✗ Error: {ex.Message}";
+            localSetupSuccess = false;
+            Logger.Error("Error unlinking server", ex);
+            StateHasChanged();
+        }
+    }
+
+    // ==================== FTP METHODS ====================
+
+    private void OnCredentialsChanged(object? sender, FtpCredentials? creds)
+    {
+        if (isLoadingCredentials) return;
+
+        if (creds != null)
+        {
+            credentials = creds;
+            hasCredentials = true;
+        }
+        else
+        {
+            credentials = new FtpCredentials();
+            hasCredentials = false;
+        }
+        statusMessage = "";
+        hasAttemptedSave = false;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnAccountChanged(object? sender, UserAccount? account)
+    {
+        if (isLoadingCredentials) return;
+        LoadCredentialsInternal();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void LoadCredentialsInternal()
+    {
+        if (isLoadingCredentials) return;
+
+        isLoadingCredentials = true;
+        try
+        {
+            var loaded = CredentialService.LoadCredentials();
+            if (loaded != null)
+            {
+                credentials = loaded;
+                hasCredentials = true;
+            }
+            else
+            {
+                credentials = CredentialService.CreateNewCredentials();
+                hasCredentials = false;
+            }
+            statusMessage = "";
+            hasAttemptedSave = false;
+        }
+        finally
+        {
+            isLoadingCredentials = false;
+        }
+    }
+
+    private void TogglePassword() => showPassword = !showPassword;
+
+    private async Task ShowAccountModal()
+    {
+        await OnShowAccountModal.InvokeAsync();
+    }
+
+    private async Task SaveCredentials()
+    {
+        hasAttemptedSave = true;
+
+        if (credentials.ValidationErrors.Count > 0)
+        {
+            SetStatus("Please fix the validation errors above.", "alert-warning", "bi-exclamation-triangle");
+            return;
+        }
+
+        isBusy = true;
+        try
+        {
+            if (CredentialService.SaveCredentials(credentials))
+            {
+                hasCredentials = true;
+                SetStatus("Credentials saved!", "alert-success", "bi-check-circle");
+            }
+            else
+            {
+                SetStatus("Failed to save credentials.", "alert-danger", "bi-x-circle");
+            }
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private async Task TestConnection()
+    {
+        isBusy = true;
+        isTesting = true;
+        SetStatus("Testing connection...", "alert-info", "bi-hourglass-split");
+
+        try
+        {
+            if (credentials.IsConfigured)
+            {
+                CredentialService.SaveCredentials(credentials);
+            }
+
+            var (success, message) = await ConnectionService.TestConnectionAsync();
+            SetStatus(message, success ? "alert-success" : "alert-danger", success ? "bi-check-circle" : "bi-x-circle");
+        }
+        catch (Exception ex)
+        {
+            SetStatus($"Test failed: {ex.Message}", "alert-danger", "bi-x-circle");
+        }
+        finally
+        {
+            isBusy = false;
+            isTesting = false;
+        }
+    }
+
+    private void DeleteCredentials()
+    {
+        if (CredentialService.DeleteCredentials())
+        {
+            credentials = CredentialService.CreateNewCredentials();
+            hasCredentials = false;
+            SetStatus("Credentials deleted.", "alert-info", "bi-trash");
+        }
+    }
+
+    private async Task DetectRemotePath()
+    {
+        if (!CanDetectPath) return;
+
+        isDetecting = true;
+        isBusy = true;
+        SetStatus("Searching for UORespawn folder...", "alert-info", "bi-hourglass-split");
+
+        try
+        {
+            var searchPaths = new List<string>
+            {
+                "/Data/UORespawn",
+                "/ServUO/Data/UORespawn",
+                "/home/ServUO/Data/UORespawn",
+                "/public_html/ServUO/Data/UORespawn",
+                "/var/www/ServUO/Data/UORespawn",
+                "/Server/Data/UORespawn",
+                $"{credentials.RemotePath?.TrimEnd('/')}/Data/UORespawn",
+                $"{credentials.RemotePath?.TrimEnd('/')}"
+            };
+
+            searchPaths = searchPaths.Where(p => !string.IsNullOrWhiteSpace(p)).Distinct().ToList();
+
+            if (!await ConnectionService.ConnectAsync())
+            {
+                SetStatus($"Connection failed: {ConnectionService.LastError}", "alert-danger", "bi-x-circle");
+                return;
+            }
+
+            string? foundPath = null;
+
+            foreach (var path in searchPaths)
+            {
+                SetStatus($"Checking: {path}...", "alert-info", "bi-search");
+                StateHasChanged();
+
+                if (await ConnectionService.DirectoryExistsAsync(path))
+                {
+                    var inputPath = $"{path.TrimEnd('/')}/INPUT";
+                    if (await ConnectionService.DirectoryExistsAsync(inputPath))
+                    {
+                        foundPath = path;
+                        break;
+                    }
+                    foundPath = path;
+                    break;
+                }
+            }
+
+            await ConnectionService.DisconnectAsync();
+
+            if (foundPath != null)
+            {
+                credentials.RemotePath = foundPath;
+                SetStatus($"Found: {foundPath}", "alert-success", "bi-check-circle");
+            }
+            else
+            {
+                SetStatus("UORespawn folder not found. Enter path manually.", "alert-warning", "bi-exclamation-triangle");
+            }
+        }
+        catch (Exception ex)
+        {
+            SetStatus($"Detection failed: {ex.Message}", "alert-danger", "bi-x-circle");
+        }
+        finally
+        {
+            isDetecting = false;
+            isBusy = false;
+        }
+    }
+
+    private void SetStatus(string message, string alertClass, string icon)
+    {
+        statusMessage = message;
+        statusAlertClass = alertClass;
+        statusIcon = icon;
+    }
+
+    private string TruncatePath(string path)
+    {
+        if (string.IsNullOrEmpty(path)) return "";
+        if (path.Length <= 40) return path;
+        return "..." + path[^37..];
+    }
+
+    private async Task UploadSpawnData()
+    {
+        await PerformSync("upload", async () => await SyncService.UploadSpawnDataAsync());
+    }
+
+    private async Task DownloadReferenceData()
+    {
+        await PerformSync("download", async () => await SyncService.DownloadReferenceDataAsync());
+    }
+
+    private async Task PerformSync(string operation, Func<Task<SyncResult>> syncAction)
+    {
+        isSyncing = true;
+        syncOperation = operation;
+        syncMessage = "";
+
+        try
+        {
+            var result = await syncAction();
+            SetSyncStatus(result.Message, result.Success ? "alert-success" : "alert-warning", result.Success ? "bi-check-circle" : "bi-exclamation-triangle");
+        }
+        catch (Exception ex)
+        {
+            SetSyncStatus($"Sync failed: {ex.Message}", "alert-danger", "bi-x-circle");
+        }
+        finally
+        {
+            isSyncing = false;
+            syncOperation = "";
+        }
+    }
+
+    private void SetSyncStatus(string message, string alertClass, string icon)
+    {
+        syncMessage = message;
+        syncAlertClass = alertClass;
+        syncIcon = icon;
+    }
+
+    // ==================== MANUAL EXPORT METHODS ====================
+
+    private async Task ExportServerScripts()
+    {
+        isExporting = true;
+        exportMessage = "";
+        StateHasChanged();
+
+        try
+        {
+            // Get the embedded server scripts
+            var scriptsSourcePath = Path.Combine(AppContext.BaseDirectory, "Data", "SERVER", "UORespawnServer");
+
+            if (!Directory.Exists(scriptsSourcePath))
+            {
+                exportMessage = "Server scripts not found in application bundle.";
+                exportSuccess = false;
+                return;
+            }
+
+            // Create a temp zip file
+            var tempZipPath = Path.Combine(Path.GetTempPath(), "UORespawnServer.zip");
+
+            if (File.Exists(tempZipPath))
+            {
+                File.Delete(tempZipPath);
+            }
+
+            ZipFile.CreateFromDirectory(scriptsSourcePath, tempZipPath);
+
+            // Let user save it
+#if WINDOWS
+            var savePicker = new Windows.Storage.Pickers.FileSavePicker();
+            var window = (Application.Current?.Windows[0]?.Handler?.PlatformView as Microsoft.UI.Xaml.Window);
+            if (window != null)
+            {
+                var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(window);
+                WinRT.Interop.InitializeWithWindow.Initialize(savePicker, hwnd);
+            }
+
+            savePicker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.Downloads;
+            savePicker.SuggestedFileName = "UORespawnServer";
+            savePicker.FileTypeChoices.Add("ZIP Archive", new List<string> { ".zip" });
+
+            var saveFile = await savePicker.PickSaveFileAsync();
+            if (saveFile != null)
+            {
+                File.Copy(tempZipPath, saveFile.Path, true);
+                exportMessage = $"Scripts exported to: {saveFile.Name}";
+                exportSuccess = true;
+            }
+
+            // Cleanup temp file
+            if (File.Exists(tempZipPath))
+            {
+                File.Delete(tempZipPath);
+            }
+#else
+            exportMessage = "Export not available on this platform.";
+            exportSuccess = false;
+            await Task.CompletedTask;
+#endif
+        }
+        catch (Exception ex)
+        {
+            exportMessage = $"Export failed: {ex.Message}";
+            exportSuccess = false;
+            Logger.Error("Error exporting server scripts", ex);
+        }
+        finally
+        {
+            isExporting = false;
+            StateHasChanged();
+        }
+    }
+
+    public void Dispose()
+    {
+        CredentialService.CredentialsChanged -= OnCredentialsChanged;
+        AccountService.ActiveAccountChanged -= OnAccountChanged;
+    }
+}

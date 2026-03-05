@@ -131,36 +131,6 @@ namespace UORespawnApp
         }
 
         /// <summary>
-        /// [DEPRECATED] Use ServerFolder instead.
-        /// Returns the Data folder path for backwards compatibility.
-        /// </summary>
-        [Obsolete("Use ServerFolder instead. This returns derived Data path.")]
-        public static string ServUODataFolder
-        {
-            get
-            {
-                var serverFolder = ServerFolder;
-                if (string.IsNullOrEmpty(serverFolder))
-                    return "";
-                return Path.Combine(serverFolder, "Data");
-            }
-            set
-            {
-                // Convert Data folder path to root folder
-                if (!string.IsNullOrEmpty(value))
-                {
-                    var parent = Path.GetDirectoryName(value);
-                    if (!string.IsNullOrEmpty(parent))
-                        ServerFolder = parent;
-                }
-                else
-                {
-                    ServerFolder = "";
-                }
-            }
-        }
-
-        /// <summary>
         /// The display name of the currently loaded spawn pack.
         /// Shown in UI to identify which pack is active.
         /// Defaults to "DefaultPack" for first-time users.
@@ -500,15 +470,9 @@ namespace UORespawnApp
         /// </summary>
         public static void ToggleBestiaryFavorite(string name)
         {
-            var favorites = BestiaryFavorites;
+            if (string.IsNullOrEmpty(name) || BestiaryFavorites == null) return;
 
-            if (favorites == null) return;
-
-            if (favorites.Contains(name))
-                favorites.Remove(name);
-            else
-                favorites.Add(name);
-            BestiaryFavorites = favorites;
+            BestiaryFavorites = ToggleFavorite(name, BestiaryFavorites);
         }
 
         /// <summary>
@@ -516,15 +480,22 @@ namespace UORespawnApp
         /// </summary>
         public static void ToggleVendorFavorite(string name)
         {
-            var favorites = VendorFavorites;
+            if (string.IsNullOrEmpty(name) || VendorFavorites == null) return;
 
-            if (favorites == null) return;
+            VendorFavorites = ToggleFavorite(name, VendorFavorites);
+        }
 
-            if (favorites.Contains(name))
-                favorites.Remove(name);
-            else
-                favorites.Add(name);
-            VendorFavorites = favorites;
+        /// <summary>
+        /// Helper method to toggle a vendor as favorite
+        /// </summary>
+        private static List<string> ToggleFavorite(string name, List<string> list)
+        {
+            if (!list.Remove(name))
+            {
+                list.Add(name);
+            }
+
+            return list;
         }
 
         /// <summary>

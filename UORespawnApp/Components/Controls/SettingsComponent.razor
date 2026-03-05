@@ -8,132 +8,7 @@
             </div>
 
             <!-- ServUO Server Integration -->
-            <div class="card map-card mb-3">
-                <div class="card-header text-center">
-                    <span class="text-primary" style="font-size: 1.25rem;"><span class="bi bi-hdd-network me-2"></span>ServUO Server Integration</span>
-                    <InfoIcon Text="Link to ServUO folder for automatic file sync" />
-                </div>
-                <div class="card-body text-center">
-                    @if (!DataWatcher.IsSupported)
-                    {
-                        <div class="alert alert-warning mb-3">
-                            <span class="bi bi-exclamation-triangle"></span>
-                            <strong>Not Supported on This Platform</strong>
-                        </div>
-                    }
-
-                    @{
-                        var isConfigured = ServerSetupUtility.IsServerConfigured(Settings.ServerFolder);
-                    }
-
-                    @if (isConfigured)
-                    {
-                        <div class="mb-3">
-                            <span class="badge bg-success d-inline-block text-center" style="font-size: 1rem; padding: 10px 20px; min-width: 200px;">
-                                <span class="bi bi-check-circle me-2"></span>
-                                Active
-                            </span>
-                        </div>
-                        <p class="text-muted mb-3"><small>@Settings.ServerFolder</small></p>
-                    }
-                    else
-                    {
-                        <p class="text-muted mb-3">Select your main ServUO folder to begin</p>
-                    }
-
-                    <!-- Link/Unlink Button -->
-                    <div class="mb-2">
-                        @if (isConfigured)
-                        {
-                            <button class="btn btn-danger btn-lg" 
-                                    style="min-width: 200px;"
-                                    @onclick="UnlinkServer"
-                                    disabled="@(!DataWatcher.IsSupported)">
-                                <span class="bi bi-x-circle"></span> Unlink
-                            </button>
-                        }
-                        else
-                        {
-                            <button class="btn btn-success btn-lg" 
-                                    style="min-width: 200px;"
-                                    @onclick="BrowseServUOFolder"
-                                    disabled="@(!DataWatcher.IsSupported)">
-                                <span class="bi bi-link-45deg"></span> Add Link
-                            </button>
-                        }
-                    </div>
-
-                    <!-- Warning Message -->
-                    @if (!isConfigured)
-                    {
-                        <div class="alert alert-warning mb-3" style="max-width: 500px; margin: 0 auto;">
-                            <span class="bi bi-exclamation-triangle me-2"></span>
-                            <small><strong>Note:</strong> This will install UORespawn server scripts to your ServUO folder. 
-                            Any existing UORespawn installation will be deleted and replaced with the latest version.</small>
-                        </div>
-                    }
-
-                    <!-- For Remote Servers Section -->
-                    <div class="mt-4 pt-3 border-top">
-                        <div class="d-flex align-items-center justify-content-center gap-2 mb-2" style="cursor: pointer;" @onclick="ToggleRemoteServerSection">
-                            <span class="bi bi-cloud-upload text-info"></span>
-                            <strong class="text-info">For Remote Servers</strong>
-                            <span class="bi @(showRemoteServerSection ? "bi-chevron-up" : "bi-chevron-down") text-info small"></span>
-                        </div>
-
-                        @if (showRemoteServerSection)
-                        {
-                            <div class="card bg-dark text-light mb-3" style="max-width: 500px; margin: 0 auto;">
-                                <div class="card-body">
-                                    <p class="small mb-3">
-                                        <span class="bi bi-info-circle me-1"></span>
-                                        Running a server on a remote machine? Export scripts and data files, 
-                                        then manually transfer them to your server. See <strong>Instructions</strong> for full workflow.
-                                    </p>
-
-                                    <!-- Export Server Scripts -->
-                                    <div class="mb-3">
-                                        <button class="btn btn-info w-100" @onclick="ExportServerScripts" disabled="@isExporting">
-                                            @if (isExporting)
-                                            {
-                                                <span class="spinner-border spinner-border-sm me-2"></span>
-                                                <text>Exporting...</text>
-                                            }
-                                            else
-                                            {
-                                                <span class="bi bi-file-earmark-zip me-2"></span>
-                                                <text>Export Server Scripts (.zip)</text>
-                                            }
-                                        </button>
-                                        <small class="text-muted d-block mt-1">Extract to: <code>Scripts/Custom/UORespawnServer/</code></small>
-                                    </div>
-
-                                    <SpawnPackExportCard />
-
-                                    <!-- Export Messages -->
-                                    @if (!string.IsNullOrEmpty(exportMessage))
-                                    {
-                                        <div class="alert @(exportSuccess ? "alert-success" : "alert-danger") small mb-0">
-                                            @exportMessage
-                                        </div>
-                                    }
-                                </div>
-                            </div>
-                        }
-                    </div>
-
-                    <!-- Validation/Setup Messages -->
-                    @if (!string.IsNullOrEmpty(serverSetupMessage))
-                    {
-                        <div class="alert @(serverSetupSuccess ? "alert-success" : "alert-danger")">
-                            @serverSetupMessage
-                        </div>
-                    }
-                </div>
-            </div>
-
-            <!-- FTP Remote Server Integration -->
-            <FtpSettingsCard OnShowAccountModal="ShowAccountModal" />
+            <ServerIntegrationCard OnShowAccountModal="ShowAccountModal" />
 
             <!-- Spawn Settings -->
             <div class="card map-card mb-3">
@@ -217,7 +92,7 @@
                                 <input class="form-check-input" type="checkbox" @bind="Settings.IsScaleSpawn" id="scaleSpawn">
                                 <label class="form-check-label" for="scaleSpawn">
                                     Scale Spawn
-                                    <InfoIcon Text="Spawn increases based on player count" />
+                                    <InfoIcon Text="Scales spawn around player" />
                                 </label>
                             </div>
                         </div>
@@ -274,8 +149,8 @@
                             <div class="form-check form-switch d-inline-block text-start mb-3">
                                 <input class="form-check-input" type="checkbox" @bind="Settings.EnableVendorExtra" id="vendorExtra">
                                 <label class="form-check-label" for="vendorExtra">
-                                    Extra Townsfolk
-                                    <InfoIcon Text="Spawns extra NPCs to fill towns" />
+                                    Extra Patrons
+                                    <InfoIcon Text="Add extra patrons to vendors" />
                                 </label>
                             </div>
                         </div>
@@ -297,7 +172,7 @@
                                 <input class="form-check-input" type="checkbox" @bind="Settings.EnableTownSpawn" id="townSpawn">
                                 <label class="form-check-label" for="townSpawn">
                                     Town Spawn
-                                    <InfoIcon Text="Allow spawns in town regions" />
+                                    <InfoIcon Text="Adds extra NPCs to the towns" />
                                 </label>
                             </div>
                         </div>
@@ -306,7 +181,7 @@
                                 <input class="form-check-input" type="checkbox" @bind="Settings.EnableGraveSpawn" id="graveSpawn">
                                 <label class="form-check-label" for="graveSpawn">
                                     Grave Spawn
-                                    <InfoIcon Text="Enable grave spawn effects" />
+                                    <InfoIcon Text="Enable graves to add undead" />
                                 </label>
                             </div>
                         </div>
@@ -870,7 +745,6 @@
 @inject SpawnPackService SpawnPackService
 @inject AccountService AccountService
 @inject MapImageCacheService MapImageCache
-@using System.IO.Compression
 @using UORespawnApp.Scripts.Constants
 @using UORespawnApp.Scripts.Utilities
 @using UORespawnApp.Scripts.Services
@@ -886,12 +760,6 @@ private string mapUploadMessage = "";
 private bool mapUploadSuccess = false;
 private bool hasMapBackup = false;
 private string boxColorHex = "#8B0000";
-private bool isExporting = false;
-private string exportMessage = "";
-private bool exportSuccess = false;
-private bool showRemoteServerSection = false;
-private string serverSetupMessage = "";
-private bool serverSetupSuccess = false;
 private bool isAddingCustomMap = false; // Flag to distinguish between replace and add modes
 private bool showCompleteResetModal = false;
 private bool cleanServerOnReset = false;
@@ -1061,124 +929,6 @@ private bool showAdvancedSettings = false;
     private void ClearVendorSearch()
     {
         vendorSearchText = "";
-    }
-
-    private async Task BrowseServUOFolder()
-    {
-        try
-        {
-#if WINDOWS
-            // Use Windows folder picker
-            var folderPicker = new Windows.Storage.Pickers.FolderPicker();
-
-            // Get the current window handle
-            var window = (Application.Current?.Windows[0]?.Handler?.PlatformView as Microsoft.UI.Xaml.Window);
-            if (window != null)
-            {
-                var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(window);
-                WinRT.Interop.InitializeWithWindow.Initialize(folderPicker, hwnd);
-            }
-
-            folderPicker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.ComputerFolder;
-            folderPicker.FileTypeFilter.Add("*");
-
-            var folder = await folderPicker.PickSingleFolderAsync();
-            if (folder != null)
-            {
-                // Validate the ServUO folder structure
-                var validation = ServerSetupUtility.ValidateServUOFolder(folder.Path);
-
-                if (validation != null && validation.IsValid)
-                {
-                    // Use FullServerSetup - handles cleanup, version check, installation, and data folder creation
-                    var (success, message) = ServerSetupUtility.FullServerSetup(folder.Path);
-
-                    if (success)
-                    {
-                        // Save the ServUO folder path (Settings.ServerFolder is the root path)
-                        Settings.ServerFolder = folder.Path;
-
-                        serverSetupMessage = $"✓ {message}";
-                        serverSetupSuccess = true;
-
-                        Logger.Info($"ServUO server linked successfully: {folder.Path}");
-                        Logger.Info($"Server scripts: {ServerSetupUtility.GetServerScriptsPath(folder.Path)}");
-                        Logger.Info($"Server data: {ServerSetupUtility.GetServerDataPath(folder.Path)}");
-                    }
-                    else
-                    {
-                        serverSetupMessage = $"✗ {message}";
-                        serverSetupSuccess = false;
-                    }
-                }
-                else
-                {
-                    // Validation failed - show detailed error
-                    var errorDetails = new List<string>();
-
-                    if (validation != null)
-                    {
-                        if (!validation.HasServUOExe) errorDetails.Add("Missing ServUO.exe");
-                        if (!validation.HasDataFolder) errorDetails.Add("Missing Data folder");
-                        if (!validation.HasScriptsFolder) errorDetails.Add("Missing Scripts folder");
-                    }
-
-                    serverSetupMessage = $"✗ Invalid ServUO folder: {string.Join(", ", errorDetails)}";
-                    serverSetupSuccess = false;
-
-                    Logger.Warning($"ServUO folder validation failed: {folder.Path} - {string.Join(", ", errorDetails)}");
-                }
-
-                StateHasChanged();
-            }
-#else
-            // Platform not supported - show a helpful message
-            serverSetupMessage = "✗ Automatic folder picker not available on this platform. Server integration is currently only supported on Windows.";
-            serverSetupSuccess = false;
-            Logger.Info("Folder picker not available on this platform - only Windows is currently supported");
-            await Task.CompletedTask;
-#endif
-        }
-        catch (Exception ex)
-        {
-            serverSetupMessage = $"✗ Error: {ex.Message}";
-            serverSetupSuccess = false;
-            Logger.Error("Error browsing ServUO folder", ex);
-            StateHasChanged();
-        }
-    }
-
-    private void UnlinkServer()
-    {
-        try
-        {
-            // Unlink and cleanup
-            var (success, message) = ServerSetupUtility.UnlinkServer(Settings.ServerFolder);
-
-            // Clear the settings
-            Settings.ServerFolder = string.Empty;
-
-            if (success)
-            {
-                serverSetupMessage = $"✓ {message}";
-                serverSetupSuccess = true;
-                Logger.Info("Server unlinked successfully");
-            }
-            else
-            {
-                serverSetupMessage = $"✗ {message}";
-                serverSetupSuccess = false;
-            }
-
-            StateHasChanged();
-        }
-        catch (Exception ex)
-        {
-            serverSetupMessage = $"✗ Error unlinking: {ex.Message}";
-            serverSetupSuccess = false;
-            Logger.Error("Error unlinking server", ex);
-            StateHasChanged();
-        }
     }
 
     // ==================== MAP BROWSE/UPLOAD METHODS ====================
@@ -1666,117 +1416,6 @@ private bool showAdvancedSettings = false;
         }
 
         return (true, string.Empty);
-    }
-
-    private async Task ExportServerScripts()
-    {
-        isExporting = true;
-        exportMessage = "";
-        StateHasChanged();
-
-        try
-        {
-            Logger.Info("Starting server scripts export...");
-
-            var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-
-            // Look for pre-packaged ZIP file
-            var possiblePaths = new[]
-            {
-                Path.Combine(baseDir, "Data", "SERVER", "UORespawnServer.zip"),           // Published/Runtime location
-                Path.Combine(baseDir, "..", "..", "..", "..", "Data", "SERVER", "UORespawnServer.zip")  // Development
-            };
-
-            string? zipPath = null;
-            foreach (var testPath in possiblePaths)
-            {
-                var fullPath = Path.GetFullPath(testPath);
-                Logger.Info($"Testing: {fullPath}");
-
-                if (File.Exists(fullPath))
-                {
-                    zipPath = fullPath;
-                    Logger.Info($"Found server scripts ZIP at: {zipPath}");
-                    break;
-                }
-            }
-
-            if (string.IsNullOrEmpty(zipPath))
-            {
-                exportMessage = "Error: Server scripts package not found.\n\n" +
-                               "The UORespawnServer.zip file should be in Data/SERVER/.\n" +
-                               "Please ensure the application was installed correctly.";
-                exportSuccess = false;
-                Logger.Warning($"UORespawnServer.zip not found. Searched paths: {string.Join(", ", possiblePaths.Select(Path.GetFullPath))}");
-                return;
-            }
-
-            var zipInfo = new FileInfo(zipPath);
-            Logger.Info($"Server scripts package found ({zipInfo.Length / 1024:N0} KB)");
-
-            // Copy to Downloads folder or use Share
-#if WINDOWS
-            // Windows - save to user's Downloads folder
-            var downloadsPath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            downloadsPath = Path.Combine(downloadsPath, "Downloads", "UORespawn_ServerScripts.zip");
-
-            File.Copy(zipPath, downloadsPath, true);
-
-            exportMessage = $"Server scripts exported to Downloads folder:\n{downloadsPath}";
-            exportSuccess = true;
-            Logger.Info($"File saved to: {downloadsPath}");
-
-            // Open Downloads folder
-            try
-            {
-                System.Diagnostics.Process.Start("explorer.exe", Path.GetDirectoryName(downloadsPath) ?? "");
-            }
-            catch { }
-#elif MACCATALYST
-            // macOS - save to user's Downloads folder
-            var downloadsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", "UORespawn_ServerScripts.zip");
-
-            File.Copy(zipPath, downloadsPath, true);
-
-            exportMessage = $"Server scripts exported to Downloads folder:\n{downloadsPath}";
-            exportSuccess = true;
-            Logger.Info($"File saved to: {downloadsPath}");
-
-            // Open Downloads folder
-            try
-            {
-                System.Diagnostics.Process.Start("open", Path.GetDirectoryName(downloadsPath) ?? "");
-            }
-            catch { }
-#else
-            // Mobile platforms - share
-            await Share.Default.RequestAsync(new ShareFileRequest
-            {
-                Title = "UORespawn Server Scripts",
-                File = new ShareFile(zipPath)
-            });
-
-            exportMessage = "Server scripts ready to share!";
-            exportSuccess = true;
-            Logger.Info("Share request sent");
-#endif
-        }
-        catch (Exception ex)
-        {
-            exportMessage = $"Error exporting server scripts: {ex.Message}";
-            exportSuccess = false;
-            Logger.Error("Export error", ex);
-        }
-        finally
-        {
-            isExporting = false;
-            StateHasChanged();
-        }
-    }
-
-    private void ToggleRemoteServerSection()
-    {
-        showRemoteServerSection = !showRemoteServerSection;
     }
 
     private void ShowAccountModal()
