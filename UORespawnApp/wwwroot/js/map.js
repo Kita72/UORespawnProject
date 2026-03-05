@@ -673,7 +673,8 @@ window.mapModule = {
                 const showDeleteHint = hasSerial && canModify;
                 if (showDeleteHint) {
                     lines.push(''); // Spacer line
-                    lines.push('Press DEL to delete');
+                    lines.push('* [ENTER] to Edit');
+                    lines.push('* [DEL] to Delete');
                 }
 
                 // Measure text for sizing
@@ -735,6 +736,8 @@ window.mapModule = {
                         this.ctx.fillStyle = '#00BFFF'; // Creatures header in blue
                     } else if (line.startsWith('  •') || line.startsWith('  ...')) {
                         this.ctx.fillStyle = '#98FB98'; // Creature names in pale green
+                    } else if (line.includes('Press ENTER')) {
+                        this.ctx.fillStyle = '#00FF7F'; // Edit hint in spring green
                     } else if (line.includes('Press DEL')) {
                         this.ctx.fillStyle = '#FFD700'; // Delete hint in gold
                     } else if (line.includes('No creatures defined')) {

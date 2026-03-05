@@ -498,6 +498,23 @@
                         <li>A <strong>DELETE command</strong> is queued for the server</li>
                     </ol>
 
+                    <h6 class="text-primary mt-4"><span class="bi bi-pencil-square me-2"></span>Editing a Spawner</h6>
+                    <ol>
+                        <li>Enable the <strong>XML toggle</strong> to show spawners</li>
+                        <li>Hover over a spawner circle on the map</li>
+                        <li>Press the <strong>Enter key</strong> while hovering</li>
+                        <li>The <strong>Edit Spawner</strong> modal appears with current settings:
+                            <ul>
+                                <li><strong>Home Range:</strong> Pre-filled with current range</li>
+                                <li><strong>Max Count:</strong> Pre-filled with current count</li>
+                                <li><strong>Creature list:</strong> Pre-populated with existing spawns</li>
+                            </ul>
+                        </li>
+                        <li>Add or remove creatures as needed</li>
+                        <li>Adjust Home Range and Max Count if desired</li>
+                        <li>Click <strong>Save Changes</strong> to queue the command</li>
+                    </ol>
+
                     <h6 class="text-primary mt-4"><span class="bi bi-plus-circle me-2"></span>Adding a Spawner</h6>
                     <ol>
                         <li>Enable the <strong>XML toggle</strong> to activate spawner mode</li>
@@ -523,6 +540,7 @@
                         <li><strong>File Location:</strong> <code>Data/UORespawn/INPUT/UOR_XmlCommands.txt</code></li>
                         <li><strong>Processing:</strong> Server processes commands during startup, then deletes the file</li>
                         <li><strong>DELETE:</strong> Finds the spawner by serial, removes all spawned creatures, deletes the spawner</li>
+                        <li><strong>EDIT:</strong> Finds the spawner by serial, updates home range, max count, and creature list (preserves special syntax)</li>
                         <li><strong>ADD:</strong> Creates a new XmlSpawner at the specified location with your creature list, home range, and max count settings</li>
                     </ul>
 
@@ -531,7 +549,8 @@
                         <ul class="mb-0 mt-2">
                             <li>Server must be <strong>linked</strong> in Settings (Data folder configured)</li>
                             <li>Changes take effect on <strong>next server restart</strong></li>
-                            <li>Legacy spawners without serial IDs cannot be deleted (delete button won't appear)</li>
+                            <li>Legacy spawners without serial IDs cannot be edited or deleted</li>
+                            <li>Each spawner can only have <strong>one pending command</strong> per session</li>
                         </ul>
                     </div>
 
@@ -539,6 +558,7 @@
                         <span class="bi bi-lightning-charge"></span> <strong>Quick Workflow:</strong>
                         <ol class="mb-0 mt-2">
                             <li>Enable XML toggle to see existing spawners</li>
+                            <li>Edit spawners: hover + press <strong>Enter</strong></li>
                             <li>Delete unwanted spawners: hover + press <strong>Delete key</strong></li>
                             <li>Add new spawners: position mouse + press <strong>Backtick (`)</strong></li>
                             <li>Restart your server to apply changes</li>

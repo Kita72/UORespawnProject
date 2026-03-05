@@ -1,0 +1,276 @@
+@using UORespawnApp.Scripts.Utilities
+@using UORespawnApp.Scripts.Services
+@inject XmlSpawnerCommandService XmlSpawnerCommandService
+@inject ToastService ToastService
+
+<div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5); display: flex !important; align-items: center; justify-content: center; height: 100vh;">
+    <div class="modal-dialog" style="margin: 0; max-width: 900px; width: 100%;">
+        <div class="modal-content" style="height: 70vh; min-height: 500px; max-height: 700px; display: flex; flex-direction: column;">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <span class="bi bi-pencil-square text-warning me-2"></span>
+                    Edit XML Spawner
+                    <span class="badge bg-info ms-2">Map @MapId at (@WorldX, @WorldY)</span>
+                </h5>
+                <button type="button" class="btn-close" @onclick="Close"></button>
+            </div>
+            <div class="modal-body" style="flex: 1; overflow: hidden; padding: 0 !important; display: flex; flex-direction: column;">
+                <!-- Sliders Section -->
+                <div class="modal-settings-bar" style="display: flex; gap: 24px; padding: 12px 16px;">
+                    <div style="flex: 1;">
+                        <label class="modal-empty-state" style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 4px;">
+                            <span class="bi bi-arrows-angle-expand me-1"></span>Home Range
+                        </label>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <input type="range" class="form-range" style="flex: 1;" min="10" max="250" @bind="homeRange" @bind:event="oninput" />
+                            <input type="number" class="form-control form-control-sm" style="width: 70px; text-align: center;" min="10" max="250" @bind="homeRange" />
+                        </div>
+                    </div>
+                    <div style="flex: 1;">
+                        <label class="modal-empty-state" style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 4px;">
+                            <span class="bi bi-hash me-1"></span>Max Count
+                        </label>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <input type="range" class="form-range" style="flex: 1;" min="1" max="100" @bind="maxCount" @bind:event="oninput" />
+                            <input type="number" class="form-control form-control-sm" style="width: 70px; text-align: center;" min="1" max="100" @bind="maxCount" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Side-by-Side Layout -->
+                <div style="display: flex; flex: 1; overflow: hidden;">
+                    <!-- Left: Bestiary Search/Select -->
+                    <div class="modal-panel" style="width: 40%; display: flex; flex-direction: column; border-right: 1px solid var(--bs-border-color, #dee2e6);">
+                        <div class="modal-panel-header" style="padding: 12px 16px; font-weight: 600; font-size: 0.9rem;">
+                            <span class="bi bi-search me-2"></span>Bestiary
+                        </div>
+                        <div style="padding: 12px; position: relative;">
+                            <input type="text" 
+                                   class="form-control form-control-sm" 
+                                   style="padding-right: 32px;"
+                                   placeholder="Search creatures..." 
+                                   @bind="searchText" 
+                                   @bind:event="oninput" />
+                            @if (!string.IsNullOrEmpty(searchText))
+                            {
+                                <button class="modal-empty-state" style="position: absolute; right: 18px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 4px;" 
+                                        @onclick="ClearSearch" title="Clear search">
+                                    <span class="bi bi-x-lg"></span>
+                                </button>
+                            }
+                        </div>
+                        <div style="flex: 1; overflow-y: auto; padding: 8px;">
+                            @{
+                                var filteredList = GetFilteredBestiary().ToList();
+                            }
+                            @if (filteredList.Any())
+                            {
+                                @foreach (var creature in filteredList)
+                                {
+                                    var count = selectedCreatures.Count(c => c == creature);
+                                    var hasAny = count > 0;
+                                    <div class="modal-list-item @(hasAny ? "selected" : "")" 
+                                         style="padding: 8px 12px; margin-bottom: 4px; border-radius: 4px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem;"
+                                         @onclick="() => AddCreature(creature)"
+                                         title="Click to add">
+                                        <span>@creature</span>
+                                        <span style="display: flex; align-items: center; gap: 4px;">
+                                            @if (hasAny)
+                                            {
+                                                <span class="badge bg-success" style="font-size: 0.7rem;">@count</span>
+                                            }
+                                            <span class="bi bi-plus-circle text-success"></span>
+                                        </span>
+                                    </div>
+                                }
+                            }
+                            else if (!string.IsNullOrEmpty(searchText))
+                            {
+                                <div class="modal-empty-state" style="display: flex; flex-direction: column; align-items: center; padding: 24px; text-align: center; gap: 8px;">
+                                    <span class="bi bi-emoji-frown" style="font-size: 1.5rem; opacity: 0.5;"></span>
+                                    <span>No matches for "@searchText"</span>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="modal-empty-state" style="display: flex; flex-direction: column; align-items: center; padding: 24px; text-align: center; gap: 8px;">
+                                    <span class="bi bi-search" style="font-size: 1.5rem; opacity: 0.5;"></span>
+                                    <span>Type to search...</span>
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Right: Selected Spawns -->
+                    <div class="modal-panel-alt" style="width: 60%; display: flex; flex-direction: column;">
+                        <div class="modal-panel-header" style="padding: 12px 16px; font-weight: 600; font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center;">
+                            <span>
+                                <span class="bi bi-list-check me-2"></span>Selected
+                                <span class="badge bg-secondary ms-2">@selectedCreatures.Count</span>
+                            </span>
+                            @if (selectedCreatures.Count > 0)
+                            {
+                                <button class="btn btn-sm btn-outline-danger" @onclick="ClearCreatures" title="Clear all">
+                                    <span class="bi bi-trash"></span>
+                                </button>
+                            }
+                        </div>
+                        <div style="flex: 1; overflow-y: auto; padding: 12px;">
+                            @if (selectedCreatures.Count > 0)
+                            {
+                                @foreach (var spawn in selectedCreatures)
+                                {
+                                    <div class="modal-list-item" style="padding: 10px 14px; margin-bottom: 6px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
+                                        <span style="font-weight: 500; font-size: 0.95rem;">@spawn</span>
+                                        <button class="btn btn-sm btn-outline-danger" 
+                                                style="opacity: 0.7; padding: 2px 6px;"
+                                                @onclick="() => RemoveCreature(spawn)" 
+                                                title="Remove">
+                                            <span class="bi bi-x-lg"></span>
+                                        </button>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <div class="modal-empty-state" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; padding: 24px;">
+                                    <span class="bi bi-inbox" style="font-size: 2rem; opacity: 0.3;"></span>
+                                    <p style="margin: 12px 0 4px 0; font-weight: 500;">No spawns selected</p>
+                                    <small>Search and click creatures on the left to add them</small>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" @onclick="Close">Cancel</button>
+                <button type="button" class="btn btn-warning" @onclick="SaveChanges" disabled="@(selectedCreatures.Count == 0)">
+                    <span class="bi bi-check-lg me-1"></span>Save Changes (@selectedCreatures.Count)
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Serial { get; set; } = string.Empty;
+    [Parameter] public int MapId { get; set; }
+    [Parameter] public int WorldX { get; set; }
+    [Parameter] public int WorldY { get; set; }
+    [Parameter] public int InitialHomeRange { get; set; } = 20;
+    [Parameter] public int InitialMaxCount { get; set; } = 10;
+    [Parameter] public List<string> InitialSpawnNames { get; set; } = [];
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private int homeRange;
+    private int maxCount;
+    private string searchText = "";
+    private List<string> selectedCreatures = [];
+
+    protected override void OnInitialized()
+    {
+        // Initialize from parameters
+        homeRange = InitialHomeRange > 0 ? InitialHomeRange : 20;
+        maxCount = InitialMaxCount > 0 ? InitialMaxCount : 10;
+        
+        // Pre-populate with existing spawn names
+        if (InitialSpawnNames != null && InitialSpawnNames.Count > 0)
+        {
+            selectedCreatures = [.. InitialSpawnNames];
+        }
+    }
+
+    private IEnumerable<string> GetFilteredBestiary()
+    {
+        var list = BestiaryListUtility.BestiaryNameList ?? [];
+
+        if (string.IsNullOrWhiteSpace(searchText))
+        {
+            return list.Take(50); // Show first 50 by default
+        }
+
+        return list
+            .Where(c => c.Contains(searchText, StringComparison.OrdinalIgnoreCase))
+            .Take(50);
+    }
+
+    private void ClearSearch()
+    {
+        searchText = "";
+    }
+
+    private void AddCreature(string name)
+    {
+        selectedCreatures.Add(name);
+        StateHasChanged();
+    }
+
+    private void RemoveCreature(string name)
+    {
+        // Remove the last occurrence of this creature
+        var index = selectedCreatures.LastIndexOf(name);
+        if (index >= 0)
+        {
+            selectedCreatures.RemoveAt(index);
+        }
+        StateHasChanged();
+    }
+
+    private void ClearCreatures()
+    {
+        selectedCreatures.Clear();
+        StateHasChanged();
+    }
+
+    private async Task SaveChanges()
+    {
+        if (selectedCreatures.Count == 0)
+        {
+            ToastService.ShowWarning("Please select at least one creature");
+            return;
+        }
+
+        if (string.IsNullOrEmpty(Serial))
+        {
+            ToastService.ShowWarning("Cannot edit: Spawner has no serial ID");
+            return;
+        }
+
+        // Check for existing pending command
+        var pendingCmd = XmlSpawnerCommandService.GetPendingCommand(Serial);
+        if (pendingCmd != null)
+        {
+            ToastService.ShowWarning($"Cannot edit: Spawner already has pending {pendingCmd} command");
+            return;
+        }
+
+        // Write the edit command
+        if (XmlSpawnerCommandService.WriteEditCommand(Serial, homeRange, maxCount, selectedCreatures))
+        {
+            var creatureSummary = string.Join(", ", selectedCreatures
+                .GroupBy(c => c)
+                .Select(g => g.Count() > 1 ? $"{g.Key} x{g.Count()}" : g.Key)
+                .Take(3));
+
+            if (selectedCreatures.GroupBy(c => c).Count() > 3)
+            {
+                creatureSummary += "...";
+            }
+
+            Logger.Info($"XML Spawner edit command sent: {Serial} Range:{homeRange} MaxCount:{maxCount} Creatures:{creatureSummary}");
+            ToastService.ShowWarning($"Edit command sent. Changes will apply when server restarts.");
+
+            await Close();
+        }
+        else
+        {
+            ToastService.ShowWarning("Failed to write edit command");
+        }
+    }
+
+    private async Task Close()
+    {
+        await OnClose.InvokeAsync();
+    }
+}

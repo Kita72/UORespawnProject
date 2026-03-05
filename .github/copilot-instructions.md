@@ -11,8 +11,6 @@ UORespawn is a professional spawn management system for Ultima Online servers ru
 ---
 
 ## Project Structure Mind Map
-
-```
 UORespawnProject/
 ├── UORespawnApp/                    # Main MAUI Blazor Hybrid application
 │   ├── Components/
@@ -39,22 +37,16 @@ UORespawnProject/
         ├── Core/                    # Core spawn engine
         ├── Entities/                # Server entity definitions
         └── Mobiles/                 # Custom mobile behaviors
-```
-
 ---
 
 ## Architecture
 
 ### Server Directory Structure (v2.0+)
-When linked to ServUO, the server uses this folder structure under `Data/UORespawn/`:
-```
-UORespawn/
+When linked to ServUO, the server uses this folder structure under `Data/UORespawn/`:UORespawn/
 ├── INPUT/       # Editor writes .bin files here (server reads)
 ├── OUTPUT/      # Server writes .txt files here (editor reads)
 ├── STATS/       # Heatmap/player spawn statistics
 └── SYS/         # Internal tracking files
-```
-
 ### Data Flow
 1. **Editor → Server**: Editor saves `.bin` files to `Data/UOR_DATA/`, DataWatcher syncs to server's `INPUT/`
 2. **Server → Editor**: Server auto-generates `.txt` files in `OUTPUT/` on startup (bestiary, regions, spawners, vendors)
@@ -167,6 +159,9 @@ UORespawn/
 - **XML Toggle**: Green circles showing XML spawner locations
 - **Spawns Toggle**: Colored dots showing player spawn statistics
 - **Spawn Boxes**: Click to select, golden glow on hover
+
+### Map Component Consistency
+- When implementing any map-related feature (XML spawners, overlays, keyboard shortcuts, etc.), ALWAYS apply changes to ALL THREE map components: `BoxSpawnComponent`, `RegionSpawnComponent`, and `VendorSpawnComponent`. These share the same map canvas functionality and should have consistent behavior.
 
 ---
 

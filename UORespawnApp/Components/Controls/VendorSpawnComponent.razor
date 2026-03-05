@@ -61,7 +61,7 @@
                         <strong>Controls:</strong> Left-Click Sign/Hive = Select | Right-Drag = Pan | Arrow Keys/WASD = Pan
                         @if (ViewService.ShowXMLSpawners)
                         {
-                            <span style="color: #28a745;"> | XML Keys - Add[`] | Delete[DEL]</span>
+                            <span style="color: #28a745;"> | XML Keys - Add[`] | Edit[Enter] | Delete[DEL]</span>
                         }
                     </small>
                 </div>
@@ -277,6 +277,20 @@
         OnClose="@CancelAddXmlSpawner" />
 }
 
+<!-- Edit XML Spawner Modal -->
+@if (showEditXmlModal)
+{
+    <EditXmlSpawnerModal 
+        Serial="@editXmlSerial"
+        MapId="@ViewService.CurrentMapId"
+        WorldX="@editXmlWorldX"
+        WorldY="@editXmlWorldY"
+        InitialHomeRange="@editXmlHomeRange"
+        InitialMaxCount="@editXmlMaxCount"
+        InitialSpawnNames="@editXmlSpawnNames"
+        OnClose="@CancelEditXmlSpawner" />
+}
+
 @code {
     private string imageSrc = "";
     private string imageDim = "Loading...";
@@ -336,6 +350,15 @@
     private bool showAddXmlModal = false;
     private int addXmlWorldX = 0;
     private int addXmlWorldY = 0;
+
+    // XML Spawner edit modal state
+    private bool showEditXmlModal = false;
+    private string editXmlSerial = string.Empty;
+    private int editXmlWorldX = 0;
+    private int editXmlWorldY = 0;
+    private int editXmlHomeRange = 20;
+    private int editXmlMaxCount = 10;
+    private List<string> editXmlSpawnNames = [];
 
     // Sign type group for UI display
     private class SignTypeGroup
@@ -807,6 +830,13 @@
         if (key == "delete" && ViewService.ShowXMLSpawners)
         {
             await TryDeleteHoveredXmlSpawner();
+            return;
+        }
+
+        // Handle Enter key for XML spawner edit
+        if (key == "enter" && ViewService.ShowXMLSpawners)
+        {
+            await TryEditHoveredXmlSpawner();
             return;
         }
 
@@ -1723,6 +1753,18 @@
             return;
         }
 
+        // Check for existing pending command
+        var pendingCmd = XmlSpawnerCommandService.GetPendingCommand(pendingDeleteSerial);
+        if (pendingCmd != null)
+        {
+            ToastService.ShowWarning($"Cannot delete: Spawner already has pending {pendingCmd} command");
+            showDeleteConfirmation = false;
+            pendingDeleteSerial = null;
+            pendingDeleteIdx = -1;
+            StateHasChanged();
+            return;
+        }
+
         // Write delete command
         if (XmlSpawnerCommandService.WriteDeleteCommand(pendingDeleteSerial))
         {
@@ -1758,6 +1800,87 @@
         showAddXmlModal = false;
         addXmlWorldX = 0;
         addXmlWorldY = 0;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Attempts to edit the currently hovered XML spawner via Enter key.
+    /// </summary>
+    private async Task TryEditHoveredXmlSpawner()
+    {
+        try
+        {
+            // Get hovered XML spawner from JavaScript
+            var result = await JS.InvokeAsync<string>("eval", "JSON.stringify(window.mapModule.getHoveredXmlSpawner())");
+            if (string.IsNullOrEmpty(result) || result == "null")
+            {
+                // No spawner hovered, do nothing
+                return;
+            }
+
+            // Parse the spawner data
+            using var doc = System.Text.Json.JsonDocument.Parse(result);
+            var root = doc.RootElement;
+
+            var serial = root.TryGetProperty("serial", out var serialProp) ? serialProp.GetString() : null;
+
+            if (string.IsNullOrEmpty(serial))
+            {
+                ToastService.ShowWarning("Cannot edit: Spawner has no serial ID");
+                return;
+            }
+
+            if (!XmlSpawnerCommandService.CanWriteCommands())
+            {
+                ToastService.ShowWarning("Cannot edit: Server not linked. Link your server in Settings first.");
+                return;
+            }
+
+            // Check for existing pending command
+            var pendingCmd = XmlSpawnerCommandService.GetPendingCommand(serial);
+            if (pendingCmd != null)
+            {
+                ToastService.ShowWarning($"Cannot edit: Spawner already has pending {pendingCmd} command");
+                return;
+            }
+
+            // Get full spawner info from utility
+            var spawner = SpawnerListUtility.GetSpawnerBySerial(serial);
+            if (spawner == null)
+            {
+                ToastService.ShowWarning("Cannot edit: Spawner data not found");
+                return;
+            }
+
+            // Populate edit modal state
+            editXmlSerial = serial;
+            editXmlWorldX = spawner.CenterX;
+            editXmlWorldY = spawner.CenterY;
+            editXmlHomeRange = spawner.Radius > 0 ? spawner.Radius : 20;
+            editXmlMaxCount = spawner.MaxCount > 0 ? spawner.MaxCount : 10;
+            editXmlSpawnNames = spawner.SpawnNames != null ? [.. spawner.SpawnNames] : [];
+
+            // Show edit modal
+            showEditXmlModal = true;
+            await InvokeAsync(StateHasChanged);
+
+            Logger.Info($"Opening Edit XML Spawner modal for {serial} at ({editXmlWorldX}, {editXmlWorldY})");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Error getting hovered XML spawner for edit", ex);
+        }
+    }
+
+    private void CancelEditXmlSpawner()
+    {
+        showEditXmlModal = false;
+        editXmlSerial = string.Empty;
+        editXmlWorldX = 0;
+        editXmlWorldY = 0;
+        editXmlHomeRange = 20;
+        editXmlMaxCount = 10;
+        editXmlSpawnNames = [];
         StateHasChanged();
     }
 
