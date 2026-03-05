@@ -12,8 +12,8 @@
 @implements IDisposable
 
 <div class="container-fluid p-3">
-    <div class="row">
-        <div class="col-lg-9">
+    <div class="spawn-editor-layout">
+        <div class="map-column">
             <div class="alert alert-dark mb-2 d-flex justify-content-between align-items-center" style="width:@(ViewportConstants.ViewportWidth)px;">
                 <div class="d-flex align-items-center gap-2">
                     <span class="bi bi-geo-alt" style="color: goldenrod;"></span>
@@ -65,7 +65,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-lg-3 right-column-container" style="padding-left:15px;">
+        <div class="sidebar-column right-column-container">
             <!-- Mini Map Component -->
             <MiniMapComponent @ref="miniMapRef"
                               CanvasId="regionMiniMapCanvas"

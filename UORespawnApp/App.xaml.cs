@@ -44,9 +44,6 @@ namespace UORespawnApp
             };
 
 #if WINDOWS
-            window.MaximumWidth = double.PositiveInfinity;
-            window.MaximumHeight = double.PositiveInfinity;
-
             window.Created += (s, e) =>
             {
                 var platformWindow = window.Handler?.PlatformView as Microsoft.UI.Xaml.Window;
@@ -59,7 +56,13 @@ namespace UORespawnApp
                     if (appWindow != null)
                     {
                         var presenter = appWindow.Presenter as Microsoft.UI.Windowing.OverlappedPresenter;
-                        presenter?.Maximize();
+                        if (presenter != null)
+                        {
+                            // Open maximized and lock it there
+                            presenter.Maximize();             // Start maximized (respects taskbar)
+                            presenter.IsResizable = false;    // Disable edge dragging to resize
+                            presenter.IsMaximizable = false;  // Disable maximize/restore button
+                        }
                     }
                 }
             };

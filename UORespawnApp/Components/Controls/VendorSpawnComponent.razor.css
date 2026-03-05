@@ -75,6 +75,27 @@
     filter: brightness(1.2);
 }
 
+/* ============================================
+   SPAWN EDITOR LAYOUT - Flexbox for responsive sidebar
+   ============================================ */
+.spawn-editor-layout {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+}
+
+/* Map column - fixed width for the map canvas */
+.map-column {
+    flex-shrink: 0;
+}
+
+/* Sidebar column - grows to fill remaining space */
+.sidebar-column {
+    flex: 1;
+    min-width: 280px;
+    max-width: 450px;
+}
+
 /* Right column container - flex to fill space */
 .right-column-container {
     display: flex;

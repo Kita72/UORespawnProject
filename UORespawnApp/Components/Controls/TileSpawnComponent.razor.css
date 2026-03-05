@@ -1,18 +1,62 @@
-/* Tile List Container - Flex layout with height constraints */
-.tile-list-container {
+/* ============================================
+   ECOLOGY BANNER CARD
+   ============================================ */
+.ecology-banner-card .card {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    border: 1px solid #333;
+}
+
+.ecology-banner-icon {
+    font-size: 2.5rem;
+    color: goldenrod;
+}
+
+.ecology-banner-title {
+    color: goldenrod;
+    font-weight: 600;
+}
+
+.ecology-banner-btn {
+    white-space: nowrap;
+}
+
+/* Light Theme - Ecology Banner */
+body.light-theme .ecology-banner-card .card {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-color: #dee2e6;
+}
+
+body.light-theme .ecology-banner-icon {
+    color: #b8860b;
+}
+
+body.light-theme .ecology-banner-title {
+    color: #b8860b;
+}
+
+/* ============================================
+   TILE COLUMN CARDS - Fixed height for all 3 columns
+   ============================================ */
+.tile-column-card {
+    height: calc(100vh - 230px); /* Fixed height: viewport minus header, padding, and ecology banner */
+    min-height: 450px;
     display: flex;
     flex-direction: column;
-    max-height: calc(100vh - 180px); /* Dynamic height based on viewport */
-    min-height: 400px; /* Prevent over-shrinking */
     overflow: hidden;
 }
 
-/* Tile List Body - Scrollable at ~90% of original height (540px vs 600px) */
+.tile-column-card > .card-body {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+/* Tile List Body - Scrollable */
 .tile-list-body {
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
-    max-height: 540px; /* Reduced from 600px to ~90% */
+    min-height: 0;
 }
 
 /* Tile List Styling */
@@ -127,15 +171,6 @@ body.light-theme .tile-item.selected {
 }
 
 /* ==================== TILE IMAGE VIEWER ==================== */
-
-/* Tile Image Container - Match tile list height */
-.tile-image-container {
-    display: flex;
-    flex-direction: column;
-    max-height: calc(100vh - 180px);
-    min-height: 400px;
-    overflow: hidden;
-}
 
 /* Tile Image Body */
 .tile-image-body {
