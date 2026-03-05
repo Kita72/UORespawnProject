@@ -23,7 +23,7 @@
 
 UORespawn is a modern .NET MAUI application that provides a comprehensive visual interface for creating and managing spawn systems in Ultima Online ServUO servers. It offers three complementary spawn methods to populate your world with creatures and NPCs.
 
-**Version:** 2.0.0.9  
+**Version:** 2.0.1.1  
 **Platform:** Windows, macOS  
 **Framework:** .NET 10 MAUI with Blazor  
 **License:** MIT
@@ -42,6 +42,10 @@ UORespawn is a modern .NET MAUI application that provides a comprehensive visual
 - Six frequency tiers (Common, Uncommon, Rare, Water, Weather, Timed)
 - **Interactive XML spawner overlay** - hover to highlight, click for tooltip with location and home range
 - **Interactive server spawn statistics** - dwell-based tooltips showing player name, location, and total spawn events
+- **XML Spawner Management (v2.0.1.0+)**:
+  - Right-click to add new XML spawners with HomeRange/MaxCount configuration
+  - Press **DEL** while hovering to delete XML spawners
+  - Press **ENTER** while hovering to edit XML spawners (v2.0.1.1+)
 
 ### 🏰 Region Spawn System
 - Spawn creatures by named server regions
@@ -96,12 +100,13 @@ UORespawn is a modern .NET MAUI application that provides a comprehensive visual
 - **Professional Admin GUI** - In-game control panel with `[UORespawn`
 - **Intelligent Recycling** - Up to 60% mob reuse for optimal performance
 - **Real-time Metrics** - Monitor spawn performance with `[SpawnStats`
+- **Debug Mode** - Use `[ShowRespawn` to see all spawnable creatures at your location
 - **Spawn Packs** - Three-category system (Approved, Created, Imported) for managing spawn configurations
 - Pack Dashboard with detailed statistics (entry counts + location counts)
 - **Intelligent pack sync** - Only syncs changes when actual edits are made
 - **Bestiary Favorites** - Star creatures for quick access in spawn modals
 - **Vendor Favorites** - Star vendors for quick access in vendor spawn editor
-- Dark theme UI
+- **Light/Dark Theme Support** - Full theming with automatic contrast adjustments (v2.0.1.0+)
 - Custom map image replacement (including custom maps beyond default 6)
 - Bestiary management (600+ creatures)
 

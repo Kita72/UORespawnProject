@@ -5,6 +5,51 @@ All notable changes to UORespawn will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1.1] - 2026-03-05
+
+### Added
+
+#### XML Spawner Editing
+- **Edit XML Spawner** - Press ENTER while hovering over an XML spawner on the map to edit it
+  - EditXmlSpawnerModal component with HomeRange and MaxCount sliders
+  - Side-by-side layout: bestiary list (left) + current spawn entries (right)
+  - Click bestiary creatures to add, click existing entries to remove
+  - Favorites support for quick access to commonly used creatures
+  - Applies to Box Spawn, Region Spawn, and Vendor Spawn map editors
+- **Updated JavaScript Tooltips** - Map tooltips now show both "Press ENTER to edit" and "Press DEL to delete"
+
+#### Documentation
+- **[ShowRespawn] Command** - Added to Instructions page Debug Mode section
+  - In-game command documentation with usage table
+  - Shows all spawnable creatures at your location
+
+### Changed
+
+#### Settings Page Reorganization
+- **ServerIntegrationCard** - New unified component combining all server integration options
+  - Local/Remote toggle replaces separate cards
+  - Remote mode includes FTP/Manual sub-selection
+  - Cleaner, more organized settings layout
+- **Removed FtpSettingsCard** - Functionality consolidated into ServerIntegrationCard
+
+#### Tooltip Corrections
+- **Scale Spawn** - Fixed tooltip: "Minimum scale factor for spawned creatures (0.75 = 75% size)"
+- **Extra Patrons** - Renamed from "Extra Townsfolk" with corrected tooltip about additional vendor patrons
+- **Town Spawn** - Fixed tooltip: "Spawn town creatures and NPCs within town boundaries"
+- **Grave Spawn** - Fixed tooltip: "Spawn undead creatures near grave/cemetery areas"
+
+### Fixed
+- **Light Theme Button Contrast** - Fixed `btn-outline-light` buttons invisible in light mode
+  - Spawn Pack page Import button now visible in both themes
+  - Modal buttons properly styled for light/dark themes
+  - Uses dark text (#495057) and medium border (#6c757d) in light mode
+
+### Technical
+- `EditXmlSpawnerModal.razor` component with full CRUD support for XML spawner editing
+- `ServerIntegrationCard.razor` consolidates Local Link, FTP Sync, and Manual Export options
+- CSS light theme overrides in `SpawnPacksComponent.razor.css` for button visibility
+- Build verified with .NET 10 - no warnings or errors
+
 ## [2.0.1.0] - 2026-03-04
 
 ### Added
