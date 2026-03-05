@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Collections.Generic;
 
 using Server.Misc;
@@ -8,7 +9,6 @@ using Server.Items;
 using Server.Mobiles;
 using Server.Commands;
 using Server.Targeting;
-using System.Reflection;
 
 using Server.Custom.UORespawnServer.Enums;
 using Server.Custom.UORespawnServer.Items;
@@ -20,6 +20,7 @@ using Server.Custom.UORespawnServer.Helpers;
 using Server.Custom.UORespawnServer.Spawners;
 
 using CPA = Server.CommandPropertyAttribute;
+using Server.Engines.Harvest;
 
 namespace Server.Custom.UORespawnServer
 {
@@ -314,12 +315,14 @@ namespace Server.Custom.UORespawnServer
         {
             try
             {
-                var maxRng = UOR_Settings.MAX_RANGE;
+                int min = UOR_Settings.MIN_RANGE;
+                int max = UOR_Settings.MIN_RANGE;
+                bool lava = false;
 
                 // 1. Single Loop Strategy: Keep looking until VALID or MAX_ATTEMPTS
                 while (entity.ATTEMPTS++ < UOR_Settings.MAX_SPAWN_CHECKS)
                 {
-                    entity.LOCATION = GetSpawnPoint(pm.Location, UOR_Settings.MIN_RANGE, maxRng, pm.Map, out bool isWater);
+                    entity.LOCATION = GetSpawnPoint(pm.Location, min, max, pm.Map, out bool isWater, out lava);
 
                     if (Utility.RandomDouble() > UOR_Settings.CHANCE_WATER && !IsWaterLimit(isWater))
                     {
@@ -373,7 +376,7 @@ namespace Server.Custom.UORespawnServer
                     // Add to queue so the next 'Locate' call avoids this area
                     QueueSpawnLocation(pm.Map, entity.LOCATION);
 
-                    return new SpawnEntity(pm.Map, entity.LOCATION);
+                    return new SpawnEntity(pm.Map, entity.LOCATION) { HitLava = lava };
                 }
                 else if (UOR_Settings.ENABLE_DEBUG)
                 {
@@ -416,11 +419,13 @@ namespace Server.Custom.UORespawnServer
             return new Rectangle2D(loc.X - rad, loc.Y - rad, rad * 2, rad * 2);
         }
 
-        internal static Point3D GetSpawnPoint(Point3D center, int min, int max, Map map, out bool isWater)
+        internal static Point3D GetSpawnPoint(Point3D center, int min, int max, Map map, out bool isWater, out bool isLava)
         {
             if (map == null || map == Map.Internal)
             {
                 isWater = false;
+
+                isLava = false;
 
                 return Point3D.Zero;
             }
@@ -444,22 +449,47 @@ namespace Server.Custom.UORespawnServer
             if (map.CanSpawnMobile(x, y, z))
             {
                 isWater = false;
+
+                isLava = false;
+
                 return new Point3D(x, y, z);
             }
             else
             {
-                var waterPoint = new Point3D(x, y, z);
+                var specialPoint = new Point3D(x, y, z);
 
-                if (GetTileName(map, waterPoint) == "water")
+                var name = GetTileName(map, specialPoint);
+
+                if (!string.IsNullOrEmpty(name))
                 {
-                    isWater = true;
+                    switch (name)
+                    {
+                        case "water":
+                            {
+                                isWater = true;
 
-                    return waterPoint;
+                                isLava = false;
+
+                                return specialPoint;
+                            }
+
+                        case "lava":
+                            {
+                                isWater = false;
+
+                                isLava = true;
+
+                                return Point3D.Zero;
+                            }
+                    }
                 }
             }
 
             // Fallback: If no valid spot found, return Point3D.Zero or center
             isWater = false;
+
+            isLava = false;
+
             return Point3D.Zero;
         }
 

@@ -32,6 +32,7 @@ namespace Server.Custom.UORespawnServer.Entities
         internal bool IsNight { get; set; }
         internal bool IsTown { get; set; }
         internal bool IsDungeon { get; set; }
+        internal bool HitLava { get; set; } = false;
 
         public SpawnEntity(Map map, Point3D location)
         {
@@ -55,9 +56,7 @@ namespace Server.Custom.UORespawnServer.Entities
 
             SetFrequency();
 
-            SetSpawnType();
-
-            if (string.IsNullOrEmpty(Name))
+            if (SetSpawnType())
             {
                 SetSpawn();
             }
@@ -75,7 +74,7 @@ namespace Server.Custom.UORespawnServer.Entities
 
         private void SetTile()
         {
-            TileName = UOR_Utility.GetTileName(Facet, Location);
+            TileName = HitLava? "lava" : UOR_Utility.GetTileName(Facet, Location);
         }
 
         private void SetRegion()
@@ -156,17 +155,32 @@ namespace Server.Custom.UORespawnServer.Entities
             }
         }
 
-        private void SetSpawnType()
+        private bool SetSpawnType()
         {
-            if (SpawnType == SpawnTypes.None)
+            if (IsDungeon || IsTown)
             {
-                switch (Utility.Random(3))
-                {
-                    case 1: SpawnType = SpawnTypes.Box; break;
-                    case 2: SpawnType = SpawnTypes.Region; break;
-                    default: SpawnType = SpawnTypes.Tile; break;
-                }
+                SpawnType = SpawnTypes.Region;
+
+                return true;
             }
+
+            if (!string.IsNullOrEmpty(BoxSpawner.TryBoxSpawn(this)))
+            {
+                SpawnType = SpawnTypes.Box;
+
+                return true;
+            }
+
+            if (!string.IsNullOrEmpty(RegionSpawner.TryRegionSpawn(this)))
+            {
+                SpawnType = SpawnTypes.Region;
+
+                return true;
+            }
+
+            SpawnType = SpawnTypes.Tile;
+
+            return true;
         }
 
         private void SetSpawn()

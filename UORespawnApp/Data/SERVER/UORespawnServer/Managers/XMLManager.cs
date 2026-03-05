@@ -18,6 +18,7 @@ namespace Server.Custom.UORespawnServer.Managers
         // Command types
         private const string CMD_DELETE = "DELETE";
         private const string CMD_ADD = "ADD";
+        private const string CMD_EDIT = "EDIT";
 
         /// <summary>
         /// Processes all pending XML spawner commands from the command file.
@@ -34,6 +35,7 @@ namespace Server.Custom.UORespawnServer.Managers
 
             int deleted = 0;
             int added = 0;
+            int edited = 0;
             int failed = 0;
 
             try
@@ -72,6 +74,13 @@ namespace Server.Custom.UORespawnServer.Managers
                                 failed++;
                             break;
 
+                        case CMD_EDIT:
+                            if (ProcessEditCommand(parts))
+                                edited++;
+                            else
+                                failed++;
+                            break;
+
                         default:
                             failed++;
                             UOR_Utility.SendMsg(ConsoleColor.Yellow, $"XMLCMD-[Unknown command: {command}]");
@@ -82,7 +91,7 @@ namespace Server.Custom.UORespawnServer.Managers
                 // Delete command file after processing to prevent re-execution
                 File.Delete(CommandFilePath);
 
-                UOR_Utility.SendMsg(ConsoleColor.Green, $"XMLCMD-[Processed: {deleted} deleted, {added} added, {failed} failed]");
+                UOR_Utility.SendMsg(ConsoleColor.Green, $"XMLCMD-[Processed: {deleted} deleted, {added} added, {edited} edited, {failed} failed]");
             }
             catch (Exception ex)
             {
@@ -247,6 +256,225 @@ namespace Server.Custom.UORespawnServer.Managers
                 UOR_Utility.SendMsg(ConsoleColor.Red, $"XMLCMD-[ADD: Error creating spawner: {ex.Message}]");
                 return false;
             }
+        }
+
+        /// <summary>
+        /// Processes an EDIT command.
+        /// Format: EDIT|Serial|HomeRange|MaxCount|Creature1:Count1|Creature2:Count2|...
+        /// Preserves XmlSpawner special syntax (e.g., /Cantwalk/true) for existing creatures.
+        /// </summary>
+        private static bool ProcessEditCommand(string[] parts)
+        {
+            // Minimum: EDIT|Serial|HomeRange|MaxCount|Creature:Count = 5 parts
+            if (parts.Length < 5)
+            {
+                UOR_Utility.SendMsg(ConsoleColor.Red, "XMLCMD-[EDIT: Insufficient parameters]");
+                return false;
+            }
+
+            // Parse serial
+            if (!int.TryParse(parts[1], out int serialValue))
+            {
+                UOR_Utility.SendMsg(ConsoleColor.Red, $"XMLCMD-[EDIT: Invalid serial format: {parts[1]}]");
+                return false;
+            }
+
+            // Parse HomeRange and MaxCount
+            if (!int.TryParse(parts[2], out int homeRange) ||
+                !int.TryParse(parts[3], out int maxCount))
+            {
+                UOR_Utility.SendMsg(ConsoleColor.Red, "XMLCMD-[EDIT: Invalid HomeRange/MaxCount parameters]");
+                return false;
+            }
+
+            // Find the spawner
+            Item item = World.FindItem((Serial)serialValue);
+
+            if (item == null)
+            {
+                UOR_Utility.SendMsg(ConsoleColor.Yellow, $"XMLCMD-[EDIT: Spawner not found: {serialValue}]");
+                return false;
+            }
+
+            // Parse creature list (parts 4 onwards)
+            var creatures = new List<(string typeName, int count)>();
+
+            for (int i = 4; i < parts.Length; i++)
+            {
+                string[] creatureParts = parts[i].Split(':');
+
+                if (creatureParts.Length != 2)
+                {
+                    UOR_Utility.SendMsg(ConsoleColor.Yellow, $"XMLCMD-[EDIT: Invalid creature format: {parts[i]}]");
+                    continue;
+                }
+
+                string typeName = creatureParts[0];
+
+                if (!int.TryParse(creatureParts[1], out int count) || count <= 0)
+                {
+                    UOR_Utility.SendMsg(ConsoleColor.Yellow, $"XMLCMD-[EDIT: Invalid count for {typeName}]");
+                    continue;
+                }
+
+                creatures.Add((typeName, count));
+            }
+
+            if (creatures.Count == 0)
+            {
+                UOR_Utility.SendMsg(ConsoleColor.Red, "XMLCMD-[EDIT: No valid creatures specified]");
+                return false;
+            }
+
+            try
+            {
+                // Handle XmlSpawner
+                if (item is XmlSpawner xmlSpawner)
+                {
+                    return EditXmlSpawner(xmlSpawner, homeRange, maxCount, creatures);
+                }
+
+                // Handle standard Spawner
+                if (item is Spawner spawner)
+                {
+                    return EditStandardSpawner(spawner, homeRange, maxCount, creatures);
+                }
+
+                UOR_Utility.SendMsg(ConsoleColor.Yellow, $"XMLCMD-[EDIT: Item is not a spawner: {serialValue}]");
+                return false;
+            }
+            catch (Exception ex)
+            {
+                UOR_Utility.SendMsg(ConsoleColor.Red, $"XMLCMD-[EDIT: Error editing spawner: {ex.Message}]");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Edits an XmlSpawner, preserving special syntax for existing creatures.
+        /// </summary>
+        private static bool EditXmlSpawner(XmlSpawner spawner, int homeRange, int maxCount, List<(string typeName, int count)> creatures)
+        {
+            // Build lookup of existing spawn objects: clean name -> original full TypeName
+            // This preserves special XmlSpawner syntax like /Cantwalk/true or ,param
+            var existingByCleanName = new Dictionary<string, XmlSpawner.SpawnObject>(StringComparer.OrdinalIgnoreCase);
+
+            if (spawner.SpawnObjects != null)
+            {
+                foreach (var spawnObj in spawner.SpawnObjects)
+                {
+                    if (!string.IsNullOrEmpty(spawnObj.TypeName))
+                    {
+                        string cleanName = ExtractCleanTypeName(spawnObj.TypeName);
+
+                        // Only store first occurrence (in case of duplicates)
+                        if (!existingByCleanName.ContainsKey(cleanName))
+                        {
+                            existingByCleanName[cleanName] = spawnObj;
+                        }
+                    }
+                }
+            }
+
+            // Remove existing spawned creatures
+            spawner.RemoveSpawnObjects();
+
+            // Build new spawn objects list
+            var newSpawnObjects = new List<XmlSpawner.SpawnObject>();
+
+            foreach (var (typeName, count) in creatures)
+            {
+                // Check if this creature existed with special syntax
+                if (existingByCleanName.TryGetValue(typeName, out var existingObj) && 
+                    HasSpecialSyntax(existingObj.TypeName))
+                {
+                    // Preserve original TypeName with special syntax, but update count
+                    var spawnObj = new XmlSpawner.SpawnObject(existingObj.TypeName, count);
+                    newSpawnObjects.Add(spawnObj);
+                }
+                else
+                {
+                    // Use the clean name from edit command
+                    var spawnObj = new XmlSpawner.SpawnObject(typeName, count);
+                    newSpawnObjects.Add(spawnObj);
+                }
+            }
+
+            // Apply changes
+            spawner.SpawnObjects = newSpawnObjects.ToArray();
+            spawner.HomeRange = homeRange;
+            spawner.MaxCount = maxCount;
+
+            // Trigger respawn
+            spawner.DoRespawn = true;
+
+            UOR_Utility.SendMsg(ConsoleColor.Cyan, $"XMLCMD-[EDIT: XmlSpawner({spawner.Serial.Value})|Spawn({creatures.Count})|Max({maxCount})|Range({homeRange})]");
+            return true;
+        }
+
+        /// <summary>
+        /// Edits a standard Spawner.
+        /// </summary>
+        private static bool EditStandardSpawner(Spawner spawner, int homeRange, int maxCount, List<(string typeName, int count)> creatures)
+        {
+            // Remove existing spawned creatures
+            spawner.RemoveSpawned();
+
+            // Clear existing spawn entries
+            spawner.SpawnObjects.Clear();
+
+            // Add new spawn entries
+            foreach (var (typeName, count) in creatures)
+            {
+                var spawnObj = new SpawnObject(typeName, count);
+                spawner.SpawnObjects.Add(spawnObj);
+            }
+
+            // Apply settings
+            spawner.HomeRange = homeRange;
+            spawner.MaxCount = maxCount;
+
+            // Trigger respawn
+            spawner.Respawn();
+
+            UOR_Utility.SendMsg(ConsoleColor.Cyan, $"XMLCMD-[EDIT: Spawner({spawner.Serial.Value})|Spawn({creatures.Count})|Max({maxCount})|Range({homeRange})]");
+            return true;
+        }
+
+        /// <summary>
+        /// Checks if a TypeName contains XmlSpawner special syntax (commas or slashes).
+        /// </summary>
+        private static bool HasSpecialSyntax(string typeName)
+        {
+            return typeName.Contains(",") || typeName.Contains("/");
+        }
+
+        /// <summary>
+        /// Extracts the clean creature type name from XmlSpawner syntax.
+        /// Handles formats like "CreatureName,param" or "CreatureName/prop/value".
+        /// </summary>
+        private static string ExtractCleanTypeName(string typeName)
+        {
+            if (string.IsNullOrWhiteSpace(typeName))
+                return typeName;
+
+            string name = typeName.Trim();
+
+            // Handle comma-separated parameters (e.g., "tribewarrior,Kurak")
+            int commaIndex = name.IndexOf(',');
+            if (commaIndex > 0)
+            {
+                name = name.Substring(0, commaIndex).Trim();
+            }
+
+            // Handle slash-separated properties (e.g., "MyrmidexQueen/Cantwalk/true")
+            int slashIndex = name.IndexOf('/');
+            if (slashIndex > 0)
+            {
+                name = name.Substring(0, slashIndex).Trim();
+            }
+
+            return name;
         }
     }
 }

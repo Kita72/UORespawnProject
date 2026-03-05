@@ -77,9 +77,9 @@ namespace Server.Custom.UORespawnServer.Spawners
 
             for (int attempt = 0; attempt < UOR_Settings.MAX_SPAWN_CHECKS; attempt++)
             {
-                Point3D candidate = UOR_Utility.GetSpawnPoint(targetLocation, 1, 6, map, out bool isWater);
+                Point3D candidate = UOR_Utility.GetSpawnPoint(targetLocation, 1, 6, map, out bool isWater, out _);
 
-                if (!isWater && map.CanSpawnMobile(candidate))
+                if (!isWater && map.CanFit(candidate, 40))
                 {
                     return candidate;
                 }

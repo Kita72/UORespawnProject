@@ -7,9 +7,11 @@ namespace Server.Custom.UORespawnServer.Helpers
     {
         internal static string GetTileName(int id, Map map, Point3D location)
         {
-            string name = TileData.LandTable[id].Name;
+            string name = TileData.LandTable[id & TileData.MaxItemValue].Name;
 
             if (InvalidTileNames.Contains(name)) return string.Empty;
+
+            if (InvalidTiles.Contains(id)) return string.Empty;
 
             if (CloudTiles.Contains(id)) return "cloud";
 
