@@ -1,4 +1,43 @@
 /* ============================================
+   MAP HEADER SELECT - Matches Box/Region/Vendor
+   ============================================ */
+.map-header-select {
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    font-size: 0.875rem;
+}
+
+.map-header-select:focus {
+    background-color: rgba(255, 255, 255, 0.15);
+    border-color: goldenrod;
+    box-shadow: 0 0 0 2px rgba(218, 165, 32, 0.25);
+    color: white;
+}
+
+.map-header-select option {
+    background-color: #212529;
+    color: white;
+}
+
+body.light-theme .map-header-select {
+    background-color: white;
+    border-color: #dee2e6;
+    color: #212529;
+}
+
+body.light-theme .map-header-select:focus {
+    background-color: white;
+    border-color: #b8860b;
+    box-shadow: 0 0 0 2px rgba(184, 134, 11, 0.25);
+}
+
+body.light-theme .map-header-select option {
+    background-color: white;
+    color: #212529;
+}
+
+/* ============================================
    ECOLOGY BANNER CARD
    ============================================ */
 .ecology-banner-card .card {

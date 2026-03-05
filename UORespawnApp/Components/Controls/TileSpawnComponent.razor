@@ -9,10 +9,21 @@
 @implements IDisposable
 
 <div class="container-fluid p-3">
-    <!-- Simplified Header -->
+    <!-- Simplified Header with Map Selector -->
     <div class="alert alert-dark mb-3 d-flex justify-content-between align-items-center shadow-sm">
-        <span style="width: 16px;"></span>
-        <h5 class="mb-0"><span class="bi bi-grid-3x3-gap me-2" style="color: goldenrod;"></span><span style="color: goldenrod;">Tile Spawn</span></h5>
+        <div class="d-flex align-items-center gap-2">
+            <span class="bi bi-grid-3x3-gap" style="color: goldenrod;"></span>
+            <select class="form-select form-select-sm map-header-select" 
+                    @bind:get="ViewService.CurrentMapId" 
+                    @bind:set="OnMapChanged"
+                    style="width: auto; min-width: 120px;">
+                @foreach (var mapId in GetAvailableMaps())
+                {
+                    <option value="@mapId">@MapUtility.GetMapName(mapId)</option>
+                }
+            </select>
+        </div>
+        <h5 class="mb-0"><span style="color: goldenrod;">Tile Spawn</span></h5>
         <span class="bi bi-info-circle" style="color: #6c757d; cursor: help;" title="Configure spawns based on ground tile types. Animals and Creatures spawn on matching terrain across all maps."></span>
     </div>
 
@@ -632,6 +643,30 @@
     private void CloseEcologyModal()
     {
         showEcologyModal = false;
+        StateHasChanged();
+    }
+
+    private List<int> GetAvailableMaps()
+    {
+        return MapUtility.GetAvailableMaps();
+    }
+
+    private void OnMapChanged(int newMapId)
+    {
+        ViewService.CurrentMapId = newMapId;
+
+        // Update SESSION's Current_Map - this is what the tile data uses
+        if (Utility.SESSION != null)
+        {
+            Utility.SESSION.Current_Map = newMapId;
+        }
+
+        // Re-select current tile for the new map (reloads entity data for new map)
+        if (!string.IsNullOrEmpty(selectedTile))
+        {
+            SelectTile(selectedTile);
+        }
+
         StateHasChanged();
     }
 
