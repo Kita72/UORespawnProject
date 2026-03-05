@@ -317,7 +317,6 @@ namespace Server.Custom.UORespawnServer.Helpers
             "Cave exit",
             "stone moss2",
             "NODRAW",
-            "NoName",
             "TerrainFallback",
             "UNUSED",
             "VOID!!!!!!",
