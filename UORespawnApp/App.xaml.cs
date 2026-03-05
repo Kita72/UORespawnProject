@@ -32,15 +32,12 @@ namespace UORespawnApp
 
         /// <summary>
         /// Creates and configures the main application window.
-        /// Sets up window dimensions, maximizes on Windows, and registers cleanup handlers.
         /// </summary>
         protected override Window CreateWindow(IActivationState? activationState)
         {
             var window = new Window(new MainPage()) 
             { 
-                Title = "UORespawn Editor",
-                Width = 1400,
-                Height = 900
+                Title = "UORespawn Editor"
             };
 
 #if WINDOWS
@@ -58,11 +55,19 @@ namespace UORespawnApp
                         var presenter = appWindow.Presenter as Microsoft.UI.Windowing.OverlappedPresenter;
                         if (presenter != null)
                         {
-                            // Open maximized and lock it there
-                            presenter.Maximize();             // Start maximized (respects taskbar)
-                            presenter.IsResizable = false;    // Disable edge dragging to resize
-                            presenter.IsMaximizable = false;  // Disable maximize/restore button
+                            presenter.Maximize();
+                            presenter.IsResizable = false;
                         }
+
+                        // When user clicks maximize button (toggles to Restored), snap back to Maximized
+                        appWindow.Changed += (appWin, args) =>
+                        {
+                            var p = appWindow.Presenter as Microsoft.UI.Windowing.OverlappedPresenter;
+                            if (p != null && p.State == Microsoft.UI.Windowing.OverlappedPresenterState.Restored)
+                            {
+                                p.Maximize();
+                            }
+                        };
                     }
                 }
             };
