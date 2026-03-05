@@ -73,6 +73,24 @@ body.light-theme .spawn-pack-dashboard-footer {
     border-top: 1px solid #dee2e6;
 }
 
+/* Footer button styles for light theme contrast */
+.spawn-pack-dashboard-footer .btn-outline-light {
+    color: #e0e0e0;
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+body.light-theme .spawn-pack-dashboard-footer .btn-outline-light {
+    color: #495057;
+    border-color: #6c757d;
+    background: transparent;
+}
+
+body.light-theme .spawn-pack-dashboard-footer .btn-outline-light:hover {
+    color: #fff;
+    background-color: #6c757d;
+    border-color: #6c757d;
+}
+
 .spawn-pack-modal .modal-content {
     background: #0f0f0f;
     color: #e0e0e0;
@@ -95,6 +113,24 @@ body.light-theme .spawn-pack-modal .modal-content {
 body.light-theme .spawn-pack-modal .modal-header,
 body.light-theme .spawn-pack-modal .modal-footer {
     border-color: #dee2e6;
+}
+
+/* Modal button styles for light theme contrast */
+.spawn-pack-modal .btn-outline-light {
+    color: #e0e0e0;
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+body.light-theme .spawn-pack-modal .btn-outline-light {
+    color: #495057;
+    border-color: #6c757d;
+    background: transparent;
+}
+
+body.light-theme .spawn-pack-modal .btn-outline-light:hover {
+    color: #fff;
+    background-color: #6c757d;
+    border-color: #6c757d;
 }
 
 /* Toggle buttons for Approved/Imported */
