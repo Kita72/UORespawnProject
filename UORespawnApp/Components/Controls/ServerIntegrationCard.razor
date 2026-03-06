@@ -17,19 +17,19 @@
         <InfoIcon Text="Connect to your ServUO server for automatic file sync" />
     </div>
     <div class="card-body">
-        
+
         <!-- Connection Type Selector -->
-        <div class="d-flex justify-content-center gap-2 mb-4">
-            <button class="btn @(connectionType == ConnectionType.Local ? "btn-success" : "btn-outline-secondary")" 
-                    style="min-width: 140px;"
-                    @onclick="() => SetConnectionType(ConnectionType.Local)">
-                <span class="bi bi-pc-display me-2"></span>Local Link
-            </button>
-            <button class="btn @(connectionType == ConnectionType.Remote ? "btn-info" : "btn-outline-secondary")" 
-                    style="min-width: 140px;"
-                    @onclick="() => SetConnectionType(ConnectionType.Remote)">
-                <span class="bi bi-cloud me-2"></span>Remote Server
-            </button>
+        <div class="d-flex justify-content-center mb-4">
+            <div class="connection-type-toggle">
+                <button class="toggle-btn @(connectionType == ConnectionType.Local ? "active-local" : "")" 
+                        @onclick="() => SetConnectionType(ConnectionType.Local)">
+                    <span class="bi bi-pc-display me-2"></span>Local Link
+                </button>
+                <button class="toggle-btn @(connectionType == ConnectionType.Remote ? "active-remote" : "")" 
+                        @onclick="() => SetConnectionType(ConnectionType.Remote)">
+                    <span class="bi bi-cloud me-2"></span>Remote Server
+                </button>
+            </div>
         </div>
 
         <!-- LOCAL LINK SECTION -->
@@ -46,28 +46,38 @@
 
                 @if (isLocalConfigured)
                 {
-                    <div class="mb-3">
-                        <span class="badge bg-success d-inline-block text-center" style="font-size: 1rem; padding: 10px 20px; min-width: 200px;">
-                            <span class="bi bi-check-circle me-2"></span>Active
-                        </span>
+                    <div class="mb-2">
+                        <div class="link-status-pill">
+                            <div class="status-indicator">
+                                <span class="bi bi-check-circle"></span>
+                                <span>Linked</span>
+                            </div>
+                            <button class="unlink-btn" 
+                                    @onclick="UnlinkServer"
+                                    disabled="@(!DataWatcher.IsSupported)">
+                                <span class="bi bi-x-circle"></span>
+                                <span>Unlink</span>
+                            </button>
+                        </div>
                     </div>
-                    <p class="text-muted mb-3"><small>@Settings.ServerFolder</small></p>
-                    <button class="btn btn-danger btn-lg" 
-                            style="min-width: 200px;"
-                            @onclick="UnlinkServer"
-                            disabled="@(!DataWatcher.IsSupported)">
-                        <span class="bi bi-x-circle me-2"></span>Unlink
-                    </button>
+                    <div class="server-path">@Settings.ServerFolder</div>
                 }
                 else
                 {
-                    <p class="text-muted mb-3">Select your main ServUO folder to enable automatic sync</p>
-                    <button class="btn btn-success btn-lg" 
-                            style="min-width: 200px;"
-                            @onclick="BrowseServUOFolder"
-                            disabled="@(!DataWatcher.IsSupported)">
-                        <span class="bi bi-link-45deg me-2"></span>Add Link
-                    </button>
+                    <div class="mb-2">
+                        <div class="link-status-pill">
+                            <div class="status-indicator unlinked">
+                                <span class="bi bi-x-circle"></span>
+                                <span>Unlinked</span>
+                            </div>
+                            <button class="link-btn" 
+                                    @onclick="BrowseServUOFolder"
+                                    disabled="@(!DataWatcher.IsSupported)">
+                                <span class="bi bi-link-45deg"></span>
+                                <span>Add Link</span>
+                            </button>
+                        </div>
+                    </div>
 
                     <div class="alert alert-info mt-3" style="max-width: 500px; margin: 0 auto;">
                         <span class="bi bi-info-circle me-2"></span>
