@@ -247,7 +247,6 @@ namespace Server.Custom.UORespawnServer.Services
 
             // System Limits
             commandsLogged += LogSettingCommand("MAX_RECYCLE_TYPE", UOR_Settings.MAX_RECYCLE_TYPE.ToString());
-            commandsLogged += LogSettingCommand("MAX_RECYCLE_TOTAL", UOR_Settings.MAX_RECYCLE_TOTAL.ToString());
             commandsLogged += LogSettingCommand("MAX_SPAWN_CHECKS", UOR_Settings.MAX_SPAWN_CHECKS.ToString());
             commandsLogged += LogSettingCommand("MAX_QUEUE_SIZE", UOR_Settings.MAX_QUEUE_SIZE.ToString());
             commandsLogged += LogSettingCommand("MAX_STAT_SIZE", UOR_Settings.MAX_STAT_SIZE.ToString());
