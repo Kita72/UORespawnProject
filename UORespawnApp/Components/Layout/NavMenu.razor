@@ -55,25 +55,24 @@
             </div>
         </div>
 
-        <div class="nav-item px-3">
-            <button class="nav-link btn btn-link @GetActiveClass("settings")" @onclick="ShowSettings">
-                <span class="bi bi-gear-fill-nav-menu" aria-hidden="true"></span> Settings
-            </button>
-        </div>
-        <div class="nav-item px-3">
-            <button class="nav-link btn btn-link @GetActiveClass("instructions")" @onclick="ShowInstructions">
-                <span class="bi bi-book-fill-nav-menu" aria-hidden="true"></span> Instructions
-            </button>
-        </div>
+        <!-- Spacer to push footer to bottom -->
+        <div class="nav-spacer"></div>
 
-        <div class="nav-item px-3">
-            <button class="nav-link btn btn-link theme-toggle" @onclick="ToggleTheme">
-                <span class="bi @themeIcon" aria-hidden="true"></span> @themeText
-            </button>
+        <!-- Footer: Icons + Update -->
+        <div class="nav-footer">
+            <div class="bottom-icons-bar">
+                <button class="icon-btn @GetActiveClass("settings")" @onclick="ShowSettings" title="Settings">
+                    <span class="bi bi-gear-fill-nav-menu" aria-hidden="true"></span>
+                </button>
+                <button class="icon-btn @GetActiveClass("instructions")" @onclick="ShowInstructions" title="Instructions">
+                    <span class="bi bi-book-fill-nav-menu" aria-hidden="true"></span>
+                </button>
+                <button class="icon-btn theme-btn" @onclick="ToggleTheme" title="@themeText">
+                    <span class="bi @themeIcon" aria-hidden="true"></span>
+                </button>
+            </div>
+            <UpdateNotification />
         </div>
-
-        <!-- Update Checker at bottom of nav -->
-        <UpdateNotification />
     </nav>
 </div>
 

@@ -237,7 +237,7 @@ body.light-theme .map-label {
         display: flex;
         flex-direction: column;
         flex: 1;
-        min-height: 0;
+        min-height: 100%;
     }
 }
 
@@ -353,4 +353,65 @@ body.light-theme .bi-globe-americas-nav-menu {
     display: inline-block;
     background-size: contain;
     background-repeat: no-repeat;
+}
+
+/* Bottom Icons Bar */
+.bottom-icons-bar {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    margin: 0 0.75rem;
+}
+
+/* Nav Spacer - pushes footer to bottom */
+.nav-spacer {
+    flex: 1;
+}
+
+/* Nav Footer - contains icons and update notification */
+.nav-footer {
+    margin-top: auto;
+}
+
+.bottom-icons-bar .icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border: none;
+    border-radius: 8px;
+    background-color: rgba(255, 255, 255, 0.08);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.bottom-icons-bar .icon-btn:hover {
+    background-color: rgba(255, 255, 255, 0.15);
+    transform: translateY(-1px);
+}
+
+.bottom-icons-bar .icon-btn.active {
+    background-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.bottom-icons-bar .icon-btn .bi {
+    margin-right: 0;
+    width: 1.25rem;
+    height: 1.25rem;
+}
+
+body.light-theme .bottom-icons-bar .icon-btn {
+    background-color: rgba(0, 0, 0, 0.08);
+}
+
+body.light-theme .bottom-icons-bar .icon-btn:hover {
+    background-color: rgba(0, 0, 0, 0.15);
+}
+
+body.light-theme .bottom-icons-bar .icon-btn.active {
+    background-color: rgba(0, 0, 0, 0.2);
 }
