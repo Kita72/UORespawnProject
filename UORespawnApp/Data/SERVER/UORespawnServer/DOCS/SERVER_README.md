@@ -1,8 +1,8 @@
 # UORespawnServer - Server Documentation
 
-> **Version:** 2.0.0.9
+> **Version:** 2.0.1.2
 > **Target:** .NET Framework 4.8  
-> **Last Updated:** March 2026
+> **Last Updated:** June 2025
 
 ---
 
@@ -34,7 +34,7 @@ UORespawnServer is a dynamic player-centric spawn system for ServUO. Instead of 
 - **Player-Centric Spawning** - Mobs spawn near active players, not fixed locations
 - **Multi-Layer Spawn Resolution** - Box → Region → Tile priority system
 - **O(1) Spatial Lookups** - SpatialGridManager provides instant box lookups
-- **Mob Recycling** - RecycleService pools mobs for performance
+- **On-Map Spawn Management** - SpawnQueryService relocates and trims spawn on the live map
 - **Weather/Time Spawns** - Conditional spawns based on environment
 - **Vendor System** - Dynamic NPC vendor spawning at sign locations
 - **Unified Logging Pipeline** - `UOR_Utility.SendMsg` drives console + file logging by color
@@ -116,7 +116,7 @@ The server and editor work in a **synchronized partnership**:
 | Service | Purpose |
 |---------|---------|
 | `ProcessService` | Main spawn processing and mob creation |
-| `RecycleService` | Mob pooling for performance (spawn keeps ISpawner leash) |
+| `SpawnQueryService` | On-map spawn queries for relocation and trimming |
 | `TrackService` | Placeholder for future tracking features |
 | `ValidateService` | Spawn validation using ISpawner on-demand queries |
 | `TimedService` | Time-based spawn updates (day/night) |
@@ -436,8 +436,8 @@ ENABLE_DEBUG,False
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `MAX_RECYCLE_TYPE` | 20 | Max mobs cached per type in recycle pool |
-| `MAX_RECYCLE_TOTAL` | 50000 | Max total mobs in recycle pool |
+| `MAX_RECYCLE_TYPE` | 20 | Max spawn allowed per creature type |
+| `MAX_RECYCLE_TOTAL` | *dynamic* | Calculated as `BestiaryCount × MAX_RECYCLE_TYPE` (can be overridden) |
 | `MAX_SPAWN_CHECKS` | 3 | Max attempts to find valid spawn point |
 | `MAX_QUEUE_SIZE` | 5 | Max locations queued per player |
 | `MAX_STAT_SIZE` | 10000 | Max statistics entries |
@@ -475,6 +475,35 @@ ENABLE_DEBUG,False
 | `ENABLE_VENDOR_EXTRA` | False | Spawn extra TownNPCs with vendors |
 | `ENABLE_SPAWN_EFFECTS` | True | Show spawn visual effects |
 | `ENABLE_DEBUG` | False | Enable verbose debug logging |
+
+### Settings Validation (NEW in 2.0.1.2)
+
+All settings are automatically validated on load to prevent invalid values from causing issues. Invalid values are clamped to valid ranges and logged.
+
+| Setting | Valid Range | Notes |
+|---------|-------------|-------|
+| `SCALE_MOD` | 0.1 - 3.0 | Scale modifier |
+| `SEARCH_INTERVAL` | 50 - 2000 ms | Per-player search rate |
+| `PROCESS_INTERVAL` | 50 - 2000 ms | Global processing rate |
+| `VALIDATE_INTERVAL` | 1 - 60 sec | Must be >= 1 |
+| `TIMED_INTERVAL` | 1 - 60 min | Must be >= 1 |
+| `MAX_RECYCLE_TYPE` | 1 - 100 | Per-type spawn limit, must be >= 1 |
+| `MAX_RECYCLE_TOTAL` | 1 - 100000 | Total spawn limit (if override set) |
+| `MAX_SPAWN_CHECKS` | 1 - 10 | Spawn point search attempts |
+| `MAX_QUEUE_SIZE` | 1 - 10 | Queue slots per player |
+| `MAX_STAT_SIZE` | 100 - 10000 | Statistics buffer size |
+| `MAX_SPAWN` | 5 - 75 | Area spawn limit |
+| `MIN_RANGE` | 5 - 125 | Auto-clamped to <= MAX_RANGE |
+| `MAX_RANGE` | 5 - 250 | Spawn distance limit |
+| `MAX_CROWD` | 1 - 10 | Crowd multiplier |
+| `CHANCE_*` | 0.0 - 1.0 | All chance values clamped to valid probability |
+
+**Example Log Output:**
+```
+SETTINGS-[Clamped VALIDATE_INTERVAL to 1]
+SETTINGS-[Clamped CHANCE_RARE to 1]
+SETTINGS-[Clamped MIN_RANGE to MAX_RANGE (80)]
+```
 
 ---
 
@@ -1107,6 +1136,13 @@ Events are subscribed only once via `_EventsSubscribed` flag. The `UnsubscribeEv
 
 | Version | Changes |
 |---------|---------|
+| 2.0.1.2 | **NEW:** Settings validation with range clamping for all values |
+| 2.0.1.2 | **FIX:** ValidateService IsCalling loop now processes each player once |
+| 2.0.1.1 | **REFACTOR:** RecycleService replaced with SpawnQueryService (on-map relocation) |
+| 2.0.1.1 | **NEW:** Dynamic `MAX_RECYCLE_TOTAL` calculation (`BestiaryCount × MAX_RECYCLE_TYPE`) |
+| 2.0.1.1 | **FIX:** Spawn limits now only trim excess, never block new spawns |
+| 2.0.1.1 | **PERF:** TrimExcess deletes furthest spawn first (minimizes player impact) |
+| 2.0.1.0 | **REFACTOR:** Major code review and cleanup pass |
 | 2.0.0.9 | **POLISH:** Code review and comment cleanup pass |
 | 2.0.0.9 | **FIX:** Spawner name no longer shows on creature hover (debug mode only) |
 | 2.0.0.9 | **FIX:** Queued location check now properly detects point inside rectangle |

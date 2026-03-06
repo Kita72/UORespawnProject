@@ -20,7 +20,6 @@ using Server.Custom.UORespawnServer.Helpers;
 using Server.Custom.UORespawnServer.Spawners;
 
 using CPA = Server.CommandPropertyAttribute;
-using Server.Engines.Harvest;
 
 namespace Server.Custom.UORespawnServer
 {
@@ -58,8 +57,6 @@ namespace Server.Custom.UORespawnServer
         {
             _TypeCache = new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase);
 
-            InitializeQuedLocationList();
-
             SendMsg(ConsoleColor.Green, "UTILITY-[Initialized]");
         }
 
@@ -94,47 +91,8 @@ namespace Server.Custom.UORespawnServer
             return TileHelper.GetTileName(GetTile(map, location).ID, map, location);
         }
 
-        internal static bool HasWater(Map map, Point3D location, out WaterTypes waterType)
+        internal static bool HasWeather(Map map, Rectangle2D spot, out WeatherTypes weatherType)
         {
-            if (GetTileName(map, location) == "water")
-            {
-                waterType = GetWaterType(GetTile(map, location).ID);
-
-                return true;
-            }
-
-            if (GetStatic(map, location, "water") != null)
-            {
-                waterType = GetWaterType(GetTile(map, location).ID);
-
-                return true;
-            }
-
-            waterType = WaterTypes.Shallow;
-
-            return false;
-        }
-
-        private static WaterTypes GetWaterType(int id)
-        {
-            bool water = false;
-
-            int[] deepWater = TileHelper.GetDeepWater();
-
-            for (int i = 0; !water && i < deepWater.Length; i += 2)
-            {
-                water = (id >= deepWater[i] && id <= deepWater[i + 1]);
-            }
-
-            return  water ? WaterTypes.Deep : WaterTypes.Shallow;
-        }
-
-        internal static bool HasWeather(Map map, Point3D location, out WeatherTypes weatherType)
-        {
-            Point2D start = new Point2D(location.X - 1, location.Y - 1);
-            Point2D end = new Point2D(start.X + 3, start.Y + 3);
-            Rectangle2D spot = new Rectangle2D(start, end);
-
             weatherType = GetWeatherType(Weather.GetWeatherList(map).Find(w => w.IntersectsWith(spot)));
 
             return weatherType != WeatherTypes.None;
@@ -259,72 +217,23 @@ namespace Server.Custom.UORespawnServer
             return locations;
         }
 
-        internal static Dictionary<Map, List<Rectangle2D>> QuedLocations { get; set; }
-
-        private const int QUEUED_LOCATION_RADIUS = 4;
-
-        private const int MAX_QUEUED_LOCATIONS_PER_MAP = 2000;
-
-        private static void InitializeQuedLocationList()
+        internal static SpawnEntity Locate(RespawnerEntity respawner, LocationEntity entity)
         {
-            if (QuedLocations == null || QuedLocations.Count < 6)
-            {
-                QuedLocations = new Dictionary<Map, List<Rectangle2D>>();
+            var pm = respawner._Player;
 
-                for (int i = 0; i < 6; i++)
-                {
-                    QuedLocations[Map.Maps[i]] = new List<Rectangle2D>();
-                }
-            }
-        }
+            int min = UOR_Settings.MIN_RANGE;
+            int max = UOR_Settings.MAX_RANGE;
 
-        internal static void QueueSpawnLocation(Map map, Point3D location)
-        {
-            if (map == null || map == Map.Internal || location == Point3D.Zero)
-            {
-                return;
-            }
+            bool lava = false;
 
-            if (!QuedLocations.TryGetValue(map, out var list) || list == null)
-            {
-                return;
-            }
-
-            list.Add(GetSpawnBox(location, QUEUED_LOCATION_RADIUS));
-
-            if (list.Count > MAX_QUEUED_LOCATIONS_PER_MAP)
-            {
-                list.RemoveAt(0);
-            }
-        }
-
-        internal static void ReleaseQueuedSpawnLocation(Map map, Point3D location)
-        {
-            if (map == null || map == Map.Internal || location == Point3D.Zero)
-            {
-                return;
-            }
-
-            if (QuedLocations != null && QuedLocations.TryGetValue(map, out var list) && list != null)
-            {
-                list.Remove(GetSpawnBox(location, QUEUED_LOCATION_RADIUS));
-            }
-        }
-
-        internal static SpawnEntity Locate(PlayerMobile pm, LocationEntity entity)
-        {
             try
             {
-                int min = UOR_Settings.MIN_RANGE;
-                int max = UOR_Settings.MIN_RANGE;
-                bool lava = false;
-
                 // 1. Single Loop Strategy: Keep looking until VALID or MAX_ATTEMPTS
                 while (entity.ATTEMPTS++ < UOR_Settings.MAX_SPAWN_CHECKS)
                 {
                     entity.LOCATION = GetSpawnPoint(pm.Location, min, max, pm.Map, out bool isWater, out lava);
 
-                    if (Utility.RandomDouble() > UOR_Settings.CHANCE_WATER && !IsWaterLimit(isWater))
+                    if (entity.CHANCE < UOR_Settings.CHANCE_WATER && !IsWaterLimit(isWater))
                     {
                         if (UOR_Settings.ENABLE_DEBUG) entity.REASON = "[Skipped-Water]";
                         continue;
@@ -343,25 +252,17 @@ namespace Server.Custom.UORespawnServer
                         continue;
                     }
 
-                    // 3. Queue Check - Don't spawn on top of recent spawn locations
-                    bool isQueued = false;
-                    var queuedRects = QuedLocations[pm.Map];
-                    var checkPoint = new Point2D(entity.LOCATION.X, entity.LOCATION.Y);
-
-                    for (int i = 0; i < queuedRects.Count; i++)
-                    {
-                        if (queuedRects[i].Contains(checkPoint))
-                        {
-                            isQueued = true;
-                            break;
-                        }
-                    }
-
-                    if (isQueued)
+                    // 3. Queue Check - Don't spawn too close to player's recent spawn locations
+                    if (respawner.IsLocationTooClose(entity.LOCATION, UOR_Settings.MIN_RANGE))
                     {
                         if (UOR_Settings.ENABLE_DEBUG) entity.REASON = "[X-Qued]";
                         continue;
                     }
+                    //else if (SpawnInRange(pm.Map, entity.LOCATION, UOR_Settings.MIN_RANGE) > 0)
+                    //{
+                    //    if (UOR_Settings.ENABLE_DEBUG) entity.REASON = "[X-Qued]";
+                    //    continue;
+                    //}
 
                     // If we reached here, the location is valid!
                     entity.VALID = true;
@@ -373,10 +274,7 @@ namespace Server.Custom.UORespawnServer
                 {
                     entity.REGION = Region.Find(entity.LOCATION, pm.Map);
 
-                    // Add to queue so the next 'Locate' call avoids this area
-                    QueueSpawnLocation(pm.Map, entity.LOCATION);
-
-                    return new SpawnEntity(pm.Map, entity.LOCATION) { HitLava = lava };
+                    return new SpawnEntity(pm.Map, entity.LOCATION) { IsLava = lava };
                 }
                 else if (UOR_Settings.ENABLE_DEBUG)
                 {
@@ -503,11 +401,6 @@ namespace Server.Custom.UORespawnServer
             return true;
         }
 
-        internal static bool CanSpawnWater(Map map, Point3D location)
-        {
-            return Spawner.IsValidWater(map, location.X, location.Y, location.Z);
-        }
-
         internal static bool PlayersInRange(Map map, Point3D location, int range)
         {
             var players = map.GetClientsInRange(location, range);
@@ -525,47 +418,40 @@ namespace Server.Custom.UORespawnServer
         /// </summary>
         internal static int SpawnInRange(Map map, Point3D location, int range)
         {
-            var spawns = map.GetMobilesInRange(location, range)
-                            .Where(m => !(m is BaseVendor))
-                            .ToList();
+            var spawns = map.GetMobilesInRange(location, range);
 
-            int count = spawns.Count;
+            var count = spawns.Where(m => !(m is BaseVendor) || m is WanderingHealer).ToList().Count;
+
+            spawns.Free();
 
             return count;
         }
 
-        internal static bool IsValidPlayer(PlayerMobile pm)
-        {
-            return pm != null && !pm.Deleted && pm.Map != null && pm.Map != Map.Internal;
-        }
-
-        internal static bool IsValidSpawn(int serial, out Mobile mobile)
+        internal static bool IsValidSpawn(int serial, out Mobile spawn)
         {
             if (World.Mobiles.ContainsKey(serial))
             {
                 if (World.Mobiles[serial] is Mobile m && !m.Deleted && m.Alive)
                 {
+                    spawn = m;
+
                     if (m is BaseCreature bc)
                     {
-                        mobile = bc;
-
                         return !bc.Controlled;
                     }
-                    mobile = m;
 
                     return true;
                 }
             }
 
-            mobile = null;
+            spawn = null;
 
             return false;
         }
 
         internal static string GetSpawnName(ISpawnEntity entity, SpawnEntity spawn)
         {
-            if (entity == null)
-                return string.Empty;
+            if (entity == null) return string.Empty;
 
             switch (spawn.FrequencyType)
             {

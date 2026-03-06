@@ -67,7 +67,7 @@ namespace Server.Custom.UORespawnServer.Managers
                     writer.WriteLine(command.ToCommandString());
                 }
 
-                UOR_Utility.SendMsg(ConsoleColor.Cyan, $"COMMAND-[Logged: {command.Action} {command.Target}]");
+                UOR_Utility.SendMsg(ConsoleColor.Green, $"COMMAND-[Logged: {command.Action} {command.Target}]");
                 return true;
             }
             catch (Exception ex)
@@ -158,7 +158,7 @@ namespace Server.Custom.UORespawnServer.Managers
                     }
                 }
 
-                UOR_Utility.SendMsg(ConsoleColor.Cyan, $"COMMAND-[Read {commands.Count} commands for {target}]");
+                UOR_Utility.SendMsg(ConsoleColor.Green, $"COMMAND-[Read {commands.Count} commands for {target}]");
             }
             catch (Exception ex)
             {

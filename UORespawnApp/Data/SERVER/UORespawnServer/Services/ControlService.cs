@@ -113,9 +113,13 @@ namespace Server.Custom.UORespawnServer.Services
             return total;
         }
 
+        /// <summary>
+        /// Gets total relocations performed this session.
+        /// Shows how many spawns were reused instead of created new.
+        /// </summary>
         internal int GetRecycledCount()
         {
-            return UOR_Core.GetRecycledCount();
+            return UOR_Core.GetRelocatedCount();
         }
 
         internal bool GetIsPaused() => UOR_Core.IsPaused;
@@ -190,91 +194,41 @@ namespace Server.Custom.UORespawnServer.Services
 
         #region Value Adjustments
 
+        // All adjustments apply delta directly - UOR_Settings.ValidateSettings() is the source of truth
+        // for valid ranges. Minimal sanity checks here (non-negative where required, 0-1 for chances).
+
         // Scale Modifier
         internal void AdjustScaleMod(double delta)
         {
-            double newVal = Math.Max(0.1, Math.Min(5.0, UOR_Settings.SCALE_MOD + delta));
-
-            UOR_Settings.UpdateScaleMod(newVal);
+            UOR_Settings.UpdateScaleMod(Math.Max(0.1, UOR_Settings.SCALE_MOD + delta));
         }
 
-        // Intervals
-        internal void AdjustSearchInterval(int delta)
-        {
-            UOR_Settings.SEARCH_INTERVAL = Math.Max(100, Math.Min(2000, UOR_Settings.SEARCH_INTERVAL + delta));
-        }
+        // Intervals (must be >= 1)
+        internal void AdjustSearchInterval(int delta) => UOR_Settings.SEARCH_INTERVAL = Math.Max(1, UOR_Settings.SEARCH_INTERVAL + delta);
+        internal void AdjustProcessInterval(int delta) => UOR_Settings.PROCESS_INTERVAL = Math.Max(1, UOR_Settings.PROCESS_INTERVAL + delta);
+        internal void AdjustValidateInterval(int delta) => UOR_Settings.VALIDATE_INTERVAL = Math.Max(1, UOR_Settings.VALIDATE_INTERVAL + delta);
+        internal void AdjustTimedInterval(int delta) => UOR_Settings.TIMED_INTERVAL = Math.Max(1, UOR_Settings.TIMED_INTERVAL + delta);
 
-        internal void AdjustProcessInterval(int delta)
-        {
-            UOR_Settings.PROCESS_INTERVAL = Math.Max(100, Math.Min(2000, UOR_Settings.PROCESS_INTERVAL + delta));
-        }
+        // Limits (must be >= 1)
+        internal void AdjustMaxSpawn(int delta) => UOR_Settings.MAX_SPAWN_VAL = Math.Max(1, UOR_Settings.MAX_SPAWN_VAL + delta);
+        internal void AdjustMaxRange(int delta) => UOR_Settings.MAX_RANGE_VAL = Math.Max(1, UOR_Settings.MAX_RANGE_VAL + delta);
+        internal void AdjustMinRange(int delta) => UOR_Settings.MIN_RANGE_VAL = Math.Max(1, UOR_Settings.MIN_RANGE_VAL + delta);
+        internal void AdjustMaxCrowd(int delta) => UOR_Settings.MAX_CROWD_VAL = Math.Max(1, UOR_Settings.MAX_CROWD_VAL + delta);
+        internal void AdjustMaxQueueSize(int delta) => UOR_Settings.MAX_QUEUE_SIZE = Math.Max(1, UOR_Settings.MAX_QUEUE_SIZE + delta);
 
-        internal void AdjustValidateInterval(int delta)
-        {
-            UOR_Settings.VALIDATE_INTERVAL = Math.Max(5, Math.Min(60, UOR_Settings.VALIDATE_INTERVAL + delta));
-        }
+        // Chances (probability must be 0.0 - 1.0)
+        internal void AdjustChanceWater(double delta) => UOR_Settings.CHANCE_WATER = ClampChance(UOR_Settings.CHANCE_WATER + delta);
+        internal void AdjustChanceWeather(double delta) => UOR_Settings.CHANCE_WEATHER = ClampChance(UOR_Settings.CHANCE_WEATHER + delta);
+        internal void AdjustChanceTimed(double delta) => UOR_Settings.CHANCE_TIMED = ClampChance(UOR_Settings.CHANCE_TIMED + delta);
+        internal void AdjustChanceCommon(double delta) => UOR_Settings.CHANCE_COMMON = ClampChance(UOR_Settings.CHANCE_COMMON + delta);
+        internal void AdjustChanceUncommon(double delta) => UOR_Settings.CHANCE_UNCOMMON = ClampChance(UOR_Settings.CHANCE_UNCOMMON + delta);
+        internal void AdjustChanceRare(double delta) => UOR_Settings.CHANCE_RARE = ClampChance(UOR_Settings.CHANCE_RARE + delta);
 
-        internal void AdjustTimedInterval(int delta)
-        {
-            UOR_Settings.TIMED_INTERVAL = Math.Max(1, Math.Min(60, UOR_Settings.TIMED_INTERVAL + delta));
-        }
-
-        // Limits
-        internal void AdjustMaxSpawn(int delta)
-        {
-            UOR_Settings.MAX_SPAWN_VAL = Math.Max(5, Math.Min(50, UOR_Settings.MAX_SPAWN_VAL + delta));
-        }
-
-        internal void AdjustMaxRange(int delta)
-        {
-            UOR_Settings.MAX_RANGE_VAL = Math.Max(20, Math.Min(100, UOR_Settings.MAX_RANGE_VAL + delta));
-        }
-
-        internal void AdjustMinRange(int delta)
-        {
-            UOR_Settings.MIN_RANGE_VAL = Math.Max(5, Math.Min(30, UOR_Settings.MIN_RANGE_VAL + delta));
-        }
-
-        internal void AdjustMaxCrowd(int delta)
-        {
-            UOR_Settings.MAX_CROWD_VAL = Math.Max(1, Math.Min(10, UOR_Settings.MAX_CROWD_VAL + delta));
-        }
-
-        internal void AdjustMaxQueueSize(int delta)
-        {
-            UOR_Settings.MAX_QUEUE_SIZE = Math.Max(5, Math.Min(50, UOR_Settings.MAX_QUEUE_SIZE + delta));
-        }
-
-        // Chances
-        internal void AdjustChanceWater(double delta)
-        {
-            UOR_Settings.CHANCE_WATER = Math.Max(0.0, Math.Min(1.0, UOR_Settings.CHANCE_WATER + delta));
-        }
-
-        internal void AdjustChanceWeather(double delta)
-        {
-            UOR_Settings.CHANCE_WEATHER = Math.Max(0.0, Math.Min(1.0, UOR_Settings.CHANCE_WEATHER + delta));
-        }
-
-        internal void AdjustChanceTimed(double delta)
-        {
-            UOR_Settings.CHANCE_TIMED = Math.Max(0.0, Math.Min(1.0, UOR_Settings.CHANCE_TIMED + delta));
-        }
-
-        internal void AdjustChanceCommon(double delta)
-        {
-            UOR_Settings.CHANCE_COMMON = Math.Max(0.0, Math.Min(1.0, UOR_Settings.CHANCE_COMMON + delta));
-        }
-
-        internal void AdjustChanceUncommon(double delta)
-        {
-            UOR_Settings.CHANCE_UNCOMMON = Math.Max(0.0, Math.Min(1.0, UOR_Settings.CHANCE_UNCOMMON + delta));
-        }
-
-        internal void AdjustChanceRare(double delta)
-        {
-            UOR_Settings.CHANCE_RARE = Math.Max(0.0, Math.Min(1.0, UOR_Settings.CHANCE_RARE + delta));
-        }
+        /// <summary>
+        /// Clamps a chance value to valid probability range (0.0 - 1.0).
+        /// This is a mathematical requirement, not an arbitrary limit.
+        /// </summary>
+        private static double ClampChance(double value) => Math.Max(0.0, Math.Min(1.0, value));
 
         #endregion
 

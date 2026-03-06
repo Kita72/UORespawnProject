@@ -1,11 +1,13 @@
 using System;
 using System.IO;
 
+using Server.Custom.UORespawnServer.Managers;
+
 namespace Server.Custom.UORespawnServer
 {
     internal static class UOR_Settings
     {
-        internal const string VERSION = "2.0.1.1";
+        internal const string VERSION = "2.0.1.2";
 
         // System Scaler (exposed for ControlService)
         internal static double SCALE_MOD { get; private set; } = 1.0;
@@ -18,7 +20,33 @@ namespace Server.Custom.UORespawnServer
 
         // System Limits
         internal static int MAX_RECYCLE_TYPE { get; set; } = 20; // Max mobs cached per type
-        internal static int MAX_RECYCLE_TOTAL { get; set; } = 50000; // Max total mobs cached
+
+        // MAX_RECYCLE_TOTAL: Dynamic calculation from bestiary count * per-type limit
+        // This ensures trimming to per-type limit keeps us under grand total
+        private static int _MaxRecycleTotalOverride = 0; // If set via settings file, use this instead
+
+        /// <summary>
+        /// Maximum total spawn allowed in world.
+        /// Calculated as BestiaryCount × MAX_RECYCLE_TYPE unless overridden.
+        /// </summary>
+        internal static int MAX_RECYCLE_TOTAL => GetMaxRecycleTotal();
+
+        private static int GetMaxRecycleTotal()
+        {
+            // If override set from settings file, use it
+            if (_MaxRecycleTotalOverride > 0)
+                return _MaxRecycleTotalOverride;
+
+            // Dynamic: bestiary count * per-type limit
+            int bestiaryCount = GameManager.BestiaryCount;
+
+            if (bestiaryCount > 0)
+                return bestiaryCount * MAX_RECYCLE_TYPE;
+
+            // Fallback if bestiary not yet initialized
+            return 50000;
+        }
+
         internal static int MAX_SPAWN_CHECKS { get; set; } = 3; // Max mobs checked when searching
         internal static int MAX_QUEUE_SIZE { get; set; } = 5; // Max mobs qued
         internal static int MAX_STAT_SIZE { get; set; } = 10000; // Max stat points collected
@@ -27,7 +55,7 @@ namespace Server.Custom.UORespawnServer
         internal static int MAX_SPAWN_VAL { get; set; } = 25;
         internal static int MAX_SPAWN => SetScaleMod(MAX_SPAWN_VAL);
 
-        internal static int MIN_RANGE_VAL { get; set; } = 20;
+        internal static int MIN_RANGE_VAL { get; set; } = 30;
         internal static int MIN_RANGE => SetScaleMod(MIN_RANGE_VAL);
 
         internal static int MAX_RANGE_VAL { get; set; } = 80;
@@ -119,7 +147,7 @@ namespace Server.Custom.UORespawnServer
                     if (int.TryParse(value, out int recycleType)) MAX_RECYCLE_TYPE = recycleType;
                     break;
                 case "MAX_RECYCLE_TOTAL":
-                    if (int.TryParse(value, out int recycleTotal)) MAX_RECYCLE_TOTAL = recycleTotal;
+                    if (int.TryParse(value, out int recycleTotal)) _MaxRecycleTotalOverride = recycleTotal;
                     break;
                 case "MAX_SPAWN_CHECKS":
                     if (int.TryParse(value, out int spawnChecks)) MAX_SPAWN_CHECKS = spawnChecks;
@@ -212,7 +240,8 @@ namespace Server.Custom.UORespawnServer
             TIMED_INTERVAL = ClampInt(TIMED_INTERVAL, 1, 60, "TIMED_INTERVAL");
 
             MAX_RECYCLE_TYPE = ClampInt(MAX_RECYCLE_TYPE, 1, 100, "MAX_RECYCLE_TYPE");
-            MAX_RECYCLE_TOTAL = ClampInt(MAX_RECYCLE_TOTAL, 1, 100000, "MAX_RECYCLE_TOTAL");
+            if (_MaxRecycleTotalOverride > 0)
+                _MaxRecycleTotalOverride = ClampInt(_MaxRecycleTotalOverride, 1, 100000, "MAX_RECYCLE_TOTAL");
             MAX_SPAWN_CHECKS = ClampInt(MAX_SPAWN_CHECKS, 1, 10, "MAX_SPAWN_CHECKS");
             MAX_QUEUE_SIZE = ClampInt(MAX_QUEUE_SIZE, 1, 10, "MAX_QUEUE_SIZE");
             MAX_STAT_SIZE = ClampInt(MAX_STAT_SIZE, 100, 10000, "MAX_STAT_SIZE");

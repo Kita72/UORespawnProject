@@ -40,7 +40,7 @@ namespace Server.Custom.UORespawnServer.Timers
             {
                 if (_Entity.GetQueCount() < UOR_Settings.MAX_QUEUE_SIZE)
                 {
-                    _Entity.Push(UOR_Utility.Locate(_Player, new LocationEntity(_Player)));
+                    _Entity.Push(UOR_Utility.Locate(_Entity, new LocationEntity(_Player)));
 
                     _LocationsPushed++;
 

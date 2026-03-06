@@ -1,5 +1,6 @@
-using Server.Targeting;
 using System.Collections.Generic;
+
+using Server.Custom.UORespawnServer.Enums;
 
 namespace Server.Custom.UORespawnServer.Helpers
 {
@@ -7,9 +8,16 @@ namespace Server.Custom.UORespawnServer.Helpers
     {
         internal static string GetTileName(int id, Map map, Point3D location)
         {
-            string name = TileData.LandTable[id & TileData.MaxItemValue].Name;
-
             if (InvalidTiles.Contains(id)) return string.Empty;
+
+            if (WaterShallowTiles.Contains(id)) // Water Shoreline Check
+            {
+                if (location == Point3D.Zero) return string.Empty;
+
+                var waterTarg = UOR_Utility.GetStatic(map, location, "water");
+
+                return waterTarg?.Name;
+            }
 
             if (CloudTiles.Contains(id)) return "cloud";
 
@@ -33,18 +41,25 @@ namespace Server.Custom.UORespawnServer.Helpers
 
             if (SandStoneTiles.Contains(id)) return "sand stone";
 
-            if (!string.IsNullOrEmpty(name)) return name;
+            string name = TileData.LandTable[id & TileData.MaxItemValue].Name;
+
+            if (WaterDeepTiles.Contains(id) && name == "water") // Water Name Check
+            {
+                return name;
+            }
 
             if (InvalidTileNames.Contains(name)) return string.Empty;
 
-            if (location == Point3D.Zero) return string.Empty;
+            if (!string.IsNullOrEmpty(name)) return name;
 
-            return new LandTarget(location, map).Name;
+            return string.Empty;
         }
 
-        internal static int[] GetDeepWater()
+        internal static WaterTypes GetWaterType(int id)
         {
-            return m_WaterDeepTiles;
+            bool water = WaterDeepTiles.Contains(id);
+
+            return water ? WaterTypes.Deep : WaterTypes.Shallow;
         }
 
         //Invalid
@@ -276,14 +291,14 @@ namespace Server.Custom.UORespawnServer.Helpers
         };
 
         //Water Deep
-        private static readonly int[] m_WaterDeepTiles = new int[]
+        private static readonly HashSet<int> WaterDeepTiles = new HashSet<int>
         {
             0x00A8, 0x00AB,
             0x0136, 0x0137
         };
 
         //Water Sand
-        internal static readonly HashSet<int> WaterSandTiles = new HashSet<int>
+        internal static readonly HashSet<int> WaterShallowTiles = new HashSet<int> // land below static water!
         {
             0x004C, 0x004D,
             0x004E, 0x004F,

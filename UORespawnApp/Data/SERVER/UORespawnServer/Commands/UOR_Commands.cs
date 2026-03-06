@@ -12,6 +12,8 @@ namespace Server.Custom.UORespawnServer.Commands
         {
             CommandSystem.Register("UORespawn", AccessLevel.Administrator, new CommandEventHandler(UORespawn_OnCommand));
             CommandSystem.Register("UOR", AccessLevel.Administrator, new CommandEventHandler(UORespawn_OnCommand));
+            CommandSystem.Register("UORAdd", AccessLevel.Counselor, new CommandEventHandler(UORespawnAdd_OnCommand));
+            CommandSystem.Register("UORDrop", AccessLevel.Counselor, new CommandEventHandler(UORespawnDrop_OnCommand));
             CommandSystem.Register("ShowRespawn", AccessLevel.Administrator, new CommandEventHandler(ShowUORespawn_OnCommand));
         }
 
@@ -28,27 +30,67 @@ namespace Server.Custom.UORespawnServer.Commands
             UOR_Utility.SendMsg(ConsoleColor.Yellow, "CONTROL-[Accessed]");
         }
 
+        [Usage("UORAdd")]
+        [Description("Adds Staff to Respawn")]
+        private static void UORespawnDrop_OnCommand(CommandEventArgs e)
+        {
+            if (e.Mobile is PlayerMobile pm)
+            {
+                if (UOR_Core.AddStaff(pm))
+                {
+                    pm.SendMessage(63, "Added to UORespawn!");
+                }
+            }
+        }
+
+        [Usage("UORDrop")]
+        [Description("Drops Staff from Respawn")]
+        private static void UORespawnAdd_OnCommand(CommandEventArgs e)
+        {
+            if (e.Mobile is PlayerMobile pm)
+            {
+                if (UOR_Core.DropStaff(pm))
+                {
+                    pm.SendMessage(33, "Dropped from UORespawn!");
+                }
+            }
+        }
+
         [Usage("ShowRespawn")]
         [Description("Show's Respawn Spawn")]
         private static void ShowUORespawn_OnCommand(CommandEventArgs e)
         {
             if (e.Mobile is PlayerMobile pm)
             {
-                var mobs = pm.Map.GetMobilesInRange(pm.Location, 40)?.ToList();
+                RunCallOut(pm);
 
-                if (mobs.Count > 0)
+                if (UOR_Core.ToggleValidateCallOut())
                 {
-                    for (int i = 0; i < mobs.Count; i++)
-                    {
-                        if (mobs[i] is BaseCreature bc && bc.MySpawner is UOR_Spawner)
-                        {
-                            bc.Say("I AM RESPAWNED!");
-                        }
-                    }
+                    pm.SendMessage(63, "Callout Respawn - [ON]");
+                }
+                else
+                {
+                    pm.SendMessage(33, "Callout Respawn - [OFF]");
                 }
             }
 
             UOR_Utility.SendMsg(ConsoleColor.Yellow, "CONTROL-[Accessed]");
+        }
+
+        internal static void RunCallOut(PlayerMobile pm)
+        {
+            var mobs = pm.Map.GetMobilesInRange(pm.Location, 40)?.ToList();
+
+            if (mobs.Count > 0)
+            {
+                for (int i = 0; i < mobs.Count; i++)
+                {
+                    if (mobs[i] is BaseCreature bc && bc.MySpawner is UOR_Spawner)
+                    {
+                        bc.Say("I AM RESPAWNED!");
+                    }
+                }
+            }
         }
     }
 }

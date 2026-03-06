@@ -37,6 +37,32 @@ namespace Server.Custom.UORespawnServer.Entities
             return _SpawnQueue.Count;
         }
 
+        /// <summary>
+        /// Checks if a location is too close to any queued spawn locations.
+        /// Uses simple distance check instead of Rectangle2D for efficiency.
+        /// </summary>
+        internal bool IsLocationTooClose(Point3D location, int minRange)
+        {
+            if (_SpawnQueue == null || _SpawnQueue.Count == 0)
+                return false;
+
+            foreach (var spawn in _SpawnQueue)
+            {
+                if (spawn?.Location != null && spawn.Location != Point3D.Zero)
+                {
+                    // Use squared distance to avoid sqrt calculation
+                    int dx = location.X - spawn.Location.X;
+                    int dy = location.Y - spawn.Location.Y;
+                    int distSq = (dx * dx) + (dy * dy);
+
+                    if (distSq < (minRange * minRange))
+                        return true;
+                }
+            }
+
+            return false;
+        }
+
         internal void Push(SpawnEntity entity)
         {
             if (entity != null)

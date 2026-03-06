@@ -116,12 +116,13 @@ namespace Server.Custom.UORespawnServer.Gumps
             y += 30;
 
             AddStatRow(20, y, "Status", _Service.GetIsPaused() ? "PAUSED" : "RUNNING", _Service.GetIsPaused() ? COLOR_OFF : COLOR_ON);
-            AddStatRow(230, y, "Locked", _Service.GetIsLocked() ? "YES" : "NO", _Service.GetIsLocked() ? COLOR_OFF : COLOR_ON);
+            AddStatRow(190, y, "Locked", _Service.GetIsLocked() ? "YES" : "NO", _Service.GetIsLocked() ? COLOR_OFF : COLOR_ON);
             y += 20;
 
             AddStatRow(20, y, "Players", $"{_Service.GetPlayerCount()}", COLOR_VALUE);
-            AddStatRow(230, y, "Queued", $"{_Service.GetQueuedCount()}", COLOR_VALUE);
+            AddStatRow(190, y, "Queued", $"{_Service.GetQueuedCount()}", COLOR_VALUE);
 
+            // Power
             if (power)
             {
                 AddButton(355, y, 30534, 30535, BTN_POWER, GumpButtonType.Reply, 0);
@@ -133,7 +134,9 @@ namespace Server.Custom.UORespawnServer.Gumps
             y += 20;
 
             AddStatRow(20, y, "Spawns", $"{_Service.GetAllSpawnCount()}", COLOR_VALUE);
-            AddStatRow(230, y, "Recycled", $"{_Service.GetRecycledCount()}", COLOR_VALUE);
+            AddStatRow(190, y, "Recycled", $"{_Service.GetRecycledCount()}", COLOR_VALUE);
+
+            // Power
             AddLabel(power ? 360 : 358, y, power ? COLOR_ON : COLOR_OFF, $"{(power ? "ON" : "OFF")}");
             y += 35;
 

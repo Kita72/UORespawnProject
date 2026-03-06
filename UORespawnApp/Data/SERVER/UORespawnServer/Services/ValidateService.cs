@@ -1,18 +1,22 @@
 using System;
-
+using System.Collections.Generic;
+using Server.Accounting;
+using Server.Custom.UORespawnServer.Commands;
+using Server.Custom.UORespawnServer.Entities;
 using Server.Custom.UORespawnServer.Timers;
-using Server.Custom.UORespawnServer.Spawners;
 
 namespace Server.Custom.UORespawnServer.Services
 {
     /// <summary>
-    /// Validates spawn proximity to players.
-    /// Spawn too far from players gets sent to recycle.
-    /// Uses ISpawner on-demand query - no tracking list needed.
+    /// Validates spawn counts and trims excess.
+    /// Spawn is only trimmed if: out-of-sight AND type count exceeds limit.
+    /// Deletes furthest away first to minimize player impact.
     /// </summary>
     internal class ValidateService
     {
         private readonly ValidateTimer _ValidateTimer;
+
+        internal bool IsCalling { get; set; }
 
         public ValidateService()
         {
@@ -42,31 +46,63 @@ namespace Server.Custom.UORespawnServer.Services
         }
 
         /// <summary>
-        /// Check all mob spawn - send those far from players to recycle.
+        /// Validate spawn counts and trim excess per type.
+        /// Only trims spawn that is out-of-sight of all players.
+        /// Uses MAX_RECYCLE_TYPE as the per-type limit.
         /// </summary>
         internal void Validate()
         {
-            // On-demand ISpawner query - no tracking list
-            var allSpawn = UOR_MobSpawner.GetAllSpawn();
-
-            int recycledThisPass = 0;
-            int maxDistance = UOR_Settings.MAX_RANGE + (UOR_Settings.MAX_RANGE / 2);
-
-            foreach (var creature in allSpawn)
+            if (IsCalling && UOR_Core.GetRespawners(out List<RespawnerEntity> list))
             {
-                if (creature == null || creature.Deleted)
-                    continue;
-
-                if (!UOR_Utility.PlayersInRange(creature.Map, creature.Location, maxDistance))
+                foreach (var spawner in list)
                 {
-                    UOR_Core.SendToRecycled(creature.Serial);
-                    recycledThisPass++;
+                    UOR_Commands.RunCallOut(spawner._Player);
                 }
             }
 
-            if (recycledThisPass > 0)
+            var queryService = UOR_Core.GetSpawnQueryService();
+
+            if (queryService == null)
+                return;
+
+            // Check total spawn limit first
+            int totalSpawn = queryService.GetTotalSpawnCount();
+            int totalLimit = UOR_Settings.MAX_RECYCLE_TOTAL;
+
+            if (totalSpawn > totalLimit)
             {
-                UOR_Utility.SendMsg(ConsoleColor.Yellow, $"VALIDATE-[{recycledThisPass} Recycled]");
+                UOR_Utility.SendMsg(ConsoleColor.Yellow, $"VALIDATE-[Total: {totalSpawn}/{totalLimit} - Trimming excess]");
+            }
+
+            // Get all unique spawn types currently in world
+            var spawnTypes = queryService.GetAllSpawnTypes();
+            int totalTrimmed = 0;
+            int typeLimit = UOR_Settings.MAX_RECYCLE_TYPE;
+
+            foreach (var typeName in spawnTypes)
+            {
+                int typeCount = queryService.GetTypeCount(typeName);
+
+                // Only trim if over limit
+                if (typeCount > typeLimit)
+                {
+                    int trimmed = queryService.TrimExcess(typeName, typeLimit);
+
+                    if (trimmed > 0)
+                    {
+                        totalTrimmed += trimmed;
+
+                        if (UOR_Settings.ENABLE_DEBUG)
+                        {
+                            UOR_Utility.SendMsg(ConsoleColor.Yellow, $"VALIDATE-[{typeName}: {typeCount}->{typeCount - trimmed}]");
+                        }
+                    }
+                }
+            }
+
+            if (totalTrimmed > 0)
+            {
+                UOR_Utility.SendMsg(ConsoleColor.Yellow, $"VALIDATE-[Trimmed {totalTrimmed} excess spawn]");
             }
         }
     }

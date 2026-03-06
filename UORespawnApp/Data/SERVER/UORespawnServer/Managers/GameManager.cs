@@ -19,6 +19,12 @@ namespace Server.Custom.UORespawnServer.Managers
         // Cache of valid creature names from bestiary (case-insensitive for matching)
         private static HashSet<string> _BestiaryCache = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
+        /// <summary>
+        /// Total count of valid creature types in bestiary.
+        /// Used for dynamic MAX_RECYCLE_TOTAL calculation.
+        /// </summary>
+        internal static int BestiaryCount { get; private set; } = 0;
+
         internal static void InitializeData()
         {
             UOR_Utility.SendMsg(ConsoleColor.Green, "DATA-[Initializing...");
@@ -190,10 +196,13 @@ namespace Server.Custom.UORespawnServer.Managers
                         _BestiaryCache.Add(type);
                     }
 
+                    // Store count for limit calculations before cache is cleared
+                    BestiaryCount = _BestiaryCache.Count;
+
                     File.WriteAllLines(UOR_DIR.BESTIARY_LIST_FILE, types);
                 }
 
-                UOR_Utility.SendMsg(ConsoleColor.Green, $"BESTIARY-[Generated: {_BestiaryCache.Count} creatures]");
+                UOR_Utility.SendMsg(ConsoleColor.Green, $"BESTIARY-[Generated: {BestiaryCount} creatures]");
             }
             catch (Exception ex)
             {

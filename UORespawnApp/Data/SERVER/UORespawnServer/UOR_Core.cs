@@ -77,7 +77,7 @@ namespace Server.Custom.UORespawnServer
 
         private static ProcessService _ProcessService;
 
-        private static RecycleService _RecycleService;
+        private static SpawnQueryService _SpawnQueryService;
 
         private static TrackService _TrackService;
 
@@ -294,7 +294,7 @@ namespace Server.Custom.UORespawnServer
             UOR_Utility.SendMsg(ConsoleColor.Yellow, $"Respawn-[Services Created]");
 
             _ProcessService = new ProcessService();
-            _RecycleService = new RecycleService();
+            _SpawnQueryService = new SpawnQueryService();
             _TrackService = new TrackService();      // Now a simple service, no ServerStarted subscription
             _ValidateService = new ValidateService();
             _TimedService = new TimedService();
@@ -453,30 +453,42 @@ namespace Server.Custom.UORespawnServer
             UOR_Utility.SendMsg(ConsoleColor.Green, "TIMERS-[Stopped]");
         }
 
-        internal static void SendToRecycled(Serial serial)
+        /// <summary>
+        /// Gets the SpawnQueryService for on-map spawn queries.
+        /// </summary>
+        internal static SpawnQueryService GetSpawnQueryService()
         {
-            _RecycleService.Add(serial);
+            return _SpawnQueryService;
         }
 
-        internal static Mobile GetRecycled(string name, out bool isRecycled)
+        /// <summary>
+        /// Tries to find a relocatable spawn of the given type on the map.
+        /// If found, returns it for relocation. Otherwise ALWAYS creates a new spawn.
+        /// Limits are for trimming later - never block spawn creation!
+        /// </summary>
+        internal static Mobile GetRelocatable(string name, out bool isRelocated)
         {
-            Mobile m = _RecycleService.Remove(name);
+            // Try to find relocatable first (prefer reuse over new)
+            var existing = _SpawnQueryService.FindRelocatable(name);
 
-            if (m == null)
+            if (existing != null)
             {
-                isRecycled = false;
-
-                return UOR_Utility.CreateSpawn(name);
+                isRelocated = true;
+                return existing;
             }
 
-            isRecycled = true;
+            // No relocatable found - ALWAYS create new (limits are for trimming, not blocking)
+            isRelocated = false;
 
-            return m;
+            return UOR_Utility.CreateSpawn(name);
         }
 
-        internal static int GetRecycledCount()
+        /// <summary>
+        /// Gets total relocations performed this session (for ControlGump stats).
+        /// </summary>
+        internal static int GetRelocatedCount()
         {
-            return _RecycleService.GetRecycledTotal();
+            return _SpawnQueryService?.GetTotalRelocated() ?? 0;
         }
 
         internal static int GetPlayerCount()
@@ -526,9 +538,6 @@ namespace Server.Custom.UORespawnServer
 
             // Clean up all vendor spawn via ISpawner
             _VendorService.DeleteAllVendors();
-
-            // Clear recycled pool
-            _RecycleService.ClearRecycled();
 
             // Clean up all mob spawn via ISpawner pattern
             int deleted = UOR_Utility.ClearAllSpawns();
@@ -582,6 +591,49 @@ namespace Server.Custom.UORespawnServer
                     UOR_Utility.SendMsg(ConsoleColor.Yellow, $"UORespawn-[{pm.Name} Relogged In]");
                 }
             }
+        }
+
+        internal static bool ToggleValidateCallOut()
+        {
+            return _ValidateService.IsCalling = !_ValidateService.IsCalling;
+        }
+
+        internal static bool AddStaff(PlayerMobile pm)
+        {
+            if (!_RespawnerList.ContainsKey(pm.Serial))
+            {
+                _RespawnerList.Add(pm.Serial, new RespawnerEntity(pm));
+
+                UOR_Utility.SendMsg(ConsoleColor.Yellow, $"UORespawn-[{pm.Name} Added]");
+
+                return true;
+            }
+
+            return false;
+        }
+
+        internal static bool DropStaff(PlayerMobile pm)
+        {
+            bool isDropped = false;
+
+            if (_RespawnerList.ContainsKey(pm.Serial))
+            {
+                _RespawnerList[pm.Serial].Stop();
+                _RespawnerList.Remove(pm.Serial);
+
+                UOR_Utility.SendMsg(ConsoleColor.Yellow, $"UORespawn-[{pm.Name} Drapped]");
+
+                isDropped = true;
+            }
+
+            if (_RespawnerList.Count == 0)
+            {
+                IsPaused = true;
+
+                UOR_Utility.SendMsg(ConsoleColor.Yellow, $"UORespawn-[Paused]");
+            }
+
+            return isDropped;
         }
     }
 }

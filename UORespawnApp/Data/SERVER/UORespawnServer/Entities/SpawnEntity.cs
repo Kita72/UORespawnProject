@@ -5,6 +5,7 @@ using Server.Mobiles;
 
 using Server.Custom.UORespawnServer.Enums;
 using Server.Custom.UORespawnServer.Mobiles;
+using Server.Custom.UORespawnServer.Helpers;
 
 namespace Server.Custom.UORespawnServer.Entities
 {
@@ -12,7 +13,7 @@ namespace Server.Custom.UORespawnServer.Entities
     /// Holds spawn data for a queued spawn while it is active in the system.
     /// Contains location, environment, and frequency data used to determine what to spawn.
     /// </summary>
-    internal class SpawnEntity 
+    internal class SpawnEntity
     {
         internal string Name { get; private set; }
 
@@ -20,6 +21,9 @@ namespace Server.Custom.UORespawnServer.Entities
         internal Point3D Location { get; set; }
         internal Region RegionName { get; private set; }
         internal string TileName { get; private set; }
+        internal int TileId { get; private set; }
+        internal Rectangle2D SpawnBox { get; private set; }
+        internal double DiceRoll { get; private set; }
 
         internal FrequencyTypes FrequencyType { get; set; } = FrequencyTypes.Common;
         internal WaterTypes WaterType { get; set; } = WaterTypes.Shallow;
@@ -32,12 +36,17 @@ namespace Server.Custom.UORespawnServer.Entities
         internal bool IsNight { get; set; }
         internal bool IsTown { get; set; }
         internal bool IsDungeon { get; set; }
-        internal bool HitLava { get; set; } = false;
+        internal bool IsLava { get; set; } = false;
 
         public SpawnEntity(Map map, Point3D location)
         {
             Facet = map;
+
             Location = location;
+
+            SpawnBox = UOR_Utility.GetSpawnBox(Location, UOR_Settings.MIN_RANGE);
+
+            DiceRoll = Utility.RandomDouble();
 
             UpdateEntity();
         }
@@ -62,19 +71,15 @@ namespace Server.Custom.UORespawnServer.Entities
             }
         }
 
-        internal bool HasLocation(Point3D location)
-        {
-            return GetSpawnBox().Contains(location);
-        }
-
-        internal Rectangle2D GetSpawnBox()
-        {
-            return UOR_Utility.GetSpawnBox(Location, UOR_Settings.MIN_RANGE);
-        }
-
         private void SetTile()
         {
-            TileName = HitLava? "lava" : UOR_Utility.GetTileName(Facet, Location);
+            var tile = UOR_Utility.GetTile(Facet, Location);
+
+            TileId = tile.ID;
+
+            TileName = IsLava ? "lava" : TileHelper.GetTileName(TileId, Facet, Location);
+
+            IsWater = TileName == "water";
         }
 
         private void SetRegion()
@@ -90,24 +95,25 @@ namespace Server.Custom.UORespawnServer.Entities
 
         private void SetTime()
         {
-            IsNight = UOR_Utility.IsNight(Facet, Location);
-
             TimeType = UOR_Utility.GetTime(Facet, Location);
         }
 
         private void SetWater()
         {
-            IsWater = UOR_Utility.HasWater(Facet, Location, out WaterTypes waterType);
-
             if (IsWater)
             {
-                WaterType = waterType;
+                WaterType = TileHelper.GetWaterType(TileId);
+
+                if (WaterType == WaterTypes.Shallow)
+                {
+                    Location = new Point3D(Location.X, Location.Y, (Location.Z + 5));
+                }
             }
         }
 
         private void SetWeather()
         {
-            IsWeather = UOR_Utility.HasWeather(Facet, Location, out WeatherTypes weatherType);
+            IsWeather = UOR_Utility.HasWeather(Facet, SpawnBox, out WeatherTypes weatherType);
 
             if (IsWeather)
             {
@@ -119,32 +125,28 @@ namespace Server.Custom.UORespawnServer.Entities
         {
             if (IsWater)
             {
-                FrequencyType = FrequencyTypes.Water;
-
                 return;
             }
 
-            var roll = Utility.RandomDouble();
-
-            if (Utility.RandomBool() && roll < UOR_Settings.CHANCE_TIMED)
+            if (UOR_Utility.GetTime(Facet, Location) == TimeType && DiceRoll < UOR_Settings.CHANCE_TIMED)
             {
                 FrequencyType = FrequencyTypes.Timed;
             }
-            else if (IsWeather && roll < UOR_Settings.CHANCE_WEATHER)
+            else if (IsWeather && DiceRoll < UOR_Settings.CHANCE_WEATHER)
             {
                 FrequencyType = FrequencyTypes.Weather;
             }
-            else if (roll < UOR_Settings.CHANCE_RARE)
+            else if (DiceRoll < UOR_Settings.CHANCE_RARE)
             {
                 FrequencyType = FrequencyTypes.Rare;
             }
-            else if (roll < UOR_Settings.CHANCE_UNCOMMON)
+            else if (DiceRoll < UOR_Settings.CHANCE_UNCOMMON)
             {
                 FrequencyType = FrequencyTypes.UnCommon;
             }
             else
             {
-                if (roll < UOR_Settings.CHANCE_COMMON) // User can set < 100%! need to have fallback!
+                if (DiceRoll < UOR_Settings.CHANCE_COMMON) // User can set < 100%! need to have fallback!
                 {
                     FrequencyType = FrequencyTypes.Common;
                 }
@@ -185,6 +187,8 @@ namespace Server.Custom.UORespawnServer.Entities
 
         private void SetSpawn()
         {
+            IsNight = UOR_Utility.IsNight(Facet, Location);
+
             switch (SpawnType)
             {
                 case SpawnTypes.Box: Name = BoxSpawner.TryBoxSpawn(this);
@@ -216,11 +220,6 @@ namespace Server.Custom.UORespawnServer.Entities
                     }
                 }
             }
-        }
-
-        internal void LocationQueryUpdate()
-        {
-            UOR_Utility.ReleaseQueuedSpawnLocation(Facet, Location);
         }
     }
 }
