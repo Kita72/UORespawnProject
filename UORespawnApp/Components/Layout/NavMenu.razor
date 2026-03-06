@@ -58,8 +58,17 @@
         <!-- Spacer to push footer to bottom -->
         <div class="nav-spacer"></div>
 
-        <!-- Footer: Icons + Update -->
+        <!-- Footer: Badge + Icons + Update -->
         <div class="nav-footer">
+            <!-- App Badge (click to save) -->
+            <div class="badge-container">
+                <img src="UORespawnBadge.png" 
+                     alt="UORespawn Badge" 
+                     class="app-badge" 
+                     title="Click to save badge"
+                     @onclick="SaveBadge" />
+            </div>
+
             <div class="bottom-icons-bar">
                 <button class="icon-btn @GetActiveClass("settings")" @onclick="ShowSettings" title="Settings">
                     <span class="bi bi-gear-fill-nav-menu" aria-hidden="true"></span>
@@ -166,6 +175,52 @@
         }
 
         await Task.CompletedTask;
+    }
+
+    private async Task SaveBadge()
+    {
+        try
+        {
+            string? destinationFolder = null;
+
+#if WINDOWS
+            // Use Windows folder picker
+            var folderPicker = new Windows.Storage.Pickers.FolderPicker();
+            folderPicker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.Downloads;
+            folderPicker.FileTypeFilter.Add("*");
+
+            // Get window handle for the picker
+            var window = Application.Current?.Windows.FirstOrDefault()?.Handler?.PlatformView as Microsoft.UI.Xaml.Window;
+            if (window != null)
+            {
+                var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(window);
+                WinRT.Interop.InitializeWithWindow.Initialize(folderPicker, hwnd);
+            }
+
+            var folder = await folderPicker.PickSingleFolderAsync();
+            destinationFolder = folder?.Path;
+#elif MACCATALYST
+            // For macOS, save to Downloads folder as default
+            destinationFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
+#endif
+
+            if (!string.IsNullOrEmpty(destinationFolder))
+            {
+                string destinationPath = Path.Combine(destinationFolder, "UORespawnBadge.png");
+
+                // Get the badge from wwwroot (embedded in app package)
+                using var stream = await FileSystem.OpenAppPackageFileAsync("wwwroot/UORespawnBadge.png");
+                using var fileStream = File.Create(destinationPath);
+                await stream.CopyToAsync(fileStream);
+
+                ToastService.ShowSuccess($"Badge saved to {destinationFolder}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Error saving badge", ex);
+            ToastService.ShowWarning($"Could not save badge: {ex.Message}");
+        }
     }
 
     public void Dispose()

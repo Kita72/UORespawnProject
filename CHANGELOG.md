@@ -5,6 +5,39 @@ All notable changes to UORespawn will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1.2] - 2026-03-06
+
+### Added
+
+#### App Badge
+- **Official UORespawn Badge** - Downloadable badge image for users to display on websites/servers
+  - Located in NavMenu between spawn section and bottom icons
+  - Click to save badge to folder of your choice (Windows folder picker)
+  - macOS saves to Downloads folder automatically
+
+#### In-Game Commands
+- **[UORAdd** - Add creatures to spawn list at current location (GameMaster+)
+- **[UORDrop** - Remove creatures from spawn list at current location (GameMaster+)
+
+### Changed
+
+#### Instructions Documentation
+- **Section 12 Rewritten** - Completely rewrote "In-Game Editing" section with accurate documentation
+  - Documents actual Control Panel → Edit Spawn → Target workflow
+  - Removed incorrect references to non-existent commands
+  - Added SpawnEditGump and VendorEditGump feature documentation
+  - Added target type table (Ground, Signs, Beehives, Items)
+- **[ShowRespawn] Updated** - Now documented as toggle mode (call once to enable, again to disable)
+- **Default Values Synced** - Updated settings defaults to match server (SearchInterval: 125ms, MinRange: 30, WaterChance: 5%)
+
+### Removed
+
+- **MaxRecycleTotal Setting** - Removed from editor (server now auto-calculates based on player count)
+
+### Technical
+- NavMenu badge container with click-to-save functionality using MAUI FolderPicker
+- Badge positioned in nav-footer, stacked above bottom icons bar
+
 ## [2.0.1.1] - 2026-03-05
 
 ### Added
