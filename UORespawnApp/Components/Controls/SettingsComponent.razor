@@ -20,11 +20,11 @@
                     <div class="row justify-content-center">
                         <div class="col-md-6 mb-3 text-center">
                             <label class="form-label">Min Range</label>
-                            <input type="number" class="form-control text-center" @bind="Settings.MinRange" min="0" />
+                            <input type="number" class="form-control text-center" @bind="Settings.MinRange" min="5" max="125" />
                         </div>
                         <div class="col-md-6 mb-3 text-center">
                             <label class="form-label">Max Range</label>
-                            <input type="number" class="form-control text-center" @bind="Settings.MaxRange" min="0" />
+                            <input type="number" class="form-control text-center" @bind="Settings.MaxRange" min="5" max="250" />
                         </div>
                     </div>
 
@@ -34,14 +34,14 @@
                                 Max Crowd
                                 <InfoIcon Text="Maximum spawns within Min Range" />
                             </label>
-                            <input type="number" class="form-control text-center" @bind="Settings.MaxCrowd" min="0" />
+                            <input type="number" class="form-control text-center" @bind="Settings.MaxCrowd" min="1" max="10" />
                         </div>
                         <div class="col-md-6 mb-3 text-center">
                             <label class="form-label">
                                 Max Mobs
                                 <InfoIcon Text="Maximum spawns within Max Range" />
                             </label>
-                            <input type="number" class="form-control text-center" @bind="Settings.MaxMobs" min="0" />
+                            <input type="number" class="form-control text-center" @bind="Settings.MaxMobs" min="5" max="75" />
                         </div>
                     </div>
 
@@ -261,20 +261,11 @@
                                     </div>
                                     <div class="col-md-4 mb-3 text-center">
                                         <label class="form-label small">
-                                            Max Recycle Total
-                                            <InfoIcon Text="Max total mobs in recycle pool" />
-                                        </label>
-                                        <input type="number" class="form-control form-control-sm text-center" @bind="Settings.MaxRecycleTotal" min="1" max="100000" />
-                                    </div>
-                                    <div class="col-md-4 mb-3 text-center">
-                                        <label class="form-label small">
                                             Max Spawn Checks
                                             <InfoIcon Text="Max attempts to find valid spawn point" />
                                         </label>
                                         <input type="number" class="form-control form-control-sm text-center" @bind="Settings.MaxSpawnChecks" min="1" max="10" />
                                     </div>
-                                </div>
-                                <div class="row justify-content-center">
                                     <div class="col-md-4 mb-3 text-center">
                                         <label class="form-label small">
                                             Max Queue Size

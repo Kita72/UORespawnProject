@@ -226,10 +226,6 @@ public class CommandService
                     if (int.TryParse(value, out var maxRecycleType))
                         Settings.MaxRecycleType = maxRecycleType;
                     break;
-                case "MAX_RECYCLE_TOTAL":
-                    if (int.TryParse(value, out var maxRecycleTotal))
-                        Settings.MaxRecycleTotal = maxRecycleTotal;
-                    break;
                 case "MAX_SPAWN_CHECKS":
                     if (int.TryParse(value, out var maxSpawnChecks))
                         Settings.MaxSpawnChecks = maxSpawnChecks;

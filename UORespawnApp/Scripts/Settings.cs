@@ -53,28 +53,31 @@ namespace UORespawnApp
         // ==================== VALIDATION CONSTANTS ====================
 
         /// <summary>Minimum allowed value for range settings</summary>
-        public const int MinRangeValue = 1;
+        public const int MinRangeValue = 5;
 
-        /// <summary>Maximum allowed value for range settings</summary>
-        public const int MaxRangeValue = 500;
+        /// <summary>Maximum allowed value for MinRange</summary>
+        public const int MaxMinRangeValue = 125;
+
+        /// <summary>Maximum allowed value for MaxRange</summary>
+        public const int MaxMaxRangeValue = 250;
 
         /// <summary>Minimum allowed value for MaxMobs</summary>
-        public const int MinMobsValue = 1;
+        public const int MinMobsValue = 5;
 
         /// <summary>Maximum allowed value for MaxMobs</summary>
-        public const int MaxMobsValue = 500;
+        public const int MaxMobsValue = 75;
 
         /// <summary>Minimum allowed value for MaxCrowd</summary>
         public const int MinCrowdValue = 1;
 
         /// <summary>Maximum allowed value for MaxCrowd</summary>
-        public const int MaxCrowdValue = 50;
+        public const int MaxCrowdValue = 10;
 
         /// <summary>Minimum allowed value for interval settings (ms)</summary>
-        public const int MinIntervalValue = 10;
+        public const int MinIntervalValue = 50;
 
         /// <summary>Maximum allowed value for interval settings (ms)</summary>
-        public const int MaxIntervalValue = 60000;
+        public const int MaxIntervalValue = 2000;
 
         private static void LoadCache()
         {
@@ -276,14 +279,14 @@ namespace UORespawnApp
 
         public static int MinRange
         {
-            get => Preferences.Get("MinRange", 20);
-            set => Preferences.Set("MinRange", Math.Clamp(value, MinRangeValue, MaxRangeValue));
+            get => Preferences.Get("MinRange", 30);
+            set => Preferences.Set("MinRange", Math.Clamp(value, MinRangeValue, MaxMinRangeValue));
         }
 
         public static int MaxRange
         {
             get => Preferences.Get("MaxRange", 80);
-            set => Preferences.Set("MaxRange", Math.Clamp(value, MinRangeValue, MaxRangeValue));
+            set => Preferences.Set("MaxRange", Math.Clamp(value, MinRangeValue, MaxMaxRangeValue));
         }
 
         public static int MaxCrowd
@@ -301,14 +304,14 @@ namespace UORespawnApp
         public static double ScaleMod
         {
             get => Preferences.Get("ScaleMod", 1.0);
-            set => Preferences.Set("ScaleMod", Math.Clamp(value, 0.1, 10.0));
+            set => Preferences.Set("ScaleMod", Math.Clamp(value, 0.1, 3.0));
         }
 
         // System Intervals
         /// <summary>How often to search for spawn locations per player (milliseconds)</summary>
         public static int SearchInterval
         {
-            get => Preferences.Get("SearchInterval", 75);
+            get => Preferences.Get("SearchInterval", 125);
             set => Preferences.Set("SearchInterval", Math.Clamp(value, MinIntervalValue, MaxIntervalValue));
         }
 
@@ -323,7 +326,7 @@ namespace UORespawnApp
         public static int ValidateInterval
         {
             get => Preferences.Get("ValidateInterval", 5);
-            set => Preferences.Set("ValidateInterval", Math.Clamp(value, 1, 300));
+            set => Preferences.Set("ValidateInterval", Math.Clamp(value, 1, 60));
         }
 
         /// <summary>How often to check time-based spawns (minutes)</summary>
@@ -338,35 +341,28 @@ namespace UORespawnApp
         public static int MaxRecycleType
         {
             get => Preferences.Get("MaxRecycleType", 20);
-            set => Preferences.Set("MaxRecycleType", Math.Clamp(value, 1, 1000));
-        }
-
-        /// <summary>Max total mobs in recycle pool</summary>
-        public static int MaxRecycleTotal
-        {
-            get => Preferences.Get("MaxRecycleTotal", 50000);
-            set => Preferences.Set("MaxRecycleTotal", Math.Clamp(value, 100, 500000));
+            set => Preferences.Set("MaxRecycleType", Math.Clamp(value, 1, 100));
         }
 
         /// <summary>Max attempts to find valid spawn point</summary>
         public static int MaxSpawnChecks
         {
             get => Preferences.Get("MaxSpawnChecks", 3);
-            set => Preferences.Set("MaxSpawnChecks", Math.Clamp(value, 1, 20));
+            set => Preferences.Set("MaxSpawnChecks", Math.Clamp(value, 1, 10));
         }
 
         /// <summary>Max locations queued per player</summary>
         public static int MaxQueueSize
         {
             get => Preferences.Get("MaxQueueSize", 5);
-            set => Preferences.Set("MaxQueueSize", Math.Clamp(value, 1, 50));
+            set => Preferences.Set("MaxQueueSize", Math.Clamp(value, 1, 10));
         }
 
         /// <summary>Max statistics entries</summary>
         public static int MaxStatSize
         {
             get => Preferences.Get("MaxStatSize", 10000);
-            set => Preferences.Set("MaxStatSize", Math.Clamp(value, 100, 100000));
+            set => Preferences.Set("MaxStatSize", Math.Clamp(value, 100, 10000));
         }
 
         // New Spawn Toggles
@@ -393,7 +389,7 @@ namespace UORespawnApp
 
         public static double WaterChance
         {
-            get => Preferences.Get("WaterChance", 0.25);
+            get => Preferences.Get("WaterChance", 0.05);
             set => Preferences.Set("WaterChance", Math.Clamp(value, 0.0, 1.0));
         }
 
@@ -534,27 +530,26 @@ namespace UORespawnApp
             // Scale modifier
             ScaleMod = 1.0;
 
-            // System intervals
-            SearchInterval = 75;
+            // System intervals (matches server 2.0.1.2)
+            SearchInterval = 125;
             ProcessInterval = 250;
             ValidateInterval = 5;
             TimedInterval = 1;
 
             // System limits
             MaxRecycleType = 20;
-            MaxRecycleTotal = 50000;
             MaxSpawnChecks = 3;
             MaxQueueSize = 5;
             MaxStatSize = 10000;
 
             // Spawn limits
             MaxMobs = 25;
-            MinRange = 20;
+            MinRange = 30;
             MaxRange = 80;
             MaxCrowd = 3;
 
-            // Spawn chances
-            WaterChance = 0.25;
+            // Spawn chances (matches server 2.0.1.2)
+            WaterChance = 0.05;
             WeatherChance = 0.01;
             TimedChance = 0.01;
             CommonChance = 1.0;

@@ -45,7 +45,6 @@ namespace UORespawnApp.Scripts.Services
                 // System Limits
                 writer.WriteLine("# System Limits");
                 writer.WriteLine($"MAX_RECYCLE_TYPE,{Settings.MaxRecycleType}");
-                writer.WriteLine($"MAX_RECYCLE_TOTAL,{Settings.MaxRecycleTotal}");
                 writer.WriteLine($"MAX_SPAWN_CHECKS,{Settings.MaxSpawnChecks}");
                 writer.WriteLine($"MAX_QUEUE_SIZE,{Settings.MaxQueueSize}");
                 writer.WriteLine($"MAX_STAT_SIZE,{Settings.MaxStatSize}");
@@ -179,10 +178,6 @@ namespace UORespawnApp.Scripts.Services
                 case "MAX_RECYCLE_TYPE":
                     if (int.TryParse(value, out var recycleType))
                         Settings.MaxRecycleType = recycleType;
-                    break;
-                case "MAX_RECYCLE_TOTAL":
-                    if (int.TryParse(value, out var recycleTotal))
-                        Settings.MaxRecycleTotal = recycleTotal;
                     break;
                 case "MAX_SPAWN_CHECKS":
                     if (int.TryParse(value, out var spawnChecks))
