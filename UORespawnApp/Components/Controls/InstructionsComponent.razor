@@ -747,7 +747,7 @@
 
                     <h6 class="text-primary"><span class="bi bi-sliders me-2"></span>Spawn Limits</h6>
                     <ul>
-                        <li><strong>Spawn Range Min/Max:</strong> Distance from player where creatures can spawn (default: 20-80 tiles)</li>
+                        <li><strong>Spawn Range Min/Max:</strong> Distance from player where creatures can spawn (default: 30-80 tiles)</li>
                         <li><strong>Max Spawn:</strong> Maximum creatures within Max Range (default: 25)</li>
                         <li><strong>Max Crowd:</strong> Crowd multiplier within Min Range (default: 3)</li>
                     </ul>
@@ -755,7 +755,7 @@
                     <h6 class="text-primary mt-4"><span class="bi bi-percent me-2"></span>Spawn Chances</h6>
                     <ul>
                         <li><strong>Common/Uncommon/Rare:</strong> Probability for each rarity tier (default: 1.0 / 0.1 / 0.01)</li>
-                        <li><strong>Water/Weather/Timed:</strong> Environmental spawn probabilities (default: 0.25 / 0.01 / 0.01)</li>
+                        <li><strong>Water/Weather/Timed:</strong> Environmental spawn probabilities (default: 0.05 / 0.01 / 0.01)</li>
                     </ul>
 
                     <h6 class="text-primary mt-4"><span class="bi bi-toggles me-2"></span>Spawn Toggles</h6>
@@ -782,7 +782,7 @@
                     <h6 class="text-primary mt-4"><span class="bi bi-clock-history me-2"></span>System Intervals (Advanced)</h6>
                     <p class="text-muted small">These settings control server-side timing. Most users can leave defaults.</p>
                     <ul>
-                        <li><strong>Search Interval:</strong> How often to search for spawn locations per player (default: 75ms)</li>
+                        <li><strong>Search Interval:</strong> How often to search for spawn locations per player (default: 125ms)</li>
                         <li><strong>Process Interval:</strong> How often to process the spawn queue (default: 250ms)</li>
                         <li><strong>Validate Interval:</strong> How often to validate existing spawns (default: 5 seconds)</li>
                         <li><strong>Timed Interval:</strong> How often to check time-based spawns (default: 1 minute)</li>
@@ -791,11 +791,15 @@
                     <h6 class="text-primary mt-4"><span class="bi bi-gear-wide me-2"></span>System Limits (Advanced)</h6>
                     <ul>
                         <li><strong>Max Recycle Type:</strong> Max mobs cached per type in recycle pool (default: 20)</li>
-                        <li><strong>Max Recycle Total:</strong> Max total mobs in recycle pool (default: 50000)</li>
                         <li><strong>Max Spawn Checks:</strong> Max attempts to find valid spawn point (default: 3)</li>
                         <li><strong>Max Queue Size:</strong> Max locations queued per player (default: 5)</li>
                         <li><strong>Max Stat Size:</strong> Max statistics entries (default: 10000)</li>
                     </ul>
+                    <p class="small text-muted">
+                        <span class="bi bi-info-circle"></span> <strong>Note:</strong> The total recycle pool limit is automatically 
+                        calculated by the server as <code>Max Recycle Type × Bestiary Count</code>. This ensures the pool scales 
+                        appropriately with your creature variety.
+                    </p>
 
                     <h6 class="text-primary mt-4"><span class="bi bi-toggle-on me-2"></span>Debug Toggle</h6>
                     <p>
@@ -1272,99 +1276,103 @@
                     <strong><span class="bi bi-pencil-square"></span> 12. In-Game Editing</strong>
                 </div>
                 <div class="card-body">
-                    <h6 class="text-primary"><span class="bi bi-controller me-2"></span>Edit Spawns From In-Game (v2.0.0.8)</h6>
+                    <h6 class="text-primary"><span class="bi bi-controller me-2"></span>Edit Spawns From In-Game</h6>
                     <p>
-                        UORespawn v2.0.0.8 introduces <strong>in-game editing commands</strong> that let you mark existing spawns 
-                        for modification directly from your ServUO server. The edits are queued in command files and processed 
-                        by the editor on next launch.
+                        UORespawn provides <strong>in-game spawn editing via gumps</strong> accessible through the Control Panel. 
+                        This allows admins to view and modify spawn lists directly on the server without needing the desktop editor.
                     </p>
 
                     <div class="alert alert-success mb-4">
                         <span class="bi bi-magic me-1"></span> <strong>How It Works:</strong>
                         <ol class="mb-0 mt-2">
-                            <li>Use an edit command in-game to mark a spawn for editing</li>
-                            <li>The server writes a command file to <code>Data/UORespawn/COMMANDS/</code></li>
-                            <li>When you open the editor, it detects pending edits</li>
-                            <li>A modal shows all pending commands - you choose which to apply</li>
-                            <li>Applied edits navigate you directly to that spawn for modification</li>
+                            <li>Open the Control Panel with <code>[UORespawn</code></li>
+                            <li>Click the <strong>Edit Spawn</strong> button to get a target cursor</li>
+                            <li>Target the ground, a static (sign, beehive), or an item at the location you want to edit</li>
+                            <li>The system opens all relevant spawn editors for that location</li>
+                            <li>Make changes directly in the gump and click <strong>Save Changes</strong></li>
                         </ol>
                     </div>
 
-                    <h6 class="text-primary mt-4"><span class="bi bi-terminal me-2"></span>Edit Commands</h6>
+                    <h6 class="text-primary mt-4"><span class="bi bi-bullseye me-2"></span>Target Types</h6>
+                    <p>When you target a location, the system checks for all spawn types at that point:</p>
                     <table class="table table-dark table-sm">
                         <thead>
                             <tr>
-                                <th>Command</th>
+                                <th>Target</th>
+                                <th>What Opens</th>
                                 <th>Description</th>
-                                <th>Usage</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr>
-                                <td><code>[EditBox</code></td>
-                                <td>Edit a box spawn at your current location</td>
-                                <td>Stand inside a spawn box and use the command</td>
+                                <td><strong>Ground/Land</strong></td>
+                                <td>Spawn Edit Gump(s)</td>
+                                <td>Opens editors for any Box, Region, or Tile spawn at that location</td>
                             </tr>
                             <tr>
-                                <td><code>[EditRegion</code></td>
-                                <td>Edit the region spawn for your current region</td>
-                                <td>Stand in the region you want to edit</td>
+                                <td><strong>Static (Sign)</strong></td>
+                                <td>Vendor Edit Gump</td>
+                                <td>Opens the vendor spawn editor for that shop sign</td>
                             </tr>
                             <tr>
-                                <td><code>[EditTile</code></td>
-                                <td>Edit the tile spawn for the ground tile type at your feet</td>
-                                <td>Stand on the tile type you want to modify</td>
+                                <td><strong>Static (Beehive)</strong></td>
+                                <td>Vendor Edit Gump</td>
+                                <td>Opens the vendor spawn editor for the beehive</td>
                             </tr>
                             <tr>
-                                <td><code>[EditVendor</code></td>
-                                <td>Edit the vendor spawn at the nearest sign/hive</td>
-                                <td>Stand near a shop sign or beehive</td>
+                                <td><strong>Item</strong></td>
+                                <td>Spawn Edit Gump(s)</td>
+                                <td>Opens editors for any Box, Region, or Tile spawn at the item's location</td>
                             </tr>
                         </tbody>
                     </table>
 
-                    <h6 class="text-primary mt-4"><span class="bi bi-ui-checks-grid me-2"></span>Processing Pending Edits</h6>
-                    <p>When the editor launches and detects pending edit commands:</p>
-                    <ol>
-                        <li>A <strong>Pending Edits</strong> modal appears showing all queued commands</li>
-                        <li>Each command shows its type, target (coordinates/region/tile), and timestamp</li>
-                        <li>Click <strong>Apply</strong> on a command to:
-                            <ul>
-                                <li>Navigate to the appropriate editor page</li>
-                                <li>Select the correct map</li>
-                                <li>Focus on the specific spawn entry</li>
-                            </ul>
-                        </li>
-                        <li>Click <strong>Dismiss</strong> to remove a command without applying</li>
-                        <li>Click <strong>Dismiss All</strong> to clear all pending commands</li>
-                    </ol>
-
-                    <h6 class="text-primary mt-4"><span class="bi bi-exclamation-triangle me-2"></span>Important Notes</h6>
+                    <h6 class="text-primary mt-4"><span class="bi bi-ui-checks-grid me-2"></span>Spawn Edit Gump Features</h6>
+                    <p>The Spawn Edit Gump allows you to manage creature entries for each frequency tier:</p>
                     <ul>
-                        <li><strong>Pack Verification:</strong> Before applying edits, ensure the correct spawn pack is loaded!</li>
-                        <li><strong>Command Persistence:</strong> Commands remain queued until you apply or dismiss them</li>
-                        <li><strong>Multiple Edits:</strong> You can queue multiple edit commands before opening the editor</li>
-                        <li><strong>Linked Servers Only:</strong> Edit commands require the editor to be linked to your ServUO folder</li>
+                        <li><strong>Section Tabs:</strong> Switch between Water, Weather, Timed, Common, Uncommon, and Rare spawn lists</li>
+                        <li><strong>Trigger Selector:</strong> For Weather/Timed spawns, cycle through trigger conditions</li>
+                        <li><strong>Spawn List:</strong> View all creatures in the current section with scroll support</li>
+                        <li><strong>Add New Spawn:</strong> Type a creature name and click the add button</li>
+                        <li><strong>Delete Entries:</strong> Remove individual creatures from the spawn list</li>
+                        <li><strong>Save Changes:</strong> Commits your edits to the spawn data file</li>
+                    </ul>
+
+                    <h6 class="text-primary mt-4"><span class="bi bi-shop me-2"></span>Vendor Edit Gump Features</h6>
+                    <p>The Vendor Edit Gump manages vendor spawns at signs and beehives:</p>
+                    <ul>
+                        <li><strong>Vendor List:</strong> Shows all vendor types assigned to this spawn point</li>
+                        <li><strong>Add Vendors:</strong> Add new vendor types to the spawn</li>
+                        <li><strong>Remove Vendors:</strong> Delete vendor entries from the list</li>
+                        <li><strong>Save Changes:</strong> Commits your edits to the vendor spawn file</li>
+                    </ul>
+
+                    <h6 class="text-primary mt-4"><span class="bi bi-info-circle me-2"></span>Important Notes</h6>
+                    <ul>
+                        <li><strong>Multiple Gumps:</strong> If a location has overlapping spawn types (e.g., a box inside a region), multiple edit gumps will open</li>
+                        <li><strong>No Spawn Data:</strong> If no spawn exists at the targeted location, you'll receive a message suggesting to use the desktop editor to create it</li>
+                        <li><strong>Access Level:</strong> Requires GameMaster or higher access level</li>
+                        <li><strong>Changes Are Immediate:</strong> Saved changes take effect on the next spawn cycle</li>
                     </ul>
 
                     <h6 class="text-primary mt-4"><span class="bi bi-workflow me-2"></span>Example Workflow</h6>
                     <div class="alert alert-secondary">
                         <ol class="mb-0">
-                            <li>You're playing on your server and notice spawn issues in a dungeon</li>
-                            <li>Walk to the problem area and use <code>[EditBox</code></li>
-                            <li>Server confirms: <em>"Edit command queued for box spawn at (1234, 5678)"</em></li>
-                            <li>Continue playing - queue more edits if needed</li>
-                            <li>Later, open the UORespawn Editor</li>
-                            <li>The Pending Edits modal shows your queued commands</li>
-                            <li>Click Apply - editor navigates directly to that box spawn</li>
-                            <li>Make your changes and save</li>
+                            <li>Use <code>[UORespawn</code> to open the Control Panel</li>
+                            <li>Click the <strong>Edit Spawn</strong> button</li>
+                            <li>Target the ground in a dungeon area</li>
+                            <li>A Spawn Edit Gump opens showing the box spawn at that location</li>
+                            <li>Click the <strong>Rare</strong> tab to view rare creature entries</li>
+                            <li>Type "Balron" in the add field and click add</li>
+                            <li>Click <strong>Save Changes</strong> to commit</li>
+                            <li>The spawn will now include Balrons in the rare tier!</li>
                         </ol>
                     </div>
 
                     <div class="alert alert-info mt-3">
-                        <span class="bi bi-lightbulb"></span> <strong>Tip:</strong> This feature is perfect for live server 
-                        administrators who want to note spawn adjustments while playing, then batch-edit them later in the 
-                        editor without having to remember coordinates!
+                        <span class="bi bi-lightbulb"></span> <strong>Tip:</strong> Use in-game editing for quick tweaks and adjustments. 
+                        For creating new spawn areas or managing spawn packs, use the desktop UORespawn Editor for its full feature set 
+                        including map visualization and bulk operations.
                     </div>
                 </div>
             </div>
@@ -1497,10 +1505,9 @@
                         automatically cleaned up after 7 days.
                     </p>
 
-                    <h6 class="text-primary mt-4"><span class="bi bi-terminal me-2"></span>In-Game Debug Command</h6>
+                    <h6 class="text-primary mt-4"><span class="bi bi-terminal me-2"></span>In-Game Debug Commands</h6>
                     <p>
-                        Need to visually identify which creatures around you are spawned by UORespawn? Use the 
-                        <code>[ShowRespawn</code> command in-game!
+                        Need to visually identify which creatures around you are spawned by UORespawn? Use these debug commands:
                     </p>
                     <table class="table table-dark table-sm">
                         <thead>
@@ -1512,13 +1519,32 @@
                         <tbody>
                             <tr>
                                 <td><code>[ShowRespawn</code></td>
-                                <td>All UORespawn creatures within 40 tiles will say <strong>"I AM RESPAWNED!"</strong></td>
+                                <td>
+                                    <strong>Toggle auto call-out mode.</strong> When enabled, UORespawn creatures will continuously 
+                                    announce themselves by saying <strong>"I AM RESPAWNED!"</strong> during validation cycles. 
+                                    Run the command again to turn it off. First use also triggers an immediate call-out within 40 tiles.
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><code>[UORAdd</code></td>
+                                <td>
+                                    <strong>Add yourself to the spawn system.</strong> Staff members can use this to become a 
+                                    "player spawner" - creatures will spawn around you like they do for regular players. 
+                                    Useful for testing spawn configurations without logging in as a player.
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><code>[UORDrop</code></td>
+                                <td>
+                                    <strong>Remove yourself from the spawn system.</strong> Stops creatures from spawning around 
+                                    your staff character. Use this when you're done testing and want to observe without triggering spawns.
+                                </td>
                             </tr>
                         </tbody>
                     </table>
                     <p class="small text-muted">
-                        <span class="bi bi-info-circle me-1"></span>This is a quick way to visually identify UORespawn creatures 
-                        without having to open each mobile's properties menu. Requires Administrator access.
+                        <span class="bi bi-info-circle me-1"></span><code>[ShowRespawn</code> requires Administrator access. 
+                        <code>[UORAdd</code> and <code>[UORDrop</code> require Counselor access or higher.
                     </p>
 
                     <div class="alert alert-info mt-3">
