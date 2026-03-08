@@ -97,6 +97,11 @@ window.mapModule = {
     // ============================================
     keyStates: new Set(),
     panAnimationId: null,
+    edgePanAnimationId: null,
+    _lastDrawScreenX: 0,
+    _lastDrawScreenY: 0,
+    _edgePanThreshold: 25,
+    _docMoveHandler: null,
     onPanUpdate: null,
     lastPanUpdateTime: 0,
     panUpdateThrottleMs: 50,
@@ -296,16 +301,42 @@ window.mapModule = {
         this.drawStartWorld = { x: world.x, y: world.y };
         this.drawCurrentWorld = { x: world.x, y: world.y };
         console.log(`✏️ Draw start: world (${world.x}, ${world.y})`);
+        // Document-level listener so mouse is tracked even outside canvas bounds
+        this._docMoveHandler = (e) => {
+            if (!this.isDrawing) { this._removeDrawListeners(); return; }
+            const r = this.canvas.getBoundingClientRect();
+            const sx = Math.max(0, Math.min(this.viewportWidth, e.clientX - r.left));
+            const sy = Math.max(0, Math.min(this.viewportHeight, e.clientY - r.top));
+            this.updateDrawing(sx, sy);
+        };
+        document.addEventListener('pointermove', this._docMoveHandler);
     },
     
     updateDrawing: function(screenX, screenY) {
         if (!this.isDrawing) return;
+        this._lastDrawScreenX = screenX;
+        this._lastDrawScreenY = screenY;
         const world = this.screenToWorld(screenX, screenY);
-        this.drawCurrentWorld = { x: world.x, y: world.y };
-        this.redrawAll(); // Show preview
+        // Clamp to map bounds so box can never exceed the map
+        this.drawCurrentWorld = {
+            x: Math.max(0, Math.min(this.imageWidth, world.x)),
+            y: Math.max(0, Math.min(this.imageHeight, world.y))
+        };
+        // Start auto-pan when mouse is within threshold pixels of any canvas edge
+        const t = this._edgePanThreshold;
+        const nearEdge = screenX < t || screenX > this.viewportWidth - t ||
+                         screenY < t || screenY > this.viewportHeight - t;
+        if (nearEdge) {
+            this._startEdgePan();
+        } else {
+            this._stopEdgePan();
+        }
+        this.redrawAll();
     },
     
     finishDrawing: function() {
+        this._stopEdgePan();
+        this._removeDrawListeners();
         if (!this.isDrawing) {
             this.isDrawing = false;
             return null;
@@ -337,6 +368,20 @@ window.mapModule = {
         
         console.log(`✅ Box created: (${x1}, ${y1}) ${width}x${height}`);
         return result;
+    },
+
+    cancelDrawing: function() {
+        this._stopEdgePan();
+        this._removeDrawListeners();
+        this.isDrawing = false;
+        this.redrawAll();
+    },
+
+    _removeDrawListeners: function() {
+        if (this._docMoveHandler) {
+            document.removeEventListener('pointermove', this._docMoveHandler);
+            this._docMoveHandler = null;
+        }
     },
 
     // ============================================
@@ -1102,10 +1147,10 @@ window.mapModule = {
                 }
                 
                 const box = spawn.spawnBox;
-                const x = box.x || box.X;
-                const y = box.y || box.Y;
-                const w = box.width || box.Width;
-                const h = box.height || box.Height;
+                const x = box.x ?? box.X ?? 0;
+                const y = box.y ?? box.Y ?? 0;
+                const w = box.width ?? box.Width ?? 0;
+                const h = box.height ?? box.Height ?? 0;
 
                 // Convert world to screen coordinates
                 const topLeft = this.worldToScreen(x, y);
@@ -1823,6 +1868,56 @@ window.mapModule = {
     // Register a callback for pan updates (called from C#)
     setPanUpdateCallback: function(callback) {
         this.onPanUpdate = callback;
+    },
+
+    // Start the edge-pan animation loop (called during box draw near canvas edge)
+    _startEdgePan: function() {
+        if (this.edgePanAnimationId !== null) return; // Already running
+        const tick = () => {
+            if (!this.isDrawing) {
+                this.edgePanAnimationId = null;
+                return;
+            }
+            const t = this._edgePanThreshold;
+            const sx = this._lastDrawScreenX;
+            const sy = this._lastDrawScreenY;
+            let dx = 0, dy = 0;
+            const maxSpeed = 8; // px per frame (matches ~480px/sec at 60fps)
+            // Compute pan delta proportional to proximity to each edge
+            if (sx < t) dx = Math.ceil((t - sx) / t * maxSpeed);
+            else if (sx > this.viewportWidth - t) dx = -Math.ceil((sx - (this.viewportWidth - t)) / t * maxSpeed);
+            if (sy < t) dy = Math.ceil((t - sy) / t * maxSpeed);
+            else if (sy > this.viewportHeight - t) dy = -Math.ceil((sy - (this.viewportHeight - t)) / t * maxSpeed);
+            if (dx !== 0 || dy !== 0) {
+                this.panX += dx;
+                this.panY += dy;
+                this.clampPan();
+                this.img.style.left = this.panX + 'px';
+                this.img.style.top = this.panY + 'px';
+                // Recompute draw endpoint in world space after the pan shift
+                const world = this.screenToWorld(sx, sy);
+                this.drawCurrentWorld = {
+                    x: Math.max(0, Math.min(this.imageWidth, world.x)),
+                    y: Math.max(0, Math.min(this.imageHeight, world.y))
+                };
+                this.redrawAll();
+                // Throttled minimap update during edge-pan
+                const now = performance.now();
+                if (this.onPanUpdate && (now - this.lastPanUpdateTime) >= this.panUpdateThrottleMs) {
+                    this.lastPanUpdateTime = now;
+                    this.onPanUpdate(this.panX, this.panY);
+                }
+            }
+            this.edgePanAnimationId = requestAnimationFrame(tick);
+        };
+        this.edgePanAnimationId = requestAnimationFrame(tick);
+    },
+
+    _stopEdgePan: function() {
+        if (this.edgePanAnimationId !== null) {
+            cancelAnimationFrame(this.edgePanAnimationId);
+            this.edgePanAnimationId = null;
+        }
     },
 
     getPanPosition: function() {

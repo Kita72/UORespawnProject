@@ -48,10 +48,10 @@
                      @onload="OnImageLoaded" />
                 <canvas id="mapCanvas" width="@ViewportConstants.ViewportWidth" height="@ViewportConstants.ViewportHeight"
                         style="position:absolute; top:0; left:0; cursor:crosshair;"
-                        @onmousedown="OnMouseDown"
-                        @onmousemove="OnMouseMove"
-                        @onmouseup="OnMouseUp"
-                        @onmouseleave="OnMouseLeave"
+                        @onpointerdown="OnPointerDown"
+                        @onpointermove="OnPointerMove"
+                        @onpointerup="OnPointerUp"
+                        @onpointerleave="OnPointerLeave"
                         @oncontextmenu:preventDefault />
             </div>
             <div class="card mt-2 shadow-sm" style="width:@(ViewportConstants.ViewportWidth)px;">
@@ -372,6 +372,8 @@ private List<string> editXmlSpawnNames = [];
         }
 
         ViewService.OnMapChanged += HandleMapChanged;
+        if (Application.Current?.Windows.Count > 0)
+            Application.Current.Windows[0].Deactivated += OnWindowDeactivated;
     }
 
     private void OnMapChanged(int mapId)
@@ -579,7 +581,7 @@ private List<string> editXmlSpawnNames = [];
         Logger.Info($"Mini-map click: pan to ({panX:F0}, {panY:F0})");
     }
 
-        private async Task OnMouseDown(MouseEventArgs e)
+        private async Task OnPointerDown(PointerEventArgs e)
         {
             // Update mouse world coordinates
             await UpdateMouseCoordinates(e.OffsetX, e.OffsetY);
@@ -592,6 +594,10 @@ private List<string> editXmlSpawnNames = [];
             {
                 isDrawing = true;
                 await JS.InvokeVoidAsync("eval", $"window.mapModule.startDrawing({e.OffsetX}, {e.OffsetY})");
+                // Capture pointer so pointermove/pointerup fire even when mouse leaves canvas
+                await JS.InvokeVoidAsync("eval", $"document.getElementById('mapCanvas').setPointerCapture({e.PointerId})");
+                StartDrawPanTracking();
+                await ConfineMouseToCanvas(e.OffsetX, e.OffsetY);
             }
             else if (e.Button == 2) // Right - pan
             {
@@ -600,14 +606,17 @@ private List<string> editXmlSpawnNames = [];
             }
     }
     
-    private async Task OnMouseMove(MouseEventArgs e)
+    private async Task OnPointerMove(PointerEventArgs e)
     {
-        // Update mouse coordinates on every move
-        await UpdateMouseCoordinates(e.OffsetX, e.OffsetY);
+        // When drawing with pointer capture, clamp to canvas bounds so the box never escapes
+        double sx = isDrawing ? Math.Clamp(e.OffsetX, 0, ViewportConstants.ViewportWidth) : e.OffsetX;
+        double sy = isDrawing ? Math.Clamp(e.OffsetY, 0, ViewportConstants.ViewportHeight) : e.OffsetY;
+
+        await UpdateMouseCoordinates(sx, sy);
 
         if (isDrawing)
         {
-            await JS.InvokeVoidAsync("eval", $"window.mapModule.updateDrawing({e.OffsetX}, {e.OffsetY})");
+            await JS.InvokeVoidAsync("eval", $"window.mapModule.updateDrawing({sx}, {sy})");
         }
         else if (isPanning)
         {
@@ -626,18 +635,18 @@ private List<string> editXmlSpawnNames = [];
         else
         {
             // Check for hover over spawn boxes when not drawing or panning
-            await UpdateHoveredSpawn(e.OffsetX, e.OffsetY);
+            await UpdateHoveredSpawn(sx, sy);
 
             // Update XML spawner hover (for dwell-based tooltip, like server spawns)
             if (ViewService.ShowXMLSpawners)
             {
-                await JS.InvokeVoidAsync("eval", $"window.mapModule.updateXmlSpawnerHover({e.OffsetX}, {e.OffsetY})");
+                await JS.InvokeVoidAsync("eval", $"window.mapModule.updateXmlSpawnerHover({sx}, {sy})");
             }
 
             // Update server spawn hover (for dwell-based tooltip)
             if (ViewService.ShowServerSpawns)
             {
-                await JS.InvokeVoidAsync("eval", $"window.mapModule.updateServerSpawnHover({e.OffsetX}, {e.OffsetY})");
+                await JS.InvokeVoidAsync("eval", $"window.mapModule.updateServerSpawnHover({sx}, {sy})");
             }
         }
     }
@@ -661,12 +670,24 @@ private List<string> editXmlSpawnNames = [];
         catch { }
     }
     
-    private async Task OnMouseUp(MouseEventArgs e)
+    private async Task OnPointerUp(PointerEventArgs e)
     {
         if (isDrawing && Utility.SESSION != null)
         {
             isDrawing = false;
+            StopDrawPanTracking();
+            ReleaseMouseConfinement();
             var rect = await JS.InvokeAsync<RectData>("eval", "window.mapModule.finishDrawing()");
+
+            // Sync pan position in case edge-panning moved the map during draw
+            var edgePanResult = await JS.InvokeAsync<double[]>("eval", "window.mapModule.getPan()");
+            if (edgePanResult.Length == 2)
+            {
+                panX = edgePanResult[0];
+                panY = edgePanResult[1];
+                mapPositions[currentMapTracked] = (panX, panY, zoomLevel);
+                if (miniMapRef != null) await miniMapRef.UpdateViewport(panX, panY, zoomLevel);
+            }
 
             if (rect != null && rect.Width > 0 && rect.Height > 0)
             {
@@ -748,9 +769,12 @@ private List<string> editXmlSpawnNames = [];
         }
     }
     
-    private async Task OnMouseLeave()
+    private async Task OnPointerLeave(PointerEventArgs e)
     {
-        isDrawing = false;
+        // While drawing, pointer capture keeps pointermove/pointerup flowing to the canvas
+        // even when the physical mouse is outside - do not cancel the draw here
+        if (isDrawing) return;
+
         isPanning = false;
 
         // Clear hover highlight when mouse leaves canvas
@@ -1569,6 +1593,10 @@ private List<string> editXmlSpawnNames = [];
     private bool isKeyPanning = false;
     private System.Threading.Timer? keyPanTimer;
 
+    // Draw pan tracking (keeps minimap in sync during edge-pan while drawing)
+    private bool isDrawPanTracking = false;
+    private System.Threading.Timer? drawPanTimer;
+
     private async Task StartKeyPanTracking()
     {
         if (isKeyPanning) return;
@@ -1607,6 +1635,91 @@ private List<string> editXmlSpawnNames = [];
         keyPanTimer?.Dispose();
         keyPanTimer = null;
     }
+
+    private void StartDrawPanTracking()
+    {
+        if (isDrawPanTracking) return;
+        isDrawPanTracking = true;
+        drawPanTimer = new System.Threading.Timer(async _ =>
+        {
+            if (!isDrawPanTracking) return;
+            try
+            {
+                await InvokeAsync(async () =>
+                {
+                    var coords = await JS.InvokeAsync<double[]>("eval", "window.mapModule.getPan()");
+                    if (coords?.Length == 2)
+                    {
+                        panX = coords[0];
+                        panY = coords[1];
+                        if (miniMapRef != null) await miniMapRef.UpdateViewport(panX, panY, zoomLevel);
+                    }
+                });
+            }
+            catch { }
+        }, null, 0, 50);
+    }
+
+    private void StopDrawPanTracking()
+    {
+        isDrawPanTracking = false;
+        drawPanTimer?.Dispose();
+        drawPanTimer = null;
+    }
+
+    // ============================================
+    // Mouse Confinement (Windows only)
+    // Binds the OS cursor to the canvas rect while the user is drawing a box.
+    // ============================================
+
+    private void OnWindowDeactivated(object? sender, EventArgs e) => ReleaseMouseConfinement();
+
+    private async Task ConfineMouseToCanvas(double offsetX, double offsetY)
+    {
+#if WINDOWS
+        try
+        {
+            // devicePixelRatio converts CSS pixels → physical screen pixels
+            var dpr = await JS.InvokeAsync<double>("eval", "window.devicePixelRatio || 1");
+
+            // GetCursorPos gives the physical screen position of the cursor right now.
+            // At this moment the cursor is inside the canvas at (offsetX, offsetY) CSS px.
+            GetCursorPos(out var cursor);
+            int left   = cursor.x - (int)(offsetX * dpr);
+            int top    = cursor.y - (int)(offsetY * dpr);
+            int right  = left + (int)(ViewportConstants.ViewportWidth  * dpr);
+            int bottom = top  + (int)(ViewportConstants.ViewportHeight * dpr);
+
+            var clip = new RECT_CLIP { left = left, top = top, right = right, bottom = bottom };
+            ClipCursorToRect(ref clip);
+        }
+        catch { }
+#endif
+    }
+
+    private void ReleaseMouseConfinement()
+    {
+#if WINDOWS
+        try { ClipCursorClear(nint.Zero); } catch { }
+#endif
+    }
+
+#if WINDOWS
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    private struct RECT_CLIP { public int left, top, right, bottom; }
+
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    private struct POINT_CLIP { public int x, y; }
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern bool GetCursorPos(out POINT_CLIP lpPoint);
+
+    [System.Runtime.InteropServices.DllImport("user32.dll", EntryPoint = "ClipCursor")]
+    private static extern bool ClipCursorToRect(ref RECT_CLIP lpRect);
+
+    [System.Runtime.InteropServices.DllImport("user32.dll", EntryPoint = "ClipCursor")]
+    private static extern bool ClipCursorClear(nint lpRect);
+#endif
 
     // ============================================
     // XML Spawner Management (JSInvokable callbacks)
@@ -1849,8 +1962,12 @@ private List<string> editXmlSpawnNames = [];
 
     public void Dispose()
     {
+        if (Application.Current?.Windows.Count > 0)
+            Application.Current.Windows[0].Deactivated -= OnWindowDeactivated;
         ViewService.OnMapChanged -= HandleMapChanged;
         keyPanTimer?.Dispose();
+        drawPanTimer?.Dispose();
+        ReleaseMouseConfinement();
         dotNetRef?.Dispose();
     }
 }
