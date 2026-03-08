@@ -1,9 +1,59 @@
+/* Step Labels */
+.step-label {
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+/* Server Type Single Toggle Button */
+.server-type-btn-single {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 24px;
+    border: 2px solid goldenrod;
+    border-radius: 10px;
+    background: #1a1a1a;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 110px;
+}
+
+.server-type-btn-single.servuo { background: #292929; }
+.server-type-btn-single.muo    { background: #000000; }
+
+.server-type-btn-single:hover {
+    box-shadow: 0 0 12px rgba(218, 165, 32, 0.35);
+}
+
+.server-type-logo {
+    width: 54px;
+    height: 54px;
+    object-fit: contain;
+}
+
+.server-type-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: goldenrod;
+}
+
+.server-type-switch-icon {
+    font-size: 0.65rem;
+    color: #6c757d;
+    margin-top: -2px;
+}
+
 /* Connection Type Pill Toggle */
 .connection-type-toggle {
     display: inline-flex;
     border-radius: 50px;
     overflow: hidden;
-    background: #1a1a1a;
+    background: #0d0d0d;
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.6);
     padding: 4px;
 }
 
@@ -24,86 +74,13 @@
 }
 
 .connection-type-toggle .toggle-btn.active-local {
-    background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+    background: linear-gradient(135deg, goldenrod 0%, #b8860b 100%);
     color: white;
 }
 
 .connection-type-toggle .toggle-btn.active-remote {
     background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
     color: white;
-}
-
-/* Link Status Pill */
-.link-status-pill {
-    display: inline-flex;
-    border-radius: 50px;
-    overflow: hidden;
-    background: #1a1a1a;
-    padding: 4px;
-}
-
-.link-status-pill .status-indicator {
-    padding: 10px 24px;
-    border: none;
-    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
-    color: white;
-    font-weight: 600;
-    border-radius: 50px 0 0 50px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    min-width: 130px;
-    justify-content: center;
-}
-
-.link-status-pill .status-indicator.unlinked {
-    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-}
-
-.link-status-pill .unlink-btn {
-    padding: 10px 20px;
-    border: none;
-    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-    color: white;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    border-radius: 0 50px 50px 0;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.link-status-pill .unlink-btn:hover {
-    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-}
-
-.link-status-pill .unlink-btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-.link-status-pill .link-btn {
-    padding: 10px 24px;
-    border: none;
-    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
-    color: white;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    border-radius: 0 50px 50px 0;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.link-status-pill .link-btn:hover {
-    background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
-}
-
-.link-status-pill .link-btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
 }
 
 /* Server Path Display */
@@ -113,4 +90,203 @@
     font-family: monospace;
     margin-top: 8px;
     word-break: break-all;
+}
+
+/* Two-path linked display */
+.server-paths-display {
+    text-align: left;
+    max-width: 520px;
+    margin: 0 auto;
+    padding: 8px 12px;
+    background: #1a1a1a;
+    border-radius: 8px;
+}
+
+.server-paths-display.broken {
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    background: rgba(239, 68, 68, 0.05);
+}
+
+.server-path.broken {
+    color: #ef4444;
+    text-decoration: line-through;
+    opacity: 0.8;
+}
+
+.server-path-row {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    font-size: 0.82rem;
+    font-family: monospace;
+    color: #9ca3af;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.server-path-row .path-label {
+    color: #6c757d;
+    font-size: 0.78rem;
+    flex-shrink: 0;
+}
+
+/* Folder Section Sub-container (unlinked state) */
+.folder-section {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 10px;
+    padding: 14px 16px;
+    max-width: 520px;
+    margin: 0 auto 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Folder Picker Rows */
+.folder-picker-row {
+    background: #1a1a1a;
+    border-radius: 8px;
+    padding: 10px 14px;
+    text-align: left;
+}
+
+.folder-picker-header {
+    font-size: 0.88rem;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.folder-picker-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.selected-path {
+    color: #9ca3af;
+    font-size: 0.8rem;
+    font-family: monospace;
+    flex: 1;
+    min-width: 0;
+    word-break: break-all;
+}
+
+/* ============================================
+   LIGHT THEME OVERRIDES
+   ============================================ */
+
+/* Server type buttons — keep per-logo backgrounds (logos need dark),
+   but lighten the default border and label color */
+body.light-theme .server-type-btn {
+    border-color: #adb5bd;
+}
+
+body.light-theme .server-type-label {
+    color: #495057;
+}
+
+body.light-theme .server-type-btn.active .server-type-label {
+    color: #d97706;
+}
+
+/* Connection type pill toggle */
+body.light-theme .connection-type-toggle {
+    background: #e9ecef;
+}
+
+body.light-theme .connection-type-toggle .toggle-btn {
+    color: #495057;
+}
+
+body.light-theme .connection-type-toggle .toggle-btn:hover:not(.active-local):not(.active-remote) {
+    color: #212529;
+}
+
+/* Server paths display (linked / broken states) */
+body.light-theme .server-paths-display {
+    background: #f1f3f5;
+    border: 1px solid #dee2e6;
+}
+
+body.light-theme .server-path-row {
+    color: #495057;
+}
+
+body.light-theme .server-path-row .path-label {
+    color: #6c757d;
+}
+
+body.light-theme .server-path {
+    color: #495057;
+}
+
+/* Folder picker rows */
+body.light-theme .folder-section {
+    background: rgba(0, 0, 0, 0.03);
+    border: 1px solid rgba(0, 0, 0, 0.09);
+}
+
+body.light-theme .server-type-btn-single {
+    background: #f8f9fa;
+    border-color: goldenrod;
+}
+
+body.light-theme .server-type-btn-single.servuo { background: #f0ede8; }
+body.light-theme .server-type-btn-single.muo    { background: #e8e8e8; }
+
+body.light-theme .folder-picker-row {
+    background: #f1f3f5;
+    border: 1px solid #dee2e6;
+}
+
+body.light-theme .selected-path {
+    color: #495057;
+}
+
+/* Manual Transfer collapsible section */
+.manual-section {
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.manual-section-header {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    background: rgba(255, 255, 255, 0.04);
+    border: none;
+    color: #adb5bd;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.2s;
+}
+
+.manual-section-header:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.manual-section-body {
+    padding: 16px;
+}
+
+body.light-theme .manual-section {
+    border-color: rgba(0, 0, 0, 0.1);
+}
+
+body.light-theme .manual-section-header {
+    background: rgba(0, 0, 0, 0.04);
+    color: #495057;
+}
+
+body.light-theme .manual-section-header:hover {
+    background: rgba(0, 0, 0, 0.07);
 }

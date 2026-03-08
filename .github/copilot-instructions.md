@@ -163,6 +163,12 @@ When linked to ServUO, the server uses this folder structure under `Data/UORespa
 ### Map Component Consistency
 - When implementing any map-related feature (XML spawners, overlays, keyboard shortcuts, etc.), ALWAYS apply changes to ALL THREE map components: `BoxSpawnComponent`, `RegionSpawnComponent`, and `VendorSpawnComponent`. These share the same map canvas functionality and should have consistent behavior.
 
+### Theme Considerations
+- Always consider both light and dark themes when making any UI changes. The project has a light/dark theme system, and every CSS rule that affects colors, backgrounds, or borders must include a `body.light-theme` variant.
+
+### UI Text Guidelines
+- Never add explanatory info boxes, tooltips, or alert blocks to UI unless explicitly asked. Buttons and labels are sufficient — no "what this button does" UI text should be added unprompted.
+
 ---
 
 ## Spawn Frequencies

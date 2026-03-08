@@ -5,6 +5,65 @@ All notable changes to UORespawn will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1.3] - 2026-03-07
+
+### Added
+
+#### MUO (ModernUO) Server Support
+- **Server Type Selection** — Choose between ServUO and ModernUO from the Server Integration card
+  - Logo button toggle using `SERVUO.png` and `MUO.png` square buttons — only one highlighted at a time (orange border glow)
+  - Image backgrounds pixel-sampled from each logo (`#292929` for ServUO, `#000000` for MUO) for a seamless look
+  - Selection persists in Settings and drives all folder path hints throughout the editor
+- **MUO Folder Layout** — All path hints, help text, and placeholders dynamically update for MUO:
+  - Scripts: `Projects/UOContent/Custom/` (vs ServUO's `Scripts/Custom/`)
+  - Data: `Distribution/Data/` (vs ServUO's `Data/`)
+
+#### Two-Path Server Linking
+- **Custom Scripts Folder** — Dedicated folder picker for the server's `Custom/` scripts directory
+- **Server Data Folder** — Dedicated folder picker for the server's `Data/` root directory
+  - Replaces single-folder selection; each path is independently validated and stored
+  - `UORespawn/` subfolder is created automatically inside the selected Data folder
+
+#### Broken Link Detection & Auto-Repair
+- **Amber "Broken Link" button** — Shown automatically when stored folder paths can no longer be found (server moved, drive unmounted, etc.)
+  - Clicking attempts auto-repair: walks up to 2 parent directory levels searching for `UORespawnServer/`
+  - If repair succeeds: returns to the normal Linked state instantly
+  - If repair fails: clears stored paths cleanly so the user can re-link from scratch
+
+### Changed
+
+#### Server Integration — FTP Remote
+- **Two Remote Paths** — FTP configuration now requires two separate remote paths instead of one
+  - **Remote Custom Scripts Path**: path to the server's `Custom/` scripts folder
+  - **Remote Data Exchange Path**: path to the server's `Data/` parent folder
+  - Both path fields and their help text react dynamically to the selected server type (ServUO vs MUO)
+- **Removed Auto-Detect** — Auto-detect remote path feature removed; users enter paths manually
+
+#### FTP Path Construction
+- `FtpSyncService.GetRemoteInputPath` and `GetRemoteOutputPath` now append `UORespawn/` internally
+  - `FtpCredentials.RemotePath` now stores the `Data/` parent folder, not `Data/UORespawn/`
+  - Aligns FTP path semantics with the local two-path linking model
+
+#### Instructions Page
+- **Section 10 fully rewritten** — Covers server type selection (ServUO vs MUO), two-path local link flow with per-type folder hints, broken link detection & auto-repair, side-by-side MUO/ServUO folder structure diagrams, updated FTP two-path flow; auto-detect step removed
+- **Header updated** — Now mentions both ServUO and ModernUO (MUO) support
+- **Getting Started updated** — Server type selection added as explicit step 2; tip generalized from "ServUO folder" to "server folder"
+- **What's New updated** — Five new entries at the top: MUO support, server type logo toggle, two-path linking, broken link detection, two-path FTP
+
+### Fixed
+
+#### Documentation Errata
+- **README In-Game Editing corrected** — README incorrectly listed `[EditBox`, `[EditRegion`, `[EditTile`, and `[EditVendor` as the in-game editing commands. **These commands do not exist** in the current system. The actual workflow is: type `[UORespawn` in-game → click **Edit Spawn** → target the ground, a shop sign, or a beehive. The Instructions page (Section 12) was corrected in v2.0.1.2 but the README was not updated at that time. Corrected now.
+
+### Technical
+- `Settings.ServerType`, `Settings.ScriptsCustomFolder`, `Settings.ServerDataFolder` — two-path server linking properties added
+- `PathConstants.ServerDataPath` updated to compose from `Settings.ServerDataFolder + UORespawn/`
+- `ServerSetupUtility` refactored: `ValidateCustomFolder`, `ValidateDataFolder`, `IsLinkBroken`, `TryRepairLink`
+- `FtpCredentials.RemoteCustomPath` field added; `IsConfigured` now requires both paths
+- `ServerIntegrationCard.razor` redesigned: server type logo toggle → local/remote toggle → contextual sections
+- `.server-type-btn.servuo` / `.server-type-btn.muo` CSS classes with pixel-sampled background colors
+- Build verified with .NET 10 — no warnings or errors
+
 ## [2.0.1.2] - 2026-03-06
 
 ### Added

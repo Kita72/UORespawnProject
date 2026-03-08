@@ -187,8 +187,9 @@ UORespawnApp/Data/PACKS/Created/*
 !UORespawnApp/Resources/Raw/UOR_RegionList.txt
 !UORespawnApp/Resources/Raw/UOR_SpawnerList.txt
 
-# Server scripts ZIP for export
-!UORespawnApp/Data/SERVER/UORespawnServer.zip
+# Server scripts ZIPs for export (one per supported server type)
+!UORespawnApp/Data/SERVER/SERVUO/UORespawnServer.zip
+!UORespawnApp/Data/SERVER/MUO/UORespawnServer.zip
 
 # ==================== SPAWN PACKS (Approved/DefaultPack) ====================
 # The Approved folder contains bundled packs that ship with the app.

@@ -19,6 +19,12 @@ button:active:focus {
     transition: all 0.2s ease;
 }
 
+/* Global utility color — used in FrequencyButtonsComponent trigger icons and elsewhere */
+.bg-purple {
+    background-color: #9b59b6 !important;
+    color: white !important;
+}
+
 .btn:hover {
     filter: brightness(1.1);
 }

@@ -1,36 +1,71 @@
 namespace UORespawnApp.Scripts.Utilities
 {
     /// <summary>
-    /// Utility for ServUO server integration setup and validation.
+    /// Utility for server integration setup and validation.
     /// Handles folder validation, script installation, version checking, and server configuration.
-    /// 
-    /// Server Structure on ServUO:
-    /// - Scripts/Custom/UORespawnServer/ (server scripts - namespace must match folder name)
-    /// - Data/UORespawn/ (runtime data with INPUT/, OUTPUT/, COMMANDS/, STATS/, SYS/ subfolders)
-    /// 
+    ///
+    /// New Two-Path Approach (v2.0.2+):
+    ///   Users now pick TWO explicit folders when linking a server:
+    ///   1. Scripts Custom Folder — the Custom/ directory where UORespawnServer/ scripts are installed
+    ///      ServUO example : Scripts/Custom/
+    ///      MUO example    : Projects/UOContent/Custom/
+    ///   2. Server Data Folder — the Data/ directory where UORespawn/ data exchange lives
+    ///      ServUO example : Data/
+    ///      MUO example    : Distribution/Data/
+    ///
+    ///   The app no longer needs to know the server root or type at runtime —
+    ///   users point directly at the correct folders.
+    ///
+    /// Script Source (Data/SERVER/{ServerType}/UORespawnServer/):
+    ///   Data/SERVER/SERVUO/UORespawnServer/  →  deployed to chosen custom folder
+    ///   Data/SERVER/MUO/UORespawnServer/     →  deployed to chosen custom folder
+    ///
     /// Version Management:
     /// - Editor version in Utility.Version
     /// - Server version in UOR_Settings.cs VERSION constant
-    /// - Auto-update when versions mismatch
-    /// 
+    /// - Auto-update when versions mismatch (user confirmation required)
+    ///
     /// Legacy Cleanup:
-    /// - Removes any folder starting with "UORespawn" or "Respawn" in Scripts/Custom/
+    /// - Removes any folder starting with "UORespawn" or "Respawn" in the custom folder
     /// - Removes Data/Respawn/ folder if exists (old naming)
     /// </summary>
     public static class ServerSetupUtility
     {
+        // ==================== SERVER TYPE ====================
+
         /// <summary>
-        /// Server scripts folder name - MUST match namespace (Server.Custom.UORespawnServer)
+        /// Supported server platforms UORespawn can integrate with.
+        /// </summary>
+        public enum ServerType
+        {
+            ServUO,
+            MUO
+        }
+
+        /// <summary>
+        /// Maps a ServerType to the subfolder name under Data/SERVER/ in the editor.
+        /// </summary>
+        private static string GetSourceSubfolder(ServerType serverType) => serverType switch
+        {
+            ServerType.ServUO => "SERVUO",
+            ServerType.MUO    => "MUO",
+            _                 => "SERVUO"
+        };
+
+        // ==================== CONSTANTS ====================
+
+        /// <summary>
+        /// Server scripts folder name — MUST match namespace (Server.Custom.UORespawnServer)
         /// </summary>
         private const string SERVER_SCRIPTS_FOLDER = "UORespawnServer";
 
         /// <summary>
-        /// Server data folder name under ServUO/Data/
+        /// Server data folder name placed under the server's data directory
         /// </summary>
         private const string SERVER_DATA_FOLDER = "UORespawn";
 
         /// <summary>
-        /// Parent folder containing server scripts source (Data/SERVER/)
+        /// Parent folder containing server script sources (Data/SERVER/)
         /// </summary>
         private const string SERVER_SOURCE_PARENT = "SERVER";
 
@@ -67,72 +102,74 @@ namespace UORespawnApp.Scripts.Utilities
         }
 
         /// <summary>
-        /// Validate that a folder is a valid ServUO installation
-        /// Checks for ServUO.exe, Data folder, and Scripts folder
+        /// Validate that a folder can be used as the server's Custom scripts folder.
+        /// Just checks it exists — user has already navigated to the correct location.
         /// </summary>
-        /// <param name="folderPath">Path to potential ServUO folder</param>
-        /// <returns>Validation result with details</returns>
-        public static ValidationResult ValidateServUOFolder(string folderPath)
+        public static ValidationResult ValidateCustomFolder(string customFolderPath)
         {
             var result = new ValidationResult();
 
             try
             {
-                if (string.IsNullOrWhiteSpace(folderPath))
+                if (string.IsNullOrWhiteSpace(customFolderPath))
                 {
-                    result.Message = "No folder selected";
+                    result.Message = "No Custom folder selected";
                     return result;
                 }
 
-                if (!Directory.Exists(folderPath))
+                if (!Directory.Exists(customFolderPath))
                 {
-                    result.Message = "Selected folder does not exist";
+                    result.Message = "Selected Custom folder does not exist";
                     return result;
                 }
 
-                // Check for ServUO.exe
-                var exePath = Path.Combine(folderPath, "ServUO.exe");
-                result.HasServUOExe = File.Exists(exePath);
-
-                // Check for Data folder
-                var dataPath = Path.Combine(folderPath, "Data");
-                result.HasDataFolder = Directory.Exists(dataPath);
-                result.DataFolderPath = dataPath;
-
-                // Check for Scripts folder
-                var scriptsPath = Path.Combine(folderPath, "Scripts");
-                result.HasScriptsFolder = Directory.Exists(scriptsPath);
-                result.ScriptsFolderPath = scriptsPath;
-
-                // Build validation message
-                if (!result.HasServUOExe)
-                {
-                    result.Message = "ServUO.exe not found in selected folder. Please select the main ServUO folder.";
-                    return result;
-                }
-
-                if (!result.HasDataFolder)
-                {
-                    result.Message = "Data folder not found. Please select the main ServUO folder.";
-                    return result;
-                }
-
-                if (!result.HasScriptsFolder)
-                {
-                    result.Message = "Scripts folder not found. Please select the main ServUO folder.";
-                    return result;
-                }
-
-                // All checks passed
                 result.IsValid = true;
-                result.Message = "Valid ServUO installation detected!";
-                Logger.Info($"Validated ServUO folder: {folderPath}");
+                result.Message = "Custom folder is valid";
+                result.ScriptsFolderPath = Path.Combine(customFolderPath, SERVER_SCRIPTS_FOLDER);
+                result.HasScriptsFolder = Directory.Exists(result.ScriptsFolderPath);
 
                 return result;
             }
             catch (Exception ex)
             {
-                Logger.Error("Error validating ServUO folder", ex);
+                Logger.Error("Error validating Custom folder", ex);
+                result.Message = $"Error validating folder: {ex.Message}";
+                return result;
+            }
+        }
+
+        /// <summary>
+        /// Validate that a folder can be used as the server's Data folder.
+        /// Just checks it exists — user has already navigated to the correct location.
+        /// </summary>
+        public static ValidationResult ValidateDataFolder(string serverDataFolderPath)
+        {
+            var result = new ValidationResult();
+
+            try
+            {
+                if (string.IsNullOrWhiteSpace(serverDataFolderPath))
+                {
+                    result.Message = "No Data folder selected";
+                    return result;
+                }
+
+                if (!Directory.Exists(serverDataFolderPath))
+                {
+                    result.Message = "Selected Data folder does not exist";
+                    return result;
+                }
+
+                result.IsValid = true;
+                result.Message = "Data folder is valid";
+                result.DataFolderPath = Path.Combine(serverDataFolderPath, SERVER_DATA_FOLDER);
+                result.HasDataFolder = Directory.Exists(result.DataFolderPath);
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error validating Data folder", ex);
                 result.Message = $"Error validating folder: {ex.Message}";
                 return result;
             }
@@ -141,21 +178,24 @@ namespace UORespawnApp.Scripts.Utilities
         #region Installation Status & Version Checking
 
         /// <summary>
-        /// Check installation status and version of server scripts
+        /// Check installation status and version of server scripts.
         /// </summary>
-        /// <param name="servuoPath">Path to ServUO root folder</param>
+        /// <param name="customFolderPath">Path to the Custom/ folder where UORespawnServer/ is installed</param>
+        /// <param name="serverDataFolderPath">Path to the Data/ folder where UORespawn/ lives (optional)</param>
         /// <returns>Installation status including version info</returns>
-        public static InstallationStatus CheckInstallation(string? servuoPath)
+        public static InstallationStatus CheckInstallation(string? customFolderPath, string? serverDataFolderPath = null)
         {
             var status = new InstallationStatus();
 
             try
             {
-                if (string.IsNullOrEmpty(servuoPath))
+                if (string.IsNullOrEmpty(customFolderPath))
                     return status;
 
-                var scriptsPath = Path.Combine(servuoPath, "Scripts", "Custom", SERVER_SCRIPTS_FOLDER);
-                var dataPath = Path.Combine(servuoPath, "Data", SERVER_DATA_FOLDER);
+                var scriptsPath = Path.Combine(customFolderPath, SERVER_SCRIPTS_FOLDER);
+                var dataPath = !string.IsNullOrEmpty(serverDataFolderPath)
+                    ? Path.Combine(serverDataFolderPath, SERVER_DATA_FOLDER)
+                    : null;
 
                 status.ScriptsPath = scriptsPath;
                 status.DataPath = dataPath;
@@ -224,41 +264,34 @@ namespace UORespawnApp.Scripts.Utilities
         #region Legacy Cleanup
 
         /// <summary>
-        /// Clean up ALL legacy UORespawn installations from ServUO.
-        /// Removes any folder starting with "UORespawn" or "Respawn" in:
-        /// - Scripts/Custom/
-        /// - Data/
-        /// This ensures clean state before fresh install.
+        /// Clean up ALL legacy UORespawn installations from the selected folders.
+        /// Removes any folder starting with "UORespawn" or "Respawn" in the custom folder.
+        /// Removes the old Respawn/ folder from the data folder if present.
         /// </summary>
-        /// <param name="servuoPath">Path to ServUO root folder</param>
+        /// <param name="customFolderPath">The Custom/ folder where UORespawnServer/ is installed</param>
+        /// <param name="serverDataFolderPath">The Data/ folder where UORespawn/ lives</param>
         /// <returns>Number of folders removed</returns>
-        public static int CleanupAllLegacyInstallations(string? servuoPath)
+        public static int CleanupLegacyInstallations(string? customFolderPath, string? serverDataFolderPath)
         {
             int foldersRemoved = 0;
 
             try
             {
-                if (string.IsNullOrEmpty(servuoPath))
-                    return 0;
-
-                // Clean Scripts/Custom/ folder
-                var customPath = Path.Combine(servuoPath, "Scripts", "Custom");
-                if (Directory.Exists(customPath))
+                // Clean custom folder (remove folders with legacy prefix names)
+                if (!string.IsNullOrEmpty(customFolderPath) && Directory.Exists(customFolderPath))
                 {
-                    foldersRemoved += CleanupLegacyFoldersInDirectory(customPath);
+                    foldersRemoved += CleanupLegacyFoldersInDirectory(customFolderPath);
                 }
 
-                // Clean Data/ folder (remove Data/Respawn/, Data/UORespawn/ if exists with old structure)
-                var dataPath = Path.Combine(servuoPath, "Data");
-                if (Directory.Exists(dataPath))
+                // Clean data folder (remove legacy Respawn/ if present from pre-2.0 naming)
+                if (!string.IsNullOrEmpty(serverDataFolderPath) && Directory.Exists(serverDataFolderPath))
                 {
-                    // Remove old "Respawn" folder (pre-2.0 naming)
-                    var oldRespawnPath = Path.Combine(dataPath, "Respawn");
+                    var oldRespawnPath = Path.Combine(serverDataFolderPath, "Respawn");
                     if (Directory.Exists(oldRespawnPath))
                     {
                         Directory.Delete(oldRespawnPath, true);
                         foldersRemoved++;
-                        Logger.Info($"Removed legacy Data/Respawn folder");
+                        Logger.Info("Removed legacy Respawn folder from data folder");
                     }
                 }
 
@@ -325,24 +358,30 @@ namespace UORespawnApp.Scripts.Utilities
         /// Full server setup - cleans legacy, installs scripts, creates data folders.
         /// Call this for fresh install or when linking a new server.
         /// </summary>
-        /// <param name="servuoPath">Path to ServUO root folder</param>
+        /// <param name="customFolderPath">The Custom/ folder where UORespawnServer/ scripts will be installed</param>
+        /// <param name="serverDataFolderPath">The Data/ folder where UORespawn/ data exchange will be created</param>
+        /// <param name="serverType">Target server type (ServUO or MUO) - selects bundled script source</param>
         /// <param name="forceReinstall">If true, reinstall even if already installed</param>
         /// <returns>Success status and message</returns>
-        public static (bool success, string message) FullServerSetup(string servuoPath, bool forceReinstall = false)
+        public static (bool success, string message) FullServerSetup(string customFolderPath, string serverDataFolderPath, ServerType serverType = ServerType.ServUO, bool forceReinstall = false)
         {
             try
             {
-                Logger.Info($"Starting full server setup for: {servuoPath}");
+                Logger.Info($"Starting full {serverType} server setup...");
+                Logger.Info($"  Custom folder : {customFolderPath}");
+                Logger.Info($"  Data folder   : {serverDataFolderPath}");
 
-                // Step 1: Validate ServUO folder
-                var validation = ValidateServUOFolder(servuoPath);
-                if (!validation.IsValid)
-                {
-                    return (false, validation.Message);
-                }
+                // Step 1: Validate folders
+                var customValidation = ValidateCustomFolder(customFolderPath);
+                if (!customValidation.IsValid)
+                    return (false, customValidation.Message);
+
+                var dataValidation = ValidateDataFolder(serverDataFolderPath);
+                if (!dataValidation.IsValid)
+                    return (false, dataValidation.Message);
 
                 // Step 2: Check existing installation
-                var installStatus = CheckInstallation(servuoPath);
+                var installStatus = CheckInstallation(customFolderPath, serverDataFolderPath);
 
                 // Step 3: Decide if we need to install/update
                 if (installStatus.IsInstalled && !installStatus.NeedsUpdate && !forceReinstall)
@@ -350,36 +389,30 @@ namespace UORespawnApp.Scripts.Utilities
                     Logger.Info("Server already installed with matching version - no action needed");
 
                     // Still ensure data folders exist
-                    SetupServerDataFolders(servuoPath);
+                    SetupServerDataFolders(serverDataFolderPath);
 
                     return (true, $"Server already installed (v{installStatus.InstalledVersion})");
                 }
 
-                // Step 4: Clean up ALL legacy installations
-                int cleaned = CleanupAllLegacyInstallations(servuoPath);
+                // Step 4: Clean up legacy installations
+                int cleaned = CleanupLegacyInstallations(customFolderPath, serverDataFolderPath);
                 if (cleaned > 0)
-                {
                     Logger.Info($"Cleaned {cleaned} legacy folder(s)");
-                }
 
                 // Step 5: Install server scripts
-                var scriptsResult = InstallServerScripts(servuoPath);
+                var scriptsResult = InstallServerScripts(customFolderPath, serverType);
                 if (!scriptsResult.success)
-                {
                     return scriptsResult;
-                }
 
                 // Step 6: Setup data folders
-                var dataResult = SetupServerDataFolders(servuoPath);
+                var dataResult = SetupServerDataFolders(serverDataFolderPath);
                 if (!dataResult.success)
-                {
                     return dataResult;
-                }
 
                 string action = installStatus.IsInstalled ? "updated" : "installed";
-                Logger.Info($"Server {action} successfully to v{Utility.Version}");
+                Logger.Info($"{serverType} server {action} successfully to v{Utility.Version}");
 
-                return (true, $"Server {action} successfully (v{Utility.Version})");
+                return (true, $"{serverType} server {action} successfully (v{Utility.Version})");
             }
             catch (Exception ex)
             {
@@ -389,26 +422,24 @@ namespace UORespawnApp.Scripts.Utilities
         }
 
         /// <summary>
-        /// Install server scripts to Scripts/Custom/UORespawnServer/
+        /// Install server scripts to the chosen Custom folder.
+        /// Destination: {customFolderPath}/UORespawnServer/
+        /// Source: App/Data/SERVER/{SERVUO|MUO}/UORespawnServer/
         /// </summary>
-        private static (bool success, string message) InstallServerScripts(string servuoPath)
+        private static (bool success, string message) InstallServerScripts(string customFolderPath, ServerType serverType)
         {
             try
             {
-                var scriptsPath = Path.Combine(servuoPath, "Scripts");
-
-                // Ensure Custom folder exists
-                var customPath = Path.Combine(scriptsPath, "Custom");
-                if (!Directory.Exists(customPath))
+                // Destination: {customFolderPath}/UORespawnServer/
+                if (!Directory.Exists(customFolderPath))
                 {
-                    Directory.CreateDirectory(customPath);
-                    Logger.Info($"Created Custom folder: {customPath}");
+                    Directory.CreateDirectory(customFolderPath);
+                    Logger.Info($"Created custom folder: {customFolderPath}");
                 }
 
-                // Destination: Scripts/Custom/UORespawnServer/
-                var destinationPath = Path.Combine(customPath, SERVER_SCRIPTS_FOLDER);
+                var destinationPath = Path.Combine(customFolderPath, SERVER_SCRIPTS_FOLDER);
 
-                // Remove existing if present (we already cleaned legacy, but this ensures exact folder is fresh)
+                // Remove existing if present (ensures clean install)
                 if (Directory.Exists(destinationPath))
                 {
                     Directory.Delete(destinationPath, true);
@@ -416,16 +447,17 @@ namespace UORespawnApp.Scripts.Utilities
 
                 Directory.CreateDirectory(destinationPath);
 
-                // Source: App/Data/SERVER/UORespawnServer/
-                var sourcePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data", SERVER_SOURCE_PARENT, SERVER_SCRIPTS_FOLDER);
+                // Source: App/Data/SERVER/{SERVUO|MUO}/UORespawnServer/
+                var sourcePath = Path.Combine(
+                    AppDomain.CurrentDomain.BaseDirectory,
+                    "Data", SERVER_SOURCE_PARENT, GetSourceSubfolder(serverType), SERVER_SCRIPTS_FOLDER);
 
                 if (!Directory.Exists(sourcePath))
                 {
                     Logger.Error($"Server scripts source not found: {sourcePath}");
-                    return (false, "Server scripts source folder not found in editor installation.");
+                    return (false, $"{serverType} server scripts source folder not found in editor installation.");
                 }
 
-                // Copy all files recursively
                 int filesCopied = CopyDirectoryRecursive(sourcePath, destinationPath);
 
                 if (filesCopied == 0)
@@ -433,7 +465,7 @@ namespace UORespawnApp.Scripts.Utilities
                     return (false, "No server script files found to copy");
                 }
 
-                Logger.Info($"Installed {filesCopied} server script files to {destinationPath}");
+                Logger.Info($"Installed {filesCopied} {serverType} server script files to {destinationPath}");
                 return (true, $"Installed {filesCopied} script files");
             }
             catch (Exception ex)
@@ -444,13 +476,14 @@ namespace UORespawnApp.Scripts.Utilities
         }
 
         /// <summary>
-        /// Setup server data folder structure: Data/UORespawn/ with subfolders
+        /// Setup server data folder structure (INPUT, OUTPUT, COMMANDS, STATS, SYS).
+        /// Destination: {serverDataFolderPath}/UORespawn/
         /// </summary>
-        private static (bool success, string message) SetupServerDataFolders(string servuoPath)
+        private static (bool success, string message) SetupServerDataFolders(string serverDataFolderPath)
         {
             try
             {
-                var dataPath = Path.Combine(servuoPath, "Data", SERVER_DATA_FOLDER);
+                var dataPath = Path.Combine(serverDataFolderPath, SERVER_DATA_FOLDER);
 
                 // Create main UORespawn folder
                 if (!Directory.Exists(dataPath))
@@ -492,49 +525,40 @@ namespace UORespawnApp.Scripts.Utilities
         /// This method is kept for backwards compatibility but NO LONGER auto-updates.
         /// Use ServerUpdateService.CheckForServerUpdate() for version checking with user confirmation.
         /// </summary>
-        /// <param name="servuoPath">Path to ServUO root folder</param>
         /// <returns>True if server folders are ready, false if error</returns>
         [Obsolete("Use ServerUpdateService.CheckForServerUpdate() instead for version checking with user confirmation")]
-        public static bool CheckAndUpdateServerOnStartup(string? servuoPath)
+        public static bool CheckAndUpdateServerOnStartup()
         {
             try
             {
-                if (string.IsNullOrEmpty(servuoPath))
+                var customFolder = Settings.ScriptsCustomFolder;
+                if (string.IsNullOrEmpty(customFolder))
                     return false;
 
-                var validation = ValidateServUOFolder(servuoPath);
-                if (!validation.IsValid)
-                {
-                    Logger.Warning($"Linked server folder is not valid: {validation.Message}");
-                    return false;
-                }
-
-                var installStatus = CheckInstallation(servuoPath);
+                var dataFolder = Settings.ServerDataFolder;
+                var installStatus = CheckInstallation(customFolder, dataFolder);
 
                 if (!installStatus.IsInstalled)
                 {
-                    // Server not installed - this is handled when user links server
-                    // We don't auto-install anymore
                     Logger.Info("Server scripts not installed - will be installed when user links server");
                     return true;
                 }
 
                 if (installStatus.NeedsUpdate)
                 {
-                    // DO NOT AUTO-UPDATE - let ServerUpdateService handle this with user confirmation
-                    // This prevents silent replacement of user's custom modifications
                     Logger.Info($"Server version mismatch detected (installed: {installStatus.InstalledVersion}, editor: {installStatus.EditorVersion})");
                     Logger.Info("Update will be offered via ServerUpdateService - user confirmation required");
 
-                    // Still ensure data folders exist - this is non-destructive
-                    SetupServerDataFolders(servuoPath);
+                    if (!string.IsNullOrEmpty(dataFolder))
+                        SetupServerDataFolders(dataFolder);
+
                     return true;
                 }
 
                 Logger.Info($"Server version matches editor (v{installStatus.InstalledVersion})");
 
-                // Ensure data folders exist even if version matches
-                SetupServerDataFolders(servuoPath);
+                if (!string.IsNullOrEmpty(dataFolder))
+                    SetupServerDataFolders(dataFolder);
 
                 return true;
             }
@@ -597,16 +621,19 @@ namespace UORespawnApp.Scripts.Utilities
         }
 
         /// <summary>
-        /// Check if server integration is properly configured
+        /// Check if server integration is properly configured (both folders set and scripts installed)
         /// </summary>
-        public static bool IsServerConfigured(string? servuoPath)
+        public static bool IsServerConfigured()
         {
-            if (string.IsNullOrEmpty(servuoPath))
+            var customFolder = Settings.ScriptsCustomFolder;
+            var dataFolder = Settings.ServerDataFolder;
+
+            if (string.IsNullOrEmpty(customFolder) || string.IsNullOrEmpty(dataFolder))
                 return false;
 
             try
             {
-                var scriptsPath = Path.Combine(servuoPath, "Scripts", "Custom", SERVER_SCRIPTS_FOLDER);
+                var scriptsPath = Path.Combine(customFolder, SERVER_SCRIPTS_FOLDER);
                 return Directory.Exists(scriptsPath);
             }
             catch
@@ -616,18 +643,118 @@ namespace UORespawnApp.Scripts.Utilities
         }
 
         /// <summary>
-        /// Unlink server integration - clears settings only, preserves installed scripts
+        /// Returns true if server paths are stored in settings but no longer resolve on disk.
+        /// Indicates a previously linked server that may have moved or been deleted.
         /// </summary>
-        public static (bool success, string message) UnlinkServer(string? servuoPath)
+        public static bool IsLinkBroken()
+        {
+            var customFolder = Settings.ScriptsCustomFolder;
+            var dataFolder = Settings.ServerDataFolder;
+
+            // Only broken when paths are stored but fail the configured check
+            if (string.IsNullOrEmpty(customFolder) || string.IsNullOrEmpty(dataFolder))
+                return false;
+
+            return !IsServerConfigured();
+        }
+
+        /// <summary>
+        /// Links the editor to a server where UORespawnServer scripts are already installed.
+        /// Use when scripts were deployed manually or by a previous Install action.
+        /// Does NOT copy scripts — validates they exist, then creates data exchange folders.
+        /// </summary>
+        public static (bool success, string message) LinkOnlySetup(
+            string customFolderPath, string serverDataFolderPath)
         {
             try
             {
-                if (string.IsNullOrEmpty(servuoPath))
+                var customValidation = ValidateCustomFolder(customFolderPath);
+                if (!customValidation.IsValid)
+                    return (false, customValidation.Message);
+
+                var dataValidation = ValidateDataFolder(serverDataFolderPath);
+                if (!dataValidation.IsValid)
+                    return (false, dataValidation.Message);
+
+                // Scripts must already be present — Link does not install
+                var scriptsPath = Path.Combine(customFolderPath, SERVER_SCRIPTS_FOLDER);
+                if (!Directory.Exists(scriptsPath))
+                    return (false, "UORespawnServer scripts not found in that folder. Use Install to deploy them first.");
+
+                // Create data exchange subfolders if they don't exist
+                var dataPath = Path.Combine(serverDataFolderPath, SERVER_DATA_FOLDER);
+                if (!Directory.Exists(dataPath))
+                    Directory.CreateDirectory(dataPath);
+
+                string[] subfolders = ["INPUT", "OUTPUT", "COMMANDS", "STATS", "SYS"];
+                foreach (var subfolder in subfolders)
                 {
-                    return (true, "Server was not linked");
+                    var subPath = Path.Combine(dataPath, subfolder);
+                    if (!Directory.Exists(subPath))
+                        Directory.CreateDirectory(subPath);
                 }
 
-                Logger.Info($"Server unlinked (scripts preserved): {servuoPath}");
+                Logger.Info($"Server linked (link-only): Custom={customFolderPath} | Data={serverDataFolderPath}");
+                return (true, "Server linked successfully.");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error during link-only setup", ex);
+                return (false, $"Link failed: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Attempts to repair a broken link by walking up parent directories of the stored
+        /// Custom scripts path to find where UORespawnServer/ actually lives.
+        /// Common cause: user previously selected UORespawnServer/ itself instead of Custom/.
+        /// Updates Settings.ScriptsCustomFolder if repair succeeds.
+        /// Returns true if the link was successfully repaired.
+        /// </summary>
+        public static bool TryRepairLink()
+        {
+            var customFolder = Settings.ScriptsCustomFolder;
+            if (string.IsNullOrEmpty(customFolder)) return false;
+
+            try
+            {
+                var dir = new DirectoryInfo(customFolder);
+
+                // Walk up to 2 parent levels to find a directory containing UORespawnServer/
+                for (int i = 0; i < 2; i++)
+                {
+                    if (dir.Parent == null || !dir.Parent.Exists) break;
+                    dir = dir.Parent;
+
+                    var testScripts = Path.Combine(dir.FullName, SERVER_SCRIPTS_FOLDER);
+                    if (Directory.Exists(testScripts))
+                    {
+                        Settings.ScriptsCustomFolder = dir.FullName;
+                        Logger.Info($"TryRepairLink: repaired custom folder → {dir.FullName}");
+                        return true;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("TryRepairLink error", ex);
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Unlink server integration - clears settings only, preserves installed scripts
+        /// </summary>
+        public static (bool success, string message) UnlinkServer()
+        {
+            try
+            {
+                Logger.Info($"Server unlinked (scripts preserved): Custom={Settings.ScriptsCustomFolder}");
+
+                Settings.ScriptsCustomFolder = string.Empty;
+                Settings.ServerDataFolder = string.Empty;
+
                 return (true, "Server unlinked (scripts preserved on server)");
             }
             catch (Exception ex)
@@ -640,17 +767,17 @@ namespace UORespawnApp.Scripts.Utilities
         /// <summary>
         /// Get the path where server scripts are installed
         /// </summary>
-        public static string GetServerScriptsPath(string servuoPath)
+        public static string GetServerScriptsPath()
         {
-            return Path.Combine(servuoPath, "Scripts", "Custom", SERVER_SCRIPTS_FOLDER);
+            return Path.Combine(Settings.ScriptsCustomFolder, SERVER_SCRIPTS_FOLDER);
         }
 
         /// <summary>
         /// Get the path where server data is stored
         /// </summary>
-        public static string GetServerDataPath(string servuoPath)
+        public static string GetServerDataPath()
         {
-            return Path.Combine(servuoPath, "Data", SERVER_DATA_FOLDER);
+            return Path.Combine(Settings.ServerDataFolder, SERVER_DATA_FOLDER);
         }
 
         /// <summary>
@@ -658,15 +785,15 @@ namespace UORespawnApp.Scripts.Utilities
         /// Safe to call even when server scripts are custom/modified.
         /// Used when version matches but we want to ensure folder structure.
         /// </summary>
-        /// <param name="servuoPath">Path to ServUO root folder</param>
-        public static void EnsureDataFoldersExist(string? servuoPath)
+        public static void EnsureDataFoldersExist()
         {
-            if (string.IsNullOrEmpty(servuoPath))
+            var dataFolder = Settings.ServerDataFolder;
+            if (string.IsNullOrEmpty(dataFolder))
                 return;
 
             try
             {
-                SetupServerDataFolders(servuoPath);
+                SetupServerDataFolders(dataFolder);
             }
             catch (Exception ex)
             {
@@ -680,7 +807,7 @@ namespace UORespawnApp.Scripts.Utilities
 
         /// <summary>
         /// [DEPRECATED] Use FullServerSetup instead.
-        /// Setup server-side scripts in ServUO/Scripts/Custom folder.
+        /// Setup server-side scripts using explicit folder paths.
         /// </summary>
         [Obsolete("Use FullServerSetup instead")]
         public static (bool success, string message) SetupServerScripts(string? scriptsFolderPath)
@@ -688,29 +815,17 @@ namespace UORespawnApp.Scripts.Utilities
             if (string.IsNullOrEmpty(scriptsFolderPath))
                 return (false, "Scripts folder not found");
 
-            // Extract ServUO path from scripts path
-            var servuoPath = Path.GetDirectoryName(scriptsFolderPath);
-            if (string.IsNullOrEmpty(servuoPath))
-                return (false, "Invalid scripts path");
-
-            return FullServerSetup(servuoPath);
+            return FullServerSetup(scriptsFolderPath, Settings.ServerDataFolder);
         }
 
         /// <summary>
-        /// [DEPRECATED] Use CleanupAllLegacyInstallations instead.
+        /// [DEPRECATED] Use CleanupLegacyInstallations instead.
         /// Delete existing UORespawn installation before fresh install.
         /// </summary>
-        [Obsolete("Use CleanupAllLegacyInstallations instead")]
+        [Obsolete("Use CleanupLegacyInstallations instead")]
         public static bool CleanupExistingInstallation(string? scriptsFolderPath)
         {
-            if (string.IsNullOrEmpty(scriptsFolderPath))
-                return true;
-
-            var servuoPath = Path.GetDirectoryName(scriptsFolderPath);
-            if (string.IsNullOrEmpty(servuoPath))
-                return false;
-
-            return CleanupAllLegacyInstallations(servuoPath) >= 0;
+            return CleanupLegacyInstallations(scriptsFolderPath, Settings.ServerDataFolder) >= 0;
         }
 
         #endregion

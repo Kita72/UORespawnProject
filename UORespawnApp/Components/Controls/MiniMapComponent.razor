@@ -412,11 +412,11 @@
         {
             Logger.Info($"Toggling ON server spawn statistics for {ViewService.CurrentMapId}");
 
-            // Check if ServUO folder is configured
-            if (string.IsNullOrEmpty(Settings.ServerFolder))
+            // Check if server is linked
+            if (string.IsNullOrEmpty(Settings.ScriptsCustomFolder))
             {
-                Logger.Warning("Server folder not configured!");
-                ToastService.ShowWarning("Server folder not configured! Go to Settings to link your ServUO folder.");
+                Logger.Warning("Server not linked!");
+                ToastService.ShowWarning("Server not linked! Go to Settings to link your server folders.");
                 ViewService.ToggleServerSpawns();
                 StateHasChanged();
                 return;
@@ -427,7 +427,7 @@
             if (string.IsNullOrEmpty(statsFolderPath) || !Directory.Exists(statsFolderPath))
             {
                 Logger.Warning("STATS folder not found");
-                ToastService.ShowWarning("UORespawn/STATS folder not found! Ensure Data/UORespawn/STATS/ exists in your server data folder.");
+                ToastService.ShowWarning("UORespawn/STATS folder not found in your linked server data folder.");
                 ViewService.ToggleServerSpawns();
                 StateHasChanged();
                 return;

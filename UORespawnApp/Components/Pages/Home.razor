@@ -3,6 +3,7 @@
 @using UORespawnApp.Scripts.Services
 @inject ViewService ViewService
 @inject WebViewService WebViewService
+@inject IJSRuntime JS
 
 @implements IDisposable
 
@@ -13,6 +14,17 @@
     <!-- Splash Screen (always visible, WebView overlays it via MAUI) -->
     <div style="position: fixed; top: 0; left: 250px; right: 0; bottom: 0; background-image: url('splash.png'); background-size: cover; background-position: center; background-repeat: no-repeat; z-index: 0;">
     </div>
+
+    <!-- Intro video — startup only, layered on top of static splash -->
+    @if (_showVideo)
+    {
+        <video id="splash-video"
+               style="position: fixed; top: 0; left: 250px; right: 0; bottom: 0; width: calc(100vw - 250px); height: 100vh; object-fit: cover; z-index: 1; display: block;"
+               src="videos/SplashAnim@(_videoIndex).mp4"
+               autoplay muted playsinline
+               preload="auto">
+        </video>
+    }
 
     <!-- Open Website Button (always visible, WebView covers it when open) -->
     <button @onclick="OpenWebsite" 
@@ -53,6 +65,13 @@ else if (ViewService.CurrentView == "spawnpacks")
 @code {
     private const string WebsiteUrl = "http://blackboxprogramming.runasp.net";
 
+    // Intro video — static so re-navigating to home never re-triggers it
+    private static bool _hasPlayedIntro = false;
+    private bool _showVideo = false;
+    private int _videoIndex = 0;
+    private bool _videoInitialized = false;
+    private DotNetObjectReference<Home>? _dotNetRef;
+
     protected override void OnInitialized()
     {
         ViewService.OnViewChanged += OnViewChanged;
@@ -68,6 +87,17 @@ else if (ViewService.CurrentView == "spawnpacks")
         catch (Exception ex)
         {
             Logger.Error("Error in Home.OnInitialized", ex);
+        }
+
+        // Pick a random intro video — only on first app launch
+        if (!_hasPlayedIntro)
+        {
+            _hasPlayedIntro = true;
+            if (Settings.SplashAnimationEnabled)
+            {
+                _videoIndex = Random.Shared.Next(0, 4);
+                _showVideo = true;
+            }
         }
 
         // Default to home view on startup
@@ -87,6 +117,23 @@ else if (ViewService.CurrentView == "spawnpacks")
         StateHasChanged();
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_showVideo && !_videoInitialized)
+        {
+            _videoInitialized = true;
+            _dotNetRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("initSplashVideo", _dotNetRef);
+        }
+    }
+
+    [JSInvokable]
+    public void OnVideoEnded()
+    {
+        _showVideo = false;
+        StateHasChanged();
+    }
+
     private void OpenWebsite()
     {
         WebViewService.ShowWebView(WebsiteUrl);
@@ -97,6 +144,7 @@ else if (ViewService.CurrentView == "spawnpacks")
     {
         ViewService.OnViewChanged -= OnViewChanged;
         ViewService.OnMapChanged -= StateHasChanged;
+        _dotNetRef?.Dispose();
 
         // Ensure WebView is closed when disposing
         if (WebViewService.IsWebViewOpen)

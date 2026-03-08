@@ -76,6 +76,9 @@
                 <button class="icon-btn @GetActiveClass("instructions")" @onclick="ShowInstructions" title="Instructions">
                     <span class="bi bi-book-fill-nav-menu" aria-hidden="true"></span>
                 </button>
+                <button class="icon-btn" @onclick="ToggleSplashAnimation" title="@animTitle">
+                    <span class="bi @animIcon" aria-hidden="true"></span>
+                </button>
                 <button class="icon-btn theme-btn" @onclick="ToggleTheme" title="@themeText">
                     <span class="bi @themeIcon" aria-hidden="true"></span>
                 </button>
@@ -89,6 +92,16 @@
     private bool isDarkMode = true;
     private string themeIcon => isDarkMode ? "bi-sun-fill-nav-menu" : "bi-moon-fill-nav-menu";
     private string themeText => isDarkMode ? "Light Mode" : "Dark Mode";
+
+    private bool _splashEnabled = Settings.SplashAnimationEnabled;
+    private string animIcon => _splashEnabled ? "bi-film-nav-menu" : "bi-film-off-nav-menu";
+    private string animTitle => _splashEnabled ? "Disable Intro Animation" : "Enable Intro Animation";
+
+    private void ToggleSplashAnimation()
+    {
+        _splashEnabled = !_splashEnabled;
+        Settings.SplashAnimationEnabled = _splashEnabled;
+    }
 
     protected override void OnInitialized()
     {

@@ -41,8 +41,9 @@ body.light-theme .map-header-select option {
    ECOLOGY BANNER CARD
    ============================================ */
 .ecology-banner-card .card {
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-    border: 1px solid #333;
+    background-color: #1e1e1e;
+    border: 1px solid rgba(218, 165, 32, 0.25);
+    border-left: 3px solid goldenrod;
 }
 
 .ecology-banner-icon {
@@ -61,8 +62,9 @@ body.light-theme .map-header-select option {
 
 /* Light Theme - Ecology Banner */
 body.light-theme .ecology-banner-card .card {
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    border-color: #dee2e6;
+    background-color: #f8f9fa;
+    border-color: rgba(184, 134, 11, 0.3);
+    border-left: 3px solid #b8860b;
 }
 
 body.light-theme .ecology-banner-icon {
@@ -88,6 +90,105 @@ body.light-theme .ecology-banner-title {
     flex: 1;
     overflow-y: auto;
     min-height: 0;
+}
+
+/* ============================================
+   MIDDLE COLUMN — flex config body
+   Makes FrequencyButtonsComponent fill vertically
+   so the trigger icon row (flex:1 inside it) expands
+   ============================================ */
+.tile-config-body {
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+}
+
+/* FrequencyButtonsComponent fills ALL available top space — buttons grow tall */
+.tile-config-body ::deep .freq-button-container {
+    flex: 1;
+    max-height: none;
+    justify-content: flex-start;
+    min-height: 0;
+    padding: 16px;
+}
+
+/* Each button row takes equal flex share — buttons grow with available space */
+.tile-config-body ::deep .freq-button-container > .row {
+    flex: 1;
+    align-items: stretch;
+}
+
+/* Extra gap between the top (Water/Weather/Timed) and bottom (Common/Uncommon/Rare) rows */
+.tile-config-body ::deep .freq-button-container > .row:first-child {
+    margin-bottom: 16px !important;
+}
+
+/* Col cells become flex containers so the button inside can stretch full height */
+.tile-config-body ::deep .freq-button-container > .row > [class*="col-"] {
+    display: flex;
+}
+
+/* Buttons fill their row height — no square constraint, no hard cap */
+.tile-config-body ::deep .freq-button {
+    flex: 1;
+    aspect-ratio: auto;
+    min-height: 60px;
+    max-height: none;
+}
+
+/* ============================================
+   TRIGGER BOTTOM GROUP
+   Wraps the icon display + dropdowns together,
+   pinned at bottom of tile-config-body.
+   flex:0 0 auto = sized to content, no growth.
+   ============================================ */
+.trigger-bottom-group {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    padding: 0 16px 16px;
+}
+
+/* Icon row: flex to fill the group above the dropdowns */
+.trigger-display-section {
+    display: flex;
+    align-items: stretch;
+    min-height: 160px;
+    margin-bottom: 20px;
+}
+
+.trigger-display-cell {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem;
+}
+
+.trigger-display-cell--left {
+    border-right: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.trigger-display-icon {
+    font-size: clamp(4rem, 10vh, 7rem);
+    transition: transform 0.3s ease;
+    line-height: 1;
+}
+
+.trigger-display-cell:hover .trigger-display-icon {
+    transform: scale(1.08);
+}
+
+.trigger-display-label {
+    font-size: 0.75rem;
+    color: #6c757d;
+    margin-top: 6px;
+}
+
+/* Light theme */
+body.light-theme .trigger-display-cell--left {
+    border-right-color: rgba(0, 0, 0, 0.1);
 }
 
 /* Tile List Body - Scrollable */
@@ -152,17 +253,15 @@ body.light-theme .ecology-banner-title {
     justify-content: center;
 }
 
-/* Frequency Buttons - Doubled height for better visibility */
+/* Frequency Buttons */
 .freq-button {
-    aspect-ratio: 1 / 1; /* Makes button perfectly square */
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 1.0rem;
     font-weight: 600;
-    padding: 0; /* Remove default padding to let aspect-ratio control size */
-    min-height: 120px; /* Doubled from 60px */
-    max-height: 170px; /* Doubled from 85px */
+    padding: 0;
+    min-height: 70px;
 }
 
 .freq-button:hover {
@@ -378,28 +477,5 @@ body.light-theme .tile-description-section {
 body.light-theme .tile-no-image-note {
     background-color: rgba(74, 111, 165, 0.1);
     color: #4a6fa5;
-}
-
-/* Trigger Dashboard Styles */
-.trigger-indicator {
-    padding: 1rem 0;
-}
-
-.trigger-indicator i {
-    transition: all 0.3s ease;
-}
-
-.trigger-indicator:hover i {
-    transform: scale(1.1);
-}
-
-.bg-purple {
-    background-color: #9b59b6;
-    color: white;
-}
-
-/* Light Theme - Trigger Dashboard */
-body.light-theme .trigger-indicator .badge.bg-secondary {
-    background-color: #adb5bd !important;
 }
 

@@ -90,39 +90,44 @@ public static class ConfigurationValidator
     /// </summary>
     private static void ValidateServerLink(ValidationResult result)
     {
-        var serverFolder = Settings.ServerFolder;
+        var customFolder = Settings.ScriptsCustomFolder;
+        var dataFolder = Settings.ServerDataFolder;
 
-        if (string.IsNullOrEmpty(serverFolder))
+        if (string.IsNullOrEmpty(customFolder))
         {
             // No server link configured - that's fine
             Logger.Info("[Config] No server link configured (standalone mode)");
             return;
         }
 
-        // Check if linked server folder still exists
-        if (!Directory.Exists(serverFolder))
+        // Check if linked Custom folder still exists
+        if (!Directory.Exists(customFolder))
         {
-            result.Warnings.Add($"Linked server folder no longer exists: {serverFolder}");
-            Logger.Warning($"[Config] Linked server folder missing: {serverFolder}");
+            result.Warnings.Add($"Linked Custom folder no longer exists: {customFolder}");
+            Logger.Warning($"[Config] Linked Custom folder missing: {customFolder}");
             return;
         }
 
-        // Check for expected server subfolders
-        var serverDataPath = Path.Combine(serverFolder, "Data", "UORespawn");
-        if (!Directory.Exists(serverDataPath))
-        {
-            result.Warnings.Add("Server UORespawn data folder not found. Server may need initialization.");
-            Logger.Warning("[Config] Server Data/UORespawn folder not found");
-        }
-
-        var serverScriptsPath = Path.Combine(serverFolder, "Scripts", "Custom", "UORespawnServer");
+        // Check for UORespawnServer in custom folder
+        var serverScriptsPath = Path.Combine(customFolder, "UORespawnServer");
         if (!Directory.Exists(serverScriptsPath))
         {
-            result.Warnings.Add("Server UORespawn scripts not installed. Run server setup.");
+            result.Warnings.Add("UORespawnServer scripts not found in Custom folder. Run server setup.");
             Logger.Warning("[Config] Server scripts not found");
         }
 
-        Logger.Info($"[Config] Server link validated: {serverFolder}");
+        // Check data folder
+        if (!string.IsNullOrEmpty(dataFolder) && Directory.Exists(dataFolder))
+        {
+            var serverDataPath = Path.Combine(dataFolder, "UORespawn");
+            if (!Directory.Exists(serverDataPath))
+            {
+                result.Warnings.Add("Server UORespawn data folder not found. Server may need initialization.");
+                Logger.Warning("[Config] Server Data/UORespawn folder not found");
+            }
+        }
+
+        Logger.Info($"[Config] Server link validated: Custom={customFolder}");
     }
 
     /// <summary>
@@ -168,7 +173,8 @@ public static class ConfigurationValidator
             $"Local Data Path: {PathConstants.LocalDataPath}",
             $"Maps Path: {PathConstants.MapsPath}",
             $"Packs Path: {PathConstants.PacksPath}",
-            $"Server Folder: {Settings.ServerFolder ?? "(not linked)"}",
+            $"Scripts Custom Folder: {(string.IsNullOrEmpty(Settings.ScriptsCustomFolder) ? "(not linked)" : Settings.ScriptsCustomFolder)}",
+            $"Server Data Folder: {(string.IsNullOrEmpty(Settings.ServerDataFolder) ? "(not linked)" : Settings.ServerDataFolder)}",
             $"Current Pack: {Settings.CurrentPackName ?? "(none)"}",
             $"Debug Mode: {Settings.IsDebugMode}",
             $"────────────────────────────────────────",
@@ -180,9 +186,14 @@ public static class ConfigurationValidator
         lines.Add($"  Maps: {(Directory.Exists(PathConstants.MapsPath) ? "✓" : "✗")}");
         lines.Add($"  Packs: {(Directory.Exists(PathConstants.PacksPath) ? "✓" : "✗")}");
 
-        if (!string.IsNullOrEmpty(Settings.ServerFolder))
+        if (!string.IsNullOrEmpty(Settings.ScriptsCustomFolder))
         {
-            lines.Add($"  Server Link: {(Directory.Exists(Settings.ServerFolder) ? "✓" : "✗ MISSING")}");
+            lines.Add($"  Custom Folder: {(Directory.Exists(Settings.ScriptsCustomFolder) ? "✓" : "✗ MISSING")}");
+        }
+
+        if (!string.IsNullOrEmpty(Settings.ServerDataFolder))
+        {
+            lines.Add($"  Data Folder:   {(Directory.Exists(Settings.ServerDataFolder) ? "✓" : "✗ MISSING")}");
         }
 
         return string.Join(Environment.NewLine, lines);

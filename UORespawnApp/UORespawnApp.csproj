@@ -149,18 +149,37 @@
          Publish (Release): Include only ZIPs, extract on first launch
          ======================================================================== -->
 
-    <!-- SERVER: Pre-packaged server scripts ZIP for export functionality -->
+    <!-- SERVER: Pre-packaged server scripts ZIPs for export functionality -->
+    <!-- Structure: Data/SERVER/{ServerType}/UORespawnServer/ + UORespawnServer.zip -->
+    <!-- Supported: SERVUO (ServUO), MUO (ModernUO) -->
     <ItemGroup>
-      <None Include="Data\SERVER\UORespawnServer.zip" Condition="Exists('Data\SERVER\UORespawnServer.zip')">
+      <!-- Exclude server .cs files from compilation (they're server scripts, not app code) -->
+      <Compile Remove="Data\SERVER\**\*.cs" />
+
+      <!-- ── SERVUO ── -->
+      <!-- ZIP for export/release -->
+      <None Include="Data\SERVER\SERVUO\UORespawnServer.zip" Condition="Exists('Data\SERVER\SERVUO\UORespawnServer.zip')">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
-      <!-- Exclude server .cs files from compilation (they're ServUO scripts, not app code) -->
-      <Compile Remove="Data\SERVER\**\*.cs" />
-      <None Remove="Data\SERVER\UORespawnServer\**\*.*" Condition="'$(Configuration)' == 'Release'" />
-      <!-- Copy UORespawnServer folder contents for server linking (Debug builds and if ZIP not present) -->
-      <None Include="Data\SERVER\UORespawnServer\**\*.*">
+      <!-- Exclude raw .cs files in Release builds (ZIP is used instead) -->
+      <None Remove="Data\SERVER\SERVUO\UORespawnServer\**\*.*" Condition="'$(Configuration)' == 'Release'" />
+      <!-- Copy folder contents for Debug (server linking without ZIP extraction) -->
+      <None Include="Data\SERVER\SERVUO\UORespawnServer\**\*.*" Condition="'$(Configuration)' != 'Release'">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        <Link>Data\SERVER\UORespawnServer\%(RecursiveDir)%(Filename)%(Extension)</Link>
+        <Link>Data\SERVER\SERVUO\UORespawnServer\%(RecursiveDir)%(Filename)%(Extension)</Link>
+      </None>
+
+      <!-- ── MUO ── -->
+      <!-- ZIP for export/release -->
+      <None Include="Data\SERVER\MUO\UORespawnServer.zip" Condition="Exists('Data\SERVER\MUO\UORespawnServer.zip')">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <!-- Exclude raw .cs files in Release builds (ZIP is used instead) -->
+      <None Remove="Data\SERVER\MUO\UORespawnServer\**\*.*" Condition="'$(Configuration)' == 'Release'" />
+      <!-- Copy folder contents for Debug (server linking without ZIP extraction) -->
+      <None Include="Data\SERVER\MUO\UORespawnServer\**\*.*" Condition="'$(Configuration)' != 'Release'">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        <Link>Data\SERVER\MUO\UORespawnServer\%(RecursiveDir)%(Filename)%(Extension)</Link>
       </None>
     </ItemGroup>
 
@@ -234,6 +253,9 @@
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         <Link>Data\TILES\%(Filename)%(Extension)</Link>
       </None>
+    </ItemGroup>
+    <ItemGroup>
+      <Folder Include="Data\SERVER\MUO\" />
     </ItemGroup>
 
 </Project>

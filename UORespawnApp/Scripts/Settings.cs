@@ -22,7 +22,9 @@ namespace UORespawnApp
     ///    IsScaleSpawn, EnableRiftSpawn, EnableDebugSpawn
     /// 
     /// PROPERTIES PREFERENCES-ONLY (NOT in binary):
-    ///    ServerFolder (ServUO root path - editor config),
+    ///    ScriptsCustomFolder (Custom/ folder where UORespawnServer/ is installed),
+    ///    ServerDataFolder (Data/ folder where UORespawn/ data exchange lives),
+    ///    ServerType (\"ServUO\" or \"MUO\" - which bundled scripts to install),
     ///    BoxColor, BoxColorInc, BoxLineSize (UI appearance),
     ///    Bestiary (editor custom creature list)
     /// 
@@ -33,7 +35,8 @@ namespace UORespawnApp
     internal static class Settings
     {
         // Cache for frequently accessed settings to avoid repeated Preferences.Get() calls
-        private static string? _cachedServerFolder;
+        private static string? _cachedScriptsCustomFolder;
+        private static string? _cachedServerDataFolder;
         private static string? _cachedCurrentPackName;
         private static string? _cachedCurrentPackFolder;
         private static Color? _cachedBoxColor;
@@ -81,31 +84,21 @@ namespace UORespawnApp
 
         private static void LoadCache()
         {
-            // Migration: Check for old ServUODataFolder and convert to new ServerFolder format
-            var oldDataFolder = Preferences.Get("ServUODataFolder", "");
-            var serverFolder = Preferences.Get("ServerFolder", "");
-
-            // If old setting exists but new one doesn't, migrate
-            if (!string.IsNullOrEmpty(oldDataFolder) && string.IsNullOrEmpty(serverFolder))
+            // Migration: Clear old single-path ServerFolder setting (pre-2.0.2)
+            // Users must re-link using the new two-path approach (Custom folder + Data folder)
+            if (Preferences.ContainsKey("ServerFolder"))
             {
-                // Old setting stored Data folder path (e.g., C:\ServUO\Data)
-                // New setting stores ServUO root (e.g., C:\ServUO)
-                var parentFolder = Path.GetDirectoryName(oldDataFolder);
-                if (!string.IsNullOrEmpty(parentFolder) && Directory.Exists(parentFolder))
-                {
-                    // Verify it's actually a ServUO folder
-                    if (File.Exists(Path.Combine(parentFolder, "ServUO.exe")))
-                    {
-                        serverFolder = parentFolder;
-                        Preferences.Set("ServerFolder", serverFolder);
-                        Logger.Info($"Migrated ServUODataFolder to ServerFolder: {serverFolder}");
-                    }
-                }
-                // Clear old setting
+                Preferences.Remove("ServerFolder");
+                Logger.Info("Cleared legacy ServerFolder setting - server must be re-linked with new two-path setup");
+            }
+
+            if (Preferences.ContainsKey("ServUODataFolder"))
+            {
                 Preferences.Remove("ServUODataFolder");
             }
 
-            _cachedServerFolder = serverFolder;
+            _cachedScriptsCustomFolder = Preferences.Get("ScriptsCustomFolder", "");
+            _cachedServerDataFolder = Preferences.Get("ServerDataFolder", "");
             _cachedCurrentPackName = Preferences.Get("CurrentPackName", DefaultPackName);
             _cachedCurrentPackFolder = Preferences.Get("CurrentPackFolder", "");
 
@@ -119,18 +112,43 @@ namespace UORespawnApp
         }
 
         /// <summary>
-        /// The ServUO root folder path (e.g., C:\ServUO).
-        /// Used to derive Scripts/Custom/UORespawnServer/ and Data/UORespawn/ paths.
+        /// The server's Custom folder path (e.g., C:\ServUO\Scripts\Custom\).
+        /// UORespawnServer/ scripts are installed directly inside this folder.
         /// Empty string if not linked.
         /// </summary>
-        public static string ServerFolder
+        public static string ScriptsCustomFolder
         {
-            get => _cachedServerFolder ?? "";
+            get => _cachedScriptsCustomFolder ?? "";
             set
             {
-                _cachedServerFolder = value;
-                Preferences.Set("ServerFolder", value);
+                _cachedScriptsCustomFolder = value;
+                Preferences.Set("ScriptsCustomFolder", value);
             }
+        }
+
+        /// <summary>
+        /// The server's Data folder path (e.g., C:\ServUO\Data\).
+        /// UORespawn/ data exchange folder is created directly inside this folder.
+        /// Empty string if not linked.
+        /// </summary>
+        public static string ServerDataFolder
+        {
+            get => _cachedServerDataFolder ?? "";
+            set
+            {
+                _cachedServerDataFolder = value;
+                Preferences.Set("ServerDataFolder", value);
+            }
+        }
+
+        /// <summary>
+        /// The selected server type for script installation ("ServUO" or "MUO").
+        /// Used to pick the correct bundled server scripts from Data/SERVER/.
+        /// </summary>
+        public static string ServerType
+        {
+            get => Preferences.Get("ServerType", "ServUO");
+            set => Preferences.Set("ServerType", value);
         }
 
         /// <summary>
@@ -418,6 +436,16 @@ namespace UORespawnApp
         }
 
         /// <summary>
+        /// Whether the intro splash animation plays on app launch.
+        /// Default is true. User can toggle via nav bar button.
+        /// </summary>
+        public static bool SplashAnimationEnabled
+        {
+            get => Preferences.Get("SplashAnimationEnabled", true);
+            set => Preferences.Set("SplashAnimationEnabled", value);
+        }
+
+        /// <summary>
         /// Version string to skip server update prompts for.
         /// When set, the editor won't prompt to update server scripts until the editor version changes.
         /// This allows users to keep custom server modifications without repeated prompts.
@@ -510,7 +538,8 @@ namespace UORespawnApp
             Preferences.Clear();
 
             // Reset the cache to default values
-            _cachedServerFolder = "";
+            _cachedScriptsCustomFolder = "";
+            _cachedServerDataFolder = "";
             _cachedCurrentPackName = DefaultPackName;
             _cachedCurrentPackFolder = "";
             _cachedBoxColor = DefaultBoxColor;

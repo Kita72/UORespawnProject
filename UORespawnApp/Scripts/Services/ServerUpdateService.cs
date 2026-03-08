@@ -24,7 +24,8 @@ public class ServerUpdateService
     /// </summary>
     public class ServerUpdateInfo
     {
-        public string ServUOPath { get; set; } = "";
+        public string CustomFolderPath { get; set; } = "";
+        public string ServerDataFolderPath { get; set; } = "";
         public string InstalledVersion { get; set; } = "";
         public string EditorVersion { get; set; } = Utility.Version;
         public bool IsUpgrade => CompareVersions(EditorVersion, InstalledVersion) > 0;
@@ -74,29 +75,24 @@ public class ServerUpdateService
     /// <summary>
     /// Check if server scripts need updating. Does NOT automatically update.
     /// Raises OnServerUpdateAvailable event if update is needed.
+    /// Reads server paths from Settings.ScriptsCustomFolder and Settings.ServerDataFolder.
     /// </summary>
-    /// <param name="servuoPath">Path to ServUO installation</param>
     /// <returns>True if check completed (regardless of update need), false if error</returns>
-    public bool CheckForServerUpdate(string? servuoPath)
+    public bool CheckForServerUpdate()
     {
         try
         {
-            if (string.IsNullOrEmpty(servuoPath))
+            var customFolder = Settings.ScriptsCustomFolder;
+            var dataFolder = Settings.ServerDataFolder;
+
+            if (string.IsNullOrEmpty(customFolder))
             {
                 Logger.Info("[ServerUpdate] No server linked - skipping update check");
                 return true;
             }
 
-            // Validate the ServUO folder
-            var validation = ServerSetupUtility.ValidateServUOFolder(servuoPath);
-            if (!validation.IsValid)
-            {
-                Logger.Warning($"[ServerUpdate] Invalid ServUO folder: {validation.Message}");
-                return false;
-            }
-
             // Check installation status without auto-updating
-            var status = ServerSetupUtility.CheckInstallation(servuoPath);
+            var status = ServerSetupUtility.CheckInstallation(customFolder, dataFolder);
 
             if (!status.IsInstalled)
             {
@@ -118,7 +114,8 @@ public class ServerUpdateService
                 // Version mismatch detected - raise event for UI to handle
                 PendingUpdate = new ServerUpdateInfo
                 {
-                    ServUOPath = servuoPath,
+                    CustomFolderPath = customFolder,
+                    ServerDataFolderPath = dataFolder,
                     InstalledVersion = status.InstalledVersion ?? "unknown",
                     EditorVersion = status.EditorVersion,
                     ScriptsPath = status.ScriptsPath,
@@ -136,7 +133,7 @@ public class ServerUpdateService
                 Logger.Info($"[ServerUpdate] Server scripts up to date (v{status.InstalledVersion})");
 
                 // Ensure data folders exist even when version matches
-                ServerSetupUtility.EnsureDataFoldersExist(servuoPath);
+                ServerSetupUtility.EnsureDataFoldersExist();
             }
 
             return true;
@@ -162,8 +159,17 @@ public class ServerUpdateService
         {
             Logger.Info($"[ServerUpdate] User accepted update - updating server scripts...");
 
+            var serverTypeStr = Settings.ServerType;
+            var serverType = serverTypeStr == "MUO"
+                ? ServerSetupUtility.ServerType.MUO
+                : ServerSetupUtility.ServerType.ServUO;
+
             // Perform the full server setup (this WILL replace scripts)
-            var result = ServerSetupUtility.FullServerSetup(PendingUpdate.ServUOPath, forceReinstall: true);
+            var result = ServerSetupUtility.FullServerSetup(
+                PendingUpdate.CustomFolderPath,
+                PendingUpdate.ServerDataFolderPath,
+                serverType,
+                forceReinstall: true);
 
             if (result.success)
             {

@@ -90,7 +90,7 @@
                             <div style="width: 40px;"></div>
                         }
                     </div>
-                    <div class="card-body">
+                    <div class="card-body tile-config-body">
                         <!-- 6 Spawn Category Buttons -->
                         <FrequencyButtonsComponent
                             WaterCount="@currentEntity.WaterSpawns.Count"
@@ -101,8 +101,27 @@
                             RareCount="@currentEntity.RareSpawns.Count"
                             OnButtonClick="OpenModal" />
 
-                        <!-- Trigger Dropdowns - Below Cards like BoxSpawn -->
-                        <div class="row g-2 mt-3">
+                        <!-- Trigger icons + dropdowns grouped together at bottom -->
+                        <div class="trigger-bottom-group">
+                            <div class="trigger-display-section">
+                                <div class="trigger-display-cell trigger-display-cell--left">
+                                    <i class="bi @GetWeatherIcon(currentEntity.WeatherSpawn) trigger-display-icon"
+                                       style="@GetWeatherIconColor(currentEntity.WeatherSpawn)"></i>
+                                    <span class="badge @GetWeatherBadgeClass(currentEntity.WeatherSpawn) mt-2">
+                                        @(currentEntity.WeatherSpawn == WeatherTypes.None ? "No Weather" : currentEntity.WeatherSpawn.ToString())
+                                    </span>
+                                </div>
+                                <div class="trigger-display-cell">
+                                    <i class="bi @GetTimeIcon(currentEntity.TimedSpawn) trigger-display-icon"
+                                       style="@GetTimeIconColor(currentEntity.TimedSpawn)"></i>
+                                    <span class="badge @GetTimeBadgeClass(currentEntity.TimedSpawn) mt-2">
+                                        @(currentEntity.TimedSpawn == TimeNames.None ? "No Time" : currentEntity.TimedSpawn.ToString().Replace("_", " "))
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- Trigger Dropdowns -->
+                            <div class="row g-2">
                             <div class="col-md-6">
                                 <label class="form-label mb-1 text-center d-block">
                                     Weather Trigger
@@ -148,40 +167,7 @@
                                 </select>
                             </div>
                         </div>
-
-                        <!-- Visual Trigger Dashboard -->
-                        <div class="card mt-3" style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border: 1px solid #333;">
-                            <div class="card-body p-3">
-                                <div class="row">
-                                    <!-- Weather Indicator -->
-                                    <div class="col-6 text-center" style="border-right: 1px solid #333;">
-                                        <div class="trigger-indicator">
-                                            <i class="bi @GetWeatherIcon(currentEntity.WeatherSpawn)" 
-                                               style="font-size: 3.5rem; @GetWeatherIconColor(currentEntity.WeatherSpawn)"></i>
-                                            <div class="mt-2">
-                                                <span class="badge @GetWeatherBadgeClass(currentEntity.WeatherSpawn)">
-                                                    @(currentEntity.WeatherSpawn == WeatherTypes.None ? "No Weather" : currentEntity.WeatherSpawn.ToString())
-                                                </span>
-                                            </div>
-                                            <small class="text-muted d-block mt-1">Weather Trigger</small>
-                                        </div>
-                                    </div>
-                                    <!-- Time Indicator -->
-                                    <div class="col-6 text-center">
-                                        <div class="trigger-indicator">
-                                            <i class="bi @GetTimeIcon(currentEntity.TimedSpawn)" 
-                                               style="font-size: 3.5rem; @GetTimeIconColor(currentEntity.TimedSpawn)"></i>
-                                            <div class="mt-2">
-                                                <span class="badge @GetTimeBadgeClass(currentEntity.TimedSpawn)">
-                                                    @(currentEntity.TimedSpawn == TimeNames.None ? "No Time" : currentEntity.TimedSpawn.ToString().Replace("_", " "))
-                                                </span>
-                                            </div>
-                                            <small class="text-muted d-block mt-1">Timed Trigger</small>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        </div><!-- /trigger-bottom-group -->
                     </div>
                 </div>
             }
@@ -235,7 +221,7 @@
                         <p class="mb-0 text-muted small">Learn about the six-frequency system, terrain classifications, and the philosophy behind the UORespawn living shard simulation.</p>
                     </div>
                 </div>
-                <button class="btn btn-outline-warning btn-sm ecology-banner-btn" @onclick="OpenEcologyModal">
+                <button class="btn btn-outline-warning ecology-banner-btn" @onclick="OpenEcologyModal">
                     <span class="bi bi-journal-text me-1"></span>
                     Read Ecology Guide
                 </button>

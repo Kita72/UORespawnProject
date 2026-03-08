@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <strong>A powerful spawn management tool for Ultima Online servers running ServUO</strong>
+  <strong>A powerful spawn management tool for Ultima Online servers running ServUO or ModernUO (MUO)</strong>
 </p>
 
 <p align="center">
@@ -21,9 +21,9 @@
 
 ## 📌 About
 
-UORespawn is a modern .NET MAUI application that provides a comprehensive visual interface for creating and managing spawn systems in Ultima Online ServUO servers. It offers three complementary spawn methods to populate your world with creatures and NPCs.
+UORespawn is a modern .NET MAUI application that provides a comprehensive visual interface for creating and managing spawn systems in Ultima Online servers running **ServUO** or **ModernUO (MUO)**. It offers four complementary spawn methods to populate your world with creatures and NPCs.
 
-**Version:** 2.0.1.2  
+**Version:** 2.0.1.3  
 **Platform:** Windows, macOS  
 **Framework:** .NET 10 MAUI with Blazor  
 **License:** MIT
@@ -62,21 +62,26 @@ UORespawn is a modern .NET MAUI application that provides a comprehensive visual
 - Six frequency tiers for precise control
 - Applies globally to all maps
 
-### ⚙️ Server Integration (Three Options)
+### ⚙️ Server Integration (v2.0.1.3+)
+
+#### 🖼️ Step 1 — Choose Server Type
+- **ServUO or ModernUO (MUO)** — Logo toggle at the top of the Server Integration card
+  - All folder path hints update automatically to match your server's layout
+  - ServUO: `Scripts/Custom/` + `Data/` | MUO: `Projects/UOContent/Custom/` + `Distribution/Data/`
 
 #### 🔗 Link Local (Recommended)
-- **Auto-Sync** - Files automatically sync to ServUO Data folder
-- **Auto-Install** - Server scripts auto-install to `Scripts/Custom/UORespawnServer/` on linking
-- **Auto-Update** - Editor detects version mismatches and prompts to update server
-- **Legacy Cleanup** - Automatically removes old folders during install/update
+- **Two-Path Linking** — Separate folder pickers for Custom Scripts and Server Data folders
+- **Auto-Install** — Scripts installed to `Custom/UORespawnServer/`; `Data/UORespawn/` created automatically
+- **Auto-Update** — Editor detects version mismatches and prompts before updating scripts
+- **Broken Link Detection** — Amber button appears when stored paths can't be found; auto-repair walks parent directories to relocate the server
 
-#### 🌐 FTP Remote Server (v2.0.0.9+)
-- **Push to Server** - Upload spawn data (.bin files) to remote servers
-- **Pull from Server** - Download reference data (.txt files) from remote servers
-- **Auto-Detect Path** - Automatically finds `Data/UORespawn/` on your server
-- **Secure Credentials** - FTP credentials stored in user-controlled folders, not in app
-- **Cancellation Support** - Cancel long-running transfers at any time
-- **Progress Tracking** - Real-time file-by-file transfer status
+#### 🌐 FTP Remote Server
+- **Two Remote Paths** — Remote Custom Scripts Path + Remote Data Exchange Path (both react to server type)
+- **Push to Server** — Upload spawn data (.bin files) to remote server's `UORespawn/INPUT/` folder
+- **Pull from Server** — Download reference data (.txt files) from remote server
+- **Secure Credentials** — FTP credentials stored in user-controlled folders, not in app
+- **Cancellation Support** — Cancel long-running transfers at any time
+- **Progress Tracking** — Real-time file-by-file transfer status
 
 #### 📦 Manual Export/Import
 - Export server scripts and data packs as ZIP files
@@ -89,12 +94,14 @@ UORespawn is a modern .NET MAUI application that provides a comprehensive visual
 - **Zero Cloud Dependency** - No external servers, no account databases
 - **Delete Folder = Data Gone** - Full control over your sensitive data
 
-### 🎮 In-Game Editing (v2.0.0.8+)
-- **[EditBox** - Target a creature to edit its box spawn in the editor
-- **[EditRegion** - Target a creature to edit its region spawn in the editor
-- **[EditTile** - Target a creature to edit its tile spawn in the editor
-- **[EditVendor** - Target a vendor to edit its spawn configuration
-- Two-way editing: changes sync automatically between editor and server
+### 🎮 In-Game Editing (v2.0.1.2+)
+- Open the **Control Panel** with `[UORespawn` (Administrator access required)
+- Click **Edit Spawn** to get a target cursor
+- **Target the ground, a shop sign, or a beehive** — the system opens all relevant spawn editors for that location:
+  - **Ground / Item** → Spawn Edit Gump(s) for any Box, Region, or Tile spawn at that point
+  - **Shop Sign** → Vendor Edit Gump for that sign location
+  - **Beehive** → Vendor Edit Gump for that hive
+- Add, remove, or edit creatures directly in the gump — changes take effect on the next spawn cycle
 
 ### 🎨 Additional Features
 - **Professional Admin GUI** - In-game control panel with `[UORespawn`
@@ -141,13 +148,13 @@ Download the latest version from the [Releases](https://github.com/Kita72/UOResp
 1. Download the Windows release (.zip)
 2. Extract to your preferred location
 3. Run `UORespawnApp.exe`
-4. (Optional) Configure your ServUO Data folder in Settings for auto-sync
+4. (Optional) Link your server folder in Settings for auto-sync
 
 ### macOS
 1. Download the macOS release (.app)
 2. Move to Applications folder
 3. Run the application
-4. (Optional) Configure your ServUO Data folder in Settings for auto-sync
+4. (Optional) Link your server folder in Settings for auto-sync
 
 ### First Run
 
@@ -170,7 +177,7 @@ Download the latest version from the [Releases](https://github.com/Kita72/UOResp
    - **Tile Spawn** - Configure tile-based automatic spawns
 3. **Add Creatures** - Select from the bestiary
 4. **Configure Settings** - Adjust spawn parameters
-5. **Auto-Sync** - Files automatically save to your ServUO folder
+5. **Auto-Sync** - Files automatically sync to your linked server folder
 
 ### Box Spawn Controls
 
@@ -292,13 +299,14 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 🙏 Acknowledgments
 
 - ServUO team for the amazing server platform
+- ModernUO team for the modern UO server platform
 - Ultima Online community for continued support
 - All contributors and testers
 
 ---
 
 <p align="center">
-  Made with ❤️ for the ServUO community
+  Made with ❤️ for the ServUO and ModernUO communities
 </p>
 
 <p align="center">

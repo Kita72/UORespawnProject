@@ -35,8 +35,15 @@ public class FtpCredentials
     public string Password { get; set; } = string.Empty;
 
     /// <summary>
-    /// Remote path to the ServUO Data/UORespawn folder on the server.
-    /// Example: "/home/user/ServUO/Data/UORespawn"
+    /// Remote path to the Custom scripts folder on the server.
+    /// Example: "/home/user/ServUO/Scripts/Custom" or "/home/user/MUO/Projects/UOContent/Custom"
+    /// </summary>
+    public string RemoteCustomPath { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Remote path to the Data/ folder on the server (parent of UORespawn/).
+    /// The UORespawn/ subfolder is appended automatically by the sync service.
+    /// Example: "/home/user/ServUO/Data" or "/home/user/MUO/Distribution/Data"
     /// </summary>
     public string RemotePath { get; set; } = string.Empty;
 
@@ -75,6 +82,7 @@ public class FtpCredentials
     public bool IsConfigured =>
         !string.IsNullOrWhiteSpace(Host) &&
         !string.IsNullOrWhiteSpace(Username) &&
+        !string.IsNullOrWhiteSpace(RemoteCustomPath) &&
         !string.IsNullOrWhiteSpace(RemotePath);
 
     /// <summary>
@@ -96,11 +104,17 @@ public class FtpCredentials
             if (string.IsNullOrWhiteSpace(Username))
                 errors.Add("Username is required");
 
-            if (string.IsNullOrWhiteSpace(RemotePath))
-                errors.Add("Remote path is required");
+            if (string.IsNullOrWhiteSpace(RemoteCustomPath))
+                errors.Add("Remote custom scripts path is required");
 
-            if (!RemotePath.StartsWith('/'))
-                errors.Add("Remote path should start with /");
+            if (!string.IsNullOrWhiteSpace(RemoteCustomPath) && !RemoteCustomPath.StartsWith('/'))
+                errors.Add("Remote custom scripts path should start with /");
+
+            if (string.IsNullOrWhiteSpace(RemotePath))
+                errors.Add("Remote data exchange path is required");
+
+            if (!string.IsNullOrWhiteSpace(RemotePath) && !RemotePath.StartsWith('/'))
+                errors.Add("Remote data exchange path should start with /");
 
             return errors;
         }
@@ -162,6 +176,6 @@ public class FtpCredentials
     public override string ToString()
     {
         var tlsIndicator = UseTls ? "FTPS" : "FTP";
-        return $"{tlsIndicator}://{Username}@{Host}:{Port}{RemotePath}";
+        return $"{tlsIndicator}://{Username}@{Host}:{Port} | Custom: {RemoteCustomPath} | Data: {RemotePath}";
     }
 }

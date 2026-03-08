@@ -45,9 +45,15 @@ public class FtpSyncService
     public bool IsSyncAvailable => _credentialService.HasConfiguredCredentials;
 
     /// <summary>
-    /// Gets the remote path from current credentials.
+    /// Gets the remote data exchange path (Data/UORespawn/) from current credentials.
     /// </summary>
     private string? RemotePath => _credentialService.CurrentCredentials?.RemotePath;
+
+    /// <summary>
+    /// Gets the remote custom scripts path from current credentials.
+    /// Reserved for future remote script deployment support.
+    /// </summary>
+    private string? RemoteCustomPath => _credentialService.CurrentCredentials?.RemoteCustomPath;
 
     /// <summary>
     /// Uploads spawn data files to the remote server.
@@ -351,14 +357,14 @@ public class FtpSyncService
 
     private string GetRemoteInputPath(string filename)
     {
-        // RemotePath points to UORespawn folder, INPUT is subfolder
-        return $"{RemotePath}/{PathConstants.UOR_INPUT_SUBFOLDER}/{filename}";
+        // RemotePath points to Data/ folder; UORespawn/ is appended automatically
+        return $"{RemotePath?.TrimEnd('/')}/UORespawn/{PathConstants.UOR_INPUT_SUBFOLDER}/{filename}";
     }
 
     private string GetRemoteOutputPath(string filename)
     {
-        // RemotePath points to UORespawn folder, OUTPUT is subfolder
-        return $"{RemotePath}/{PathConstants.UOR_OUTPUT_SUBFOLDER}/{filename}";
+        // RemotePath points to Data/ folder; UORespawn/ is appended automatically
+        return $"{RemotePath?.TrimEnd('/')}/UORespawn/{PathConstants.UOR_OUTPUT_SUBFOLDER}/{filename}";
     }
 
     private void ReportProgress(IProgress<SyncProgressEventArgs>? progress, string message, int current, int total, int filePercent = 0)

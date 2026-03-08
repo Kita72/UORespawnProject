@@ -648,7 +648,7 @@
                                 </ul>
                                 <p class="text-success"><span class="bi bi-check-circle me-2"></span><strong>Your Spawn Packs in PACKS folder will be preserved!</strong></p>
 
-                                @if (ServerSetupUtility.IsServerConfigured(Settings.ServerFolder))
+                                @if (ServerSetupUtility.IsServerConfigured())
                                 {
                                     <div class="form-check mb-3">
                                         <input class="form-check-input" type="checkbox" id="cleanServerCheck" @bind="cleanServerOnReset">
@@ -1488,12 +1488,12 @@ private bool showAdvancedSettings = false;
             }
 
             // 2. Clean server if requested and linked (before clearing preferences!)
-            if (cleanServerOnReset && ServerSetupUtility.IsServerConfigured(Settings.ServerFolder))
+            if (cleanServerOnReset && ServerSetupUtility.IsServerConfigured())
             {
-                Logger.Info("Cleaning linked ServUO folder...");
+                Logger.Info("Cleaning linked server folder...");
 
                 // Delete UORespawnServer scripts folder
-                var scriptsPath = ServerSetupUtility.GetServerScriptsPath(Settings.ServerFolder);
+                var scriptsPath = ServerSetupUtility.GetServerScriptsPath();
                 if (Directory.Exists(scriptsPath))
                 {
                     try
@@ -1508,7 +1508,7 @@ private bool showAdvancedSettings = false;
                 }
 
                 // Delete UORespawn data folder on server
-                var serverDataPath = ServerSetupUtility.GetServerDataPath(Settings.ServerFolder);
+                var serverDataPath = ServerSetupUtility.GetServerDataPath();
                 if (Directory.Exists(serverDataPath))
                 {
                     try

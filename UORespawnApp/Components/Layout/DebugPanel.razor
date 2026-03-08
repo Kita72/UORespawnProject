@@ -151,8 +151,8 @@
     private string serverDebugLogContent = string.Empty;
     private string serverDebugLogPath = string.Empty;
 
-    private bool IsServerLinked => !string.IsNullOrEmpty(Settings.ServerFolder) 
-                                   && Directory.Exists(Settings.ServerFolder);
+    private bool IsServerLinked => !string.IsNullOrEmpty(Settings.ScriptsCustomFolder)
+                                   && Directory.Exists(Settings.ScriptsCustomFolder);
 
     protected override void OnInitialized()
     {

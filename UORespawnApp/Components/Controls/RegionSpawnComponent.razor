@@ -906,10 +906,10 @@
         if (string.IsNullOrEmpty(name))
             return name;
 
-        // Max 12 characters when card is not focused
-        if (name.Length > 12)
+        // Max 28 characters when card is not focused (shows 25 before ellipsis)
+        if (name.Length > 28)
         {
-            return name[..9] + "...";
+            return name[..25] + "...";
         }
 
         return name;

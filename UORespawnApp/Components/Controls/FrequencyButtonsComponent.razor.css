@@ -1,0 +1,15 @@
+/* ============================================
+   BUTTON ROW FLEX
+   Each .row inside freq-button-container grows
+   proportionally — buttons stretch to fill their row.
+   ============================================ */
+.freq-button-container > .row {
+    flex: 1;
+    align-items: stretch;
+}
+
+/* Col cells must be flex containers so the button inside fills full height */
+.freq-button-container > .row > [class*="col-"] {
+    display: flex;
+}
+

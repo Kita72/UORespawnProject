@@ -518,8 +518,7 @@ namespace UORespawnApp.Scripts.Services
         {
             try
             {
-                var servuoPath = Settings.ServerFolder;
-                if (string.IsNullOrEmpty(servuoPath))
+                if (string.IsNullOrEmpty(Settings.ScriptsCustomFolder))
                 {
                     Logger.Info("[ServerCheck] No server linked - skipping server version check");
                     return;
@@ -532,7 +531,7 @@ namespace UORespawnApp.Scripts.Services
                     // Use ServerUpdateService for version checking
                     // This will raise OnServerUpdateAvailable event if update is needed
                     // The event is forwarded to ServerUpdateAvailable which MainLayout subscribes to
-                    bool checked_ok = _serverUpdateService.CheckForServerUpdate(servuoPath);
+                    bool checked_ok = _serverUpdateService.CheckForServerUpdate();
 
                     if (checked_ok)
                     {

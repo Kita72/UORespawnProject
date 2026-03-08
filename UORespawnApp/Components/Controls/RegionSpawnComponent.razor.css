@@ -369,13 +369,12 @@ button:active:focus {
     transform: translateY(0);
 }
 
-/* Region Name Truncation - Truncate to ~15 chars, expand when selected */
+/* Region Name Truncation - C# FormatRegionName controls length; CSS handles overflow as safety net */
 .spawn-item .flex-grow-1 strong {
     display: block;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    max-width: 150px; /* Roughly 15 characters */
     transition: max-width 0.3s ease;
 }
 
