@@ -230,7 +230,7 @@ namespace UORespawnApp.Scripts.Utilities
         {
             try
             {
-                var content = File.ReadAllText(filePath);
+                var content = FileUtility.ReadAllText(filePath);
 
                 // Look for VERSION constant pattern
                 var patterns = new[]
@@ -595,7 +595,7 @@ namespace UORespawnApp.Scripts.Utilities
 
                 try
                 {
-                    File.Copy(file, destFile, overwrite: true);
+                    FileUtility.Copy(file, destFile, overwrite: true);
                     filesCopied++;
                 }
                 catch (Exception ex)

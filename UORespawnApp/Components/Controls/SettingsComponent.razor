@@ -1061,7 +1061,7 @@ private bool showAdvancedSettings = false;
             var backupPath = $"{destinationPath}.backup";
             if (File.Exists(destinationPath))
             {
-                File.Copy(destinationPath, backupPath, true);
+                FileUtility.Copy(destinationPath, backupPath, overwrite: true);
                 Logger.Info($"Original map backed up to: {backupPath}");
             }
             
@@ -1198,7 +1198,7 @@ private bool showAdvancedSettings = false;
             }
 
             // Copy backup over current map
-            File.Copy(backupPath, mapPath, true);
+            FileUtility.Copy(backupPath, mapPath, overwrite: true);
 
             // Invalidate cache so next load gets restored image
             int mapId = int.Parse(selectedMapToReplace.Replace("Map", ""));
@@ -1245,15 +1245,11 @@ private bool showAdvancedSettings = false;
             }
 
             // Delete map file
-            File.Delete(mapPath);
+            FileUtility.Delete(mapPath);
             Logger.Info($"Deleted Map{mapId}");
 
             // Also delete backup if it exists
-            if (File.Exists(backupPath))
-            {
-                File.Delete(backupPath);
-                Logger.Info($"Deleted Map{mapId} backup");
-            }
+            FileUtility.Delete(backupPath);
 
             // Invalidate cache for deleted map
             MapImageCache.InvalidateMap(mapId);
@@ -1477,7 +1473,7 @@ private bool showAdvancedSettings = false;
                 {
                     try
                     {
-                        File.Delete(file);
+                        FileUtility.Delete(file);
                         Logger.Info($"Deleted: {Path.GetFileName(file)}");
                     }
                     catch (Exception ex)

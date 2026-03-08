@@ -27,8 +27,8 @@ public class SessionService
     /// </summary>
     public int CurrentMapId
     {
-        get => _session.Current_Map;
-        set => _session.SetMap(value);
+        get => _session.CurrentMap;
+        set => _session.CurrentMap = value;
     }
 
     /// <summary>

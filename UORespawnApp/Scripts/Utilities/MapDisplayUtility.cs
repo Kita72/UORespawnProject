@@ -9,14 +9,19 @@ namespace UORespawnApp.Scripts.Utilities
 
         private static readonly Dictionary<string, Color> playerColorCache = [];
 
-        private static readonly Random rand = new();
+        private static readonly Lock _lock = new();
 
-        internal static bool HasSpawnData => SpawnStats.Count > 0;
+        internal static bool HasSpawnData { get { lock (_lock) { return SpawnStats.Count > 0; } } }
 
         internal static List<SpawnStatData> GetSpawnDataForMap(int mapId)
         {
             var result = new List<SpawnStatData>();
-            var filteredData = SpawnStats.Where(item => item.PlayerMap == mapId).ToList();
+            List<(string ShortTime, string PlayerName, int PlayerMap, Point2D PlayerLocation, Point2D SpawnLocation, string CreatureName)> filteredData;
+
+            lock (_lock)
+            {
+                filteredData = SpawnStats.Where(item => item.PlayerMap == mapId).ToList();
+            }
 
             // Pre-calculate total dots per player for this map
             var playerDotCounts = filteredData
@@ -27,14 +32,15 @@ namespace UORespawnApp.Scripts.Utilities
             {
                 Color playerColor;
 
-                if (playerColorCache.TryGetValue(data.PlayerName, out Color? value))
+                lock (_lock)
                 {
-                    playerColor = value;
-                }
-                else
-                {
-                    playerColor = Color.FromRgb(rand.Next(256), rand.Next(256), rand.Next(256));
-                    playerColorCache[data.PlayerName] = playerColor;
+                    if (!playerColorCache.TryGetValue(data.PlayerName, out playerColor!))
+                    {
+                        // Deterministic color per player name — same color survives app restarts
+                        var rng = new Random(data.PlayerName.GetHashCode());
+                        playerColor = Color.FromRgb(rng.Next(256), rng.Next(256), rng.Next(256));
+                        playerColorCache[data.PlayerName] = playerColor;
+                    }
                 }
 
                 result.Add(new SpawnStatData
@@ -57,10 +63,13 @@ namespace UORespawnApp.Scripts.Utilities
 
         internal static int GetSpawnDataCount(int mapId)
         {
-            return SpawnStats.Count(item => item.PlayerMap == mapId);
+            lock (_lock)
+            {
+                return SpawnStats.Count(item => item.PlayerMap == mapId);
+            }
         }
 
-        internal static void InstantiateStatData()
+        internal static void LoadSpawnStats()
         {
             var statsFolderPath = PathConstants.ServerStatsPath;
 
@@ -122,10 +131,13 @@ namespace UORespawnApp.Scripts.Utilities
                                     // Parse creature name (default to empty if not present)
                                     string creatureName = parts.Length >= 8 ? parts[7].Trim() : "";
 
-                                    SpawnStats.Add((shortTime, playerName, mapId,
-                                        new Point2D(playerX, playerY), 
-                                        new Point2D(spawnX, spawnY),
-                                        creatureName));
+                                    lock (_lock)
+                                    {
+                                        SpawnStats.Add((shortTime, playerName, mapId,
+                                            new Point2D(playerX, playerY),
+                                            new Point2D(spawnX, spawnY),
+                                            creatureName));
+                                    }
 
                                     successfulLines++;
                                 }

@@ -30,7 +30,7 @@ internal partial class DebugFlag : Item
         from.SendMessage(43, $"Reasons | {_Reason}");
     }
 
-    [AfterDeserialization]
+    [AfterDeserialization(false)]
     private void AfterDeserialization()
     {
         UOR_Core.AddFlag();

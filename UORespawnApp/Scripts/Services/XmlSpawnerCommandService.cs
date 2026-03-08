@@ -20,6 +20,8 @@ public class XmlSpawnerCommandService
     // Key: "MapId|X|Y", Value: true
     private static readonly HashSet<string> _pendingAddLocations = new(StringComparer.OrdinalIgnoreCase);
 
+    private static readonly Lock _lock = new();
+
     /// <summary>
     /// Gets the path to the XML commands file.
     /// Returns null if server is not linked.
@@ -43,7 +45,10 @@ public class XmlSpawnerCommandService
     public static string? GetPendingCommand(string serial)
     {
         if (string.IsNullOrEmpty(serial)) return null;
-        return _pendingCommandsBySerial.TryGetValue(serial, out var cmd) ? cmd : null;
+        lock (_lock)
+        {
+            return _pendingCommandsBySerial.TryGetValue(serial, out var cmd) ? cmd : null;
+        }
     }
 
     /// <summary>
@@ -52,7 +57,10 @@ public class XmlSpawnerCommandService
     public static bool HasPendingAddAt(int mapId, int x, int y)
     {
         var key = $"{mapId}|{x}|{y}";
-        return _pendingAddLocations.Contains(key);
+        lock (_lock)
+        {
+            return _pendingAddLocations.Contains(key);
+        }
     }
 
     /// <summary>
@@ -60,8 +68,11 @@ public class XmlSpawnerCommandService
     /// </summary>
     public static void ClearPendingCommands()
     {
-        _pendingCommandsBySerial.Clear();
-        _pendingAddLocations.Clear();
+        lock (_lock)
+        {
+            _pendingCommandsBySerial.Clear();
+            _pendingAddLocations.Clear();
+        }
         Logger.Info("Cleared pending XML spawner commands");
     }
 
@@ -79,29 +90,31 @@ public class XmlSpawnerCommandService
             return false;
         }
 
-        // Check for existing pending command on this spawner
-        var existingCmd = GetPendingCommand(serial);
-        if (existingCmd != null)
-        {
-            Logger.Warning($"Cannot delete XML spawner {serial}: Already has pending {existingCmd} command");
-            return false;
-        }
-
         var filePath = GetCommandFilePath();
         if (filePath == null) return false;
 
-        try
+        lock (_lock)
         {
-            var command = $"DELETE|{serial}";
-            File.AppendAllLines(filePath, [command]);
-            _pendingCommandsBySerial[serial] = "DELETE";
-            Logger.Info($"XML spawner delete command written: {serial}");
-            return true;
-        }
-        catch (Exception ex)
-        {
-            Logger.Error($"Failed to write XML delete command: {ex.Message}");
-            return false;
+            // Check for existing pending command on this spawner
+            if (_pendingCommandsBySerial.TryGetValue(serial, out var existingCmd))
+            {
+                Logger.Warning($"Cannot delete XML spawner {serial}: Already has pending {existingCmd} command");
+                return false;
+            }
+
+            try
+            {
+                var command = $"DELETE|{serial}";
+                File.AppendAllLines(filePath, [command]);
+                _pendingCommandsBySerial[serial] = "DELETE";
+                Logger.Info($"XML spawner delete command written: {serial}");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Failed to write XML delete command: {ex.Message}");
+                return false;
+            }
         }
     }
 
@@ -125,36 +138,40 @@ public class XmlSpawnerCommandService
             return false;
         }
 
-        // Check for existing pending ADD at this location
-        if (HasPendingAddAt(mapId, x, y))
-        {
-            Logger.Warning($"Cannot add XML spawner: Already has pending ADD command at Map {mapId} ({x},{y})");
-            return false;
-        }
-
         var filePath = GetCommandFilePath();
         if (filePath == null) return false;
 
-        try
+        lock (_lock)
         {
-            // Count duplicates to determine creature quantities
-            var creatureCounts = creatures
-                .GroupBy(c => c)
-                .Select(g => $"{g.Key}:{g.Count()}")
-                .ToList();
+            // Check for existing pending ADD at this location
+            var locationKey = $"{mapId}|{x}|{y}";
+            if (_pendingAddLocations.Contains(locationKey))
+            {
+                Logger.Warning($"Cannot add XML spawner: Already has pending ADD command at Map {mapId} ({x},{y})");
+                return false;
+            }
 
-            var creaturesData = string.Join("|", creatureCounts);
-            var command = $"ADD|{mapId}|{x}|{y}|{z}|{homeRange}|{maxCount}|{creaturesData}";
+            try
+            {
+                // Count duplicates to determine creature quantities
+                var creatureCounts = creatures
+                    .GroupBy(c => c)
+                    .Select(g => $"{g.Key}:{g.Count()}")
+                    .ToList();
 
-            File.AppendAllLines(filePath, [command]);
-            _pendingAddLocations.Add($"{mapId}|{x}|{y}");
-            Logger.Info($"XML spawner add command written: Map {mapId} at ({x},{y}) Range:{homeRange} MaxCount:{maxCount} Creatures:{creatures.Count}");
-            return true;
-        }
-        catch (Exception ex)
-        {
-            Logger.Error($"Failed to write XML add command: {ex.Message}");
-            return false;
+                var creaturesData = string.Join("|", creatureCounts);
+                var command = $"ADD|{mapId}|{x}|{y}|{z}|{homeRange}|{maxCount}|{creaturesData}";
+
+                File.AppendAllLines(filePath, [command]);
+                _pendingAddLocations.Add(locationKey);
+                Logger.Info($"XML spawner add command written: Map {mapId} at ({x},{y}) Range:{homeRange} MaxCount:{maxCount} Creatures:{creatures.Count}");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Failed to write XML add command: {ex.Message}");
+                return false;
+            }
         }
     }
 
@@ -181,37 +198,39 @@ public class XmlSpawnerCommandService
             return false;
         }
 
-        // Check for existing pending command on this spawner
-        var existingCmd = GetPendingCommand(serial);
-        if (existingCmd != null)
-        {
-            Logger.Warning($"Cannot edit XML spawner {serial}: Already has pending {existingCmd} command");
-            return false;
-        }
-
         var filePath = GetCommandFilePath();
         if (filePath == null) return false;
 
-        try
+        lock (_lock)
         {
-            // Count duplicates to determine creature quantities
-            var creatureCounts = creatures
-                .GroupBy(c => c)
-                .Select(g => $"{g.Key}:{g.Count()}")
-                .ToList();
+            // Check for existing pending command on this spawner
+            if (_pendingCommandsBySerial.TryGetValue(serial, out var existingCmd))
+            {
+                Logger.Warning($"Cannot edit XML spawner {serial}: Already has pending {existingCmd} command");
+                return false;
+            }
 
-            var creaturesData = string.Join("|", creatureCounts);
-            var command = $"EDIT|{serial}|{homeRange}|{maxCount}|{creaturesData}";
+            try
+            {
+                // Count duplicates to determine creature quantities
+                var creatureCounts = creatures
+                    .GroupBy(c => c)
+                    .Select(g => $"{g.Key}:{g.Count()}")
+                    .ToList();
 
-            File.AppendAllLines(filePath, [command]);
-            _pendingCommandsBySerial[serial] = "EDIT";
-            Logger.Info($"XML spawner edit command written: {serial} Range:{homeRange} MaxCount:{maxCount} Creatures:{creatures.Count}");
-            return true;
-        }
-        catch (Exception ex)
-        {
-            Logger.Error($"Failed to write XML edit command: {ex.Message}");
-            return false;
+                var creaturesData = string.Join("|", creatureCounts);
+                var command = $"EDIT|{serial}|{homeRange}|{maxCount}|{creaturesData}";
+
+                File.AppendAllLines(filePath, [command]);
+                _pendingCommandsBySerial[serial] = "EDIT";
+                Logger.Info($"XML spawner edit command written: {serial} Range:{homeRange} MaxCount:{maxCount} Creatures:{creatures.Count}");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Failed to write XML edit command: {ex.Message}");
+                return false;
+            }
         }
     }
 

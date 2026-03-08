@@ -365,7 +365,7 @@
 
         if (Utility.SESSION != null)
         {
-            currentMapTracked = Utility.SESSION.Current_Map;
+            currentMapTracked = Utility.SESSION.CurrentMap;
         }
 
         ViewService.OnViewChanged += OnViewChanged;
@@ -383,7 +383,7 @@
         // Update to track the NEW map
         if (Utility.SESSION != null)
         {
-            currentMapTracked = Utility.SESSION.Current_Map;
+            currentMapTracked = Utility.SESSION.CurrentMap;
             Logger.Info($"Switching to map: {currentMapTracked}");
         }
 

@@ -38,9 +38,9 @@ namespace UORespawnApp
             builder.Services.AddSingleton<DebugService>();
             builder.Services.AddSingleton<MapImageCacheService>();
 
-            // Core Data Services (replaces static Utility state)
             builder.Services.AddSingleton<SpawnDataService>();
             builder.Services.AddSingleton<SessionService>();
+            builder.Services.AddSingleton<BinarySerializationService>();
 
             // FTP & Account Services
             builder.Services.AddSingleton<AccountService>();
@@ -50,6 +50,9 @@ namespace UORespawnApp
 
             // XML Spawner Management
             builder.Services.AddSingleton<XmlSpawnerCommandService>();
+
+            // Spawn Pack Sync (keeps packs aligned when server data changes)
+            builder.Services.AddSingleton<SpawnPackSyncService>();
 
             try
             {
@@ -61,9 +64,6 @@ namespace UORespawnApp
                 {
                     Logger.Error("Configuration validation failed - app may not function correctly");
                 }
-
-                Utility.StartSession(new Session());
-                Utility.InitializeSpawnDictionary();
 
                 Logger.Info("Minimal initialization complete - UI ready to launch");
                 Logger.Info("Settings and spawn data will load in background after UI renders");

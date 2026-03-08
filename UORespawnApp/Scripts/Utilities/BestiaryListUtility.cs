@@ -15,6 +15,7 @@ namespace UORespawnApp.Scripts.Utilities
     {
         internal static List<string>? BestiaryNameList { get; private set; }
         private static bool _isLoaded = false;
+        private static readonly SemaphoreSlim _loadLock = new(1, 1);
 
         /// <summary>
         /// Clear bestiary list to force reload from file.
@@ -29,45 +30,58 @@ namespace UORespawnApp.Scripts.Utilities
         /// <summary>
         /// Load the bestiary from Resources/Raw/UOR_BestiaryList.txt
         /// </summary>
-        internal static async Task LoadBestiaryList()
+        internal static async Task LoadBestiaryList(CancellationToken cancellationToken = default)
         {
             if (_isLoaded && BestiaryNameList != null && BestiaryNameList.Count > 0)
             {
-                return; // Already loaded
+                return;
             }
 
-            BestiaryNameList = [];
-
+            await _loadLock.WaitAsync(cancellationToken);
             try
             {
-                var filePath = PathConstants.GetBestiaryFilePath();
-
-                if (!File.Exists(filePath))
+                if (_isLoaded && BestiaryNameList != null && BestiaryNameList.Count > 0)
                 {
-                    Logger.Warning($"Bestiary file not found at: {filePath}");
-                    _isLoaded = true;
                     return;
                 }
 
-                var lines = await File.ReadAllLinesAsync(filePath);
+                BestiaryNameList = [];
 
-                foreach (var line in lines)
+                try
                 {
-                    if (!string.IsNullOrWhiteSpace(line) && !line.StartsWith('#'))
+                    var filePath = PathConstants.GetBestiaryFilePath();
+
+                    if (!File.Exists(filePath))
                     {
-                        BestiaryNameList.Add(line.Trim());
+                        Logger.Warning($"Bestiary file not found at: {filePath}");
+                        _isLoaded = true;
+                        return;
                     }
+
+                    var lines = await FileUtility.ReadAllLinesAsync(filePath, cancellationToken: cancellationToken);
+
+                    foreach (var line in lines)
+                    {
+                        if (!string.IsNullOrWhiteSpace(line) && !line.StartsWith('#'))
+                        {
+                            BestiaryNameList.Add(line.Trim());
+                        }
+                    }
+
+                    BestiaryNameList.Sort();
+                    _isLoaded = true;
+
+                    Logger.Info($"Loaded {BestiaryNameList.Count} creatures from bestiary file");
                 }
-
-                BestiaryNameList.Sort();
-                _isLoaded = true;
-
-                Logger.Info($"Loaded {BestiaryNameList.Count} creatures from bestiary file");
+                catch (Exception ex)
+                {
+                    Logger.Error("Error loading bestiary list", ex);
+                    _isLoaded = true;
+                }
             }
-            catch (Exception ex)
+            finally
             {
-                Logger.Error("Error loading bestiary list", ex);
-                _isLoaded = true; // Mark as loaded to prevent repeated attempts
+                _loadLock.Release();
             }
         }
     }

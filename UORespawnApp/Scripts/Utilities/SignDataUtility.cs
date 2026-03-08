@@ -42,6 +42,7 @@ namespace UORespawnApp.Scripts.Utilities
         /// </summary>
         private static Dictionary<int, List<SignLocation>>? _signsByMap = null;
         private static bool _isLoaded = false;
+        private static readonly Lock _loadLock = new();
 
         /// <summary>
         /// Get all sign locations for a specific map
@@ -89,9 +90,9 @@ namespace UORespawnApp.Scripts.Utilities
         /// <summary>
         /// Async version of EnsureLoaded for DataWatcher reload scenarios
         /// </summary>
-        public static async Task EnsureLoadedAsync()
+        public static async Task EnsureLoadedAsync(CancellationToken cancellationToken = default)
         {
-            await Task.Run(EnsureLoaded);
+            await Task.Run(EnsureLoaded, cancellationToken);
         }
 
         /// <summary>
@@ -101,20 +102,24 @@ namespace UORespawnApp.Scripts.Utilities
         {
             if (_isLoaded) return;
 
-            _signsByMap = [];
-
-            try
+            lock (_loadLock)
             {
-                var filePath = PathConstants.GetSignDataFilePath();
+                if (_isLoaded) return;
 
-                if (!File.Exists(filePath))
+                _signsByMap = [];
+
+                try
                 {
-                    Logger.Warning($"Sign data file not found at: {filePath}");
-                    _isLoaded = true;
-                    return;
-                }
+                    var filePath = PathConstants.GetSignDataFilePath();
 
-                var lines = File.ReadAllLines(filePath);
+                    if (!File.Exists(filePath))
+                    {
+                        Logger.Warning($"Sign data file not found at: {filePath}");
+                        _isLoaded = true;
+                        return;
+                    }
+
+                var lines = FileUtility.ReadAllLines(filePath);
                 int loadedCount = 0;
 
                 foreach (var line in lines)
@@ -141,12 +146,13 @@ namespace UORespawnApp.Scripts.Utilities
                 Logger.Info($"Loaded {loadedCount} sign locations across {_signsByMap.Count} maps from UOR_SignData.txt");
                 _isLoaded = true;
             }
-            catch (Exception ex)
-            {
-                Logger.Error("Error loading sign data", ex);
-                _isLoaded = true; // Mark as loaded to prevent repeated attempts
+                    catch (Exception ex)
+                    {
+                        Logger.Error("Error loading sign data", ex);
+                        _isLoaded = true;
+                    }
+                }
             }
-        }
 
         /// <summary>
         /// Parse a single sign data line from the file

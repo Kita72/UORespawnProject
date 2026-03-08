@@ -898,7 +898,7 @@
             }
             else
             {
-                credentials = CredentialService.CreateNewCredentials();
+                credentials = FtpCredentialService.CreateNewCredentials();
                 hasCredentials = false;
             }
             statusMessage = "";
@@ -977,7 +977,7 @@
     {
         if (CredentialService.DeleteCredentials())
         {
-            credentials = CredentialService.CreateNewCredentials();
+            credentials = FtpCredentialService.CreateNewCredentials();
             hasCredentials = false;
             SetStatus("Credentials deleted.", "alert-info", "bi-trash");
         }
@@ -1060,10 +1060,7 @@
             // Create a temp zip file
             var tempZipPath = Path.Combine(Path.GetTempPath(), "UORespawnServer.zip");
 
-            if (File.Exists(tempZipPath))
-            {
-                File.Delete(tempZipPath);
-            }
+            FileUtility.Delete(tempZipPath);
 
             ZipFile.CreateFromDirectory(scriptsSourcePath, tempZipPath);
 
@@ -1084,16 +1081,13 @@
             var saveFile = await savePicker.PickSaveFileAsync();
             if (saveFile != null)
             {
-                File.Copy(tempZipPath, saveFile.Path, true);
+                FileUtility.Copy(tempZipPath, saveFile.Path, overwrite: true);
                 exportMessage = $"Scripts exported to: {saveFile.Name}";
                 exportSuccess = true;
             }
 
             // Cleanup temp file
-            if (File.Exists(tempZipPath))
-            {
-                File.Delete(tempZipPath);
-            }
+            FileUtility.Delete(tempZipPath);
 #else
             exportMessage = "Export not available on this platform.";
             exportSuccess = false;

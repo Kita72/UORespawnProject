@@ -17,6 +17,7 @@ namespace UORespawnApp.Scripts.Entities;
 public class UserAccount
 {
     private const string AccountFileName = "uor_account.json";
+    private static readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
 
     /// <summary>
     /// Display name for this account (e.g., "Wilson", "TestServer", "Production").
@@ -82,7 +83,7 @@ public class UserAccount
             if (!Directory.Exists(CredentialFolderPath))
                 Directory.CreateDirectory(CredentialFolderPath);
 
-            var json = JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
+            var json = JsonSerializer.Serialize(this, _jsonOptions);
             File.WriteAllText(AccountFilePath, json);
             return true;
         }

@@ -42,7 +42,7 @@ internal partial class RiftGate : Moongate
         });
     }
 
-    [AfterDeserialization]
+    [AfterDeserialization(false)]
     private void AfterDeserialization()
     {
         UOR_Core.AddGate();

@@ -367,7 +367,7 @@ private List<string> editXmlSpawnNames = [];
         // Track the initial map
         if (Utility.SESSION != null)
         {
-            currentMapTracked = Utility.SESSION.Current_Map;
+            currentMapTracked = Utility.SESSION.CurrentMap;
         }
 
         ViewService.OnMapChanged += HandleMapChanged;
@@ -395,7 +395,7 @@ private List<string> editXmlSpawnNames = [];
         // Update to track the NEW map
         if (Utility.SESSION != null)
         {
-            currentMapTracked = Utility.SESSION.Current_Map;
+            currentMapTracked = Utility.SESSION.CurrentMap;
             Logger.Info($"Switching to map: {currentMapTracked}");
         }
         
@@ -675,7 +675,7 @@ private List<string> editXmlSpawnNames = [];
                 var spawn = new BoxSpawnEntity
                 {
                     Position = currentSpawnList.Count + 1,
-                    MapId = Utility.SESSION.Current_Map,
+                    MapId = Utility.SESSION.CurrentMap,
                     SpawnBox = new Rect(rect.X, rect.Y, rect.Width, rect.Height),
                     WeatherSpawn = WeatherTypes.None,
                     TimedSpawn = TimeNames.None,
@@ -687,7 +687,7 @@ private List<string> editXmlSpawnNames = [];
                     RareSpawns = new()
                 };
 
-                Utility.AddBoxSpawn(Utility.SESSION.Current_Map, spawn);
+                Utility.AddBoxSpawn(Utility.SESSION.CurrentMap, spawn);
 
                 // Calculate priority based on containment
                 CalculateSpawnPriority(spawn);
@@ -940,8 +940,8 @@ private List<string> editXmlSpawnNames = [];
         {
             if (Utility.SESSION != null)
             {
-                var spawns = Utility.BoxSpawns[Utility.SESSION.Current_Map];
-                Logger.Info($"Redrawing {spawns.Count} spawns for {Utility.SESSION.Current_Map}");
+                var spawns = Utility.BoxSpawns[Utility.SESSION.CurrentMap];
+                Logger.Info($"Redrawing {spawns.Count} spawns for {Utility.SESSION.CurrentMap}");
 
                 // Serialize with proper options
                 var options = new JsonSerializerOptions 
@@ -967,7 +967,7 @@ private List<string> editXmlSpawnNames = [];
         if (Utility.SESSION == null) return new List<BoxSpawnEntity>();
 
         // Safely get spawn list with null check for dictionary key
-        if (!Utility.BoxSpawns.TryGetValue(Utility.SESSION.Current_Map, out var spawnList))
+        if (!Utility.BoxSpawns.TryGetValue(Utility.SESSION.CurrentMap, out var spawnList))
         {
             return new List<BoxSpawnEntity>();
         }
@@ -1044,7 +1044,7 @@ private List<string> editXmlSpawnNames = [];
             // Auto-jump to the spawn
             if (Utility.SESSION != null)
             {
-                var spawns = Utility.BoxSpawns[Utility.SESSION.Current_Map];
+                var spawns = Utility.BoxSpawns[Utility.SESSION.CurrentMap];
                 var targetSpawn = spawns.FirstOrDefault(s => s.Position == spawnSearchId.Value);
 
                 if (targetSpawn != null)
@@ -1294,7 +1294,7 @@ private List<string> editXmlSpawnNames = [];
     {
         if (Utility.SESSION == null) return;
         
-        var spawns = Utility.BoxSpawns[Utility.SESSION.Current_Map];
+        var spawns = Utility.BoxSpawns[Utility.SESSION.CurrentMap];
         spawns.Remove(spawn);
         
         // Reindex positions (IDs)
@@ -1556,7 +1556,7 @@ private List<string> editXmlSpawnNames = [];
     {
         if (Utility.SESSION == null) return 0;
 
-        if (!Utility.BoxSpawns.TryGetValue(Utility.SESSION.Current_Map, out var spawnList))
+        if (!Utility.BoxSpawns.TryGetValue(Utility.SESSION.CurrentMap, out var spawnList))
         {
             return 0;
         }

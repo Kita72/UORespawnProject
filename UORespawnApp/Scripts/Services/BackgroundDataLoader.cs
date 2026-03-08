@@ -10,8 +10,9 @@ namespace UORespawnApp.Scripts.Services
     /// </summary>
     public class BackgroundDataLoader : IDisposable
     {
-        private bool _isLoading = false;
-        private bool _isComplete = false;
+        private volatile bool _isLoading = false;
+        private volatile bool _isComplete = false;
+        private readonly Lock _startLock = new();
         private CancellationTokenSource? _cancellationTokenSource;
         private bool _disposed = false;
 
@@ -61,14 +62,25 @@ namespace UORespawnApp.Scripts.Services
         private DataWatcher? _dataWatcher;
         private readonly CommandService _commandService;
         private readonly ServerUpdateService _serverUpdateService;
+        private readonly BinarySerializationService _binarySerializationService;
+        private readonly SpawnDataService _spawnDataService;
+        private readonly SpawnPackService _spawnPackService;
+        private readonly SpawnPackSyncService _spawnPackSyncService;
 
-        /// <summary>
-        /// Constructor with DI injection of CommandService and ServerUpdateService.
-        /// </summary>
-        public BackgroundDataLoader(CommandService commandService, ServerUpdateService serverUpdateService)
+        public BackgroundDataLoader(
+            CommandService commandService,
+            ServerUpdateService serverUpdateService,
+            BinarySerializationService binarySerializationService,
+            SpawnDataService spawnDataService,
+            SpawnPackService spawnPackService,
+            SpawnPackSyncService spawnPackSyncService)
         {
             _commandService = commandService;
             _serverUpdateService = serverUpdateService;
+            _binarySerializationService = binarySerializationService;
+            _spawnDataService = spawnDataService;
+            _spawnPackService = spawnPackService;
+            _spawnPackSyncService = spawnPackSyncService;
 
             // Forward server update events to our own event for MainLayout
             _serverUpdateService.OnServerUpdateAvailable += (sender, info) =>
@@ -82,7 +94,7 @@ namespace UORespawnApp.Scripts.Services
         /// Called on startup to ensure edits sync back to the correct pack folder.
         /// On first launch (no data files in LocalDataPath), applies the default pack.
         /// </summary>
-        private static void InitializeActivePackPath()
+        private void InitializeActivePackPath()
         {
             try
             {
@@ -192,7 +204,7 @@ namespace UORespawnApp.Scripts.Services
                     if (File.Exists(sourceFile))
                     {
                         var destFile = Path.Combine(localDataPath, fileName);
-                        File.Copy(sourceFile, destFile, overwrite: true);
+                        FileUtility.Copy(sourceFile, destFile, overwrite: true);
 
                         Logger.Info($"  Copied: {fileName}");
                     }
@@ -244,17 +256,20 @@ namespace UORespawnApp.Scripts.Services
         /// <param name="cancellationToken">Optional cancellation token for graceful shutdown</param>
         public async Task LoadAllDataAsync(CancellationToken cancellationToken = default)
         {
-            if (_isLoading || _isComplete)
+            lock (_startLock)
             {
-                Logger.Info("Background data loading already in progress or complete");
-                return;
+                if (_isLoading || _isComplete)
+                {
+                    Logger.Info("Background data loading already in progress or complete");
+                    return;
+                }
+                _isLoading = true;
             }
 
             // Create internal cancellation source that can be cancelled via Cancel() or the passed token
             _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             var token = _cancellationTokenSource.Token;
 
-            _isLoading = true;
             CompletedSteps = 0;
 
             Logger.Info("Starting background data loading...");
@@ -293,12 +308,12 @@ namespace UORespawnApp.Scripts.Services
 
                 // Step 2.5: Ensure approved packs are unpacked from Backup folder
                 // This MUST happen BEFORE InitializeActivePackPath so the pack exists in Approved
-                await BackgroundDataLoader.EnsureApprovedPacksUnpackedAsync(token);
+                await EnsureApprovedPacksUnpackedAsync(token);
                 token.ThrowIfCancellationRequested();
 
                 // Initialize active pack path from saved CurrentPackName setting
                 // Now the pack will exist in Approved (either from Backup ZIP or folder)
-                BackgroundDataLoader.InitializeActivePackPath();
+                InitializeActivePackPath();
 
                 // Step 3: Load Box Spawn Data (Binary)
                 await LoadBoxSpawnDataAsync(token);
@@ -389,21 +404,16 @@ namespace UORespawnApp.Scripts.Services
         /// Must be called BEFORE InitializeActivePackPath so the packs exist.
         /// 
         /// Flow:
-        ///   Backup/DefaultPack.zip  → Approved/DefaultPack/ (for releases)
-        ///   Backup/DefaultPack/     → Approved/DefaultPack/ (for Git repo/dev)
+        ///   Backup/DefaultPack.zip  â†’ Approved/DefaultPack/ (for releases)
+        ///   Backup/DefaultPack/     â†’ Approved/DefaultPack/ (for Git repo/dev)
         /// </summary>
-        private static async Task EnsureApprovedPacksUnpackedAsync(CancellationToken cancellationToken = default)
+        private async Task EnsureApprovedPacksUnpackedAsync(CancellationToken cancellationToken = default)
         {
             Logger.Info("[Startup] Ensuring approved packs are unpacked from Backup...");
 
             try
             {
-                await Task.Run(() =>
-                {
-                    var packService = new SpawnPackService();
-
-                    packService.UnpackApprovedPacks();
-                });
+                await Task.Run(() => _spawnPackService.UnpackApprovedPacks(), cancellationToken);
 
                 Logger.Info("[Startup] Approved packs unpacked successfully");
             }
@@ -458,11 +468,11 @@ namespace UORespawnApp.Scripts.Services
                         if (File.Exists(serverFilePath))
                         {
                             var localFilePath = Path.Combine(rawDir, fileName);
-                            File.Copy(serverFilePath, localFilePath, overwrite: true);
+                            FileUtility.Copy(serverFilePath, localFilePath, overwrite: true);
                             syncedCount++;
                         }
                     }
-                });
+                }, cancellationToken);
 
                 Logger.Info($"[ServerSync] Synced {syncedCount} OUTPUT files from server");
             }
@@ -486,11 +496,11 @@ namespace UORespawnApp.Scripts.Services
                 var serverCommandsPath = PathConstants.ServerCommandsPath;
                 if (serverCommandsPath != null)
                 {
-                    await Task.Run(() => _commandService.SyncCommandsFromServer());
+                    await Task.Run(() => _commandService.SyncCommandsFromServer(), cancellationToken);
                 }
 
                 // Then check for local command files (including any just synced)
-                int pendingCount = await Task.Run(() => _commandService.CheckForPendingCommands());
+                int pendingCount = await Task.Run(() => _commandService.CheckForPendingCommands(), cancellationToken);
 
                 if (pendingCount > 0)
                 {
@@ -548,18 +558,13 @@ namespace UORespawnApp.Scripts.Services
                     {
                         Logger.Warning("[ServerCheck] Server check encountered issues - check logs");
                     }
-                });
+                }, cancellationToken);
             }
             catch (Exception ex)
             {
                 Logger.Warning($"[ServerCheck] Error during server check: {ex.Message}");
             }
         }
-
-        /// <summary>
-        /// Gets the CommandService instance for use by UI components.
-        /// </summary>
-        public CommandService GetCommandService() => _commandService;
 
         /// <summary>
         /// Loads the map list from file (Resources/Raw/UOR_MapList.txt).
@@ -571,7 +576,7 @@ namespace UORespawnApp.Scripts.Services
 
             try
             {
-                await MapListUtility.LoadMapList();
+                await MapListUtility.LoadMapList(cancellationToken);
 
                 IsMapListLoaded = true;
                 CompletedSteps++;
@@ -598,7 +603,7 @@ namespace UORespawnApp.Scripts.Services
 
             try
             {
-                await TileListUtility.LoadTileList();
+                await TileListUtility.LoadTileList(cancellationToken);
 
                 IsTileListLoaded = true;
                 CompletedSteps++;
@@ -614,7 +619,7 @@ namespace UORespawnApp.Scripts.Services
 
         private async Task LoadSettingsAsync(CancellationToken cancellationToken = default)
         {
-            Logger.Info("[Startup Step 0/7] Loading settings...");
+            Logger.Info("[Startup Step 0/14] Loading settings...");
 
             try
             {
@@ -622,32 +627,32 @@ namespace UORespawnApp.Scripts.Services
                 {
                     try
                     {
-                        Utility.LoadSettings();
+                        _binarySerializationService.LoadSettings();
 
-                        Logger.Info("[Startup Step 0/7] Settings loaded from binary file (or defaults if file missing)");
+                        Logger.Info("[Startup Step 0/14] Settings loaded from binary file (or defaults if file missing)");
 
                         // Always save settings to ensure binary file exists (creates file if missing)
-                        Utility.SaveSettings();
+                        _binarySerializationService.SaveSettings();
 
-                        Logger.Info($"[Startup Step 0/7] Current pack: {Settings.CurrentPackName}");
+                        Logger.Info($"[Startup Step 0/14] Current pack: {Settings.CurrentPackName}");
                     }
                     catch (Exception ex)
                     {
-                        Logger.Error("[Startup Step 0/7] LoadSettings failed - using Preferences defaults", ex);
+                        Logger.Error("[Startup Step 0/14] LoadSettings failed - using Preferences defaults", ex);
                     }
-                });
+                }, cancellationToken);
 
                 CompletedSteps++;
             }
             catch (Exception ex)
             {
-                Logger.Error("[Startup Step 0/7] Error loading settings", ex);
+                Logger.Error("[Startup Step 0/14] Error loading settings", ex);
             }
         }
 
         private async Task LoadBoxSpawnDataAsync(CancellationToken cancellationToken = default)
         {
-            Logger.Info("[Startup Step 1/7] Loading box spawn data...");
+            Logger.Info("[Startup Step 3/14] Loading box spawn data...");
 
             try
             {
@@ -655,17 +660,19 @@ namespace UORespawnApp.Scripts.Services
                 {
                     try
                     {
-                        Utility.LoadBoxSpawnData();
+                        _spawnDataService.ClearBoxSpawns();
+                        _spawnDataService.InitializeBoxSpawns();
+                        _binarySerializationService.LoadBoxSpawns();
 
-                        var totalSpawns = Utility.BoxSpawns.Values.Sum(list => list.Count);
+                        var totalSpawns = _spawnDataService.GetTotalBoxSpawnCount();
 
-                        Logger.Info($"[Startup Step 1/7] Loaded {totalSpawns} spawn boxes across all maps");
+                        Logger.Info($"[Startup Step 3/14] Loaded {totalSpawns} spawn boxes across all maps");
                     }
                     catch (Exception ex)
                     {
-                        Logger.Error("[Startup Step 1/7] LoadSpawnData failed", ex);
+                        Logger.Error("[Startup Step 3/14] LoadSpawnData failed", ex);
                     }
-                });
+                }, cancellationToken);
 
                 IsBoxSpawnDataLoaded = true;
                 CompletedSteps++;
@@ -673,13 +680,13 @@ namespace UORespawnApp.Scripts.Services
             }
             catch (Exception ex)
             {
-                Logger.Error("[Startup Step 1/7] Error loading spawn data", ex);
+                Logger.Error("[Startup Step 3/14] Error loading spawn data", ex);
             }
         }
 
         private async Task LoadTileSpawnDataAsync(CancellationToken cancellationToken = default)
         {
-            Logger.Info("[Startup Step 2/7] Loading tile spawn data...");
+            Logger.Info("[Startup Step 4/14] Loading tile spawn data...");
 
             try
             {
@@ -687,17 +694,19 @@ namespace UORespawnApp.Scripts.Services
                 {
                     try
                     {
-                        Utility.LoadTileSpawnData();
+                        _spawnDataService.ClearTileSpawns();
+                        _spawnDataService.InitializeTileSpawns();
+                        _binarySerializationService.LoadTileSpawns();
 
-                        var totalTileSpawns = Utility.TileSpawns.Values.Sum(list => list.Count);
+                        var totalTileSpawns = _spawnDataService.GetTotalTileSpawnCount();
 
-                        Logger.Info($"[Startup Step 2/7] Loaded {totalTileSpawns} tile spawn configurations across all maps");
+                        Logger.Info($"[Startup Step 4/14] Loaded {totalTileSpawns} tile spawn configurations across all maps");
                     }
                     catch (Exception ex)
                     {
-                        Logger.Error("[Startup Step 2/7] LoadTileSpawnData failed", ex);
+                        Logger.Error("[Startup Step 4/14] LoadTileSpawnData failed", ex);
                     }
-                });
+                }, cancellationToken);
 
                 IsTileSpawnDataLoaded = true;
                 CompletedSteps++;
@@ -705,13 +714,13 @@ namespace UORespawnApp.Scripts.Services
             }
             catch (Exception ex)
             {
-                Logger.Error("[Startup Step 2/7] Error loading tile spawn data", ex);
+                Logger.Error("[Startup Step 4/14] Error loading tile spawn data", ex);
             }
         }
 
         private async Task LoadRegionSpawnDataAsync(CancellationToken cancellationToken = default)
         {
-            Logger.Info("[Startup Step 3/12] Loading region spawn data...");
+            Logger.Info("[Startup Step 5/14] Loading region spawn data...");
 
             try
             {
@@ -719,17 +728,19 @@ namespace UORespawnApp.Scripts.Services
                 {
                     try
                     {
-                        Utility.LoadRegionSpawnData();
+                        _spawnDataService.ClearRegionSpawns();
+                        _spawnDataService.InitializeRegionSpawns();
+                        _binarySerializationService.LoadRegionSpawns();
 
-                        var totalRegionSpawns = Utility.RegionSpawns.Values.Sum(list => list.Count);
+                        var totalRegionSpawns = _spawnDataService.GetTotalRegionSpawnCount();
 
-                        Logger.Info($"[Startup Step 3/12] Loaded {totalRegionSpawns} region spawn configurations across all maps");
+                        Logger.Info($"[Startup Step 5/14] Loaded {totalRegionSpawns} region spawn configurations across all maps");
                     }
                     catch (Exception ex)
                     {
-                        Logger.Error("[Startup Step 3/12] LoadRegionSpawnData failed", ex);
+                        Logger.Error("[Startup Step 5/14] LoadRegionSpawnData failed", ex);
                     }
-                });
+                }, cancellationToken);
 
                 IsRegionSpawnDataLoaded = true;
                 CompletedSteps++;
@@ -737,13 +748,13 @@ namespace UORespawnApp.Scripts.Services
             }
             catch (Exception ex)
             {
-                Logger.Error("[Startup Step 3/12] Error loading region spawn data", ex);
+                Logger.Error("[Startup Step 5/14] Error loading region spawn data", ex);
             }
         }
 
         private async Task LoadVendorSpawnDataAsync(CancellationToken cancellationToken = default)
         {
-            Logger.Info("[Startup Step 4/12] Loading vendor spawn data...");
+            Logger.Info("[Startup Step 6/14] Loading vendor spawn data...");
 
             try
             {
@@ -751,17 +762,19 @@ namespace UORespawnApp.Scripts.Services
                 {
                     try
                     {
-                        Utility.LoadVendorSpawnData();
+                        _spawnDataService.ClearVendorSpawns();
+                        _spawnDataService.InitializeVendorSpawns();
+                        _binarySerializationService.LoadVendorSpawns();
 
-                        var totalVendorSpawns = Utility.VendorSpawns.Values.Sum(list => list.Count);
+                        var totalVendorSpawns = _spawnDataService.GetTotalVendorSpawnCount();
 
-                        Logger.Info($"[Startup Step 4/12] Loaded {totalVendorSpawns} vendor spawn configurations across all maps");
+                        Logger.Info($"[Startup Step 6/14] Loaded {totalVendorSpawns} vendor spawn configurations across all maps");
                     }
                     catch (Exception ex)
                     {
-                        Logger.Error("[Startup Step 4/12] LoadVendorSpawnData failed", ex);
+                        Logger.Error("[Startup Step 6/14] LoadVendorSpawnData failed", ex);
                     }
-                });
+                }, cancellationToken);
 
                 IsVendorSpawnDataLoaded = true;
                 CompletedSteps++;
@@ -769,73 +782,73 @@ namespace UORespawnApp.Scripts.Services
             }
             catch (Exception ex)
             {
-                Logger.Error("[Startup Step 4/12] Error loading vendor spawn data", ex);
+                Logger.Error("[Startup Step 6/14] Error loading vendor spawn data", ex);
             }
         }
 
         private async Task LoadBestiaryAsync(CancellationToken cancellationToken = default)
         {
-            Logger.Info("[Startup Step 5/12] Loading bestiary...");
+            Logger.Info("[Startup Step 7/14] Loading bestiary...");
 
             try
             {
-                await BestiaryListUtility.LoadBestiaryList();
+                await BestiaryListUtility.LoadBestiaryList(cancellationToken);
 
                 IsBestiaryLoaded = true;
                 CompletedSteps++;
                 BestiaryLoaded?.Invoke(this, EventArgs.Empty);
 
-                Logger.Info($"[Startup Step 5/12] Loaded {BestiaryListUtility.BestiaryNameList?.Count ?? 0} creatures in bestiary");
+                Logger.Info($"[Startup Step 7/14] Loaded {BestiaryListUtility.BestiaryNameList?.Count ?? 0} creatures in bestiary");
             }
             catch (Exception ex)
             {
-                Logger.Error("[Startup Step 5/12] LoadBestiaryList failed", ex);
+                Logger.Error("[Startup Step 7/14] LoadBestiaryList failed", ex);
             }
         }
 
         private async Task LoadVendorListAsync(CancellationToken cancellationToken = default)
         {
-            Logger.Info("[Startup Step 5/10] Loading vendor list...");
+            Logger.Info("[Startup Step 8/14] Loading vendor list...");
 
             try
             {
-                await VendorListUtility.LoadVendorList();
+                await VendorListUtility.LoadVendorList(cancellationToken);
 
                 IsVendorListLoaded = true;
                 CompletedSteps++;
                 VendorListLoaded?.Invoke(this, EventArgs.Empty);
 
-                Logger.Info($"[Startup Step 5/10] Loaded {VendorListUtility.VendorNameList?.Count ?? 0} vendors in vendor list");
+                Logger.Info($"[Startup Step 8/14] Loaded {VendorListUtility.VendorNameList?.Count ?? 0} vendors in vendor list");
             }
             catch (Exception ex)
             {
-                Logger.Error("[Startup Step 5/10] LoadVendorList failed", ex);
+                Logger.Error("[Startup Step 8/14] LoadVendorList failed", ex);
             }
         }
 
         private async Task LoadSignDataAsync(CancellationToken cancellationToken = default)
         {
-            Logger.Info("[Startup Step 6/10] Loading sign data...");
+            Logger.Info("[Startup Step 9/14] Loading sign data...");
 
             try
             {
                 // If server is linked, copy sign data from OUTPUT to Resources/Raw BEFORE loading
                 // This ensures we have the latest server-generated data
-                await SyncSignDataFromServerAsync();
+                await SyncSignDataFromServerAsync(cancellationToken);
 
                 // Clear any previously loaded data to force fresh load
                 SignDataUtility.ClearSignData();
 
-                await SignDataUtility.EnsureLoadedAsync();
+                await SignDataUtility.EnsureLoadedAsync(cancellationToken);
 
                 IsSignDataLoaded = true;
                 CompletedSteps++;
 
-                Logger.Info($"[Startup Step 6/10] Loaded {SignDataUtility.GetTotalSignCount()} sign locations");
+                Logger.Info($"[Startup Step 9/14] Loaded {SignDataUtility.GetTotalSignCount()} sign locations");
             }
             catch (Exception ex)
             {
-                Logger.Error("[Startup Step 6/10] LoadSignData failed", ex);
+                Logger.Error("[Startup Step 9/14] LoadSignData failed", ex);
             }
         }
 
@@ -843,7 +856,7 @@ namespace UORespawnApp.Scripts.Services
         /// Copies sign data from server OUTPUT folder to Resources/Raw if server is linked.
         /// This ensures we always load the latest server-generated sign data on startup.
         /// </summary>
-        private static async Task SyncSignDataFromServerAsync()
+        private static async Task SyncSignDataFromServerAsync(CancellationToken cancellationToken = default)
         {
             try
             {
@@ -870,7 +883,7 @@ namespace UORespawnApp.Scripts.Services
                     Directory.CreateDirectory(rawDir);
                 }
 
-                await Task.Run(() => File.Copy(serverSignPath, localSignPath, overwrite: true));
+                await Task.Run(() => FileUtility.Copy(serverSignPath, localSignPath, overwrite: true), cancellationToken);
                 Logger.Info($"[SignSync] Copied sign data from server OUTPUT to: {localSignPath}");
             }
             catch (Exception ex)
@@ -881,27 +894,27 @@ namespace UORespawnApp.Scripts.Services
 
         private async Task LoadHiveDataAsync(CancellationToken cancellationToken = default)
         {
-            Logger.Info("[Startup Step 7/10] Loading hive data...");
+            Logger.Info("[Startup Step 10/14] Loading hive data...");
 
             try
             {
                 // If server is linked, copy hive data from OUTPUT to Resources/Raw BEFORE loading
                 // This ensures we have the latest server-generated data
-                await SyncHiveDataFromServerAsync();
+                await SyncHiveDataFromServerAsync(cancellationToken);
 
                 // Clear any previously loaded data to force fresh load
                 HiveDataUtility.ClearHiveData();
 
-                await HiveDataUtility.EnsureLoadedAsync();
+                await HiveDataUtility.EnsureLoadedAsync(cancellationToken);
 
                 IsHiveDataLoaded = true;
                 CompletedSteps++;
 
-                Logger.Info($"[Startup Step 7/10] Loaded {HiveDataUtility.GetTotalHiveCount()} hive locations");
+                Logger.Info($"[Startup Step 10/14] Loaded {HiveDataUtility.GetTotalHiveCount()} hive locations");
             }
             catch (Exception ex)
             {
-                Logger.Error("[Startup Step 7/10] LoadHiveData failed", ex);
+                Logger.Error("[Startup Step 10/14] LoadHiveData failed", ex);
             }
         }
 
@@ -909,7 +922,7 @@ namespace UORespawnApp.Scripts.Services
         /// Copies hive data from server OUTPUT folder to Resources/Raw if server is linked.
         /// This ensures we always load the latest server-generated hive data on startup.
         /// </summary>
-        private static async Task SyncHiveDataFromServerAsync()
+        private static async Task SyncHiveDataFromServerAsync(CancellationToken cancellationToken = default)
         {
             try
             {
@@ -936,7 +949,7 @@ namespace UORespawnApp.Scripts.Services
                     Directory.CreateDirectory(rawDir);
                 }
 
-                await Task.Run(() => File.Copy(serverHivePath, localHivePath, overwrite: true));
+                await Task.Run(() => FileUtility.Copy(serverHivePath, localHivePath, overwrite: true), cancellationToken);
                 Logger.Info($"[HiveSync] Copied hive data from server OUTPUT to: {localHivePath}");
             }
             catch (Exception ex)
@@ -947,7 +960,7 @@ namespace UORespawnApp.Scripts.Services
 
         private async Task LoadXMLSpawnerListAsync(CancellationToken cancellationToken = default)
         {
-            Logger.Info("[Startup Step 8/10] Loading XML spawner list...");
+            Logger.Info("[Startup Step 11/14] Loading XML spawner list...");
             try
             {
                 await Task.Run(() =>
@@ -958,17 +971,17 @@ namespace UORespawnApp.Scripts.Services
                     }
                     catch (Exception ex)
                     {
-                        Logger.Error("[Startup Step 8/10] LoadSpawnerList failed", ex);
+                        Logger.Error("[Startup Step 11/14] LoadSpawnerList failed", ex);
                     }
-                });
+                }, cancellationToken);
 
                 IsXMLSpawnerListLoaded = true;
                 CompletedSteps++;
-                Logger.Info($"[Startup Step 8/10] XML spawner list loaded");
+                Logger.Info($"[Startup Step 11/14] XML spawner list loaded");
             }
             catch (Exception ex)
             {
-                Logger.Error("[Startup Step 8/10] Error loading XML spawner list", ex);
+                Logger.Error("[Startup Step 11/14] Error loading XML spawner list", ex);
             }
         }
 
@@ -979,24 +992,23 @@ namespace UORespawnApp.Scripts.Services
         /// </summary>
         private async Task SyncSpawnPacksWithServerDataAsync(CancellationToken cancellationToken = default)
         {
-            Logger.Info("[Startup Step 10/13] Syncing spawn packs with server data...");
+            Logger.Info("[Startup Step 12/14] Syncing spawn packs with server data...");
             try
             {
-                var syncService = new SpawnPackSyncService();
-                await syncService.SyncAllPacksAsync();
+                await _spawnPackSyncService.SyncAllPacksAsync(cancellationToken);
 
                 CompletedSteps++;
-                Logger.Info("[Startup Step 10/13] Spawn pack sync completed");
+                Logger.Info("[Startup Step 12/14] Spawn pack sync completed");
             }
             catch (Exception ex)
             {
-                Logger.Error("[Startup Step 10/13] Error syncing spawn packs", ex);
+                Logger.Error("[Startup Step 12/14] Error syncing spawn packs", ex);
             }
         }
 
         private async Task CopyMapFilesAsync(CancellationToken cancellationToken = default)
         {
-            Logger.Info("[Startup Step 9/10] Checking map files...");
+            Logger.Info("[Startup Step 13/14] Checking map files...");
             try
             {
                 await Task.Run(() =>
@@ -1015,26 +1027,26 @@ namespace UORespawnApp.Scripts.Services
 
                     if (mapFiles.Length > 0)
                     {
-                        Logger.Info($"[Startup Step 9/10] Found {mapFiles.Length} map files in Data/MAPS");
+                        Logger.Info($"[Startup Step 13/14] Found {mapFiles.Length} map files in Data/MAPS");
                     }
                     else
                     {
-                        Logger.Warning("[Startup Step 9/10] No map files found in Data/MAPS - maps may not display correctly");
+                        Logger.Warning("[Startup Step 13/14] No map files found in Data/MAPS - maps may not display correctly");
                     }
-                });
+                }, cancellationToken);
 
                 IsMapFilesCopied = true;
                 CompletedSteps++;
             }
             catch (Exception ex)
             {
-                Logger.Error("[Startup Step 9/10] Error checking map files", ex);
+                Logger.Error("[Startup Step 13/14] Error checking map files", ex);
             }
         }
 
         private async Task StartDataWatcherAsync(CancellationToken cancellationToken = default)
         {
-            Logger.Info("[Startup Step 10/10] Starting DataWatcher...");
+            Logger.Info("[Startup Step 14/14] Starting DataWatcher...");
                 try
                 {
                     // DataWatcher starts LAST to avoid false change events during initial loading
@@ -1043,6 +1055,8 @@ namespace UORespawnApp.Scripts.Services
                         try
                         {
                             _dataWatcher = new DataWatcher(
+                                _binarySerializationService,
+                                _spawnPackSyncService,
                                 onDataChanged: () =>
                                 {
                                     Logger.Info("[DataWatcher] Server data files have been updated - reloading...");
@@ -1052,7 +1066,8 @@ namespace UORespawnApp.Scripts.Services
                                 onCommandsDetected: () =>
                                 {
                                     Logger.Info("[DataWatcher] Server command files detected");
-                                    // Refresh command cache and notify UI
+                                    // Sync from server then check local
+                                    _commandService.SyncCommandsFromServer();
                                     _commandService.CheckForPendingCommands();
                                     HasPendingCommands = _commandService.HasPendingCommands;
                                     if (HasPendingCommands)
@@ -1062,13 +1077,13 @@ namespace UORespawnApp.Scripts.Services
                                 }
                             );
 
-                            Logger.Info("[Startup Step 10/10] DataWatcher started successfully");
+                            Logger.Info("[Startup Step 14/14] DataWatcher started successfully");
                         }
                         catch (Exception ex)
                         {
-                            Logger.Warning($"[Startup Step 10/10] DataWatcher failed to start: {ex.Message}");
+                            Logger.Warning($"[Startup Step 14/14] DataWatcher failed to start: {ex.Message}");
                         }
-                    });
+                    }, cancellationToken);
 
                     IsDataWatcherStarted = true;
                     CompletedSteps++;
@@ -1082,15 +1097,38 @@ namespace UORespawnApp.Scripts.Services
         /// <summary>
         /// Reloads data when server files change (triggered by DataWatcher)
         /// </summary>
-        private static async Task ReloadDataAsync()
+        private async Task ReloadDataAsync()
         {
             try
             {
                 Logger.Info("Reloading spawn data due to server file changes...");
 
-                await Task.Run(() => Utility.LoadBoxSpawnData());
-                await Task.Run(() => Utility.LoadRegionSpawnData());
-                await Task.Run(() => Utility.LoadTileSpawnData());
+                await Task.WhenAll(
+                    Task.Run(() =>
+                    {
+                        _spawnDataService.ClearBoxSpawns();
+                        _spawnDataService.InitializeBoxSpawns();
+                        _binarySerializationService.LoadBoxSpawns();
+                    }),
+                    Task.Run(() =>
+                    {
+                        _spawnDataService.ClearRegionSpawns();
+                        _spawnDataService.InitializeRegionSpawns();
+                        _binarySerializationService.LoadRegionSpawns();
+                    }),
+                    Task.Run(() =>
+                    {
+                        _spawnDataService.ClearTileSpawns();
+                        _spawnDataService.InitializeTileSpawns();
+                        _binarySerializationService.LoadTileSpawns();
+                    }),
+                    Task.Run(() =>
+                    {
+                        _spawnDataService.ClearVendorSpawns();
+                        _spawnDataService.InitializeVendorSpawns();
+                        _binarySerializationService.LoadVendorSpawns();
+                    })
+                );
 
                 Logger.Info("Spawn data reloaded successfully");
             }
@@ -1108,27 +1146,26 @@ namespace UORespawnApp.Scripts.Services
         /// 2. Clear and reload SignDataUtility and HiveDataUtility
         /// 3. Sync all packs to remove invalid vendor locations
         /// </summary>
-        public static async Task ForceReloadVendorReferenceDataAsync()
+        public async Task ForceReloadVendorReferenceDataAsync(CancellationToken cancellationToken = default)
         {
             try
             {
                 Logger.Info("[ForceReload] Forcing reload of vendor reference data...");
 
                 // Copy fresh data from server
-                await SyncSignDataFromServerAsync();
-                await SyncHiveDataFromServerAsync();
+                await SyncSignDataFromServerAsync(cancellationToken);
+                await SyncHiveDataFromServerAsync(cancellationToken);
 
                 // Clear and reload utilities
                 SignDataUtility.ClearSignData();
                 HiveDataUtility.ClearHiveData();
-                await SignDataUtility.EnsureLoadedAsync();
-                await HiveDataUtility.EnsureLoadedAsync();
+                await SignDataUtility.EnsureLoadedAsync(cancellationToken);
+                await HiveDataUtility.EnsureLoadedAsync(cancellationToken);
 
                 Logger.Info($"[ForceReload] Loaded {SignDataUtility.GetTotalSignCount()} signs, {HiveDataUtility.GetTotalHiveCount()} hives");
 
                 // Sync all packs to remove invalid vendor locations
-                var syncService = new SpawnPackSyncService();
-                await syncService.SyncAllPacksAsync();
+                await _spawnPackSyncService.SyncAllPacksAsync(cancellationToken);
 
                 Logger.Info("[ForceReload] Vendor reference data reload complete");
             }
@@ -1156,6 +1193,7 @@ namespace UORespawnApp.Scripts.Services
             _dataWatcher?.Dispose();
 
             Logger.Info("BackgroundDataLoader disposed");
+            GC.SuppressFinalize(this);
         }
     }
 }

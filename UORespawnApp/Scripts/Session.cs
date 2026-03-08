@@ -18,18 +18,10 @@ namespace UORespawnApp
         /// Currently selected map (0-5 for standard maps, 6+ for custom).
         /// Thread-safe property.
         /// </summary>
-        public int Current_Map
+        public int CurrentMap
         {
             get { lock (_lock) { return _currentMap; } }
             set { lock (_lock) { _currentMap = value; } }
-        }
-
-        internal void SetMap(int mapId)
-        {
-            lock (_lock)
-            {
-                _currentMap = mapId;
-            }
         }
 
         // ==================== UI STATE (In-Memory Only) ====================

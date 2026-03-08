@@ -70,7 +70,7 @@ public class ToastService
         // Auto-remove after duration
         if (durationMs > 0)
         {
-            Task.Run(async () =>
+            _ = Task.Run(async () =>
             {
                 await Task.Delay(durationMs);
                 RemoveToast(toast.Id);

@@ -15,6 +15,7 @@ namespace UORespawnApp.Scripts.Utilities
     {
         internal static List<string>? VendorNameList { get; private set; }
         private static bool _isLoaded = false;
+        private static readonly SemaphoreSlim _loadLock = new(1, 1);
 
         /// <summary>
         /// Clear vendor list to force reload from file.
@@ -29,45 +30,58 @@ namespace UORespawnApp.Scripts.Utilities
         /// <summary>
         /// Load the vendor list from Resources/Raw/UOR_VendorList.txt
         /// </summary>
-        internal static async Task LoadVendorList()
+        internal static async Task LoadVendorList(CancellationToken cancellationToken = default)
         {
             if (_isLoaded && VendorNameList != null && VendorNameList.Count > 0)
             {
-                return; // Already loaded
+                return;
             }
 
-            VendorNameList = [];
-
+            await _loadLock.WaitAsync(cancellationToken);
             try
             {
-                var filePath = PathConstants.GetVendorListFilePath();
-
-                if (!File.Exists(filePath))
+                if (_isLoaded && VendorNameList != null && VendorNameList.Count > 0)
                 {
-                    Logger.Warning($"Vendor list file not found at: {filePath}");
-                    _isLoaded = true;
                     return;
                 }
 
-                var lines = await File.ReadAllLinesAsync(filePath);
+                VendorNameList = [];
 
-                foreach (var line in lines)
+                try
                 {
-                    if (!string.IsNullOrWhiteSpace(line) && !line.StartsWith('#'))
+                    var filePath = PathConstants.GetVendorListFilePath();
+
+                    if (!File.Exists(filePath))
                     {
-                        VendorNameList.Add(line.Trim());
+                        Logger.Warning($"Vendor list file not found at: {filePath}");
+                        _isLoaded = true;
+                        return;
                     }
+
+                    var lines = await FileUtility.ReadAllLinesAsync(filePath, cancellationToken: cancellationToken);
+
+                    foreach (var line in lines)
+                    {
+                        if (!string.IsNullOrWhiteSpace(line) && !line.StartsWith('#'))
+                        {
+                            VendorNameList.Add(line.Trim());
+                        }
+                    }
+
+                    VendorNameList.Sort();
+                    _isLoaded = true;
+
+                    Logger.Info($"Loaded {VendorNameList.Count} vendors from vendor list file");
                 }
-
-                VendorNameList.Sort();
-                _isLoaded = true;
-
-                Logger.Info($"Loaded {VendorNameList.Count} vendors from vendor list file");
+                catch (Exception ex)
+                {
+                    Logger.Error("Error loading vendor list", ex);
+                    _isLoaded = true;
+                }
             }
-            catch (Exception ex)
+            finally
             {
-                Logger.Error("Error loading vendor list", ex);
-                _isLoaded = true; // Mark as loaded to prevent repeated attempts
+                _loadLock.Release();
             }
         }
     }

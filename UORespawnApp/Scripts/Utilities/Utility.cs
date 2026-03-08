@@ -27,6 +27,7 @@ public static class Utility
     private static SpawnDataService? _spawnDataService;
     private static SessionService? _sessionService;
     private static MapImageCacheService? _mapImageCache;
+    private static BinarySerializationService? _binarySerializationService;
 
     /// <summary>
     /// Initializes the static utility with DI services.
@@ -35,11 +36,15 @@ public static class Utility
     internal static void SetServices(
         SpawnDataService spawnDataService,
         SessionService sessionService,
-        MapImageCacheService mapImageCache)
+        MapImageCacheService mapImageCache,
+        BinarySerializationService binarySerializationService,
+        ToastService toastService)
     {
         _spawnDataService = spawnDataService;
         _sessionService = sessionService;
         _mapImageCache = mapImageCache;
+        _binarySerializationService = binarySerializationService;
+        ErrorHandler.ToastService = toastService;
         Logger.Info("Utility services initialized from DI");
     }
 
@@ -57,18 +62,6 @@ public static class Utility
     /// Map image cache service reference.
     /// </summary>
     internal static MapImageCacheService? MapImageCache => _mapImageCache;
-
-    /// <summary>
-    /// Starts or replaces the current session.
-    /// For backward compatibility - new code should use SessionService directly.
-    /// </summary>
-    internal static void StartSession(Session session)
-    {
-        // Session is now managed by SessionService which creates it in constructor.
-        // This method exists for backward compatibility but is effectively a no-op
-        // since SessionService already initializes its own session.
-        Logger.Info("Session started (managed by SessionService)");
-    }
 
     // ==================== SPAWN DATA (delegates to SpawnDataService) ====================
 
@@ -116,7 +109,7 @@ public static class Utility
     {
         try
         {
-            BinarySerializationService.SaveBoxSpawns();
+            _binarySerializationService?.SaveBoxSpawns();
         }
         catch (Exception ex)
         {
@@ -130,7 +123,7 @@ public static class Utility
         {
             _spawnDataService?.ClearBoxSpawns();
             _spawnDataService?.InitializeBoxSpawns();
-            BinarySerializationService.LoadBoxSpawns();
+            _binarySerializationService?.LoadBoxSpawns();
         }
         catch (Exception ex)
         {
@@ -148,7 +141,7 @@ public static class Utility
     {
         try
         {
-            BinarySerializationService.SaveTileSpawns();
+            _binarySerializationService?.SaveTileSpawns();
         }
         catch (Exception ex)
         {
@@ -162,7 +155,7 @@ public static class Utility
         {
             _spawnDataService?.ClearTileSpawns();
             _spawnDataService?.InitializeTileSpawns();
-            BinarySerializationService.LoadTileSpawns();
+            _binarySerializationService?.LoadTileSpawns();
         }
         catch (Exception ex)
         {
@@ -180,7 +173,7 @@ public static class Utility
     {
         try
         {
-            BinarySerializationService.SaveRegionSpawns();
+            _binarySerializationService?.SaveRegionSpawns();
         }
         catch (Exception ex)
         {
@@ -194,7 +187,7 @@ public static class Utility
         {
             _spawnDataService?.ClearRegionSpawns();
             _spawnDataService?.InitializeRegionSpawns();
-            BinarySerializationService.LoadRegionSpawns();
+            _binarySerializationService?.LoadRegionSpawns();
         }
         catch (Exception ex)
         {
@@ -212,7 +205,7 @@ public static class Utility
     {
         try
         {
-            BinarySerializationService.SaveVendorSpawns();
+            _binarySerializationService?.SaveVendorSpawns();
         }
         catch (Exception ex)
         {
@@ -226,7 +219,7 @@ public static class Utility
         {
             _spawnDataService?.ClearVendorSpawns();
             _spawnDataService?.InitializeVendorSpawns();
-            BinarySerializationService.LoadVendorSpawns();
+            _binarySerializationService?.LoadVendorSpawns();
         }
         catch (Exception ex)
         {
@@ -242,7 +235,7 @@ public static class Utility
     {
         try
         {
-            BinarySerializationService.SaveSettings();
+            _binarySerializationService?.SaveSettings();
         }
         catch (Exception ex)
         {
@@ -254,7 +247,7 @@ public static class Utility
     {
         try
         {
-            BinarySerializationService.LoadSettings();
+            _binarySerializationService?.LoadSettings();
         }
         catch (Exception ex)
         {

@@ -11,7 +11,7 @@ namespace UORespawnApp.Scripts.Services
     /// </summary>
     public static class CsvSettingsService
     {
-        private const string VERSION = "2.0.0.8";
+        private static string VERSION => Utility.Version;
 
         /// <summary>
         /// Writes all settings to a CSV file in server-compatible format.
@@ -20,77 +20,79 @@ namespace UORespawnApp.Scripts.Services
         {
             try
             {
-                using var writer = new StreamWriter(filePath);
+                var sb = new System.Text.StringBuilder();
 
                 // Header comments
-                writer.WriteLine("# UORespawn Settings File");
-                writer.WriteLine($"# Version: {VERSION}");
-                writer.WriteLine("# Format: SettingName,Value");
-                writer.WriteLine("# Lines starting with # are comments");
-                writer.WriteLine();
+                sb.AppendLine("# UORespawn Settings File");
+                sb.AppendLine($"# Version: {VERSION}");
+                sb.AppendLine("# Format: SettingName,Value");
+                sb.AppendLine("# Lines starting with # are comments");
+                sb.AppendLine();
 
                 // Scale Modifier
-                writer.WriteLine("# Scale Modifier");
-                writer.WriteLine($"SCALE_MOD,{Settings.ScaleMod}");
-                writer.WriteLine();
+                sb.AppendLine("# Scale Modifier");
+                sb.AppendLine($"SCALE_MOD,{Settings.ScaleMod}");
+                sb.AppendLine();
 
                 // System Intervals
-                writer.WriteLine("# System Intervals (milliseconds/seconds/minutes as noted)");
-                writer.WriteLine($"SEARCH_INTERVAL,{Settings.SearchInterval}");
-                writer.WriteLine($"PROCESS_INTERVAL,{Settings.ProcessInterval}");
-                writer.WriteLine($"VALIDATE_INTERVAL,{Settings.ValidateInterval}");
-                writer.WriteLine($"TIMED_INTERVAL,{Settings.TimedInterval}");
-                writer.WriteLine();
+                sb.AppendLine("# System Intervals (milliseconds/seconds/minutes as noted)");
+                sb.AppendLine($"SEARCH_INTERVAL,{Settings.SearchInterval}");
+                sb.AppendLine($"PROCESS_INTERVAL,{Settings.ProcessInterval}");
+                sb.AppendLine($"VALIDATE_INTERVAL,{Settings.ValidateInterval}");
+                sb.AppendLine($"TIMED_INTERVAL,{Settings.TimedInterval}");
+                sb.AppendLine();
 
                 // System Limits
-                writer.WriteLine("# System Limits");
-                writer.WriteLine($"MAX_RECYCLE_TYPE,{Settings.MaxRecycleType}");
-                writer.WriteLine($"MAX_SPAWN_CHECKS,{Settings.MaxSpawnChecks}");
-                writer.WriteLine($"MAX_QUEUE_SIZE,{Settings.MaxQueueSize}");
-                writer.WriteLine($"MAX_STAT_SIZE,{Settings.MaxStatSize}");
-                writer.WriteLine();
+                sb.AppendLine("# System Limits");
+                sb.AppendLine($"MAX_RECYCLE_TYPE,{Settings.MaxRecycleType}");
+                sb.AppendLine($"MAX_SPAWN_CHECKS,{Settings.MaxSpawnChecks}");
+                sb.AppendLine($"MAX_QUEUE_SIZE,{Settings.MaxQueueSize}");
+                sb.AppendLine($"MAX_STAT_SIZE,{Settings.MaxStatSize}");
+                sb.AppendLine();
 
                 // Spawn Limits
-                writer.WriteLine("# Spawn Limits");
-                writer.WriteLine($"MAX_SPAWN,{Settings.MaxMobs}");
-                writer.WriteLine($"MIN_RANGE,{Settings.MinRange}");
-                writer.WriteLine($"MAX_RANGE,{Settings.MaxRange}");
-                writer.WriteLine($"MAX_CROWD,{Settings.MaxCrowd}");
-                writer.WriteLine();
+                sb.AppendLine("# Spawn Limits");
+                sb.AppendLine($"MAX_SPAWN,{Settings.MaxMobs}");
+                sb.AppendLine($"MIN_RANGE,{Settings.MinRange}");
+                sb.AppendLine($"MAX_RANGE,{Settings.MaxRange}");
+                sb.AppendLine($"MAX_CROWD,{Settings.MaxCrowd}");
+                sb.AppendLine();
 
                 // Spawn Chances
-                writer.WriteLine("# Spawn Chances (0.0 to 1.0)");
-                writer.WriteLine($"CHANCE_WATER,{Settings.WaterChance}");
-                writer.WriteLine($"CHANCE_WEATHER,{Settings.WeatherChance}");
-                writer.WriteLine($"CHANCE_TIMED,{Settings.TimedChance}");
-                writer.WriteLine($"CHANCE_COMMON,{Settings.CommonChance}");
-                writer.WriteLine($"CHANCE_UNCOMMON,{Settings.UnCommonChance}");
-                writer.WriteLine($"CHANCE_RARE,{Settings.RareChance}");
-                writer.WriteLine();
+                sb.AppendLine("# Spawn Chances (0.0 to 1.0)");
+                sb.AppendLine($"CHANCE_WATER,{Settings.WaterChance}");
+                sb.AppendLine($"CHANCE_WEATHER,{Settings.WeatherChance}");
+                sb.AppendLine($"CHANCE_TIMED,{Settings.TimedChance}");
+                sb.AppendLine($"CHANCE_COMMON,{Settings.CommonChance}");
+                sb.AppendLine($"CHANCE_UNCOMMON,{Settings.UnCommonChance}");
+                sb.AppendLine($"CHANCE_RARE,{Settings.RareChance}");
+                sb.AppendLine();
 
                 // Spawn Toggles
-                writer.WriteLine("# Spawn Toggles (True/False)");
-                writer.WriteLine($"ENABLE_SCALE_SPAWN,{Settings.IsScaleSpawn}");
-                writer.WriteLine($"ENABLE_RIFT_SPAWN,{Settings.EnableRiftSpawn}");
-                writer.WriteLine($"ENABLE_TOWN_SPAWN,{Settings.EnableTownSpawn}");
-                writer.WriteLine($"ENABLE_GRAVE_SPAWN,{Settings.EnableGraveSpawn}");
-                writer.WriteLine();
+                sb.AppendLine("# Spawn Toggles (True/False)");
+                sb.AppendLine($"ENABLE_SCALE_SPAWN,{Settings.IsScaleSpawn}");
+                sb.AppendLine($"ENABLE_RIFT_SPAWN,{Settings.EnableRiftSpawn}");
+                sb.AppendLine($"ENABLE_TOWN_SPAWN,{Settings.EnableTownSpawn}");
+                sb.AppendLine($"ENABLE_GRAVE_SPAWN,{Settings.EnableGraveSpawn}");
+                sb.AppendLine();
 
                 // Vendor Toggles
-                writer.WriteLine("# Vendor Toggles (True/False)");
-                writer.WriteLine($"ENABLE_VENDOR_SPAWN,{Settings.EnableVendorSpawn}");
-                writer.WriteLine($"ENABLE_VENDOR_NIGHT,{Settings.EnableVendorNight}");
-                writer.WriteLine($"ENABLE_VENDOR_EXTRA,{Settings.EnableVendorExtra}");
-                writer.WriteLine();
+                sb.AppendLine("# Vendor Toggles (True/False)");
+                sb.AppendLine($"ENABLE_VENDOR_SPAWN,{Settings.EnableVendorSpawn}");
+                sb.AppendLine($"ENABLE_VENDOR_NIGHT,{Settings.EnableVendorNight}");
+                sb.AppendLine($"ENABLE_VENDOR_EXTRA,{Settings.EnableVendorExtra}");
+                sb.AppendLine();
 
                 // Effects Toggle
-                writer.WriteLine("# Effects Toggle");
-                writer.WriteLine($"ENABLE_SPAWN_EFFECTS,{Settings.EnableSpawnEffects}");
-                writer.WriteLine();
+                sb.AppendLine("# Effects Toggle");
+                sb.AppendLine($"ENABLE_SPAWN_EFFECTS,{Settings.EnableSpawnEffects}");
+                sb.AppendLine();
 
                 // Debug Toggle
-                writer.WriteLine("# Debug Toggle");
-                writer.WriteLine($"ENABLE_DEBUG,{Settings.EnableDebugSpawn}");
+                sb.AppendLine("# Debug Toggle");
+                sb.AppendLine($"ENABLE_DEBUG,{Settings.EnableDebugSpawn}");
+
+                FileUtility.WriteAllText(filePath, sb.ToString());
             }
             catch (Exception ex)
             {
@@ -112,7 +114,7 @@ namespace UORespawnApp.Scripts.Services
 
             try
             {
-                var lines = File.ReadAllLines(filePath);
+                var lines = FileUtility.ReadAllLines(filePath);
 
                 foreach (var line in lines)
                 {

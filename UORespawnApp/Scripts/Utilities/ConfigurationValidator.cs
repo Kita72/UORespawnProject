@@ -31,6 +31,7 @@ public static class ConfigurationValidator
     [
         PathConstants.LocalDataPath,      // Data/UORespawn/ - local spawn data
         PathConstants.MapsPath,           // Data/MAPS/ - map images
+        PathConstants.TilesPath,          // Data/TILES/ - tile images
         PathConstants.PacksPath,          // Data/PACKS/ - spawn packs root
         PathConstants.PacksApprovedPath,  // Data/PACKS/Approved/
         PathConstants.PacksCreatedPath,   // Data/PACKS/Created/
@@ -165,8 +166,8 @@ public static class ConfigurationValidator
     /// <returns>Multi-line string with configuration details</returns>
     public static string GetDiagnosticSummary()
     {
-        var lines = new List<string>
-        {
+        List<string> lines =
+        [
             $"UORespawn v{Utility.Version} - Configuration Summary",
             $"────────────────────────────────────────",
             $"Base Directory: {AppDomain.CurrentDomain.BaseDirectory}",
@@ -178,7 +179,7 @@ public static class ConfigurationValidator
             $"Current Pack: {Settings.CurrentPackName ?? "(none)"}",
             $"Debug Mode: {Settings.IsDebugMode}",
             $"────────────────────────────────────────",
-        };
+        ];
 
         // Check folder existence
         lines.Add("Folder Status:");

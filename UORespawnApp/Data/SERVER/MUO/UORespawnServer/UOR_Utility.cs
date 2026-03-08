@@ -65,11 +65,20 @@ internal static class UOR_Utility
     {
         if (!string.IsNullOrEmpty(name))
         {
-            if (name.ToLower().EndsWith(" quest")) return false;
+            if (name.InsensitiveEndsWith(" quest"))
+            {
+                return false;
+            }
 
-            if (name.ToLower().EndsWith(" skill")) return false;
+            if (name.InsensitiveEndsWith(" skill"))
+            {
+                return false;
+            }
 
-            if (name.ToLower().StartsWith("khaldun ")) return false;
+            if (name.InsensitiveStartsWith("khaldun "))
+            {
+                return false;
+            }
 
             return true;
         }
@@ -96,19 +105,36 @@ internal static class UOR_Utility
 
     private static WeatherTypes GetWeatherType(Weather weather)
     {
-        if (weather == null) return WeatherTypes.None;
+        if (weather == null)
+        {
+            return WeatherTypes.None;
+        }
 
         if (weather.ChanceOfPrecipitation > 0)
         {
             if (weather.ChanceOfExtremeTemperature > 0)
             {
-                if (weather.Temperature > 0) return WeatherTypes.Storm;
-                if (weather.Temperature < 0) return WeatherTypes.Blizzard;
+                if (weather.Temperature > 0)
+                {
+                    return WeatherTypes.Storm;
+                }
+
+                if (weather.Temperature < 0)
+                {
+                    return WeatherTypes.Blizzard;
+                }
             }
             else
             {
-                if (weather.Temperature > 0) return WeatherTypes.Rain;
-                if (weather.Temperature < 0) return WeatherTypes.Snow;
+                if (weather.Temperature > 0)
+                {
+                    return WeatherTypes.Rain;
+                }
+
+                if (weather.Temperature < 0)
+                {
+                    return WeatherTypes.Snow;
+                }
             }
         }
 
@@ -122,22 +148,12 @@ internal static class UOR_Utility
         return (TimeTypes)label;
     }
 
-    internal static bool IsNight(Map map, Point3D location)
-    {
-        switch (GetTime(map, location))
+    internal static bool IsNight(Map map, Point3D location) =>
+        GetTime(map, location) switch
         {
-            case TimeTypes.Witching_Hour: return true;
-            case TimeTypes.Middle_of_Night: return true;
-            case TimeTypes.Early_Morning: return false;
-            case TimeTypes.Late_Morning: return false;
-            case TimeTypes.Noon: return false;
-            case TimeTypes.Afternoon: return false;
-            case TimeTypes.Early_Evening: return false;
-            case TimeTypes.Late_at_Night: return true;
-        }
-
-        return false;
-    }
+            TimeTypes.Witching_Hour or TimeTypes.Middle_of_Night or TimeTypes.Late_at_Night => true,
+            _ => false
+        };
 
     private static StaticTarget GetStaticTarget(Point3D location, int id)
     {
@@ -164,7 +180,9 @@ internal static class UOR_Utility
         for (int m = 0; m < Map.Maps.Length; m++)
         {
             if (Map.Maps[m] == null || Map.Maps[m] == Map.Internal)
+            {
                 continue;
+            }
 
             for (int w = 0; w < Map.Maps[m].Width; w++)
             {
@@ -201,27 +219,43 @@ internal static class UOR_Utility
 
                 if (entity.CHANCE < UOR_Settings.CHANCE_WATER && !IsWaterLimit(isWater))
                 {
-                    if (UOR_Settings.ENABLE_DEBUG) entity.REASON = "[Skipped-Water]";
+                    if (UOR_Settings.ENABLE_DEBUG)
+                    {
+                        entity.REASON = "[Skipped-Water]";
+                    }
+
                     continue;
                 }
 
                 if (entity.LOCATION == Point3D.Zero)
                 {
-                    if (UOR_Settings.ENABLE_DEBUG) entity.REASON = "[ZERO]";
+                    if (UOR_Settings.ENABLE_DEBUG)
+                    {
+                        entity.REASON = "[ZERO]";
+                    }
+
                     continue;
                 }
 
                 // 2. Crowded
                 if (IsCrowded(pm.Map, entity.LOCATION))
                 {
-                    if (UOR_Settings.ENABLE_DEBUG) entity.REASON = "[Crowded]";
+                    if (UOR_Settings.ENABLE_DEBUG)
+                    {
+                        entity.REASON = "[Crowded]";
+                    }
+
                     continue;
                 }
 
                 // 3. Queue Check - Don't spawn too close to player's recent spawn locations
                 if (respawner.IsLocationTooClose(entity.LOCATION, UOR_Settings.MIN_RANGE))
                 {
-                    if (UOR_Settings.ENABLE_DEBUG) entity.REASON = "[X-Qued]";
+                    if (UOR_Settings.ENABLE_DEBUG)
+                    {
+                        entity.REASON = "[X-Qued]";
+                    }
+
                     continue;
                 }
                 // If we reached here, the location is valid!
@@ -392,7 +426,8 @@ internal static class UOR_Utility
 
     internal static bool IsValidSpawn(int serial, out Mobile spawn)
     {
-        if (World.Mobiles.TryGetValue((Serial)(uint)serial, out var m) && !m.Deleted && m.Alive)
+        var m = World.FindEntity<Mobile>((Serial)(uint)serial);
+        if (m != null && !m.Deleted && m.Alive)
         {
             spawn = m;
 
@@ -411,42 +446,69 @@ internal static class UOR_Utility
 
     internal static string GetSpawnName(ISpawnEntity entity, SpawnEntity spawn)
     {
-        if (entity == null) return string.Empty;
+        if (entity == null)
+        {
+            return string.Empty;
+        }
 
         switch (spawn.FrequencyType)
         {
             case FrequencyTypes.Water:
                 if (entity.WaterList?.Count > 0)
-                    return $"{entity.WaterList[Utility.Random(entity.WaterList.Count)]}";
+                {
+                    return $"{entity.WaterList.RandomElement()}";
+                }
+
                 break;
 
             case FrequencyTypes.Weather:
-                if (spawn.WeatherType != entity.WeatherType) 
+                if (spawn.WeatherType != entity.WeatherType)
+                {
                     return string.Empty;
+                }
+
                 if (entity.WeatherList?.Count > 0)
-                    return $"{entity.WeatherList[Utility.Random(entity.WeatherList.Count)]}";
+                {
+                    return $"{entity.WeatherList.RandomElement()}";
+                }
+
                 break;
 
             case FrequencyTypes.Timed:
-                if (spawn.TimeType != entity.TimedType) 
+                if (spawn.TimeType != entity.TimedType)
+                {
                     return string.Empty;
+                }
+
                 if (entity.TimedList?.Count > 0)
-                    return $"{entity.TimedList[Utility.Random(entity.TimedList.Count)]}";
+                {
+                    return $"{entity.TimedList.RandomElement()}";
+                }
+
                 break;
 
             case FrequencyTypes.Common:
                 if (entity.CommonList?.Count > 0)
-                    return $"{entity.CommonList[Utility.Random(entity.CommonList.Count)]}";
+                {
+                    return $"{entity.CommonList.RandomElement()}";
+                }
+
                 break;
 
             case FrequencyTypes.UnCommon:
                 if (entity.UnCommonList?.Count > 0)
-                    return $"{entity.UnCommonList[Utility.Random(entity.UnCommonList.Count)]}";
+                {
+                    return $"{entity.UnCommonList.RandomElement()}";
+                }
+
                 break;
 
             case FrequencyTypes.Rare:
                 if (entity.RareList?.Count > 0)
-                    return $"{entity.RareList[Utility.Random(entity.RareList.Count)]}";
+                {
+                    return $"{entity.RareList.RandomElement()}";
+                }
+
                 break;
         }
 
@@ -516,7 +578,7 @@ internal static class UOR_Utility
 
         try
         {
-            mob = Build(mob_Type, CommandSystem.Split(mob_Type.Name)) as Mobile;
+            mob = Build(mob_Type) as Mobile;
 
             if (mob is PlaceHolder ph)
             {
@@ -531,7 +593,7 @@ internal static class UOR_Utility
         return mob;
     }
 
-    private static ISpawnable Build(Type type, string[] args)
+    private static ISpawnable Build(Type type)
     {
         if (!typeof(ISpawnable).IsAssignableFrom(type))
         {

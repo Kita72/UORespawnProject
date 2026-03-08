@@ -1,4 +1,4 @@
-using UORespawnApp.Scripts.Constants;
+﻿using UORespawnApp.Scripts.Constants;
 using UORespawnApp.Scripts.Entities;
 using UORespawnApp.Scripts.Enums;
 using UORespawnApp.Scripts.Helpers;
@@ -13,13 +13,15 @@ namespace UORespawnApp.Scripts.Services
     /// 
     /// Note: Settings now use CSV format (via CsvSettingsService) for server 2.0.0.7+
     /// </summary>
-    public static class BinarySerializationService
+    public class BinarySerializationService(SpawnDataService spawnDataService)
     {
         // Current file format versions (binary spawn data files)
         private const int BOX_SPAWN_VERSION = 1;
         private const int TILE_SPAWN_VERSION = 1;
         private const int REGION_SPAWN_VERSION = 1;
-        private const int VENDOR_SPAWN_VERSION = 1; 
+        private const int VENDOR_SPAWN_VERSION = 1;
+
+        private readonly SpawnDataService _spawnDataService = spawnDataService;
 
         #region Active Pack Sync Helper
 
@@ -32,7 +34,7 @@ namespace UORespawnApp.Scripts.Services
         /// - Approved: Sync triggers Reset availability when compared to backup
         /// - Created/Imported: Sync keeps pack folder current (no backup/reset feature)
         /// </summary>
-        private static void SyncFileToActivePack(string sourceFilePath, string fileName)
+        private void SyncFileToActivePack(string sourceFilePath, string fileName)
         {
             try
             {
@@ -74,7 +76,7 @@ namespace UORespawnApp.Scripts.Services
         /// Save settings to CSV file (UOR_SpawnSettings.csv) using CsvSettingsService.
         /// Server 2.0.0.7+ uses CSV format for human-readable settings.
         /// </summary>
-        public static void SaveSettings()
+        public void SaveSettings()
         {
             try
             {
@@ -112,7 +114,7 @@ namespace UORespawnApp.Scripts.Services
         /// Load settings from CSV file (UOR_SpawnSettings.csv) using CsvSettingsService.
         /// Server 2.0.0.7+ uses CSV format for human-readable settings.
         /// </summary>
-        public static bool LoadSettings()
+        public bool LoadSettings()
         {
             try
             {
@@ -146,7 +148,7 @@ namespace UORespawnApp.Scripts.Services
         /// <summary>
         /// Save box spawns to binary file using BinaryWriter
         /// </summary>
-        public static void SaveBoxSpawns()
+        public void SaveBoxSpawns()
         {
             try
             {
@@ -180,7 +182,7 @@ namespace UORespawnApp.Scripts.Services
             }
         }
 
-        private static int WriteBoxSpawns(string filePath)
+        private int WriteBoxSpawns(string filePath)
         {
             using var stream = FileUtility.OpenWrite(filePath);
             using var writer = new BinaryWriter(stream);
@@ -189,7 +191,7 @@ namespace UORespawnApp.Scripts.Services
             writer.Write(Utility.Version);
 
             // Count maps that have spawn data - sort by key for deterministic output
-            var mapsWithData = Utility.BoxSpawns
+            var mapsWithData = _spawnDataService.BoxSpawns
                 .Where(kvp => kvp.Value.Count > 0)
                 .OrderBy(kvp => kvp.Key)
                 .ToList();
@@ -213,7 +215,7 @@ namespace UORespawnApp.Scripts.Services
             return totalBoxes;
         }
 
-        private static void WriteBoxSpawnEntity(BinaryWriter writer, BoxSpawnEntity box)
+        private void WriteBoxSpawnEntity(BinaryWriter writer, BoxSpawnEntity box)
         {
             writer.Write(box.Position);
             writer.Write(box.Priority);
@@ -241,7 +243,7 @@ namespace UORespawnApp.Scripts.Services
         /// <summary>
         /// Load box spawns from binary file using BinaryReader
         /// </summary>
-        public static bool LoadBoxSpawns()
+        public bool LoadBoxSpawns()
         {
             try
             {
@@ -268,7 +270,7 @@ namespace UORespawnApp.Scripts.Services
             }
         }
 
-        private static int ReadBoxSpawns(string filePath)
+        private int ReadBoxSpawns(string filePath)
         {
             using var stream = FileUtility.OpenRead(filePath);
             using var reader = new BinaryReader(stream);
@@ -286,11 +288,11 @@ namespace UORespawnApp.Scripts.Services
                 int boxCount = reader.ReadInt32();
 
                 // Ensure the map entry exists
-                if (!Utility.BoxSpawns.TryGetValue(mapId, out List<BoxSpawnEntity>? value))
+                if (!_spawnDataService.BoxSpawns.TryGetValue(mapId, out List<BoxSpawnEntity>? value))
                 {
                     value = [];
 
-                    Utility.BoxSpawns[mapId] = value;
+                    _spawnDataService.BoxSpawns[mapId] = value;
                 }
 
                 for (int b = 0; b < boxCount; b++)
@@ -304,7 +306,7 @@ namespace UORespawnApp.Scripts.Services
             return totalBoxes;
         }
 
-        private static BoxSpawnEntity ReadBoxSpawnEntity(BinaryReader reader)
+        private BoxSpawnEntity ReadBoxSpawnEntity(BinaryReader reader)
         {
             var box = new BoxSpawnEntity
             {
@@ -343,7 +345,7 @@ namespace UORespawnApp.Scripts.Services
         /// <summary>
         /// Save tile spawns to binary file using BinaryWriter
         /// </summary>
-        public static void SaveTileSpawns()
+        public void SaveTileSpawns()
         {
             try
             {
@@ -377,7 +379,7 @@ namespace UORespawnApp.Scripts.Services
             }
         }
 
-        private static int WriteTileSpawns(string filePath)
+        private int WriteTileSpawns(string filePath)
         {
             using var stream = FileUtility.OpenWrite(filePath);
             using var writer = new BinaryWriter(stream);
@@ -386,7 +388,7 @@ namespace UORespawnApp.Scripts.Services
             writer.Write(Utility.Version);
 
             // Sort by key for deterministic output
-            var mapsWithData = Utility.TileSpawns
+            var mapsWithData = _spawnDataService.TileSpawns
                 .Where(kvp => kvp.Value.Count > 0)
                 .OrderBy(kvp => kvp.Key)
                 .ToList();
@@ -410,7 +412,7 @@ namespace UORespawnApp.Scripts.Services
             return totalTiles;
         }
 
-        private static void WriteTileSpawnEntity(BinaryWriter writer, TileSpawnEntity tile)
+        private void WriteTileSpawnEntity(BinaryWriter writer, TileSpawnEntity tile)
         {
             writer.Write(tile.Id);
             writer.Write(tile.Name ?? string.Empty);
@@ -430,7 +432,7 @@ namespace UORespawnApp.Scripts.Services
         /// <summary>
         /// Load tile spawns from binary file using BinaryReader
         /// </summary>
-        public static bool LoadTileSpawns()
+        public bool LoadTileSpawns()
         {
             try
             {
@@ -457,7 +459,7 @@ namespace UORespawnApp.Scripts.Services
             }
         }
 
-        private static int ReadTileSpawns(string filePath)
+        private int ReadTileSpawns(string filePath)
         {
             using var stream = FileUtility.OpenRead(filePath);
             using var reader = new BinaryReader(stream);
@@ -475,11 +477,11 @@ namespace UORespawnApp.Scripts.Services
                 string mapName = reader.ReadString();
                 int tileCount = reader.ReadInt32();
 
-                if (!Utility.TileSpawns.TryGetValue(mapId, out List<TileSpawnEntity>? value))
+                if (!_spawnDataService.TileSpawns.TryGetValue(mapId, out List<TileSpawnEntity>? value))
                 {
                     value = [];
 
-                    Utility.TileSpawns[mapId] = value;
+                    _spawnDataService.TileSpawns[mapId] = value;
                 }
 
                 for (int t = 0; t < tileCount; t++)
@@ -509,7 +511,7 @@ namespace UORespawnApp.Scripts.Services
             return totalTiles;
         }
 
-        private static TileSpawnEntity ReadTileSpawnEntity(BinaryReader reader)
+        private TileSpawnEntity ReadTileSpawnEntity(BinaryReader reader)
         {
             var tile = new TileSpawnEntity
             {
@@ -536,7 +538,7 @@ namespace UORespawnApp.Scripts.Services
         /// <summary>
         /// Save region spawns to binary file using BinaryWriter
         /// </summary>
-        public static void SaveRegionSpawns()
+        public void SaveRegionSpawns()
         {
             try
             {
@@ -570,7 +572,7 @@ namespace UORespawnApp.Scripts.Services
             }
         }
 
-        private static int WriteRegionSpawns(string filePath)
+        private int WriteRegionSpawns(string filePath)
         {
             using var stream = FileUtility.OpenWrite(filePath);
             using var writer = new BinaryWriter(stream);
@@ -579,7 +581,7 @@ namespace UORespawnApp.Scripts.Services
             writer.Write(Utility.Version);
 
             // Sort by key for deterministic output
-            var mapsWithData = Utility.RegionSpawns
+            var mapsWithData = _spawnDataService.RegionSpawns
                 .Where(kvp => kvp.Value.Count > 0)
                 .OrderBy(kvp => kvp.Key)
                 .ToList();
@@ -603,7 +605,7 @@ namespace UORespawnApp.Scripts.Services
             return totalRegions;
         }
 
-        private static void WriteRegionSpawnEntity(BinaryWriter writer, RegionSpawnEntity region)
+        private void WriteRegionSpawnEntity(BinaryWriter writer, RegionSpawnEntity region)
         {
             writer.Write(region.Id);
             writer.Write(region.Name ?? string.Empty);
@@ -623,7 +625,7 @@ namespace UORespawnApp.Scripts.Services
         /// <summary>
         /// Load region spawns from binary file using BinaryReader
         /// </summary>
-        public static bool LoadRegionSpawns()
+        public bool LoadRegionSpawns()
         {
             try
             {
@@ -650,7 +652,7 @@ namespace UORespawnApp.Scripts.Services
             }
         }
 
-        private static int ReadRegionSpawns(string filePath)
+        private int ReadRegionSpawns(string filePath)
         {
             using var stream = FileUtility.OpenRead(filePath);
             using var reader = new BinaryReader(stream);
@@ -667,11 +669,11 @@ namespace UORespawnApp.Scripts.Services
                 string mapName = reader.ReadString();
                 int regionCount = reader.ReadInt32();
 
-                if (!Utility.RegionSpawns.TryGetValue(mapId, out List<RegionSpawnEntity>? value))
+                if (!_spawnDataService.RegionSpawns.TryGetValue(mapId, out List<RegionSpawnEntity>? value))
                 {
                     value = [];
 
-                    Utility.RegionSpawns[mapId] = value;
+                    _spawnDataService.RegionSpawns[mapId] = value;
                 }
 
                 for (int r = 0; r < regionCount; r++)
@@ -685,7 +687,7 @@ namespace UORespawnApp.Scripts.Services
             return totalRegions;
         }
 
-        private static RegionSpawnEntity ReadRegionSpawnEntity(BinaryReader reader)
+        private RegionSpawnEntity ReadRegionSpawnEntity(BinaryReader reader)
         {
             var region = new RegionSpawnEntity
             {
@@ -713,7 +715,7 @@ namespace UORespawnApp.Scripts.Services
         /// Save vendor spawn data to binary file using BinaryWriter.
         /// Format: Per map, per sign type -> vendor list (blueprint).
         /// </summary>
-        public static void SaveVendorSpawns()
+        public void SaveVendorSpawns()
         {
             try
             {
@@ -750,7 +752,7 @@ namespace UORespawnApp.Scripts.Services
         /// <summary>
         /// Load vendor spawn data from binary file using BinaryReader
         /// </summary>
-        public static void LoadVendorSpawns()
+        public void LoadVendorSpawns()
         {
             var localPath = PathConstants.GetLocalFilePath(PathConstants.VENDOR_FILENAME);
 
@@ -765,7 +767,7 @@ namespace UORespawnApp.Scripts.Services
             Logger.Info($"Loaded {totalVendors} sign types with vendors from {localPath}");
         }
 
-        private static int WriteVendorSpawns(string filePath)
+        private int WriteVendorSpawns(string filePath)
         {
             using var stream = FileUtility.OpenWrite(filePath);
             using var writer = new BinaryWriter(stream);
@@ -775,7 +777,7 @@ namespace UORespawnApp.Scripts.Services
             writer.Write(Utility.Version);
 
             // Sort by key for deterministic output
-            var sortedVendorSpawns = Utility.VendorSpawns.OrderBy(kvp => kvp.Key).ToList();
+            var sortedVendorSpawns = _spawnDataService.VendorSpawns.OrderBy(kvp => kvp.Key).ToList();
 
             // Write map count
             writer.Write(sortedVendorSpawns.Count);
@@ -803,7 +805,7 @@ namespace UORespawnApp.Scripts.Services
             return totalCount;
         }
 
-        private static int ReadVendorSpawns(string filePath)
+        private int ReadVendorSpawns(string filePath)
         {
             using var stream = FileUtility.OpenRead(filePath);
             using var reader = new BinaryReader(stream);
@@ -826,11 +828,11 @@ namespace UORespawnApp.Scripts.Services
                 string mapName = reader.ReadString(); // Read but don't use (we derive from MapUtility)
                 int vendorCount = reader.ReadInt32();
 
-                if (!Utility.VendorSpawns.TryGetValue(mapId, out List<VendorEntity>? value))
+                if (!_spawnDataService.VendorSpawns.TryGetValue(mapId, out List<VendorEntity>? value))
                 {
                     value = [];
 
-                    Utility.VendorSpawns[mapId] = value;
+                    _spawnDataService.VendorSpawns[mapId] = value;
                 }
 
                 for (int v = 0; v < vendorCount; v++)
@@ -844,7 +846,7 @@ namespace UORespawnApp.Scripts.Services
             return totalVendors;
         }
 
-        private static void WriteVendorEntity(BinaryWriter writer, VendorEntity vendor)
+        private void WriteVendorEntity(BinaryWriter writer, VendorEntity vendor)
         {
             // Write location-identifying data
             writer.Write(vendor.IsSign);
@@ -860,7 +862,7 @@ namespace UORespawnApp.Scripts.Services
             WriteStringList(writer, vendor.VendorList);
         }
 
-        private static VendorEntity ReadVendorEntity(BinaryReader reader, int mapId)
+        private VendorEntity ReadVendorEntity(BinaryReader reader, int mapId)
         {
             var isSign = reader.ReadBoolean();
             var signType = (SignTypes)reader.ReadInt32();
@@ -896,7 +898,7 @@ namespace UORespawnApp.Scripts.Services
         /// <summary>
         /// Write a list of strings to binary
         /// </summary>
-        private static void WriteStringList(BinaryWriter writer, List<string> list)
+        private void WriteStringList(BinaryWriter writer, List<string> list)
         {
             writer.Write(list?.Count ?? 0);
 
@@ -912,7 +914,7 @@ namespace UORespawnApp.Scripts.Services
         /// <summary>
         /// Read a list of strings from binary
         /// </summary>
-        private static List<string> ReadStringList(BinaryReader reader)
+        private List<string> ReadStringList(BinaryReader reader)
         {
             int count = reader.ReadInt32();
 

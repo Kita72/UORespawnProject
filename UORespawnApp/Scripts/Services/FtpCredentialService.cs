@@ -134,7 +134,7 @@ public class FtpCredentialService
     /// Creates a new credentials object (not yet saved).
     /// Call SaveCredentials() to persist.
     /// </summary>
-    public FtpCredentials CreateNewCredentials()
+    public static FtpCredentials CreateNewCredentials()
     {
         return new FtpCredentials
         {
@@ -161,7 +161,7 @@ public class FtpCredentialService
         {
             if (File.Exists(account.CredentialFilePath))
             {
-                File.Delete(account.CredentialFilePath);
+                FileUtility.Delete(account.CredentialFilePath);
                 Logger.Info($"Deleted credentials file for account '{account.Name}'");
             }
 

@@ -37,7 +37,7 @@ namespace UORespawnApp.Scripts.Utilities
         /// <summary>
         /// Load the map list from Resources/Raw/UOR_MapList.txt
         /// </summary>
-        internal static async Task LoadMapList()
+        internal static async Task LoadMapList(CancellationToken cancellationToken = default)
         {
             if (_isLoaded && MapList != null && MapList.Count > 0)
             {
@@ -58,7 +58,7 @@ namespace UORespawnApp.Scripts.Utilities
                     return;
                 }
 
-                var lines = await File.ReadAllLinesAsync(filePath);
+                var lines = await FileUtility.ReadAllLinesAsync(filePath, cancellationToken: cancellationToken);
 
                 foreach (var line in lines)
                 {

@@ -84,7 +84,8 @@ namespace UORespawnApp
                 CurrentMapId = mapId;
                 Logger.Info($"[Navigation] Map changed: {MapUtility.GetMapName(previousMap)} (ID:{previousMap}) → {MapUtility.GetMapName(mapId)} (ID:{mapId})");
 
-                Utility.SESSION?.SetMap(mapId);
+                if (Utility.SESSION != null)
+                    Utility.SESSION.CurrentMap = mapId;
 
                 OnMapChanged?.Invoke();
             }

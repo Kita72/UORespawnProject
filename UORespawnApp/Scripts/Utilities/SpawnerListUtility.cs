@@ -5,7 +5,7 @@ namespace UORespawnApp.Scripts.Utilities
 {
     internal static partial class SpawnerListUtility
     {
-        internal static readonly string SpawnersFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", "Raw", "UOR_SpawnerList.txt");
+        internal static string SpawnersFile => PathConstants.GetSpawnerListFilePath();
 
         internal static List<XMLSpawnPoint> Spawns { get; private set; } = [];
 
@@ -34,7 +34,7 @@ namespace UORespawnApp.Scripts.Utilities
                 {
                     Spawns.Clear();
 
-                    string[] lines = File.ReadAllLines(fileLoc);
+                    string[] lines = FileUtility.ReadAllLines(fileLoc);
 
                     foreach (string line in lines)
                     {

@@ -437,7 +437,7 @@
             if (!MapDisplayUtility.HasSpawnData)
             {
                 Logger.Info("Loading spawn statistics...");
-                MapDisplayUtility.InstantiateStatData();
+                MapDisplayUtility.LoadSpawnStats();
 
                 if (!MapDisplayUtility.HasSpawnData)
                 {

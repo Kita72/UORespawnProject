@@ -19,8 +19,9 @@ namespace UORespawnApp.Scripts.Services;
 /// 
 /// This ensures all packs stay aligned with the server's current data.
 /// </summary>
-public class SpawnPackSyncService
+public class SpawnPackSyncService(BinarySerializationService binarySerializationService)
 {
+    private readonly BinarySerializationService _binarySerializationService = binarySerializationService;
     private int _creaturesRemoved;
     private int _regionsRemoved;
     private int _vendorLocationsRemoved;
@@ -34,7 +35,7 @@ public class SpawnPackSyncService
     /// 1. Active pack data is aligned with server
     /// 2. Backup packs are aligned (so Reset to Default works correctly)
     /// </summary>
-    public async Task SyncAllPacksAsync()
+    public async Task SyncAllPacksAsync(CancellationToken cancellationToken = default)
     {
         Logger.Info("[PackSync] Starting spawn data synchronization with server data...");
 
@@ -73,7 +74,7 @@ public class SpawnPackSyncService
                 // 2. Sync ALL pack folders (Approved, Created, Imported)
                 // This ensures Reset to Default and switching packs produces aligned data
                 SyncAllPackFolders(validCreatures, validRegions, validVendors, validSignLocations, validHiveLocations);
-            });
+            }, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -143,7 +144,7 @@ public class SpawnPackSyncService
     /// <summary>
     /// Syncs a single pack folder by reading, cleaning, and writing back the spawn files.
     /// </summary>
-    private bool SyncPackFolder(
+    private static bool SyncPackFolder(
         string packFolder,
         HashSet<string> validCreatures,
         HashSet<string> validRegions,
@@ -272,10 +273,10 @@ public class SpawnPackSyncService
     {
         try
         {
-            BinarySerializationService.SaveBoxSpawns();
-            BinarySerializationService.SaveTileSpawns();
-            BinarySerializationService.SaveRegionSpawns();
-            BinarySerializationService.SaveVendorSpawns();
+            _binarySerializationService.SaveBoxSpawns();
+            _binarySerializationService.SaveTileSpawns();
+            _binarySerializationService.SaveRegionSpawns();
+            _binarySerializationService.SaveVendorSpawns();
             Logger.Info("[PackSync] Saved synchronized spawn data to active pack");
         }
         catch (Exception ex)

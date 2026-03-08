@@ -18,6 +18,7 @@ namespace UORespawnApp.Scripts.Services;
 public class MapImageCacheService
 {
     private readonly Dictionary<int, CachedMapImage> _cache = [];
+    private readonly HashSet<int> _preloading = [];
     private readonly Lock _lock = new();
 
     /// <summary>
@@ -131,15 +132,22 @@ public class MapImageCacheService
     {
         foreach (var mapId in mapIds)
         {
-            // Skip if already cached
+            bool shouldLoad;
             lock (_lock)
             {
-                if (_cache.ContainsKey(mapId))
-                    continue;
+                shouldLoad = !_cache.ContainsKey(mapId) && _preloading.Add(mapId);
             }
 
-            // Load into cache
-            LoadAndCacheMap(mapId);
+            if (!shouldLoad) continue;
+
+            try
+            {
+                LoadAndCacheMap(mapId);
+            }
+            finally
+            {
+                lock (_lock) { _preloading.Remove(mapId); }
+            }
         }
     }
 

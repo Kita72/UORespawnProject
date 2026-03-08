@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using System.Collections.Generic;
 
 using Server.Mobiles;
@@ -183,7 +184,7 @@ internal static class GameManager
 
             var allTypes = Assembly.GetExecutingAssembly().GetTypes();
 
-            var types = allTypes.Where(t => IsValidSpawn(t)).Select(t => t.Name).ToList();
+            List<string> types = [..allTypes.Where(t => IsValidSpawn(t)).Select(t => t.Name)];
 
             types.Sort();
 
@@ -408,38 +409,42 @@ internal static class GameManager
             return null;
         }
 
-        string[] creatures = spawnNames.Split('|');
-        List<string> cleanedNames = [];
-        string cleanName;
+        var lookup = _BestiaryCache.GetAlternateLookup<ReadOnlySpan<char>>();
+        var span = spawnNames.AsSpan();
+        StringBuilder sb = null;
 
-        foreach (string creature in creatures)
+        foreach (Range range in span.Split('|'))
         {
-            if (string.IsNullOrWhiteSpace(creature))
+            var creature = span[range].Trim();
+
+            if (creature.IsEmpty)
             {
                 continue;
             }
 
-            cleanName = ExtractCleanTypeName(creature);
+            var cleanName = ExtractCleanTypeName(creature);
 
-            if (string.IsNullOrWhiteSpace(cleanName))
+            if (cleanName.IsEmpty)
             {
                 continue;
             }
 
-            if (!_BestiaryCache.Contains(cleanName))
+            if (!lookup.Contains(cleanName))
             {
                 return null; // Invalid creature found, reject entire entry
             }
 
-            cleanedNames.Add(cleanName);
+            sb ??= new StringBuilder();
+
+            if (sb.Length > 0)
+            {
+                sb.Append('|');
+            }
+
+            sb.Append(cleanName);
         }
 
-        if (cleanedNames.Count == 0)
-        {
-            return null;
-        }
-
-        return string.Join("|", cleanedNames);
+        return sb?.Length > 0 ? sb.ToString() : null;
     }
 
     /// <summary>
@@ -451,14 +456,14 @@ internal static class GameManager
     /// - "GargoyleDestroyer, /blessed/true/..." -> "GargoyleDestroyer"
     /// - "MyrmidexQueen/Cantwalk/true" -> "MyrmidexQueen"
     /// </summary>
-    private static string ExtractCleanTypeName(string rawName)
+    private static ReadOnlySpan<char> ExtractCleanTypeName(ReadOnlySpan<char> rawName)
     {
-        if (string.IsNullOrWhiteSpace(rawName))
+        if (rawName.IsWhiteSpace())
         {
-            return null;
+            return [];
         }
 
-        string name = rawName.Trim();
+        var name = rawName.Trim();
 
         // Handle comma first (e.g., "tribewarrior,Kurak" or "GargoyleDestroyer, /blessed")
         int commaIndex = name.IndexOf(',');

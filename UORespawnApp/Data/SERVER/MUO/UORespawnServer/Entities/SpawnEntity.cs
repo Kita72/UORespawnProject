@@ -157,20 +157,20 @@ internal class SpawnEntity
     {
         IsNight = UOR_Utility.IsNight(Facet, Location);
 
-        Name = BoxSpawner.TryBoxSpawn(this);
-
-        if (!string.IsNullOrEmpty(Name))
-        {
-            SpawnType = SpawnTypes.Box;
-
-            return;
-        }
-
         if (IsDungeon || IsTown)
         {
             Name = RegionSpawner.TryRegionSpawn(this);
 
             SpawnType = SpawnTypes.Region;
+
+            return;
+        }
+
+        Name = BoxSpawner.TryBoxSpawn(this);
+
+        if (!string.IsNullOrEmpty(Name))
+        {
+            SpawnType = SpawnTypes.Box;
 
             return;
         }
@@ -186,22 +186,25 @@ internal class SpawnEntity
 
         Name = TileSpawner.TryTileSpawn(this);
 
-        SpawnType = SpawnTypes.Tile;
-
         // In case we fail to get name!
         if (string.IsNullOrEmpty(Name))
         {
-            if (UOR_Settings.ENABLE_DEBUG)
-            {
-                Name = nameof(PlaceHolder);
+            Name = TileSpawner.TryTileSpawn(this);
 
-                UOR_Utility.SendMsg(ConsoleColor.Yellow, "SetSpawn() : [PlaceHolder]");
-            }
-            else
+            if (string.IsNullOrEmpty(Name))
             {
-                Name = nameof(WanderingHealer);
+                if (UOR_Settings.ENABLE_DEBUG)
+                {
+                    Name = nameof(PlaceHolder);
 
-                UOR_Utility.SendMsg(ConsoleColor.Yellow, "SetSpawn() : [WanderingHealer]");
+                    UOR_Utility.SendMsg(ConsoleColor.Yellow, "SetSpawn() : [PlaceHolder]");
+                }
+                else
+                {
+                    Name = nameof(WanderingHealer);
+
+                    UOR_Utility.SendMsg(ConsoleColor.Yellow, "SetSpawn() : [WanderingHealer]");
+                }
             }
         }
     }

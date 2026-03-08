@@ -1,3 +1,5 @@
+using UORespawnApp.Scripts.Utilities;
+
 namespace UORespawnApp.Scripts.Services;
 
 /// <summary>
@@ -7,7 +9,7 @@ namespace UORespawnApp.Scripts.Services;
 public class DebugService
 {
     private readonly List<DebugLogEntry> _logEntries = [];
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
     
     /// <summary>
     /// Maximum number of log entries to keep in memory (prevents unbounded growth)
@@ -93,7 +95,7 @@ public class DebugService
 
             if (!File.Exists(logFile)) return;
 
-            var lines = File.ReadAllLines(logFile);
+            var lines = FileUtility.ReadAllLines(logFile);
 
             foreach (var line in lines)
             {

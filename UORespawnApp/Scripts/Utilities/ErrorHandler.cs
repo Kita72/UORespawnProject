@@ -7,6 +7,12 @@ namespace UORespawnApp.Scripts.Utilities;
 public static class ErrorHandler
 {
     /// <summary>
+    /// Reference to ToastService for user-facing error notifications.
+    /// Set during app startup via Utility.SetServices().
+    /// </summary>
+    public static Scripts.Services.ToastService? ToastService { get; set; }
+
+    /// <summary>
     /// Handles an exception by logging it and optionally notifying the user.
     /// Use for recoverable errors where the operation can continue.
     /// </summary>
@@ -21,8 +27,7 @@ public static class ErrorHandler
 
         if (notifyUser)
         {
-            // Toast notification would be shown here if ToastService was injected
-            // For now, we just log - components can check the return message
+            ToastService?.ShowError(message);
         }
 
         return message;

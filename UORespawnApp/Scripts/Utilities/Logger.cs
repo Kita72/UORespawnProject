@@ -1,3 +1,4 @@
+using System.Threading.Channels;
 using UORespawnApp.Scripts.Services;
 
 namespace UORespawnApp.Scripts.Utilities;
@@ -11,9 +12,11 @@ namespace UORespawnApp.Scripts.Utilities;
 public static class Logger
 {
     private static readonly string LogDirectory;
-    private static readonly Lock _lock = new();
     private static string? _currentLogFile;
     private static bool _initialized = false;
+
+    private static readonly Channel<string> _channel = Channel.CreateUnbounded<string>(
+        new UnboundedChannelOptions { SingleReader = true, AllowSynchronousContinuations = false });
 
     /// <summary>
     /// Reference to DebugService for in-app log visualization.
@@ -23,17 +26,35 @@ public static class Logger
 
     static Logger()
     {
-        // Store logs in the Data/Logs folder alongside spawn files and maps
         LogDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data", "Logs");
+
+        // Background writer: drains the channel and appends to the log file
+        Task.Run(async () =>
+        {
+            await foreach (var entry in _channel.Reader.ReadAllAsync())
+            {
+                if (_currentLogFile == null) continue;
+                try
+                {
+                    await File.AppendAllTextAsync(_currentLogFile, entry + Environment.NewLine);
+                }
+                catch
+                {
+                    // Silent fail — never crash the app because of logging
+                }
+            }
+        });
     }
+
+    private static readonly Lock _initLock = new();
 
     private static void EnsureInitialized()
     {
         if (_initialized) return;
 
-        lock (_lock)
+        lock (_initLock)
         {
-            if (_initialized) return; // Double-check inside lock
+            if (_initialized) return;
 
             try
             {
@@ -104,22 +125,17 @@ public static class Logger
 
     private static void Write(string level, string message)
     {
-        // Skip file logging if initialization failed (log directory couldn't be created)
         if (_currentLogFile == null)
             return;
 
         try
         {
             var logEntry = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] [{level,-5}] {message}";
-
-            lock (_lock)
-            {
-                File.AppendAllText(_currentLogFile, logEntry + Environment.NewLine);
-            }
+            _channel.Writer.TryWrite(logEntry);
         }
         catch
         {
-            // Silent fail - never crash the app because of logging
+            // Silent fail — never crash the app because of logging
         }
     }
 
@@ -142,5 +158,14 @@ public static class Logger
         {
             // Silent fail on cleanup
         }
+    }
+
+    /// <summary>
+    /// Signals the background drain task to complete after flushing all queued entries.
+    /// Call once on app shutdown after all data has been saved.
+    /// </summary>
+    public static void Shutdown()
+    {
+        _channel.Writer.Complete();
     }
 }

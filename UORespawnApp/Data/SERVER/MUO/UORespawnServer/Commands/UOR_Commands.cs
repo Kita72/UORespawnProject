@@ -78,7 +78,7 @@ internal static class UOR_Commands
     {
         foreach (var mob in pm.Map.GetMobilesInRange(pm.Location, 40))
         {
-            if (mob is BaseCreature bc && bc.MySpawner is UOR_Spawner)
+            if (mob is BaseCreature bc && bc.Spawner is UOR_Spawner)
             {
                 bc.Say("I AM RESPAWNED!");
             }

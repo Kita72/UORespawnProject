@@ -9,6 +9,8 @@ namespace UORespawnApp.Scripts.Services
         private readonly FileSystemWatcher? _commandsWatcher;
         private readonly Action? _onDataChanged;
         private readonly Action? _onCommandsDetected;
+        private readonly BinarySerializationService _binarySerializationService;
+        private readonly SpawnPackSyncService _spawnPackSyncService;
         private CancellationTokenSource? _outputDelayTokenSource;
         private CancellationTokenSource? _commandsDelayTokenSource;
         private const int DELAY_MILLISECONDS = 1000;
@@ -16,8 +18,10 @@ namespace UORespawnApp.Scripts.Services
         public static bool IsSupported => OperatingSystem.IsWindows() || OperatingSystem.IsMacOS();
         public bool IsActive => _outputWatcher != null || _commandsWatcher != null;
 
-        public DataWatcher(Action? onDataChanged = null, Action? onCommandsDetected = null)
+        public DataWatcher(BinarySerializationService binarySerializationService, SpawnPackSyncService spawnPackSyncService, Action? onDataChanged = null, Action? onCommandsDetected = null)
         {
+            _binarySerializationService = binarySerializationService;
+            _spawnPackSyncService = spawnPackSyncService;
             _onDataChanged = onDataChanged;
             _onCommandsDetected = onCommandsDetected;
 
@@ -138,31 +142,31 @@ namespace UORespawnApp.Scripts.Services
                 // Process relevant file types
                 if (PathConstants.IsBestiaryFile(e.Name) || PathConstants.IsSpawnerListFile(e.Name))
                 {
-                    await ReloadBestiary().ConfigureAwait(false);
+                    await ReloadBestiary(newSource.Token).ConfigureAwait(false);
                 }
                 else if (PathConstants.IsRegionListFile(e.Name))
                 {
-                    await ReloadRegionList().ConfigureAwait(false);
+                    await ReloadRegionList(newSource.Token).ConfigureAwait(false);
                 }
                 else if (PathConstants.IsVendorListFile(e.Name))
                 {
-                    await ReloadVendorList().ConfigureAwait(false);
+                    await ReloadVendorList(newSource.Token).ConfigureAwait(false);
                 }
                 else if (PathConstants.IsSignDataFile(e.Name))
                 {
-                    await ReloadSignData().ConfigureAwait(false);
+                    await ReloadSignData(newSource.Token).ConfigureAwait(false);
                 }
                 else if (PathConstants.IsHiveDataFile(e.Name))
                 {
-                    await ReloadHiveData().ConfigureAwait(false);
+                    await ReloadHiveData(newSource.Token).ConfigureAwait(false);
                 }
                 else if (PathConstants.IsMapListFile(e.Name))
                 {
-                    await ReloadMapList().ConfigureAwait(false);
+                    await ReloadMapList(newSource.Token).ConfigureAwait(false);
                 }
                 else if (PathConstants.IsTileListFile(e.Name))
                 {
-                    await ReloadTileList().ConfigureAwait(false);
+                    await ReloadTileList(newSource.Token).ConfigureAwait(false);
                 }
 
                 _onDataChanged?.Invoke();
@@ -177,7 +181,7 @@ namespace UORespawnApp.Scripts.Services
             }
         }
 
-        private static async Task ReloadBestiary()
+        private static async Task ReloadBestiary(CancellationToken cancellationToken = default)
         {
             try
             {
@@ -201,7 +205,7 @@ namespace UORespawnApp.Scripts.Services
                 // Clear existing list to force reload with server-generated data
                 BestiaryListUtility.ClearBestiaryList();
 
-                await BestiaryListUtility.LoadBestiaryList();
+                await BestiaryListUtility.LoadBestiaryList(cancellationToken);
 
                 Logger.Info("Bestiary reloaded from server");
             }
@@ -211,14 +215,14 @@ namespace UORespawnApp.Scripts.Services
             }
         }
 
-        private static async Task ReloadRegionList()
+        private static async Task ReloadRegionList(CancellationToken cancellationToken = default)
         {
             try
             {
                 // Clear existing region data to force reload with server-generated data
                 RegionListUtility.ClearRegionData();
 
-                await RegionListUtility.EnsureLoadedAsync();
+                await RegionListUtility.EnsureLoadedAsync(cancellationToken);
 
                 Logger.Info("Region list reloaded from server");
             }
@@ -228,7 +232,7 @@ namespace UORespawnApp.Scripts.Services
             }
         }
 
-        private static async Task ReloadVendorList()
+        private static async Task ReloadVendorList(CancellationToken cancellationToken = default)
         {
             try
             {
@@ -252,7 +256,7 @@ namespace UORespawnApp.Scripts.Services
                 // Clear existing list to force reload with server-generated data
                 VendorListUtility.ClearVendorList();
 
-                await VendorListUtility.LoadVendorList();
+                await VendorListUtility.LoadVendorList(cancellationToken);
 
                 Logger.Info("Vendor list reloaded from server");
             }
@@ -262,7 +266,7 @@ namespace UORespawnApp.Scripts.Services
             }
         }
 
-        private static async Task ReloadSignData()
+        private async Task ReloadSignData(CancellationToken cancellationToken = default)
         {
             try
             {
@@ -286,13 +290,12 @@ namespace UORespawnApp.Scripts.Services
                 // Clear existing data to force reload with server-generated data
                 SignDataUtility.ClearSignData();
 
-                await SignDataUtility.EnsureLoadedAsync();
+                await SignDataUtility.EnsureLoadedAsync(cancellationToken);
 
                 Logger.Info($"Sign data reloaded from server ({SignDataUtility.GetTotalSignCount()} locations)");
 
                 // Sync all packs to remove vendor spawns for locations that no longer exist
-                var syncService = new SpawnPackSyncService();
-                await syncService.SyncAllPacksAsync();
+                await _spawnPackSyncService.SyncAllPacksAsync(cancellationToken);
                 Logger.Info("Spawn packs synced after sign data update");
             }
             catch (Exception ex)
@@ -301,7 +304,7 @@ namespace UORespawnApp.Scripts.Services
             }
         }
 
-        private static async Task ReloadHiveData()
+        private async Task ReloadHiveData(CancellationToken cancellationToken = default)
         {
             try
             {
@@ -325,13 +328,12 @@ namespace UORespawnApp.Scripts.Services
                 // Clear existing data to force reload with server-generated data
                 HiveDataUtility.ClearHiveData();
 
-                await HiveDataUtility.EnsureLoadedAsync();
+                await HiveDataUtility.EnsureLoadedAsync(cancellationToken);
 
                 Logger.Info($"Hive data reloaded from server ({HiveDataUtility.GetTotalHiveCount()} locations)");
 
                 // Sync all packs to remove vendor spawns for locations that no longer exist
-                var syncService = new SpawnPackSyncService();
-                await syncService.SyncAllPacksAsync();
+                await _spawnPackSyncService.SyncAllPacksAsync(cancellationToken);
                 Logger.Info("Spawn packs synced after hive data update");
             }
             catch (Exception ex)
@@ -340,7 +342,7 @@ namespace UORespawnApp.Scripts.Services
             }
         }
 
-        private static async Task ReloadMapList()
+        private static async Task ReloadMapList(CancellationToken cancellationToken = default)
         {
             try
             {
@@ -364,7 +366,7 @@ namespace UORespawnApp.Scripts.Services
                 // Clear existing list to force reload with server-generated data
                 MapListUtility.ClearMapList();
 
-                await MapListUtility.LoadMapList();
+                await MapListUtility.LoadMapList(cancellationToken);
 
                 Logger.Info($"Map list reloaded from server ({MapListUtility.GetMapCount()} maps)");
             }
@@ -374,7 +376,7 @@ namespace UORespawnApp.Scripts.Services
             }
         }
 
-        private static async Task ReloadTileList()
+        private static async Task ReloadTileList(CancellationToken cancellationToken = default)
         {
             try
             {
@@ -398,7 +400,7 @@ namespace UORespawnApp.Scripts.Services
                 // Clear existing list to force reload with server-generated data
                 TileListUtility.ClearTileList();
 
-                await TileListUtility.LoadTileList();
+                await TileListUtility.LoadTileList(cancellationToken);
 
                 Logger.Info($"Tile list reloaded from server ({TileListUtility.GetTileList().Count} tile types)");
             }
@@ -440,11 +442,7 @@ namespace UORespawnApp.Scripts.Services
 
                 Logger.Info($"Command file changed: {e.Name}");
 
-                // Sync command files from server to local
-                var commandService = new CommandService();
-                commandService.SyncCommandsFromServer();
-
-                // Notify UI that commands are available
+                // Notify UI that commands are available (BackgroundDataLoader callback handles sync)
                 _onCommandsDetected?.Invoke();
             }
             catch (TaskCanceledException)

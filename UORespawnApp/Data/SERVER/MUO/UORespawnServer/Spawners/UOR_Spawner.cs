@@ -181,16 +181,16 @@ public abstract partial class UOR_Spawner : Item, ISpawner
     /// </summary>
     public static List<BaseCreature> FindAll(UOR_Spawner spawner)
     {
-        List<BaseCreature> results = [];
-
         if (spawner == null)
         {
-            return results;
+            return [];
         }
 
-        foreach (var mobile in World.Mobiles.Values)
+        List<BaseCreature> results = [];
+
+        foreach (uint serial in spawner._spawnedSerials)
         {
-            if (mobile is BaseCreature bc && !bc.Deleted && bc.Spawner == spawner)
+            if (World.FindMobile((Serial)serial) is BaseCreature { Deleted: false } bc)
             {
                 results.Add(bc);
             }
@@ -355,7 +355,7 @@ public sealed partial class UOR_MobSpawner : UOR_Spawner
     /// </summary>
     public static List<BaseCreature> GetAllSpawn()
     {
-        return FindAll<UOR_MobSpawner>();
+        return FindAll(Instance);
     }
 
     /// <summary>
@@ -484,7 +484,7 @@ public sealed partial class UOR_VendorSpawner : UOR_Spawner
     /// </summary>
     public static List<BaseCreature> GetAllSpawn()
     {
-        return FindAll<UOR_VendorSpawner>();
+        return FindAll(Instance);
     }
 
     /// <summary>
@@ -531,9 +531,9 @@ public sealed partial class UOR_VendorSpawner : UOR_Spawner
     {
         List<BaseVendor> results = [];
 
-        foreach (var mobile in World.Mobiles.Values)
+        foreach (var bc in FindAll(Instance))
         {
-            if (mobile is BaseVendor bv && !bv.Deleted && bv.Spawner is UOR_VendorSpawner)
+            if (bc is BaseVendor bv)
             {
                 results.Add(bv);
             }

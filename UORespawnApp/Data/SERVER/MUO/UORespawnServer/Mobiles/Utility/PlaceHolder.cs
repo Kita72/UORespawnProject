@@ -86,7 +86,7 @@ internal partial class PlaceHolder : BaseCreature
         base.OnAfterSpawn();
     }
 
-    [AfterDeserialization]
+    [AfterDeserialization(false)]
     private void AfterDeserialization()
     {
         Delete();

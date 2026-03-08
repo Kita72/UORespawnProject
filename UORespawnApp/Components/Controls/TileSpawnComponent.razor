@@ -6,9 +6,8 @@
 @inject IJSRuntime JS
 @inject ViewService ViewService
 @inject ToastService ToastService
-@implements IDisposable
 
-<div class="container-fluid p-3">
+<div>
     <!-- Simplified Header with Map Selector -->
     <div class="alert alert-dark mb-3 d-flex justify-content-between align-items-center shadow-sm">
         <div class="d-flex align-items-center gap-2">
@@ -317,7 +316,7 @@
         // Find or create TileSpawnEntity for this tile on current map
         if (Utility.SESSION != null)
         {
-            var currentMapId = Utility.SESSION.Current_Map;
+            var currentMapId = Utility.SESSION.CurrentMap;
 
             if (!Utility.TileSpawns.TryGetValue(currentMapId, out var tileList))
             {
@@ -454,7 +453,7 @@
     {
         if (Utility.SESSION == null) return 0;
 
-        var currentMapId = Utility.SESSION.Current_Map;
+        var currentMapId = Utility.SESSION.CurrentMap;
 
         if (!Utility.TileSpawns.TryGetValue(currentMapId, out var tileList))
             return 0;
@@ -612,7 +611,7 @@
     {
         if (Utility.SESSION == null) return 0;
 
-        if (!Utility.TileSpawns.TryGetValue(Utility.SESSION.Current_Map, out var tileList))
+        if (!Utility.TileSpawns.TryGetValue(Utility.SESSION.CurrentMap, out var tileList))
         {
             return 0;
         }
@@ -641,10 +640,10 @@
     {
         ViewService.CurrentMapId = newMapId;
 
-        // Update SESSION's Current_Map - this is what the tile data uses
+        // Update SESSION's CurrentMap - this is what the tile data uses
         if (Utility.SESSION != null)
         {
-            Utility.SESSION.Current_Map = newMapId;
+            Utility.SESSION.CurrentMap = newMapId;
         }
 
         // Re-select current tile for the new map (reloads entity data for new map)
@@ -654,9 +653,5 @@
         }
 
         StateHasChanged();
-    }
-
-    public void Dispose()
-    {
     }
 }

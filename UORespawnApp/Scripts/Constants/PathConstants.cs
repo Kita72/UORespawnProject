@@ -281,20 +281,8 @@ namespace UORespawnApp.Scripts.Constants
         /// Get the local data folder path (editor's Data/UOR_DATA/)
         /// This is where the editor stores local backup copies
         /// </summary>
-        public static string LocalDataPath
-        {
-            get
-            {
-                var dataPath = Path.Combine(BASE_DIR, DATA_FOLDER, UOR_DATA_SUBFOLDER);
-                
-                if (!Directory.Exists(dataPath))
-                {
-                    Directory.CreateDirectory(dataPath);
-                }
-                
-                return dataPath;
-            }
-        }
+        public static string LocalDataPath =>
+            Path.Combine(BASE_DIR, DATA_FOLDER, UOR_DATA_SUBFOLDER);
         
         /// <summary>
         /// Get the server data folder path (ServerDataFolder/UORespawn/)
@@ -476,20 +464,8 @@ namespace UORespawnApp.Scripts.Constants
         /// Converted to base64 data URLs when loaded for Blazor WebView display
         /// See MapUtility.cs for full map storage architecture documentation
         /// </summary>
-        public static string MapsPath
-        {
-            get
-            {
-                var mapsPath = Path.Combine(BASE_DIR, DATA_FOLDER, MAPS_SUBFOLDER);
-
-                if (!Directory.Exists(mapsPath))
-                {
-                    Directory.CreateDirectory(mapsPath);
-                }
-
-                return mapsPath;
-            }
-        }
+        public static string MapsPath =>
+            Path.Combine(BASE_DIR, DATA_FOLDER, MAPS_SUBFOLDER);
 
         /// <summary>
         /// Get the tiles folder path (Data/TILES/)
@@ -497,96 +473,36 @@ namespace UORespawnApp.Scripts.Constants
         /// Images named as lowercase tile name (e.g., grass.png, water.png)
         /// NO_DRAW.png used as fallback for tiles without images
         /// </summary>
-        public static string TilesPath
-        {
-            get
-            {
-                var tilesPath = Path.Combine(BASE_DIR, DATA_FOLDER, TILES_SUBFOLDER);
-
-                if (!Directory.Exists(tilesPath))
-                {
-                    Directory.CreateDirectory(tilesPath);
-                }
-
-                return tilesPath;
-            }
-        }
+        public static string TilesPath =>
+            Path.Combine(BASE_DIR, DATA_FOLDER, TILES_SUBFOLDER);
 
         /// <summary>
         /// Get the packs folder path (Data/PACKS/)
         /// Used for storing spawn pack backups and staging data
         /// </summary>
-        public static string PacksPath
-        {
-            get
-            {
-                var packsPath = Path.Combine(BASE_DIR, DATA_FOLDER, PACKS_SUBFOLDER);
-
-                if (!Directory.Exists(packsPath))
-                {
-                    Directory.CreateDirectory(packsPath);
-                }
-
-                return packsPath;
-            }
-        }
+        public static string PacksPath =>
+            Path.Combine(BASE_DIR, DATA_FOLDER, PACKS_SUBFOLDER);
 
         /// <summary>
         /// Get the approved packs folder path (Data/PACKS/Approved/)
         /// Contains unpacked approved packs ready to use
         /// </summary>
-        public static string PacksApprovedPath
-        {
-            get
-            {
-                var path = Path.Combine(PacksPath, PACKS_APPROVED_SUBFOLDER);
-
-                if (!Directory.Exists(path))
-                {
-                    Directory.CreateDirectory(path);
-                }
-
-                return path;
-            }
-        }
+        public static string PacksApprovedPath =>
+            Path.Combine(PacksPath, PACKS_APPROVED_SUBFOLDER);
 
         /// <summary>
         /// Get the imported packs folder path (Data/PACKS/Imported/)
         /// Contains user-imported packs
         /// </summary>
-        public static string PacksImportedPath
-        {
-            get
-            {
-                var path = Path.Combine(PacksPath, PACKS_IMPORTED_SUBFOLDER);
-
-                if (!Directory.Exists(path))
-                {
-                    Directory.CreateDirectory(path);
-                }
-
-                return path;
-            }
-        }
+        public static string PacksImportedPath =>
+            Path.Combine(PacksPath, PACKS_IMPORTED_SUBFOLDER);
 
         /// <summary>
         /// Get the created packs folder path (Data/PACKS/Created/)
         /// Contains user-created packs (made from scratch in the editor)
         /// </summary>
-        public static string PacksCreatedPath
-        {
-            get
-            {
-                var path = Path.Combine(PacksPath, PACKS_CREATED_SUBFOLDER);
-
-                if (!Directory.Exists(path))
-                {
-                    Directory.CreateDirectory(path);
-                }
-
-                return path;
-            }
-        }
+        public static string PacksCreatedPath =>
+            Path.Combine(PacksPath, PACKS_CREATED_SUBFOLDER);
 
         /// <summary>
         /// Currently active pack's data folder path.
@@ -778,6 +694,14 @@ namespace UORespawnApp.Scripts.Constants
         public static string GetRegionListFilePath()
         {
             return Path.Combine(ResourcesRawPath, REGION_LIST_FILENAME);
+        }
+
+        /// <summary>
+        /// Get the full path to the spawner list file in Resources/Raw
+        /// </summary>
+        public static string GetSpawnerListFilePath()
+        {
+            return Path.Combine(ResourcesRawPath, SPAWNER_LIST_FILENAME);
         }
 
         /// <summary>

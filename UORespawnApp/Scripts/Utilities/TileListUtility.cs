@@ -29,7 +29,7 @@ namespace UORespawnApp.Scripts.Utilities
         /// <summary>
         /// Load the tile list from Resources/Raw/UOR_TileList.txt
         /// </summary>
-        internal static async Task LoadTileList()
+        internal static async Task LoadTileList(CancellationToken cancellationToken = default)
         {
             if (_isLoaded && TileNameList != null && TileNameList.Count > 0)
             {
@@ -49,7 +49,7 @@ namespace UORespawnApp.Scripts.Utilities
                     return;
                 }
 
-                var lines = await File.ReadAllLinesAsync(filePath);
+                var lines = await FileUtility.ReadAllLinesAsync(filePath, cancellationToken: cancellationToken);
 
                 foreach (var line in lines)
                 {

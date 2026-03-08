@@ -13,10 +13,10 @@ namespace UORespawnApp.Scripts.Services;
 /// - Upload (Editor → Server): Binary spawn files (.bin) and settings (.csv) to INPUT/
 /// - Download (Server → Editor): Reference files (.txt) from OUTPUT/
 /// </summary>
-public class FtpSyncService
+public class FtpSyncService(FtpConnectionService ftpConnection, FtpCredentialService credentialService)
 {
-    private readonly FtpConnectionService _ftpConnection;
-    private readonly FtpCredentialService _credentialService;
+    private readonly FtpConnectionService _ftpConnection = ftpConnection;
+    private readonly FtpCredentialService _credentialService = credentialService;
 
     /// <summary>
     /// Event raised when sync operation starts.
@@ -32,12 +32,6 @@ public class FtpSyncService
     /// Event raised when sync operation completes.
     /// </summary>
     public event EventHandler<SyncResultEventArgs>? SyncCompleted;
-
-    public FtpSyncService(FtpConnectionService ftpConnection, FtpCredentialService credentialService)
-    {
-        _ftpConnection = ftpConnection;
-        _credentialService = credentialService;
-    }
 
     /// <summary>
     /// Checks if FTP sync is available (credentials configured).

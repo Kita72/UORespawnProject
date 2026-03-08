@@ -64,10 +64,7 @@
             }
 
             var tempPath = Path.Combine(Path.GetTempPath(), "UORespawn_SpawnPack.zip");
-            if (File.Exists(tempPath))
-            {
-                File.Delete(tempPath);
-            }
+            FileUtility.Delete(tempPath);
 
             using (var zipArchive = System.IO.Compression.ZipFile.Open(tempPath, System.IO.Compression.ZipArchiveMode.Create))
             {
@@ -80,7 +77,7 @@
 
 #if WINDOWS
             var downloadsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", "UORespawn_SpawnPack.zip");
-            File.Copy(tempPath, downloadsPath, true);
+            FileUtility.Copy(tempPath, downloadsPath, overwrite: true);
 
             exportMessage = $"Spawn pack exported to Downloads folder:\n{downloadsPath}";
             exportSuccess = true;
@@ -89,10 +86,10 @@
             {
                 System.Diagnostics.Process.Start("explorer.exe", Path.GetDirectoryName(downloadsPath) ?? "");
             }
-            catch { }
+            catch (Exception openEx) { Logger.Warning($"Could not open explorer: {openEx.Message}"); }
 #elif MACCATALYST
             var downloadsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", "UORespawn_SpawnPack.zip");
-            File.Copy(tempPath, downloadsPath, true);
+            FileUtility.Copy(tempPath, downloadsPath, overwrite: true);
 
             exportMessage = $"Spawn pack exported to Downloads folder:\n{downloadsPath}";
             exportSuccess = true;
@@ -101,7 +98,7 @@
             {
                 System.Diagnostics.Process.Start("open", Path.GetDirectoryName(downloadsPath) ?? "");
             }
-            catch { }
+            catch (Exception openEx) { Logger.Warning($"Could not open Finder: {openEx.Message}"); }
 #else
             await Share.Default.RequestAsync(new ShareFileRequest
             {

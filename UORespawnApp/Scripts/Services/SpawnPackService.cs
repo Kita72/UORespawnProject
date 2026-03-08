@@ -13,7 +13,7 @@ namespace UORespawnApp.Scripts.Services
     ///   Data/PACKS/Imported/  - User-imported packs
     ///   Data/PACKS/Created/   - User-created packs
     /// </summary>
-    public class SpawnPackService
+    public class SpawnPackService(BinarySerializationService binarySerializationService, SpawnDataService spawnDataService)
     {
         private const string PackManifestFileName = "pack.json";
         private static readonly string[] PackDataFiles =
@@ -24,6 +24,11 @@ namespace UORespawnApp.Scripts.Services
             PathConstants.REGION_FILENAME,
             PathConstants.VENDOR_FILENAME
         ];
+        private static readonly JsonSerializerOptions _manifestJsonOptions = new() { WriteIndented = true };
+
+        private readonly BinarySerializationService _binarySerializationService = binarySerializationService;
+        private readonly SpawnDataService _spawnDataService = spawnDataService;
+        private bool _approvedPacksUnpacked = false;
 
         /// <summary>
         /// Ensures approved packs exist in the Approved folder.
@@ -31,6 +36,8 @@ namespace UORespawnApp.Scripts.Services
         /// </summary>
         public void UnpackApprovedPacks()
         {
+            if (_approvedPacksUnpacked) return;
+
             var approvedPath = PathConstants.PacksApprovedPath;
 
             Logger.Info($"[UnpackApprovedPacks] Approved path: {approvedPath}");
@@ -72,6 +79,8 @@ namespace UORespawnApp.Scripts.Services
                     Logger.Error($"Error unpacking approved pack: {zipFile}", ex);
                 }
             }
+
+            _approvedPacksUnpacked = true;
         }
 
         /// <summary>
@@ -103,7 +112,7 @@ namespace UORespawnApp.Scripts.Services
             }
 
             Logger.Info($"[SpawnPack] Loaded {packs.Count} approved packs");
-            return packs.OrderBy(p => p.Metadata.Name).ToList();
+            return [.. packs.OrderBy(p => p.Metadata.Name)];
         }
 
         /// <summary>
@@ -131,7 +140,7 @@ namespace UORespawnApp.Scripts.Services
             }
 
             Logger.Info($"[SpawnPack] Loaded {packs.Count} imported packs");
-            return packs.OrderBy(p => p.Metadata.Name).ToList();
+            return [.. packs.OrderBy(p => p.Metadata.Name)];
         }
 
         /// <summary>
@@ -159,7 +168,7 @@ namespace UORespawnApp.Scripts.Services
             }
 
             Logger.Info($"[SpawnPack] Loaded {packs.Count} created packs");
-            return packs.OrderBy(p => p.Metadata.Name).ToList();
+            return [.. packs.OrderBy(p => p.Metadata.Name)];
         }
 
         /// <summary>
@@ -167,11 +176,7 @@ namespace UORespawnApp.Scripts.Services
         /// </summary>
         public List<SpawnPackInfo> LoadAllPacks()
         {
-            var packs = new List<SpawnPackInfo>();
-            packs.AddRange(LoadApprovedPacks());
-            packs.AddRange(LoadCreatedPacks());
-            packs.AddRange(LoadImportedPacks());
-            return packs;
+            return [.. LoadApprovedPacks(), .. LoadCreatedPacks(), .. LoadImportedPacks()];
         }
 
         public List<SpawnPackInfo> LoadPacks()
@@ -179,7 +184,7 @@ namespace UORespawnApp.Scripts.Services
             return LoadAllPacks().OrderBy(p => p.Metadata.Name).ToList();
         }
 
-        public SpawnPackInfo? LoadPackInfo(string packFolder)
+        public static SpawnPackInfo? LoadPackInfo(string packFolder)
         {
             if (string.IsNullOrWhiteSpace(packFolder) || !Directory.Exists(packFolder))
             {
@@ -251,7 +256,7 @@ namespace UORespawnApp.Scripts.Services
                     }
 
                     var destinationFile = Path.Combine(destinationPath, fileName);
-                    File.Copy(sourceFile, destinationFile, true);
+                    FileUtility.Copy(sourceFile, destinationFile, overwrite: true);
                     Logger.Info($"[SpawnPack] Copied {fileName} to LocalDataPath");
                 }
 
@@ -262,31 +267,38 @@ namespace UORespawnApp.Scripts.Services
 
                 if (reloadAfterApply)
                 {
-                    // SUPPRESS pack sync during reload/save to preserve original bytes
-                    // This prevents byte-level differences that cause false "Modified" detection
                     PathConstants.SuppressPackSync = true;
 
-                    Logger.Info("[SpawnPack] Reloading data into memory...");
-                    // Load the pack data into memory
-                    Utility.LoadSettings();
-                    Utility.LoadBoxSpawnData();
-                    Utility.LoadTileSpawnData();
-                    Utility.LoadRegionSpawnData();
-                    Utility.LoadVendorSpawnData();
+                    try
+                    {
+                        Logger.Info("[SpawnPack] Reloading data into memory...");
+                        _spawnDataService.ClearBoxSpawns();
+                        _spawnDataService.InitializeBoxSpawns();
+                        _spawnDataService.ClearTileSpawns();
+                        _spawnDataService.InitializeTileSpawns();
+                        _spawnDataService.ClearRegionSpawns();
+                        _spawnDataService.InitializeRegionSpawns();
+                        _spawnDataService.ClearVendorSpawns();
+                        _spawnDataService.InitializeVendorSpawns();
 
-                    Logger.Info("[SpawnPack] Saving to sync data to server...");
-                    // Save to sync data to server (if linked)
-                    // Pack sync is suppressed to preserve original bytes
-                    Utility.SaveSettings();
-                    Utility.SaveSpawnData();
-                    Utility.SaveTileSpawnData();
-                    Utility.SaveRegionSpawnData();
-                    Utility.SaveVendorSpawnData();
+                        _binarySerializationService.LoadSettings();
+                        _binarySerializationService.LoadBoxSpawns();
+                        _binarySerializationService.LoadTileSpawns();
+                        _binarySerializationService.LoadRegionSpawns();
+                        _binarySerializationService.LoadVendorSpawns();
 
-                    // Re-enable pack sync for future user edits
-                    PathConstants.SuppressPackSync = false;
+                        Logger.Info("[SpawnPack] Saving to sync data to server...");
+                        _binarySerializationService.SaveSettings();
+                        _binarySerializationService.SaveBoxSpawns();
+                        _binarySerializationService.SaveTileSpawns();
+                        _binarySerializationService.SaveRegionSpawns();
+                        _binarySerializationService.SaveVendorSpawns();
+                    }
+                    finally
+                    {
+                        PathConstants.SuppressPackSync = false;
+                    }
 
-                    // Reset dirty flag - pack is freshly loaded, no changes yet
                     PathConstants.IsSpawnDataDirty = false;
 
                     Logger.Info("[SpawnPack] Data reload and server sync complete");
@@ -306,7 +318,7 @@ namespace UORespawnApp.Scripts.Services
         /// Validates a zip file contains valid spawn pack data files.
         /// Returns validation result with list of found files and any errors.
         /// </summary>
-        public (bool IsValid, string[] FoundFiles, string? Error) ValidateSpawnPackZip(string zipPath)
+        public static (bool IsValid, string[] FoundFiles, string? Error) ValidateSpawnPackZip(string zipPath)
         {
             if (string.IsNullOrWhiteSpace(zipPath) || !File.Exists(zipPath))
             {
@@ -360,7 +372,7 @@ namespace UORespawnApp.Scripts.Services
         /// <summary>
         /// Deletes an imported spawn pack. Only allows deletion of non-approved packs.
         /// </summary>
-        public (bool Success, string? Error) DeleteImportedPack(SpawnPackInfo pack)
+        public static (bool Success, string? Error) DeleteImportedPack(SpawnPackInfo pack)
         {
             if (pack == null)
             {
@@ -426,7 +438,7 @@ namespace UORespawnApp.Scripts.Services
         /// Gets the resolved data path for a pack (where the spawn data files are located).
         /// Returns the pack folder path if files are there, or the UOR_DATA subfolder if nested.
         /// </summary>
-        public string? GetPackDataPath(SpawnPackInfo pack)
+        public static string? GetPackDataPath(SpawnPackInfo pack)
         {
             if (pack == null || string.IsNullOrEmpty(pack.PackFolderPath))
             {
@@ -447,7 +459,7 @@ namespace UORespawnApp.Scripts.Services
 
             try
             {
-                var json = File.ReadAllText(manifestPath);
+                var json = FileUtility.ReadAllText(manifestPath);
                 var manifest = JsonSerializer.Deserialize<SpawnPackMetadata>(json);
                 if (manifest != null)
                 {
@@ -748,7 +760,7 @@ namespace UORespawnApp.Scripts.Services
         /// Saves current UOR_DATA files to a pack folder.
         /// Used to preserve current state before applying a different pack.
         /// </summary>
-        public bool SaveCurrentDataToPack(SpawnPackInfo pack)
+        public static bool SaveCurrentDataToPack(SpawnPackInfo pack)
         {
             if (pack == null || string.IsNullOrWhiteSpace(pack.PackFolderPath))
             {
@@ -766,7 +778,7 @@ namespace UORespawnApp.Scripts.Services
                     if (File.Exists(sourceFile))
                     {
                         var destinationFile = Path.Combine(packDataPath, fileName);
-                        File.Copy(sourceFile, destinationFile, overwrite: true);
+                        FileUtility.Copy(sourceFile, destinationFile, overwrite: true);
                     }
                 }
 
@@ -826,7 +838,7 @@ namespace UORespawnApp.Scripts.Services
                 {
                     imageFileName = $"preview{Path.GetExtension(imagePath)}";
                     var destImagePath = Path.Combine(packFolder, imageFileName);
-                    File.Copy(imagePath, destImagePath, overwrite: true);
+                    FileUtility.Copy(imagePath, destImagePath, overwrite: true);
                     Logger.Info($"[SpawnPack] Copied preview image: {imageFileName}");
                 }
 
@@ -845,8 +857,8 @@ namespace UORespawnApp.Scripts.Services
 
                 // Save pack.json
                 var manifestPath = Path.Combine(packFolder, PackManifestFileName);
-                var json = System.Text.Json.JsonSerializer.Serialize(metadata, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
-                File.WriteAllText(manifestPath, json);
+                var json = System.Text.Json.JsonSerializer.Serialize(metadata, _manifestJsonOptions);
+                FileUtility.WriteAllText(manifestPath, json);
 
                 // Load and return the pack info
                 var pack = LoadPackInfo(packFolder);
@@ -869,7 +881,7 @@ namespace UORespawnApp.Scripts.Services
         /// Creates empty spawn data files for a new pack.
         /// Uses default settings matching ResetToDefaults() in SettingsComponent.
         /// </summary>
-        private void CreateEmptySpawnFiles(string packFolder)
+        private static void CreateEmptySpawnFiles(string packFolder)
         {
             // Create settings file with defaults matching ResetToDefaults()
             // Format must match BinarySerializationService.WriteSettings exactly
@@ -946,7 +958,7 @@ namespace UORespawnApp.Scripts.Services
         /// <summary>
         /// Deletes a user-created pack from the Created folder.
         /// </summary>
-        public (bool Success, string? Error) DeleteCreatedPack(SpawnPackInfo pack)
+        public static (bool Success, string? Error) DeleteCreatedPack(SpawnPackInfo pack)
         {
             if (pack == null || string.IsNullOrWhiteSpace(pack.PackFolderPath))
             {
@@ -979,7 +991,7 @@ namespace UORespawnApp.Scripts.Services
         private static string SanitizeFileName(string name)
         {
             var invalidChars = Path.GetInvalidFileNameChars();
-            var sanitized = new string(name.Where(c => !invalidChars.Contains(c)).ToArray());
+            var sanitized = new string(name.Where((char c) => !invalidChars.Contains(c)).ToArray());
             return sanitized.Replace(' ', '_');
         }
     }

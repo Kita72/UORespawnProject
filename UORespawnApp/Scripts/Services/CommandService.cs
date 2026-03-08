@@ -77,7 +77,7 @@ public class CommandService
 
                 try
                 {
-                    var lines = File.ReadAllLines(filePath);
+                    var lines = FileUtility.ReadAllLines(filePath);
 
                     foreach (var line in lines)
                     {
@@ -133,16 +133,15 @@ public class CommandService
                     // Append to local file if it exists, otherwise copy
                     if (File.Exists(localFile))
                     {
-                        var serverLines = File.ReadAllLines(serverFile);
+                        var serverLines = FileUtility.ReadAllLines(serverFile);
                         File.AppendAllLines(localFile, serverLines);
                     }
                     else
                     {
-                        File.Copy(serverFile, localFile);
+                        FileUtility.Copy(serverFile, localFile);
                     }
 
-                    // Delete server file after successful copy
-                    File.Delete(serverFile);
+                    FileUtility.Delete(serverFile);
                     filesCopied++;
 
                     Logger.Info($"Synced command file: {filename}");
@@ -371,7 +370,7 @@ public class CommandService
             {
                 if (File.Exists(filePath))
                 {
-                    File.Delete(filePath);
+                    FileUtility.Delete(filePath);
                     Logger.Info($"Deleted processed command file: {Path.GetFileName(filePath)}");
                 }
             }

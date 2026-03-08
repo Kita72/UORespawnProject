@@ -578,14 +578,7 @@
             // Save the display name (for UI) and folder path (for file sync) separately
             Settings.CurrentPackName = pack.Metadata.Name;
             Settings.CurrentPackFolder = pack.PackFolderPath;
-            Logger.Info($"[SpawnPacks] Pack applied: Name='{pack.Metadata.Name}', Folder='{pack.PackFolderPath}'");
-
-            // Set the active pack data path for file sync
-            if (!string.IsNullOrEmpty(pack.PackFolderPath))
-            {
-                PathConstants.ActivePackDataPath = SpawnPackService.GetPackDataPath(pack);
-                Logger.Info($"[SpawnPacks] ActivePackDataPath set: {PathConstants.ActivePackDataPath}");
-            }
+            Logger.Info($"[SpawnPacks] Pack applied: Name='{pack.Metadata.Name}', Folder='{pack.PackFolderPath}', ActivePackDataPath='{PathConstants.ActivePackDataPath}'");
 
             ToastService.ShowSuccess($"Applied spawn pack: {pack.Metadata.Name}");
         }
@@ -918,7 +911,7 @@
             {
                 System.Diagnostics.Process.Start("explorer.exe", $"/select,\"{zipPath}\"");
             }
-            catch { /* Ignore if folder open fails */ }
+            catch (Exception openEx) { Logger.Warning($"Could not open explorer: {openEx.Message}"); }
         }
         catch (Exception ex)
         {
@@ -956,10 +949,7 @@
             }
 
             var tempPath = Path.Combine(Path.GetTempPath(), "UORespawn_SpawnPack_Submission.zip");
-            if (File.Exists(tempPath))
-            {
-                File.Delete(tempPath);
-            }
+            FileUtility.Delete(tempPath);
 
             using (var zipArchive = System.IO.Compression.ZipFile.Open(tempPath, System.IO.Compression.ZipArchiveMode.Create))
             {
@@ -1126,7 +1116,7 @@
             {
                 savedImageName = Path.GetFileName(importImagePath);
                 var destinationImagePath = Path.Combine(packFolder, savedImageName);
-                File.Copy(importImagePath, destinationImagePath, true);
+                FileUtility.Copy(importImagePath, destinationImagePath, overwrite: true);
             }
 
             var metadata = new SpawnPackMetadata
@@ -1143,7 +1133,7 @@
 
             var manifestPath = Path.Combine(packFolder, "pack.json");
             var json = JsonSerializer.Serialize(metadata, new JsonSerializerOptions { WriteIndented = true });
-            await File.WriteAllTextAsync(manifestPath, json);
+            await FileUtility.WriteAllTextAsync(manifestPath, json);
             Logger.Info($"[SpawnPacks] Import complete - Pack '{packName}' saved with ID: {packId}");
 
             // Refresh packs and switch to imported view

@@ -12,6 +12,7 @@ namespace UORespawnApp.Scripts.Utilities
     {
         private static Dictionary<int, List<RegionInfo>>? _regionsByMap = null;
         private static bool _isLoaded = false;
+        private static readonly Lock _loadLock = new();
 
         #region Region Data Access
 
@@ -99,9 +100,9 @@ namespace UORespawnApp.Scripts.Utilities
         /// <summary>
         /// Async version of EnsureLoaded for DataWatcher reload scenarios
         /// </summary>
-        public static async Task EnsureLoadedAsync()
+        public static async Task EnsureLoadedAsync(CancellationToken cancellationToken = default)
         {
-            await Task.Run(() => EnsureLoaded());
+            await Task.Run(() => EnsureLoaded(), cancellationToken);
         }
 
         /// <summary>
@@ -112,22 +113,25 @@ namespace UORespawnApp.Scripts.Utilities
         {
             if (_isLoaded) return;
 
-            _regionsByMap = [];
-
-            try
+            lock (_loadLock)
             {
-                // Load from Resources/Raw folder using PathConstants
-                var filePath = PathConstants.GetRegionListFilePath();
+                if (_isLoaded) return;
 
-                if (!File.Exists(filePath))
+                _regionsByMap = [];
+
+                try
                 {
-                    Logger.Warning($"UOR_RegionList.txt not found at: {filePath}");
+                    var filePath = PathConstants.GetRegionListFilePath();
 
-                    _isLoaded = true;
-                    return;
-                }
+                    if (!File.Exists(filePath))
+                    {
+                        Logger.Warning($"UOR_RegionList.txt not found at: {filePath}");
 
-                var lines = File.ReadAllLines(filePath);
+                        _isLoaded = true;
+                        return;
+                    }
+
+                var lines = FileUtility.ReadAllLines(filePath);
 
                 // Temporary dictionary to group rects by map and name
                 var tempRegions = new Dictionary<int, Dictionary<string, List<Rect>>>();
@@ -184,12 +188,13 @@ namespace UORespawnApp.Scripts.Utilities
 
                 _isLoaded = true;
             }
-            catch (Exception ex)
-            {
-                Logger.Error("Error loading region list", ex);
-                _isLoaded = true; // Mark as loaded to prevent repeated attempts
+                    catch (Exception ex)
+                    {
+                        Logger.Error("Error loading region list", ex);
+                        _isLoaded = true;
+                    }
+                }
             }
-        }
 
         /// <summary>
         /// Parse a single region line from the file

@@ -93,6 +93,7 @@ namespace UORespawnApp
                 }
 
                 _backgroundLoader?.Dispose();
+                Logger.Shutdown();
             };
 
             return window;

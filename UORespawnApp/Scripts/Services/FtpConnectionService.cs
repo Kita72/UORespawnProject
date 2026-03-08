@@ -8,9 +8,9 @@ namespace UORespawnApp.Scripts.Services;
 /// Handles FTP connections and operations using FluentFTP.
 /// Provides a clean interface for connecting, uploading, and downloading files.
 /// </summary>
-public class FtpConnectionService : IDisposable
+public class FtpConnectionService(FtpCredentialService credentialService) : IDisposable
 {
-    private readonly FtpCredentialService _credentialService;
+    private readonly FtpCredentialService _credentialService = credentialService;
     private AsyncFtpClient? _client;
     private bool _disposed;
 
@@ -28,11 +28,6 @@ public class FtpConnectionService : IDisposable
     /// Last error message, if any.
     /// </summary>
     public string? LastError { get; private set; }
-
-    public FtpConnectionService(FtpCredentialService credentialService)
-    {
-        _credentialService = credentialService;
-    }
 
     /// <summary>
     /// Tests the connection with the current credentials.

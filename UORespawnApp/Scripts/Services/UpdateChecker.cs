@@ -12,7 +12,6 @@ namespace UORespawnApp.Scripts.Services
     {
         private static readonly HttpClient _httpClient;
         private const string GITHUB_API_URL = "https://api.github.com/repos/Kita72/UORespawnProject/releases/latest";
-        private const string CURRENT_VERSION = Utility.Version;
 
         // Cached JsonSerializerOptions for deserialization (reused across all calls)
         private static readonly JsonSerializerOptions _jsonOptions = new() 
@@ -23,17 +22,21 @@ namespace UORespawnApp.Scripts.Services
         // Static constructor - configure HttpClient headers once (not on every call)
         static UpdateChecker()
         {
-            _httpClient = new HttpClient();
+            _httpClient = new HttpClient
+            {
+                Timeout = TimeSpan.FromSeconds(8)
+            };
             _httpClient.DefaultRequestHeaders.Add("User-Agent", "UORespawn-UpdateChecker");
             _httpClient.DefaultRequestHeaders.Add("Accept", "application/vnd.github.v3+json");
         }
-        
+
         // Cache results to avoid excessive API calls
         private DateTime _lastCheckTime = DateTime.MinValue;
         private UpdateInfo? _cachedUpdateInfo = null;
         private readonly TimeSpan _cacheExpiration = TimeSpan.FromHours(1);
-        
-        public const string CurrentVersion = CURRENT_VERSION;
+
+        /// <summary>Current app version — single source of truth from Utility.Version.</summary>
+        public static string CurrentVersion => Utility.Version;
         
         /// <summary>
         /// Checks GitHub API for the latest release version.
@@ -50,33 +53,33 @@ namespace UORespawnApp.Scripts.Services
             
             try
             {
-                Logger.Info($"Checking for updates... Current version: {CURRENT_VERSION}");
+                Logger.Info($"Checking for updates... Current version: {Utility.Version}");
 
                 // Call GitHub API (headers configured in static constructor)
                 var response = await _httpClient.GetAsync(GITHUB_API_URL);
                 response.EnsureSuccessStatusCode();
-                
+
                 var json = await response.Content.ReadAsStringAsync();
                 var release = JsonSerializer.Deserialize<GitHubRelease>(json, _jsonOptions);
-                
+
                 if (release?.TagName == null)
                 {
                     Logger.Warning("GitHub API returned no release data");
                     return UpdateChecker.CreateNoUpdateInfo("Unable to check for updates");
                 }
-                
+
                 // Parse versions (strip 'v' prefix if present)
                 var latestVersionString = release.TagName.TrimStart('v');
-                
+
                 Logger.Info($"Latest release on GitHub: {latestVersionString}");
-                
+
                 // Compare versions
-                var current = new Version(CURRENT_VERSION);
+                var current = new Version(Utility.Version);
                 var latest = new Version(latestVersionString);
-                
+
                 var updateInfo = new UpdateInfo
                 {
-                    CurrentVersion = CURRENT_VERSION,
+                    CurrentVersion = Utility.Version,
                     LatestVersion = latestVersionString,
                     HasUpdate = latest > current,
                     ReleaseUrl = release.HtmlUrl ?? "https://github.com/Kita72/UORespawnProject/releases",
@@ -84,10 +87,10 @@ namespace UORespawnApp.Scripts.Services
                     ReleasedAt = release.PublishedAt,
                     CheckedAt = DateTime.Now
                 };
-                
+
                 if (updateInfo.HasUpdate)
                 {
-                    Logger.Info($"Update available: {CURRENT_VERSION} → {latestVersionString}");
+                    Logger.Info($"Update available: {Utility.Version} → {latestVersionString}");
                 }
                 else
                 {
@@ -126,8 +129,8 @@ namespace UORespawnApp.Scripts.Services
         {
             return new UpdateInfo
             {
-                CurrentVersion = CURRENT_VERSION,
-                LatestVersion = CURRENT_VERSION,
+                CurrentVersion = Utility.Version,
+                LatestVersion = Utility.Version,
                 HasUpdate = false,
                 ReleaseUrl = "https://github.com/Kita72/UORespawnProject/releases",
                 ReleaseNotes = null,

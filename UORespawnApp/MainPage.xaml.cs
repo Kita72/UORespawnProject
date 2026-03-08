@@ -35,9 +35,11 @@ namespace UORespawnApp
             var spawnDataService = App.Current?.Handler?.MauiContext?.Services.GetService<SpawnDataService>();
             var sessionService = App.Current?.Handler?.MauiContext?.Services.GetService<SessionService>();
             var mapImageCache = App.Current?.Handler?.MauiContext?.Services.GetService<MapImageCacheService>();
-            if (spawnDataService != null && sessionService != null && mapImageCache != null)
+            var binarySerializationService = App.Current?.Handler?.MauiContext?.Services.GetService<BinarySerializationService>();
+            var toastService = App.Current?.Handler?.MauiContext?.Services.GetService<ToastService>();
+            if (spawnDataService != null && sessionService != null && mapImageCache != null && binarySerializationService != null && toastService != null)
             {
-                Utility.SetServices(spawnDataService, sessionService, mapImageCache);
+                Utility.SetServices(spawnDataService, sessionService, mapImageCache, binarySerializationService, toastService);
             }
         }
 
