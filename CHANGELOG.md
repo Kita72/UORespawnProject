@@ -5,16 +5,15 @@ All notable changes to UORespawn will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.0.1.3] - 2026-03-07
+## [2.0.1.3] - 2026-03-08
 
 ### Added
 
 #### MUO (ModernUO) Server Support
 - **Server Type Selection** — Choose between ServUO and ModernUO from the Server Integration card
-  - Logo button toggle using `SERVUO.png` and `MUO.png` square buttons — only one highlighted at a time (orange border glow)
-  - Image backgrounds pixel-sampled from each logo (`#292929` for ServUO, `#000000` for MUO) for a seamless look
-  - Selection persists in Settings and drives all folder path hints throughout the editor
-- **MUO Folder Layout** — All path hints, help text, and placeholders dynamically update for MUO:
+  - Single active-logo toggle button — click to switch between ServUO and MUO, only the selected server logo is displayed
+  - Selection persists in Settings and drives all folder path hints, placeholders, and help text throughout the editor
+- **MUO Folder Layout** — All path hints dynamically update for MUO:
   - Scripts: `Projects/UOContent/Custom/` (vs ServUO's `Scripts/Custom/`)
   - Data: `Distribution/Data/` (vs ServUO's `Data/`)
 
@@ -23,6 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Server Data Folder** — Dedicated folder picker for the server's `Data/` root directory
   - Replaces single-folder selection; each path is independently validated and stored
   - `UORespawn/` subfolder is created automatically inside the selected Data folder
+- **Separate Install & Link Buttons** — Replaced the combined "Install & Link" button with two distinct actions:
+  - **Install** — Copies server scripts into the Custom folder; warns if scripts already exist with an inline overwrite confirmation prompt
+  - **Link** — Connects the editor to an already-installed server without copying scripts
 
 #### Broken Link Detection & Auto-Repair
 - **Amber "Broken Link" button** — Shown automatically when stored folder paths can no longer be found (server moved, drive unmounted, etc.)
@@ -30,13 +32,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - If repair succeeds: returns to the normal Linked state instantly
   - If repair fails: clears stored paths cleanly so the user can re-link from scratch
 
+#### Animated Splash Intro
+- **Video intro screen** — A random intro video (1 of 4) plays on first app launch, full-screen overlay over the static splash image
+  - Seamless fade from video to app — no jarring cuts or reloads
+  - Only plays once per session; re-navigating to Home never re-triggers it
+  - Dedicated `splash.js` handler (SRP — fully separated from map canvas logic)
+- **Intro Animation Toggle** — New icon button in the nav bar (between Instructions and Theme)
+  - 🎞 Goldenrod film icon = animation **enabled** (tooltip: *Disable Intro Animation*)
+  - Grey film icon = animation **disabled** (tooltip: *Enable Intro Animation*)
+  - Toggle persists across app launches via Settings; defaults to enabled on first run
+
 ### Changed
+
+#### Server Integration Card — Redesign & Polish
+- **Server Type Toggle** — Two side-by-side logo buttons replaced with a single active-server button; click it to switch between ServUO and MUO
+- **Active Server Color** — Orange accent color replaced with goldenrod (`#DAA520 / #B8860B`) throughout the active-local section for a more refined look
+- **"Local Link" Renamed** — Local connection section header renamed to **"Local Server"**
+- **Folder Picker Containers** — Script and Data folder pickers now grouped inside a subtle shaded sub-container for visual clarity
+- **Manual Transfer Relocated** — Manual Transfer moved out of the Remote FTP section into its own independent collapsible section at the bottom of the card
+  - Remote section is now exclusively for FTP/Sync configuration
+- **Connection Toggle Track** — Darkened toggle pill background with an inset box-shadow for a sunken track visual depth in dark mode
+- **Feedback Messages** — Simplified all inline status messages to short, direct confirmations:
+  - `✓ Scripts installed.` / `✓ Server linked.` / `✓ Server unlinked.`
+  - Removed verbose explanatory info box that previously described Install vs Link
 
 #### Server Integration — FTP Remote
 - **Two Remote Paths** — FTP configuration now requires two separate remote paths instead of one
   - **Remote Custom Scripts Path**: path to the server's `Custom/` scripts folder
   - **Remote Data Exchange Path**: path to the server's `Data/` parent folder
-  - Both path fields and their help text react dynamically to the selected server type (ServUO vs MUO)
+  - Both fields and their help text react dynamically to the selected server type
 - **Removed Auto-Detect** — Auto-detect remote path feature removed; users enter paths manually
 
 #### FTP Path Construction
@@ -44,24 +68,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `FtpCredentials.RemotePath` now stores the `Data/` parent folder, not `Data/UORespawn/`
   - Aligns FTP path semantics with the local two-path linking model
 
+#### Tile Spawn — Trigger Indicators
+- **Trigger Icon Row** — Weather and Timed trigger icons now appear in a dedicated row directly below the 6 frequency buttons, larger and easier to read
+
+#### Region Names
+- **25-Character Cap** — Region names in the editor are now capped at 25 characters to prevent UI overflow
+
 #### Instructions Page
 - **Section 10 fully rewritten** — Covers server type selection (ServUO vs MUO), two-path local link flow with per-type folder hints, broken link detection & auto-repair, side-by-side MUO/ServUO folder structure diagrams, updated FTP two-path flow; auto-detect step removed
 - **Header updated** — Now mentions both ServUO and ModernUO (MUO) support
 - **Getting Started updated** — Server type selection added as explicit step 2; tip generalized from "ServUO folder" to "server folder"
-- **What's New updated** — Five new entries at the top: MUO support, server type logo toggle, two-path linking, broken link detection, two-path FTP
+- **What's New updated** — New entries for MUO support, server type toggle, two-path linking, broken link detection, two-path FTP, animated intro
 
 ### Fixed
 
+#### Server Integration Light Theme
+- All Server Integration card elements now fully styled for light mode — connection toggle, folder sections, type button, manual transfer section, and status messages all properly contrast in light theme
+
 #### Documentation Errata
-- **README In-Game Editing corrected** — README incorrectly listed `[EditBox`, `[EditRegion`, `[EditTile`, and `[EditVendor` as the in-game editing commands. **These commands do not exist** in the current system. The actual workflow is: type `[UORespawn` in-game → click **Edit Spawn** → target the ground, a shop sign, or a beehive. The Instructions page (Section 12) was corrected in v2.0.1.2 but the README was not updated at that time. Corrected now.
+- **README In-Game Editing corrected** — README incorrectly listed `[EditBox`, `[EditRegion`, `[EditTile`, and `[EditVendor` as in-game editing commands. **These commands do not exist** in the current system. The actual workflow is: `[UORespawn` → **Edit Spawn** → target the ground, shop sign, or beehive. Corrected to match the Instructions page (Section 12).
 
 ### Technical
 - `Settings.ServerType`, `Settings.ScriptsCustomFolder`, `Settings.ServerDataFolder` — two-path server linking properties added
+- `Settings.SplashAnimationEnabled` — Preferences-backed bool (default `true`) for intro animation persistence
 - `PathConstants.ServerDataPath` updated to compose from `Settings.ServerDataFolder + UORespawn/`
-- `ServerSetupUtility` refactored: `ValidateCustomFolder`, `ValidateDataFolder`, `IsLinkBroken`, `TryRepairLink`
+- `ServerSetupUtility` refactored: `ValidateCustomFolder`, `ValidateDataFolder`, `IsLinkBroken`, `TryRepairLink`, `LinkOnlySetup`
 - `FtpCredentials.RemoteCustomPath` field added; `IsConfigured` now requires both paths
-- `ServerIntegrationCard.razor` redesigned: server type logo toggle → local/remote toggle → contextual sections
-- `.server-type-btn.servuo` / `.server-type-btn.muo` CSS classes with pixel-sampled background colors
+- `ServerIntegrationCard.razor` redesigned: server type toggle → local/remote toggle → folder sections → manual transfer collapsible
+- `splash.js` — dedicated splash animation handler; `window.initSplashVideo(dotnetRef)` registers video events and calls `OnVideoEnded` via DotNet interop
+- `NavMenu.razor` — animation toggle button with `bi-film-nav-menu` / `bi-film-off-nav-menu` SVG icon classes (goldenrod / grey)
 - Build verified with .NET 10 — no warnings or errors
 
 ## [2.0.1.2] - 2026-03-06
