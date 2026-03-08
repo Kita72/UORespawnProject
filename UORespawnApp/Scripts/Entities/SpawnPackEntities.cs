@@ -3,7 +3,6 @@ namespace UORespawnApp.Scripts.Entities
     /// <summary>
     /// Metadata describing a spawn pack.
     /// </summary>
-    [Serializable]
     public class SpawnPackMetadata
     {
         public string Id { get; set; } = string.Empty;
@@ -19,7 +18,6 @@ namespace UORespawnApp.Scripts.Entities
     /// <summary>
     /// Computed statistics for a spawn pack.
     /// </summary>
-    [Serializable]
     public class SpawnPackStats
     {
         /// <summary>Total spawn entries (creatures) across all box spawns.</summary>
@@ -43,13 +41,12 @@ namespace UORespawnApp.Scripts.Entities
         public int TotalSpawnEntries { get; set; }
         public int UniqueCreatureCount { get; set; }
         public int MapCount { get; set; }
-        public Dictionary<string, int> SpawnTypeCounts { get; set; } = new();
+        public Dictionary<string, int> SpawnTypeCounts { get; set; } = [];
     }
 
     /// <summary>
     /// Spawn pack record used by the editor UI.
     /// </summary>
-    [Serializable]
     public class SpawnPackInfo
     {
         /// <summary>
@@ -61,7 +58,11 @@ namespace UORespawnApp.Scripts.Entities
         public SpawnPackMetadata Metadata { get; set; } = new();
         public SpawnPackStats Stats { get; set; } = new();
         public string PackFolderPath { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Whether the user has favorited this pack. Hydrated from Settings.FavoritePackIds on load.
+        /// Not stored in pack metadata — persisted in app Preferences keyed by Metadata.Id.
+        /// </summary>
         public bool IsFavorite { get; set; }
-        public bool IsLiked { get; set; }
     }
 }

@@ -1,3 +1,4 @@
+@using UORespawnApp.Scripts
 @using UORespawnApp.Scripts.Utilities
 @inject ViewService ViewService
 @inject IJSRuntime JS
@@ -16,15 +17,10 @@
 
 <div class="nav-scrollable" @onclick="ToggleMenu">
     <nav class="flex-column">
-        <div class="nav-item px-3">
-            <button class="nav-link btn btn-link @GetActiveClass("spawnpacks")" @onclick="ShowSpawnPacks">
-                <span class="bi bi-boxes-nav-menu" aria-hidden="true"></span> Spawn Packs
-            </button>
-        </div>
-
         <div class="spawn-section">
-            <!-- Active Pack Header -->
-            <div class="active-pack-header">
+            <!-- Active Pack Header — click to manage packs -->
+            <div class="active-pack-header @GetActiveClass("spawnpacks")" @onclick="ShowSpawnPacks" title="Manage Spawn Packs">
+                <span class="bi bi-boxes-nav-menu pack-icon" aria-hidden="true"></span>
                 <span class="pack-name" title="@Settings.CurrentPackName">@Settings.CurrentPackName</span>
             </div>
 
@@ -46,11 +42,6 @@
             <div class="nav-item px-3">
                 <button class="nav-link btn btn-link @GetActiveClass("tilespawn")" @onclick="ShowWorldSpawn">
                     <span class="bi bi-grid-3x3-gap-nav-menu" aria-hidden="true"></span> Tile Spawn
-                </button>
-            </div>
-            <div class="nav-item px-3">
-                <button class="nav-link btn btn-link save-all-link" @onclick="SaveAll" title="Save All Data">
-                    <span class="bi bi-save-nav-menu" aria-hidden="true"></span> Save All
                 </button>
             </div>
         </div>
@@ -165,29 +156,6 @@
         // Use MapListUtility for dynamic map list from server
         // Supports custom maps (6+) when server provides them
         return MapListUtility.GetMapIds().ToList();
-    }
-
-    private async Task SaveAll()
-    {
-        try
-        {
-            // Save all spawn data and settings
-            Utility.SaveSettings();
-            Utility.SaveSpawnData();
-            Utility.SaveTileSpawnData();
-            Utility.SaveRegionSpawnData();
-            Utility.SaveVendorSpawnData();
-
-            Logger.Info("Manual save completed - all data saved");
-            ToastService.ShowSuccess("All data saved successfully!");
-        }
-        catch (Exception ex)
-        {
-            Logger.Error("Error during manual save", ex);
-            ToastService.ShowWarning($"Error saving data: {ex.Message}");
-        }
-
-        await Task.CompletedTask;
     }
 
     private async Task SaveBadge()

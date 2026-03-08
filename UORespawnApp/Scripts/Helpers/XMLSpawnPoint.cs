@@ -1,4 +1,4 @@
-﻿namespace UORespawnApp
+﻿namespace UORespawnApp.Scripts.Helpers
 {
     internal class XMLSpawnPoint
     {
@@ -18,12 +18,6 @@
 
         // MaxCount from spawner
         public int MaxCount { get; set; }
-
-        // Legacy properties for backward compatibility
-        public int X { get; set; }
-        public int Y { get; set; }
-        public int Width { get; set; }
-        public int Height { get; set; }
 
         // List of creature/spawn names from the spawner (cleaned of RND patterns)
         public List<string> SpawnNames { get; set; }

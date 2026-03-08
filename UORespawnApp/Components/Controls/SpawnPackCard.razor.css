@@ -86,6 +86,14 @@
     color: #17a2b8;
 }
 
+.spawn-pack-actions .btn.fav-btn:hover {
+    color: #f7c948;
+}
+
+.spawn-pack-actions .btn.fav-btn.is-favorite {
+    color: #f7c948;
+}
+
 .spawn-pack-actions .btn.reset-btn:hover {
     color: #fd7e14;
 }

@@ -1460,11 +1460,7 @@
             return;
         }
 
-        if (!Utility.VendorSpawns.TryGetValue(ViewService.CurrentMapId, out var vendors))
-        {
-            vendors = new List<VendorEntity>();
-            Utility.VendorSpawns[ViewService.CurrentMapId] = vendors;
-        }
+        var vendors = Utility.GetOrCreateVendorList(ViewService.CurrentMapId);
 
         // Remove existing vendor entity for this specific location
         vendors.RemoveAll(v => 
@@ -1506,11 +1502,7 @@
     /// </summary>
     private async Task SaveBulkAddModal()
     {
-        if (!Utility.VendorSpawns.TryGetValue(ViewService.CurrentMapId, out var vendors))
-        {
-            vendors = [];
-            Utility.VendorSpawns[ViewService.CurrentMapId] = vendors;
-        }
+        var vendors = Utility.GetOrCreateVendorList(ViewService.CurrentMapId);
 
         // Calculate what was added vs removed compared to original common vendors
         var vendorsToAdd = currentVendorList.Except(originalBulkVendorList).ToList();

@@ -1,3 +1,4 @@
+using UORespawnApp.Scripts.Constants;
 using UORespawnApp.Scripts.Utilities;
 
 namespace UORespawnApp.Scripts.Services;
@@ -90,7 +91,7 @@ public class DebugService
     {
         try
         {
-            var logDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data", "Logs");
+            var logDirectory = PathConstants.LogsPath;
             var logFile = Path.Combine(logDirectory, "uor_spawn_session.log");
 
             if (!File.Exists(logFile)) return;

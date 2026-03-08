@@ -288,12 +288,7 @@ namespace UORespawnApp.Scripts.Services
                 int boxCount = reader.ReadInt32();
 
                 // Ensure the map entry exists
-                if (!_spawnDataService.BoxSpawns.TryGetValue(mapId, out List<BoxSpawnEntity>? value))
-                {
-                    value = [];
-
-                    _spawnDataService.BoxSpawns[mapId] = value;
-                }
+                var value = _spawnDataService.GetOrCreateBoxList(mapId);
 
                 for (int b = 0; b < boxCount; b++)
                 {
@@ -477,12 +472,7 @@ namespace UORespawnApp.Scripts.Services
                 string mapName = reader.ReadString();
                 int tileCount = reader.ReadInt32();
 
-                if (!_spawnDataService.TileSpawns.TryGetValue(mapId, out List<TileSpawnEntity>? value))
-                {
-                    value = [];
-
-                    _spawnDataService.TileSpawns[mapId] = value;
-                }
+                var value = _spawnDataService.GetOrCreateTileList(mapId);
 
                 for (int t = 0; t < tileCount; t++)
                 {
@@ -669,12 +659,7 @@ namespace UORespawnApp.Scripts.Services
                 string mapName = reader.ReadString();
                 int regionCount = reader.ReadInt32();
 
-                if (!_spawnDataService.RegionSpawns.TryGetValue(mapId, out List<RegionSpawnEntity>? value))
-                {
-                    value = [];
-
-                    _spawnDataService.RegionSpawns[mapId] = value;
-                }
+                var value = _spawnDataService.GetOrCreateRegionList(mapId);
 
                 for (int r = 0; r < regionCount; r++)
                 {
@@ -828,12 +813,7 @@ namespace UORespawnApp.Scripts.Services
                 string mapName = reader.ReadString(); // Read but don't use (we derive from MapUtility)
                 int vendorCount = reader.ReadInt32();
 
-                if (!_spawnDataService.VendorSpawns.TryGetValue(mapId, out List<VendorEntity>? value))
-                {
-                    value = [];
-
-                    _spawnDataService.VendorSpawns[mapId] = value;
-                }
+                var value = _spawnDataService.GetOrCreateVendorList(mapId);
 
                 for (int v = 0; v < vendorCount; v++)
                 {

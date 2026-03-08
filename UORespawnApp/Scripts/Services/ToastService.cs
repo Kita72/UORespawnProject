@@ -14,9 +14,12 @@ public class ToastService
     public event Action? OnToastChanged;
 
     /// <summary>
-    /// Get all current toast messages
+    /// Get a thread-safe snapshot of current toast messages
     /// </summary>
-    public List<ToastMessage> Messages => _messages;
+    public IReadOnlyList<ToastMessage> Messages
+    {
+        get { lock (_messages) { return [.. _messages]; } }
+    }
 
     /// <summary>
     /// Show an informational toast (blue)

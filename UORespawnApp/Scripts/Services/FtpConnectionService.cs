@@ -84,6 +84,7 @@ public class FtpConnectionService(FtpCredentialService credentialService) : IDis
     /// </summary>
     public async Task<bool> ConnectAsync()
     {
+        ObjectDisposedException.ThrowIf(_disposed, this);
         var credentials = _credentialService.CurrentCredentials;
         if (credentials == null || !credentials.IsConfigured)
         {
@@ -151,6 +152,7 @@ public class FtpConnectionService(FtpCredentialService credentialService) : IDis
     /// <param name="cancellationToken">Cancellation token to cancel the operation</param>
     public async Task<bool> UploadFileAsync(string localPath, string remotePath, IProgress<FtpProgress>? progress = null, CancellationToken cancellationToken = default)
     {
+        ObjectDisposedException.ThrowIf(_disposed, this);
         if (_client == null || !_client.IsConnected)
         {
             if (!await ConnectAsync())
@@ -196,6 +198,7 @@ public class FtpConnectionService(FtpCredentialService credentialService) : IDis
     /// <param name="cancellationToken">Cancellation token to cancel the operation</param>
     public async Task<bool> DownloadFileAsync(string localPath, string remotePath, IProgress<FtpProgress>? progress = null, CancellationToken cancellationToken = default)
     {
+        ObjectDisposedException.ThrowIf(_disposed, this);
         if (_client == null || !_client.IsConnected)
         {
             if (!await ConnectAsync())
@@ -313,10 +316,9 @@ public class FtpConnectionService(FtpCredentialService credentialService) : IDis
     public async Task<List<string>> ListDirectoriesAsync(string remotePath)
     {
         var items = await ListDirectoryAsync(remotePath);
-        return items
+        return [.. items
             .Where(i => i.Type == FtpObjectType.Directory)
-            .Select(i => i.FullName)
-            .ToList();
+            .Select(i => i.FullName)];
     }
 
     /// <summary>

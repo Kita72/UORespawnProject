@@ -269,11 +269,6 @@ namespace UORespawnApp.Scripts.Constants
         /// Contains live session heatmap data
         /// </summary>
         public const string STATS_FILE_PATTERN = "*_SpawnStats.txt";
-        
-        /// <summary>
-        /// Alternative stats file pattern
-        /// </summary>
-        public const string STATS_FILE_SUFFIX = "_Stats.txt";
 
         // ==================== FOLDER PATHS ====================
         
@@ -468,6 +463,13 @@ namespace UORespawnApp.Scripts.Constants
             Path.Combine(BASE_DIR, DATA_FOLDER, MAPS_SUBFOLDER);
 
         /// <summary>
+        /// Get the logs folder path (Data/Logs/)
+        /// Used by Logger and DebugService for application log files
+        /// </summary>
+        public static string LogsPath =>
+            Path.Combine(BASE_DIR, DATA_FOLDER, "Logs");
+
+        /// <summary>
         /// Get the tiles folder path (Data/TILES/)
         /// Contains PNG images for tile type visualization
         /// Images named as lowercase tile name (e.g., grass.png, water.png)
@@ -585,7 +587,7 @@ namespace UORespawnApp.Scripts.Constants
         /// </summary>
         public static bool IsStatsFile(string fileName)
         {
-            return fileName.EndsWith(STATS_FILE_SUFFIX, StringComparison.OrdinalIgnoreCase) ||
+            return fileName.EndsWith("_Stats.txt", StringComparison.OrdinalIgnoreCase) ||
                    fileName.Contains("SpawnStats", StringComparison.OrdinalIgnoreCase);
         }
 

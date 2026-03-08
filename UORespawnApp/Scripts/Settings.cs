@@ -1,6 +1,6 @@
 using UORespawnApp.Scripts.Utilities;
 
-namespace UORespawnApp
+namespace UORespawnApp.Scripts
 {
     /// <summary>
     /// Settings class manages UORespawn configuration using a two-tier persistence model:
@@ -10,18 +10,19 @@ namespace UORespawnApp
     ///    - Immediate persistence on every property set
     ///    - Used for editor-specific settings (UI appearance, server folder path, custom bestiary)
     ///
-    /// 2. BINARY SERIALIZATION (UOR_SpawnSettings.bin):
-    ///    - Spawn-related settings saved to binary file via Utility.SaveSettings()
+    /// 2. CSV SERIALIZATION (UOR_SpawnSettings.csv):
+    ///    - Spawn-related settings saved to CSV file via Utility.SaveSettings()
+    ///    - Human-readable format: SettingName,Value (server 2.0.0.7+)
     ///    - Syncs to server folder when configured
     ///    - Loaded on app startup by BackgroundDataLoader.LoadSettingsAsync()
     /// 
-    /// PROPERTIES IN BINARY (.bin file):
+    /// PROPERTIES IN CSV (.csv file):
     ///    MaxMobs, MinRange, MaxRange, MaxCrowd,
     ///    WaterChance, WeatherChance, TimedChance,
     ///    CommonChance, UnCommonChance, RareChance,
     ///    IsScaleSpawn, EnableRiftSpawn, EnableDebugSpawn
     /// 
-    /// PROPERTIES PREFERENCES-ONLY (NOT in binary):
+    /// PROPERTIES PREFERENCES-ONLY (NOT in CSV):
     ///    ScriptsCustomFolder (Custom/ folder where UORespawnServer/ is installed),
     ///    ServerDataFolder (Data/ folder where UORespawn/ data exchange lives),
     ///    ServerType (\"ServUO\" or \"MUO\" - which bundled scripts to install),
@@ -29,7 +30,7 @@ namespace UORespawnApp
     ///    Bestiary (editor custom creature list)
     /// 
     /// SAVE TRIGGERS:
-    ///    - SettingsComponent.Dispose() (page navigation)
+    ///    - SettingsComponent.SaveSpawnSettings() (Save Settings button in Spawn Settings card)
     ///    - ResetToDefaults() (explicit save after reset)
     /// </summary>
     internal static class Settings
@@ -37,6 +38,7 @@ namespace UORespawnApp
         // Cache for frequently accessed settings to avoid repeated Preferences.Get() calls
         private static string? _cachedScriptsCustomFolder;
         private static string? _cachedServerDataFolder;
+        private static string? _cachedServerType;
         private static string? _cachedCurrentPackName;
         private static string? _cachedCurrentPackFolder;
         private static Color? _cachedBoxColor;
@@ -99,6 +101,7 @@ namespace UORespawnApp
 
             _cachedScriptsCustomFolder = Preferences.Get("ScriptsCustomFolder", "");
             _cachedServerDataFolder = Preferences.Get("ServerDataFolder", "");
+            _cachedServerType = Preferences.Get("ServerType", "ServUO");
             _cachedCurrentPackName = Preferences.Get("CurrentPackName", DefaultPackName);
             _cachedCurrentPackFolder = Preferences.Get("CurrentPackFolder", "");
 
@@ -147,8 +150,12 @@ namespace UORespawnApp
         /// </summary>
         public static string ServerType
         {
-            get => Preferences.Get("ServerType", "ServUO");
-            set => Preferences.Set("ServerType", value);
+            get => _cachedServerType ?? "ServUO";
+            set
+            {
+                _cachedServerType = value;
+                Preferences.Set("ServerType", value);
+            }
         }
 
         /// <summary>
@@ -490,6 +497,36 @@ namespace UORespawnApp
         }
 
         /// <summary>
+        /// Set of favorited spawn pack IDs (Metadata.Id or folder name as fallback).
+        /// Stored as comma-separated values in preferences.
+        /// Hydrated onto SpawnPackInfo.IsFavorite when packs are loaded.
+        /// </summary>
+        public static HashSet<string> FavoritePackIds
+        {
+            get
+            {
+                var value = Preferences.Get("FavoritePackIds", "");
+                if (string.IsNullOrEmpty(value))
+                    return [];
+                return [.. value.Split(',', StringSplitOptions.RemoveEmptyEntries)];
+            }
+            private set => Preferences.Set("FavoritePackIds", string.Join(",", value));
+        }
+
+        /// <summary>
+        /// Toggles a spawn pack's favorite status by its Metadata.Id.
+        /// </summary>
+        public static void TogglePackFavorite(string packId)
+        {
+            if (string.IsNullOrEmpty(packId)) return;
+
+            var ids = FavoritePackIds;
+            if (!ids.Remove(packId))
+                ids.Add(packId);
+            FavoritePackIds = ids;
+        }
+
+        /// <summary>
         /// Helper method to toggle a creature as favorite
         /// </summary>
         public static void ToggleBestiaryFavorite(string name)
@@ -540,6 +577,7 @@ namespace UORespawnApp
             // Reset the cache to default values
             _cachedScriptsCustomFolder = "";
             _cachedServerDataFolder = "";
+            _cachedServerType = "ServUO";
             _cachedCurrentPackName = DefaultPackName;
             _cachedCurrentPackFolder = "";
             _cachedBoxColor = DefaultBoxColor;

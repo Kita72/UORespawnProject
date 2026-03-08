@@ -1,7 +1,7 @@
 using UORespawnApp.Scripts.Entities;
 using UORespawnApp.Scripts.Utilities;
 
-namespace UORespawnApp
+namespace UORespawnApp.Scripts.Services
 {
     /// <summary>
     /// Service for managing view navigation and map selection state.
@@ -22,12 +22,12 @@ namespace UORespawnApp
         /// <summary>
         /// Whether XML spawners overlay is currently visible (shared across Box/Region spawn pages)
         /// </summary>
-        public bool ShowXMLSpawners { get; set; } = false;
+        public bool ShowXMLSpawners { get; private set; } = false;
 
         /// <summary>
         /// Whether server spawn statistics overlay is currently visible (shared across Box/Region spawn pages)
         /// </summary>
-        public bool ShowServerSpawns { get; set; } = false;
+        public bool ShowServerSpawns { get; private set; } = false;
 
         /// <summary>
         /// Currently active spawn pack (the last pack that was applied).
@@ -84,8 +84,7 @@ namespace UORespawnApp
                 CurrentMapId = mapId;
                 Logger.Info($"[Navigation] Map changed: {MapUtility.GetMapName(previousMap)} (ID:{previousMap}) → {MapUtility.GetMapName(mapId)} (ID:{mapId})");
 
-                if (Utility.SESSION != null)
-                    Utility.SESSION.CurrentMap = mapId;
+                Utility.SESSION?.CurrentMap = mapId;
 
                 OnMapChanged?.Invoke();
             }

@@ -31,9 +31,9 @@ namespace UORespawnApp.Scripts.Services
         }
 
         // Cache results to avoid excessive API calls
-        private DateTime _lastCheckTime = DateTime.MinValue;
-        private UpdateInfo? _cachedUpdateInfo = null;
-        private readonly TimeSpan _cacheExpiration = TimeSpan.FromHours(1);
+        private static DateTime _lastCheckTime = DateTime.MinValue;
+        private static UpdateInfo? _cachedUpdateInfo = null;
+        private static readonly TimeSpan _cacheExpiration = TimeSpan.FromHours(1);
 
         /// <summary>Current app version — single source of truth from Utility.Version.</summary>
         public static string CurrentVersion => Utility.Version;

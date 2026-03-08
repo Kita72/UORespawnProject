@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using UORespawnApp.Scripts.Constants;
+using UORespawnApp.Scripts.Helpers;
 
 namespace UORespawnApp.Scripts.Utilities
 {
@@ -91,10 +92,6 @@ namespace UORespawnApp.Scripts.Utilities
                         }
 
                         // Store center coordinates and radius for circle visualization
-                        // Also keep legacy X/Y adjusted to top-left for backward compatibility
-                        int adjustedX = x - (range / 2);
-                        int adjustedY = y - (range / 2);
-
                         Spawns.Add(new XMLSpawnPoint
                         {
                             Serial = serial,
@@ -103,11 +100,7 @@ namespace UORespawnApp.Scripts.Utilities
                             CenterY = y,
                             Radius = range,
                             MaxCount = maxCount,
-                            SpawnNames = cleanedNames,
-                            X = adjustedX,
-                            Y = adjustedY,
-                            Width = range,
-                            Height = range
+                            SpawnNames = cleanedNames
                         });
                     }
 

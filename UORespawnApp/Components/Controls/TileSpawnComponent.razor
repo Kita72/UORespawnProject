@@ -318,11 +318,7 @@
         {
             var currentMapId = Utility.SESSION.CurrentMap;
 
-            if (!Utility.TileSpawns.TryGetValue(currentMapId, out var tileList))
-            {
-                tileList = new List<TileSpawnEntity>();
-                Utility.TileSpawns[currentMapId] = tileList;
-            }
+            var tileList = Utility.GetOrCreateTileList(currentMapId);
 
             var existing = tileList.FirstOrDefault(t => t.Name.Equals(tileName, StringComparison.OrdinalIgnoreCase));
 

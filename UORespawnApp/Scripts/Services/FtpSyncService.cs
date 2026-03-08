@@ -44,12 +44,6 @@ public class FtpSyncService(FtpConnectionService ftpConnection, FtpCredentialSer
     private string? RemotePath => _credentialService.CurrentCredentials?.RemotePath;
 
     /// <summary>
-    /// Gets the remote custom scripts path from current credentials.
-    /// Reserved for future remote script deployment support.
-    /// </summary>
-    private string? RemoteCustomPath => _credentialService.CurrentCredentials?.RemoteCustomPath;
-
-    /// <summary>
     /// Uploads spawn data files to the remote server.
     /// Files uploaded: UOR_BoxSpawn.bin, UOR_TileSpawn.bin, UOR_RegionSpawn.bin, UOR_VendorSpawn.bin, UOR_SpawnSettings.csv
     /// </summary>
@@ -382,52 +376,32 @@ public enum SyncOperation
 /// <summary>
 /// Result of a sync operation.
 /// </summary>
-public class SyncResult
+public class SyncResult(bool success, string message)
 {
-    public bool Success { get; }
-    public string Message { get; }
+    public bool Success { get; } = success;
+    public string Message { get; } = message;
     public int FilesTransferred { get; init; }
     public int FilesFailed { get; init; }
     public List<string> FileNames { get; init; } = [];
-
-    public SyncResult(bool success, string message)
-    {
-        Success = success;
-        Message = message;
-    }
 }
 
 /// <summary>
 /// Progress information for sync operations.
 /// </summary>
-public class SyncProgressEventArgs : EventArgs
+public class SyncProgressEventArgs(string message, int current, int total, int fileProgress = 0) : EventArgs
 {
-    public string Message { get; }
-    public int CurrentFile { get; }
-    public int TotalFiles { get; }
-    public int FileProgress { get; }
+    public string Message { get; } = message;
+    public int CurrentFile { get; } = current;
+    public int TotalFiles { get; } = total;
+    public int FileProgress { get; } = fileProgress;
     public int OverallProgress => TotalFiles > 0 ? (CurrentFile * 100) / TotalFiles : 0;
-
-    public SyncProgressEventArgs(string message, int current, int total, int fileProgress = 0)
-    {
-        Message = message;
-        CurrentFile = current;
-        TotalFiles = total;
-        FileProgress = fileProgress;
-    }
 }
 
 /// <summary>
 /// Event args for sync completion.
 /// </summary>
-public class SyncResultEventArgs : EventArgs
+public class SyncResultEventArgs(SyncOperation operation, SyncResult result) : EventArgs
 {
-    public SyncOperation Operation { get; }
-    public SyncResult Result { get; }
-
-    public SyncResultEventArgs(SyncOperation operation, SyncResult result)
-    {
-        Operation = operation;
-        Result = result;
-    }
+    public SyncOperation Operation { get; } = operation;
+    public SyncResult Result { get; } = result;
 }

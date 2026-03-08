@@ -10,12 +10,6 @@
     <div class="card-body spawn-pack-details">
         <div class="spawn-pack-author">By: @Pack.Metadata.Author</div>
         <div class="spawn-pack-actions">
-            <button class="btn btn-sm btn-link" type="button" title="Like" @onclick:stopPropagation="true" @onclick="ToggleLike">
-                <span class="bi @(Pack.IsLiked ? "bi-heart-fill" : "bi-heart")"></span>
-            </button>
-            <button class="btn btn-sm btn-link" type="button" title="Favorite" @onclick:stopPropagation="true" @onclick="ToggleFavorite">
-                <span class="bi @(Pack.IsFavorite ? "bi-star-fill" : "bi-star")"></span>
-            </button>
             <button class="btn btn-sm btn-link" 
                     type="button" 
                     title="Apply"
@@ -29,6 +23,13 @@
                     @onclick:stopPropagation="true" 
                     @onclick="ShowInfo">
                 <span class="bi bi-info-circle"></span>
+            </button>
+            <button class="btn btn-sm btn-link fav-btn @(Pack.IsFavorite ? "is-favorite" : "")" 
+                    type="button" 
+                    title="@(Pack.IsFavorite ? "Remove from favorites" : "Add to favorites")"
+                    @onclick:stopPropagation="true" 
+                    @onclick="ToggleFavorite">
+                <span class="bi @(Pack.IsFavorite ? "bi-star-fill" : "bi-star")"></span>
             </button>
             @if (ShowDelete && !Pack.Metadata.IsApproved)
             {
@@ -52,12 +53,6 @@
     public EventCallback<SpawnPackInfo> OnSelect { get; set; }
 
     [Parameter]
-    public EventCallback<SpawnPackInfo> OnLike { get; set; }
-
-    [Parameter]
-    public EventCallback<SpawnPackInfo> OnFavorite { get; set; }
-
-    [Parameter]
     public EventCallback<SpawnPackInfo> OnApply { get; set; }
 
     [Parameter]
@@ -67,6 +62,9 @@
     public EventCallback<SpawnPackInfo> OnInfo { get; set; }
 
     [Parameter]
+    public EventCallback<SpawnPackInfo> OnFavorite { get; set; }
+
+    [Parameter]
     public bool ShowDelete { get; set; } = false;
 
     private async Task HandleSelect()
@@ -74,24 +72,6 @@
         if (OnSelect.HasDelegate)
         {
             await OnSelect.InvokeAsync(Pack);
-        }
-    }
-
-    private async Task ToggleLike()
-    {
-        Pack.IsLiked = !Pack.IsLiked;
-        if (OnLike.HasDelegate)
-        {
-            await OnLike.InvokeAsync(Pack);
-        }
-    }
-
-    private async Task ToggleFavorite()
-    {
-        Pack.IsFavorite = !Pack.IsFavorite;
-        if (OnFavorite.HasDelegate)
-        {
-            await OnFavorite.InvokeAsync(Pack);
         }
     }
 
@@ -109,6 +89,12 @@
         {
             await OnInfo.InvokeAsync(Pack);
         }
+    }
+
+    private async Task ToggleFavorite()
+    {
+        if (OnFavorite.HasDelegate)
+            await OnFavorite.InvokeAsync(Pack);
     }
 
     private async Task DeletePack()

@@ -12,29 +12,30 @@ public class SpawnDataService
 {
     private readonly Lock _lock = new();
 
-    /// <summary>
-    /// Box spawn data indexed by MapId.
-    /// Each map contains a list of BoxSpawnEntity objects.
-    /// </summary>
-    internal Dictionary<int, List<BoxSpawnEntity>> BoxSpawns { get; private set; } = [];
+    private readonly Dictionary<int, List<BoxSpawnEntity>> _boxSpawns = [];
+    private readonly Dictionary<int, List<TileSpawnEntity>> _tileSpawns = [];
+    private readonly Dictionary<int, List<RegionSpawnEntity>> _regionSpawns = [];
+    private readonly Dictionary<int, List<VendorEntity>> _vendorSpawns = [];
 
     /// <summary>
-    /// Tile spawn data indexed by MapId.
-    /// Each map contains a list of TileSpawnEntity objects.
+    /// Box spawn data indexed by MapId. Use service methods to add/clear entries.
     /// </summary>
-    internal Dictionary<int, List<TileSpawnEntity>> TileSpawns { get; private set; } = [];
+    internal IReadOnlyDictionary<int, List<BoxSpawnEntity>> BoxSpawns => _boxSpawns;
 
     /// <summary>
-    /// Region spawn data indexed by MapId.
-    /// Each map contains a list of RegionSpawnEntity objects.
+    /// Tile spawn data indexed by MapId. Use service methods to add/clear entries.
     /// </summary>
-    internal Dictionary<int, List<RegionSpawnEntity>> RegionSpawns { get; private set; } = [];
+    internal IReadOnlyDictionary<int, List<TileSpawnEntity>> TileSpawns => _tileSpawns;
 
     /// <summary>
-    /// Vendor spawn data indexed by MapId.
-    /// Each map contains a list of VendorEntity objects.
+    /// Region spawn data indexed by MapId. Use service methods to add/clear entries.
     /// </summary>
-    internal Dictionary<int, List<VendorEntity>> VendorSpawns { get; private set; } = [];
+    internal IReadOnlyDictionary<int, List<RegionSpawnEntity>> RegionSpawns => _regionSpawns;
+
+    /// <summary>
+    /// Vendor spawn data indexed by MapId. Use service methods to add/clear entries.
+    /// </summary>
+    internal IReadOnlyDictionary<int, List<VendorEntity>> VendorSpawns => _vendorSpawns;
 
     /// <summary>
     /// Initializes all spawn dictionaries with empty lists for standard maps (0-5).
@@ -61,7 +62,7 @@ public class SpawnDataService
         {
             for (int i = 0; i <= 5; i++)
             {
-                BoxSpawns[i] = [];
+                _boxSpawns[i] = [];
             }
         }
     }
@@ -73,10 +74,10 @@ public class SpawnDataService
     {
         lock (_lock)
         {
-            if (!BoxSpawns.TryGetValue(mapId, out var list))
+            if (!_boxSpawns.TryGetValue(mapId, out var list))
             {
                 list = [];
-                BoxSpawns[mapId] = list;
+                _boxSpawns[mapId] = list;
             }
 
             if (!list.Contains(entity))
@@ -93,7 +94,7 @@ public class SpawnDataService
     {
         lock (_lock)
         {
-            BoxSpawns.Clear();
+            _boxSpawns.Clear();
         }
     }
 
@@ -104,7 +105,23 @@ public class SpawnDataService
     {
         lock (_lock)
         {
-            return BoxSpawns.Values.Sum(list => list.Count);
+            return _boxSpawns.Values.Sum(list => list.Count);
+        }
+    }
+
+    /// <summary>
+    /// Gets the box spawn list for a map, creating an empty list if none exists.
+    /// </summary>
+    internal List<BoxSpawnEntity> GetOrCreateBoxList(int mapId)
+    {
+        lock (_lock)
+        {
+            if (!_boxSpawns.TryGetValue(mapId, out var list))
+            {
+                list = [];
+                _boxSpawns[mapId] = list;
+            }
+            return list;
         }
     }
 
@@ -121,7 +138,7 @@ public class SpawnDataService
         {
             for (int i = 0; i <= 5; i++)
             {
-                TileSpawns[i] = [];
+                _tileSpawns[i] = [];
             }
         }
     }
@@ -133,7 +150,7 @@ public class SpawnDataService
     {
         lock (_lock)
         {
-            TileSpawns.Clear();
+            _tileSpawns.Clear();
         }
     }
 
@@ -144,7 +161,23 @@ public class SpawnDataService
     {
         lock (_lock)
         {
-            return TileSpawns.Values.Sum(list => list.Count);
+            return _tileSpawns.Values.Sum(list => list.Count);
+        }
+    }
+
+    /// <summary>
+    /// Gets the tile spawn list for a map, creating an empty list if none exists.
+    /// </summary>
+    internal List<TileSpawnEntity> GetOrCreateTileList(int mapId)
+    {
+        lock (_lock)
+        {
+            if (!_tileSpawns.TryGetValue(mapId, out var list))
+            {
+                list = [];
+                _tileSpawns[mapId] = list;
+            }
+            return list;
         }
     }
 
@@ -161,7 +194,7 @@ public class SpawnDataService
         {
             for (int i = 0; i <= 5; i++)
             {
-                RegionSpawns[i] = [];
+                _regionSpawns[i] = [];
             }
         }
     }
@@ -173,7 +206,7 @@ public class SpawnDataService
     {
         lock (_lock)
         {
-            RegionSpawns.Clear();
+            _regionSpawns.Clear();
         }
     }
 
@@ -184,7 +217,23 @@ public class SpawnDataService
     {
         lock (_lock)
         {
-            return RegionSpawns.Values.Sum(list => list.Count);
+            return _regionSpawns.Values.Sum(list => list.Count);
+        }
+    }
+
+    /// <summary>
+    /// Gets the region spawn list for a map, creating an empty list if none exists.
+    /// </summary>
+    internal List<RegionSpawnEntity> GetOrCreateRegionList(int mapId)
+    {
+        lock (_lock)
+        {
+            if (!_regionSpawns.TryGetValue(mapId, out var list))
+            {
+                list = [];
+                _regionSpawns[mapId] = list;
+            }
+            return list;
         }
     }
 
@@ -201,7 +250,7 @@ public class SpawnDataService
         {
             for (int i = 0; i <= 5; i++)
             {
-                VendorSpawns[i] = [];
+                _vendorSpawns[i] = [];
             }
         }
     }
@@ -213,7 +262,7 @@ public class SpawnDataService
     {
         lock (_lock)
         {
-            VendorSpawns.Clear();
+            _vendorSpawns.Clear();
         }
     }
 
@@ -224,7 +273,24 @@ public class SpawnDataService
     {
         lock (_lock)
         {
-            return VendorSpawns.Values.Sum(list => list.Count);
+            return _vendorSpawns.Values.Sum(list => list.Count);
+        }
+    }
+
+    /// <summary>
+    /// Gets the vendor list for a map, creating an empty list if none exists.
+    /// Use this to safely get a mutable reference for in-place additions or removals.
+    /// </summary>
+    internal List<VendorEntity> GetOrCreateVendorList(int mapId)
+    {
+        lock (_lock)
+        {
+            if (!_vendorSpawns.TryGetValue(mapId, out var list))
+            {
+                list = [];
+                _vendorSpawns[mapId] = list;
+            }
+            return list;
         }
     }
 

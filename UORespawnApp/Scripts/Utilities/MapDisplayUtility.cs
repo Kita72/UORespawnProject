@@ -37,7 +37,7 @@ namespace UORespawnApp.Scripts.Utilities
                     if (!playerColorCache.TryGetValue(data.PlayerName, out playerColor!))
                     {
                         // Deterministic color per player name — same color survives app restarts
-                        var rng = new Random(data.PlayerName.GetHashCode());
+                        var rng = new Random(GetStableHashCode(data.PlayerName));
                         playerColor = Color.FromRgb(rng.Next(256), rng.Next(256), rng.Next(256));
                         playerColorCache[data.PlayerName] = playerColor;
                     }
@@ -69,6 +69,17 @@ namespace UORespawnApp.Scripts.Utilities
             }
         }
 
+        private static int GetStableHashCode(string str)
+        {
+            unchecked
+            {
+                uint hash = 2166136261u;
+                foreach (byte b in System.Text.Encoding.UTF8.GetBytes(str))
+                    hash = (hash ^ b) * 16777619u;
+                return (int)hash;
+            }
+        }
+
         internal static void LoadSpawnStats()
         {
             var statsFolderPath = PathConstants.ServerStatsPath;
@@ -97,7 +108,7 @@ namespace UORespawnApp.Scripts.Utilities
                         Logger.Info($"Reading spawn stats: {Path.GetFileName(filePath)}");
                         int fileLineCount = 0;
 
-                        foreach (string line in File.ReadLines(filePath))
+                        foreach (string line in FileUtility.ReadAllLines(filePath))
                         {
                             totalLines++;
                             fileLineCount++;

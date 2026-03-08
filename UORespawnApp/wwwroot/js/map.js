@@ -564,17 +564,17 @@ window.mapModule = {
                 .map((spawner, idx) => ({ spawner, idx }))
                 .filter(item => item.spawner != null)
                 .sort((a, b) => {
-                    const radiusA = a.spawner.radius || a.spawner.width || 10;
-                    const radiusB = b.spawner.radius || b.spawner.width || 10;
+                    const radiusA = a.spawner.radius ?? 10;
+                    const radiusB = b.spawner.radius ?? 10;
                     return radiusB - radiusA; // Descending order (largest first)
                 });
 
             sortedSpawners.forEach(({ spawner, idx }) => {
 
                 // Use center coordinates and radius for circle visualization
-                const centerX = spawner.centerX || spawner.x || 0;
-                const centerY = spawner.centerY || spawner.y || 0;
-                const radius = spawner.radius || spawner.width || 10;
+                const centerX = spawner.centerX ?? 0;
+                const centerY = spawner.centerY ?? 0;
+                const radius = spawner.radius ?? 10;
 
                 // Convert center point to screen coordinates
                 const screenCenter = this.worldToScreen(centerX, centerY);
@@ -1280,9 +1280,9 @@ window.mapModule = {
             const spawner = this.xmlSpawners[i];
             if (!spawner) continue;
 
-            const centerX = spawner.centerX || spawner.x || 0;
-            const centerY = spawner.centerY || spawner.y || 0;
-            const radius = spawner.radius || spawner.width || 10;
+            const centerX = spawner.centerX ?? 0;
+            const centerY = spawner.centerY ?? 0;
+            const radius = spawner.radius ?? 10;
 
             // Check if point is within circle
             const dx = worldX - centerX;

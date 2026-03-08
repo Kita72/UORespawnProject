@@ -23,8 +23,16 @@ namespace UORespawnApp.Scripts.Utilities
         /// </summary>
         internal static void ClearBestiaryList()
         {
-            BestiaryNameList?.Clear();
-            _isLoaded = false;
+            _loadLock.Wait();
+            try
+            {
+                BestiaryNameList?.Clear();
+                _isLoaded = false;
+            }
+            finally
+            {
+                _loadLock.Release();
+            }
         }
 
         /// <summary>

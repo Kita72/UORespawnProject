@@ -1,4 +1,5 @@
 using System.Threading.Channels;
+using UORespawnApp.Scripts.Constants;
 using UORespawnApp.Scripts.Services;
 
 namespace UORespawnApp.Scripts.Utilities;
@@ -26,7 +27,7 @@ public static class Logger
 
     static Logger()
     {
-        LogDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data", "Logs");
+        LogDirectory = PathConstants.LogsPath;
 
         // Background writer: drains the channel and appends to the log file
         Task.Run(async () =>

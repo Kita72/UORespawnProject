@@ -353,7 +353,7 @@ public class SpawnPackSyncService(BinarySerializationService binarySerialization
 
     #region Creature Removal
 
-    private static int RemoveInvalidCreaturesFromBoxSpawns(Dictionary<int, List<BoxSpawnEntity>> spawns, HashSet<string> validCreatures)
+    private static int RemoveInvalidCreaturesFromBoxSpawns(IReadOnlyDictionary<int, List<BoxSpawnEntity>> spawns, HashSet<string> validCreatures)
     {
         int removed = 0;
 
@@ -373,7 +373,7 @@ public class SpawnPackSyncService(BinarySerializationService binarySerialization
         return removed;
     }
 
-    private static int RemoveInvalidCreaturesFromTileSpawns(Dictionary<int, List<TileSpawnEntity>> spawns, HashSet<string> validCreatures)
+    private static int RemoveInvalidCreaturesFromTileSpawns(IReadOnlyDictionary<int, List<TileSpawnEntity>> spawns, HashSet<string> validCreatures)
     {
         int removed = 0;
 
@@ -393,7 +393,7 @@ public class SpawnPackSyncService(BinarySerializationService binarySerialization
         return removed;
     }
 
-    private static int RemoveInvalidCreaturesFromRegionSpawns(Dictionary<int, List<RegionSpawnEntity>> spawns, HashSet<string> validCreatures)
+    private static int RemoveInvalidCreaturesFromRegionSpawns(IReadOnlyDictionary<int, List<RegionSpawnEntity>> spawns, HashSet<string> validCreatures)
     {
         int removed = 0;
 
@@ -424,7 +424,7 @@ public class SpawnPackSyncService(BinarySerializationService binarySerialization
 
     #region Region Removal
 
-    private static int RemoveInvalidRegions(Dictionary<int, List<RegionSpawnEntity>> spawns, HashSet<string> validRegions)
+    private static int RemoveInvalidRegions(IReadOnlyDictionary<int, List<RegionSpawnEntity>> spawns, HashSet<string> validRegions)
     {
         int removed = 0;
 
@@ -450,7 +450,7 @@ public class SpawnPackSyncService(BinarySerializationService binarySerialization
     #region Vendor Location Removal
 
     private static int RemoveInvalidVendorLocations(
-        Dictionary<int, List<VendorEntity>> spawns,
+        IReadOnlyDictionary<int, List<VendorEntity>> spawns,
         HashSet<string> validSignLocations,
         HashSet<string> validHiveLocations)
     {
@@ -492,7 +492,7 @@ public class SpawnPackSyncService(BinarySerializationService binarySerialization
         return removed;
     }
 
-    private static int RemoveInvalidVendorsFromSpawns(Dictionary<int, List<VendorEntity>> spawns, HashSet<string> validVendors)
+    private static int RemoveInvalidVendorsFromSpawns(IReadOnlyDictionary<int, List<VendorEntity>> spawns, HashSet<string> validVendors)
     {
         int removed = 0;
 

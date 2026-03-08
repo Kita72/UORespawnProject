@@ -284,6 +284,14 @@
                             </div>
                         </div>
                     }
+
+                    <hr class="my-4" />
+
+                    <div class="text-center">
+                        <button class="btn btn-primary" style="min-width: 200px;" @onclick="SaveSpawnSettings">
+                            <span class="bi bi-save me-2"></span>Save Settings
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -736,6 +744,7 @@
 @inject SpawnPackService SpawnPackService
 @inject AccountService AccountService
 @inject MapImageCacheService MapImageCache
+@using UORespawnApp.Scripts
 @using UORespawnApp.Scripts.Constants
 @using UORespawnApp.Scripts.Utilities
 @using UORespawnApp.Scripts.Services
@@ -1421,6 +1430,24 @@ private bool showAdvancedSettings = false;
         StateHasChanged();
     }
 
+    private void SaveSpawnSettings()
+    {
+        try
+        {
+            Utility.SaveSettings();
+            Utility.SaveSpawnData();
+            Utility.SaveTileSpawnData();
+            Utility.SaveRegionSpawnData();
+            Utility.SaveVendorSpawnData();
+            Logger.Info("Spawn settings saved manually");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Error saving spawn settings", ex);
+            ToastService.ShowWarning($"Error saving settings: {ex.Message}");
+        }
+    }
+
     private void ResetToDefaults()
     {
         // Use the centralized reset method from Settings class
@@ -1429,12 +1456,12 @@ private bool showAdvancedSettings = false;
         // Update local UI state
         boxColorHex = "#8B0000";
 
-        // Save to binary file immediately
+        // Save to CSV file immediately
         try
         {
             PathConstants.IsSpawnDataDirty = true;
             Utility.SaveSettings();
-            Logger.Info("Settings reset to defaults and saved to binary");
+            Logger.Info("Settings reset to defaults and saved to CSV");
         }
         catch (Exception ex)
         {
@@ -1526,9 +1553,9 @@ private bool showAdvancedSettings = false;
             Logger.Info("All MAUI Preferences cleared");
 
             // 4. Clear in-memory spawn data
-            Utility.BoxSpawns.Clear();
-            Utility.TileSpawns.Clear();
-            Utility.RegionSpawns.Clear();
+            Utility.ClearBoxSpawns();
+            Utility.ClearTileSpawns();
+            Utility.ClearRegionSpawns();
             Utility.InitializeSpawnDictionary();
 
             // 5. Clear runtime path constants

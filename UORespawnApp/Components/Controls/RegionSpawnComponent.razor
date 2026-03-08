@@ -1,6 +1,7 @@
 @using Microsoft.JSInterop
 @using Microsoft.Maui.Graphics
 @using System.Text.Json
+@using UORespawnApp.Scripts
 @using UORespawnApp.Scripts.Constants
 @using UORespawnApp.Scripts.Utilities
 @using UORespawnApp.Scripts.Entities
@@ -999,11 +1000,7 @@
     {
         selectedRegion = region;
 
-        if (!Utility.RegionSpawns.TryGetValue(ViewService.CurrentMapId, out var list))
-        {
-            list = new List<RegionSpawnEntity>();
-            Utility.RegionSpawns[ViewService.CurrentMapId] = list;
-        }
+        var list = Utility.GetOrCreateRegionList(ViewService.CurrentMapId);
 
         var existing = list.FirstOrDefault(r => r.Name.Equals(region.Name, StringComparison.OrdinalIgnoreCase));
         if (existing != null)

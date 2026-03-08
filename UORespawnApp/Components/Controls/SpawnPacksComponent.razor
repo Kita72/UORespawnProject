@@ -4,6 +4,7 @@
 @using System.Text.Json
 @using Microsoft.Maui.Devices
 @using Microsoft.Maui.Storage
+@using UORespawnApp.Scripts
 @using UORespawnApp.Scripts.Constants
 @using UORespawnApp.Scripts.Entities
 @using UORespawnApp.Scripts.Services
@@ -54,7 +55,7 @@
                         <div class="spawn-pack-grid">
                             @foreach (var pack in ApprovedPacks)
                             {
-                                <SpawnPackCard Pack="pack" OnSelect="SelectPack" OnApply="ApplyPack" OnInfo="ShowEcologyModal" />
+                                <SpawnPackCard Pack="pack" OnSelect="SelectPack" OnApply="ApplyPack" OnInfo="ShowEcologyModal" OnFavorite="HandleFavoriteToggled" />
                             }
                         </div>
                         @if (ApprovedPacks.Count == 0)
@@ -67,7 +68,7 @@
                         <div class="spawn-pack-grid">
                             @foreach (var pack in CreatedPacks)
                             {
-                                <SpawnPackCard Pack="pack" OnSelect="SelectPack" OnApply="ApplyPack" OnDelete="DeleteCreatedPack" OnInfo="ShowEcologyModal" ShowDelete="true" />
+                                <SpawnPackCard Pack="pack" OnSelect="SelectPack" OnApply="ApplyPack" OnDelete="DeleteCreatedPack" OnInfo="ShowEcologyModal" OnFavorite="HandleFavoriteToggled" ShowDelete="true" />
                             }
                         </div>
                         @if (CreatedPacks.Count == 0)
@@ -80,7 +81,7 @@
                         <div class="spawn-pack-grid">
                             @foreach (var pack in ImportedPacks)
                             {
-                                <SpawnPackCard Pack="pack" OnSelect="SelectPack" OnApply="ApplyPack" OnDelete="DeletePack" OnInfo="ShowEcologyModal" ShowDelete="true" />
+                                <SpawnPackCard Pack="pack" OnSelect="SelectPack" OnApply="ApplyPack" OnDelete="DeletePack" OnInfo="ShowEcologyModal" OnFavorite="HandleFavoriteToggled" ShowDelete="true" />
                             }
                         </div>
                         @if (ImportedPacks.Count == 0)
@@ -518,6 +519,9 @@
         ImportedPacks = SpawnPackService.LoadImportedPacks();
         Logger.Info($"[SpawnPacks] Refreshed packs - {ApprovedPacks.Count} approved, {CreatedPacks.Count} created, {ImportedPacks.Count} imported");
 
+        // Hydrate IsFavorite from persistent favorites
+        HydrateFavorites();
+
         // Keep selected pack if it still exists, otherwise select first available
         if (SelectedPack != null)
         {
@@ -540,6 +544,20 @@
             PackView.Imported => ImportedPacks,
             _ => ApprovedPacks
         };
+    }
+
+    private void HydrateFavorites()
+    {
+        var favoriteIds = Settings.FavoritePackIds;
+        foreach (var pack in ApprovedPacks.Concat(CreatedPacks).Concat(ImportedPacks))
+            pack.IsFavorite = favoriteIds.Contains(pack.Metadata.Id);
+    }
+
+    private void HandleFavoriteToggled(SpawnPackInfo pack)
+    {
+        Settings.TogglePackFavorite(pack.Metadata.Id);
+        pack.IsFavorite = Settings.FavoritePackIds.Contains(pack.Metadata.Id);
+        StateHasChanged();
     }
 
     private void SetPackView(PackView view)

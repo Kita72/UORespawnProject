@@ -14,19 +14,19 @@ public class XmlSpawnerCommandService
 
     // Track pending commands by serial to prevent duplicates in a session
     // Key: serial, Value: command type (DELETE, EDIT, ADD)
-    private static readonly Dictionary<string, string> _pendingCommandsBySerial = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, string> _pendingCommandsBySerial = new(StringComparer.OrdinalIgnoreCase);
 
     // Track pending ADD commands by location to prevent duplicate spawners at same spot
     // Key: "MapId|X|Y", Value: true
-    private static readonly HashSet<string> _pendingAddLocations = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _pendingAddLocations = new(StringComparer.OrdinalIgnoreCase);
 
-    private static readonly Lock _lock = new();
+    private readonly Lock _lock = new();
 
     /// <summary>
     /// Gets the path to the XML commands file.
     /// Returns null if server is not linked.
     /// </summary>
-    private static string? GetCommandFilePath()
+    private string? GetCommandFilePath()
     {
         var inputPath = PathConstants.ServerInputPath;
         if (string.IsNullOrEmpty(inputPath))
@@ -42,7 +42,7 @@ public class XmlSpawnerCommandService
     /// </summary>
     /// <param name="serial">The spawner serial to check</param>
     /// <returns>The pending command type, or null if none</returns>
-    public static string? GetPendingCommand(string serial)
+    public string? GetPendingCommand(string serial)
     {
         if (string.IsNullOrEmpty(serial)) return null;
         lock (_lock)
@@ -54,7 +54,7 @@ public class XmlSpawnerCommandService
     /// <summary>
     /// Checks if a location already has a pending ADD command.
     /// </summary>
-    public static bool HasPendingAddAt(int mapId, int x, int y)
+    public bool HasPendingAddAt(int mapId, int x, int y)
     {
         var key = $"{mapId}|{x}|{y}";
         lock (_lock)
@@ -66,7 +66,7 @@ public class XmlSpawnerCommandService
     /// <summary>
     /// Clears all pending commands. Call when server syncs or on app restart.
     /// </summary>
-    public static void ClearPendingCommands()
+    public void ClearPendingCommands()
     {
         lock (_lock)
         {
@@ -82,7 +82,7 @@ public class XmlSpawnerCommandService
     /// </summary>
     /// <param name="serial">The serial number of the spawner to delete (e.g., "0x12345678")</param>
     /// <returns>True if command was written successfully</returns>
-    public static bool WriteDeleteCommand(string serial)
+    public bool WriteDeleteCommand(string serial)
     {
         if (string.IsNullOrEmpty(serial))
         {
@@ -130,7 +130,7 @@ public class XmlSpawnerCommandService
     /// <param name="maxCount">Maximum spawn count (1-100)</param>
     /// <param name="creatures">List of creature names (duplicates count as quantity)</param>
     /// <returns>True if command was written successfully</returns>
-    public static bool WriteAddCommand(int mapId, int x, int y, int z, int homeRange, int maxCount, List<string> creatures)
+    public bool WriteAddCommand(int mapId, int x, int y, int z, int homeRange, int maxCount, List<string> creatures)
     {
         if (creatures == null || creatures.Count == 0)
         {
@@ -184,7 +184,7 @@ public class XmlSpawnerCommandService
     /// <param name="maxCount">Maximum spawn count (1-100)</param>
     /// <param name="creatures">List of creature names (duplicates count as quantity)</param>
     /// <returns>True if command was written successfully</returns>
-    public static bool WriteEditCommand(string serial, int homeRange, int maxCount, List<string> creatures)
+    public bool WriteEditCommand(string serial, int homeRange, int maxCount, List<string> creatures)
     {
         if (string.IsNullOrEmpty(serial))
         {
@@ -237,7 +237,7 @@ public class XmlSpawnerCommandService
     /// <summary>
     /// Checks if the server is linked and commands can be written.
     /// </summary>
-    public static bool CanWriteCommands()
+    public bool CanWriteCommands()
     {
         return !string.IsNullOrEmpty(PathConstants.ServerInputPath);
     }

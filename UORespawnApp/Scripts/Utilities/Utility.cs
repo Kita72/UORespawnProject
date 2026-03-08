@@ -28,6 +28,7 @@ public static class Utility
     private static SessionService? _sessionService;
     private static MapImageCacheService? _mapImageCache;
     private static BinarySerializationService? _binarySerializationService;
+    private static bool _isInitialized;
 
     /// <summary>
     /// Initializes the static utility with DI services.
@@ -40,11 +41,15 @@ public static class Utility
         BinarySerializationService binarySerializationService,
         ToastService toastService)
     {
+        if (_isInitialized)
+            throw new InvalidOperationException("Utility services are already initialized.");
+
         _spawnDataService = spawnDataService;
         _sessionService = sessionService;
         _mapImageCache = mapImageCache;
         _binarySerializationService = binarySerializationService;
         ErrorHandler.ToastService = toastService;
+        _isInitialized = true;
         Logger.Info("Utility services initialized from DI");
     }
 
@@ -69,26 +74,32 @@ public static class Utility
     /// Box spawn data - delegates to SpawnDataService.
     /// Prefer injecting SpawnDataService directly in new code.
     /// </summary>
-    internal static Dictionary<int, List<BoxSpawnEntity>> BoxSpawns => 
-        _spawnDataService?.BoxSpawns ?? [];
+    internal static IReadOnlyDictionary<int, List<BoxSpawnEntity>> BoxSpawns => 
+        _spawnDataService?.BoxSpawns ?? new Dictionary<int, List<BoxSpawnEntity>>();
 
     /// <summary>
     /// Tile spawn data - delegates to SpawnDataService.
     /// </summary>
-    internal static Dictionary<int, List<TileSpawnEntity>> TileSpawns => 
-        _spawnDataService?.TileSpawns ?? [];
+    internal static IReadOnlyDictionary<int, List<TileSpawnEntity>> TileSpawns => 
+        _spawnDataService?.TileSpawns ?? new Dictionary<int, List<TileSpawnEntity>>();
 
     /// <summary>
     /// Region spawn data - delegates to SpawnDataService.
     /// </summary>
-    internal static Dictionary<int, List<RegionSpawnEntity>> RegionSpawns => 
-        _spawnDataService?.RegionSpawns ?? [];
+    internal static IReadOnlyDictionary<int, List<RegionSpawnEntity>> RegionSpawns => 
+        _spawnDataService?.RegionSpawns ?? new Dictionary<int, List<RegionSpawnEntity>>();
 
     /// <summary>
     /// Vendor spawn data - delegates to SpawnDataService.
     /// </summary>
-    internal static Dictionary<int, List<VendorEntity>> VendorSpawns => 
-        _spawnDataService?.VendorSpawns ?? [];
+    internal static IReadOnlyDictionary<int, List<VendorEntity>> VendorSpawns => 
+        _spawnDataService?.VendorSpawns ?? new Dictionary<int, List<VendorEntity>>();
+
+    /// <summary>
+    /// Gets the vendor list for a map (creating it if absent) — safe for in-place mutation.
+    /// </summary>
+    internal static List<VendorEntity> GetOrCreateVendorList(int mapId) =>
+        _spawnDataService?.GetOrCreateVendorList(mapId) ?? [];
 
     /// <summary>
     /// Initialize all spawn dictionaries - delegates to SpawnDataService.
@@ -101,6 +112,11 @@ public static class Utility
     #region Box Spawn Methods (delegate to SpawnDataService)
 
     internal static void InitializeBoxSpawns() => _spawnDataService?.InitializeBoxSpawns();
+
+    internal static void ClearBoxSpawns() => _spawnDataService?.ClearBoxSpawns();
+
+    internal static List<BoxSpawnEntity> GetOrCreateBoxList(int mapId) =>
+        _spawnDataService?.GetOrCreateBoxList(mapId) ?? [];
 
     internal static void AddBoxSpawn(int map, BoxSpawnEntity entity) => 
         _spawnDataService?.AddBoxSpawn(map, entity);
@@ -137,6 +153,11 @@ public static class Utility
 
     internal static void InitializeTileSpawns() => _spawnDataService?.InitializeTileSpawns();
 
+    internal static void ClearTileSpawns() => _spawnDataService?.ClearTileSpawns();
+
+    internal static List<TileSpawnEntity> GetOrCreateTileList(int mapId) =>
+        _spawnDataService?.GetOrCreateTileList(mapId) ?? [];
+
     internal static void SaveTileSpawnData()
     {
         try
@@ -168,6 +189,11 @@ public static class Utility
     #region Region Spawn Methods (delegate to SpawnDataService)
 
     internal static void InitializeRegionSpawns() => _spawnDataService?.InitializeRegionSpawns();
+
+    internal static void ClearRegionSpawns() => _spawnDataService?.ClearRegionSpawns();
+
+    internal static List<RegionSpawnEntity> GetOrCreateRegionList(int mapId) =>
+        _spawnDataService?.GetOrCreateRegionList(mapId) ?? [];
 
     internal static void SaveRegionSpawnData()
     {
