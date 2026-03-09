@@ -168,6 +168,11 @@ namespace UORespawnApp.Scripts.Services
                 {
                     await ReloadTileList(newSource.Token).ConfigureAwait(false);
                 }
+                else
+                {
+                    Logger.Info($"Ignoring unrecognized OUTPUT file: {e.Name}");
+                    return;
+                }
 
                 _onDataChanged?.Invoke();
             }

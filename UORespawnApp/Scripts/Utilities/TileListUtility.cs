@@ -15,6 +15,7 @@ namespace UORespawnApp.Scripts.Utilities
     {
         internal static List<string>? TileNameList { get; private set; }
         private static bool _isLoaded = false;
+        private static readonly SemaphoreSlim _loadLock = new(1, 1);
 
         /// <summary>
         /// Clear tile list to force reload from file.
@@ -36,38 +37,51 @@ namespace UORespawnApp.Scripts.Utilities
                 return; // Already loaded
             }
 
-            TileNameList = [];
-
+            await _loadLock.WaitAsync(cancellationToken);
             try
             {
-                var filePath = PathConstants.GetTileListFilePath();
-
-                if (!File.Exists(filePath))
+                if (_isLoaded && TileNameList != null && TileNameList.Count > 0)
                 {
-                    Logger.Warning($"Tile list file not found at: {filePath}");
-                    _isLoaded = true;
                     return;
                 }
 
-                var lines = await FileUtility.ReadAllLinesAsync(filePath, cancellationToken: cancellationToken);
+                TileNameList = [];
 
-                foreach (var line in lines)
+                try
                 {
-                    if (!string.IsNullOrWhiteSpace(line) && !line.StartsWith('#'))
+                    var filePath = PathConstants.GetTileListFilePath();
+
+                    if (!File.Exists(filePath))
                     {
-                        TileNameList.Add(line.Trim());
+                        Logger.Warning($"Tile list file not found at: {filePath}");
+                        _isLoaded = true;
+                        return;
                     }
+
+                    var lines = await FileUtility.ReadAllLinesAsync(filePath, cancellationToken: cancellationToken);
+
+                    foreach (var line in lines)
+                    {
+                        if (!string.IsNullOrWhiteSpace(line) && !line.StartsWith('#'))
+                        {
+                            TileNameList.Add(line.Trim());
+                        }
+                    }
+
+                    TileNameList.Sort();
+                    _isLoaded = true;
+
+                    Logger.Info($"Loaded {TileNameList.Count} tile types from tile list file");
                 }
-
-                TileNameList.Sort();
-                _isLoaded = true;
-
-                Logger.Info($"Loaded {TileNameList.Count} tile types from tile list file");
+                catch (Exception ex)
+                {
+                    Logger.Error("Error loading tile list", ex);
+                    _isLoaded = true; // Mark as loaded to prevent repeated attempts
+                }
             }
-            catch (Exception ex)
+            finally
             {
-                Logger.Error("Error loading tile list", ex);
-                _isLoaded = true; // Mark as loaded to prevent repeated attempts
+                _loadLock.Release();
             }
         }
 

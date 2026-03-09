@@ -36,8 +36,16 @@ namespace UORespawnApp.Scripts.Services
         public bool IsLoading => _isLoading;
         public bool IsComplete => _isComplete;
 
-        // Progress tracking
-        public const int TotalSteps = 15;
+        // Progress tracking — one entry per step that calls CompletedSteps++.
+        // Add/remove names here when adding/removing tracked load steps.
+        private static readonly string[] _trackedStepNames =
+        [
+            "Settings", "MapList", "TileList", "BoxSpawns", "TileSpawns",
+            "RegionSpawns", "VendorSpawns", "Bestiary", "VendorList",
+            "SignData", "HiveData", "XMLSpawners", "SpawnPackSync", "MapFiles", "DataWatcher"
+        ];
+
+        public static int TotalSteps => _trackedStepNames.Length;
         public int CompletedSteps { get; private set; }
         public double ProgressPercentage => (double)CompletedSteps / TotalSteps * 100;
 

@@ -119,32 +119,32 @@ namespace UORespawnApp.Scripts.Utilities
                         return;
                     }
 
-                var lines = FileUtility.ReadAllLines(filePath);
-                int loadedCount = 0;
+                    var lines = FileUtility.ReadAllLines(filePath);
+                    int loadedCount = 0;
 
-                foreach (var line in lines)
-                {
-                    if (string.IsNullOrWhiteSpace(line) || line.StartsWith('#'))
-                        continue;
-
-                    var parsed = ParseSignLine(line);
-                    if (parsed != null)
+                    foreach (var line in lines)
                     {
-                        var (mapId, signLocation) = parsed.Value;
+                        if (string.IsNullOrWhiteSpace(line) || line.StartsWith('#'))
+                            continue;
 
-                        if (!_signsByMap.TryGetValue(mapId, out var mapSigns))
+                        var parsed = ParseSignLine(line);
+                        if (parsed != null)
                         {
-                            mapSigns = [];
-                            _signsByMap[mapId] = mapSigns;
+                            var (mapId, signLocation) = parsed.Value;
+
+                            if (!_signsByMap.TryGetValue(mapId, out var mapSigns))
+                            {
+                                mapSigns = [];
+                                _signsByMap[mapId] = mapSigns;
+                            }
+
+                            mapSigns.Add(signLocation);
+                            loadedCount++;
                         }
-
-                        mapSigns.Add(signLocation);
-                        loadedCount++;
                     }
-                }
 
-                Logger.Info($"Loaded {loadedCount} sign locations across {_signsByMap.Count} maps from UOR_SignData.txt");
-                _isLoaded = true;
+                    Logger.Info($"Loaded {loadedCount} sign locations across {_signsByMap.Count} maps from UOR_SignData.txt");
+                    _isLoaded = true;
             }
                     catch (Exception ex)
                     {

@@ -34,6 +34,7 @@ namespace UORespawnApp.Scripts.Services
         private static DateTime _lastCheckTime = DateTime.MinValue;
         private static UpdateInfo? _cachedUpdateInfo = null;
         private static readonly TimeSpan _cacheExpiration = TimeSpan.FromHours(1);
+        private static readonly Lock _cacheLock = new();
 
         /// <summary>Current app version — single source of truth from Utility.Version.</summary>
         public static string CurrentVersion => Utility.Version;
@@ -45,10 +46,13 @@ namespace UORespawnApp.Scripts.Services
         public async Task<UpdateInfo> CheckForUpdateAsync()
         {
             // Return cached result if still valid
-            if (_cachedUpdateInfo != null && DateTime.Now - _lastCheckTime < _cacheExpiration)
+            lock (_cacheLock)
             {
-                Logger.Info("Returning cached update check result");
-                return _cachedUpdateInfo;
+                if (_cachedUpdateInfo != null && DateTime.Now - _lastCheckTime < _cacheExpiration)
+                {
+                    Logger.Info("Returning cached update check result");
+                    return _cachedUpdateInfo;
+                }
             }
             
             try
@@ -65,7 +69,7 @@ namespace UORespawnApp.Scripts.Services
                 if (release?.TagName == null)
                 {
                     Logger.Warning("GitHub API returned no release data");
-                    return UpdateChecker.CreateNoUpdateInfo("Unable to check for updates");
+                    return CreateNoUpdateInfo("Unable to check for updates");
                 }
 
                 // Parse versions (strip 'v' prefix if present)
@@ -98,9 +102,12 @@ namespace UORespawnApp.Scripts.Services
                 }
                 
                 // Cache the result
-                _cachedUpdateInfo = updateInfo;
-                _lastCheckTime = DateTime.Now;
-                
+                lock (_cacheLock)
+                {
+                    _cachedUpdateInfo = updateInfo;
+                    _lastCheckTime = DateTime.Now;
+                }
+
                 return updateInfo;
             }
             catch (HttpRequestException ex)
@@ -120,8 +127,11 @@ namespace UORespawnApp.Scripts.Services
         /// </summary>
         public void ClearCache()
         {
-            _cachedUpdateInfo = null;
-            _lastCheckTime = DateTime.MinValue;
+            lock (_cacheLock)
+            {
+                _cachedUpdateInfo = null;
+                _lastCheckTime = DateTime.MinValue;
+            }
             Logger.Info("Update check cache cleared");
         }
         

@@ -114,32 +114,32 @@ namespace UORespawnApp.Scripts.Utilities
                         return;
                     }
 
-                var lines = FileUtility.ReadAllLines(filePath);
-                int loadedCount = 0;
+                    var lines = FileUtility.ReadAllLines(filePath);
+                    int loadedCount = 0;
 
-                foreach (var line in lines)
-                {
-                    if (string.IsNullOrWhiteSpace(line) || line.StartsWith('#'))
-                        continue;
-
-                    var parsed = ParseHiveLine(line);
-                    if (parsed != null)
+                    foreach (var line in lines)
                     {
-                        var (mapId, hiveLocation) = parsed.Value;
+                        if (string.IsNullOrWhiteSpace(line) || line.StartsWith('#'))
+                            continue;
 
-                        if (!_hivesByMap.TryGetValue(mapId, out var mapHives))
+                        var parsed = ParseHiveLine(line);
+                        if (parsed != null)
                         {
-                            mapHives = [];
-                            _hivesByMap[mapId] = mapHives;
+                            var (mapId, hiveLocation) = parsed.Value;
+
+                            if (!_hivesByMap.TryGetValue(mapId, out var mapHives))
+                            {
+                                mapHives = [];
+                                _hivesByMap[mapId] = mapHives;
+                            }
+
+                            mapHives.Add(hiveLocation);
+                            loadedCount++;
                         }
-
-                        mapHives.Add(hiveLocation);
-                        loadedCount++;
                     }
-                }
 
-                Logger.Info($"Loaded {loadedCount} hive locations across {_hivesByMap.Count} maps from UOR_HiveData.txt");
-                _isLoaded = true;
+                    Logger.Info($"Loaded {loadedCount} hive locations across {_hivesByMap.Count} maps from UOR_HiveData.txt");
+                    _isLoaded = true;
             }
                     catch (Exception ex)
                     {

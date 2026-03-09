@@ -116,8 +116,12 @@ public class DebugService
                 }
             }
 
-            // Notify UI of loaded entries
-            OnLogCleared?.Invoke(); // Trigger refresh
+            // Notify UI of loaded entries — fire OnLogEntry so subscribers refresh
+            lock (_lock)
+            {
+                if (_logEntries.Count > 0)
+                    OnLogEntry?.Invoke(_logEntries[^1]);
+            }
         }
         catch
         {

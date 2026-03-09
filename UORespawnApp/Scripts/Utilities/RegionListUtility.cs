@@ -131,62 +131,62 @@ namespace UORespawnApp.Scripts.Utilities
                         return;
                     }
 
-                var lines = FileUtility.ReadAllLines(filePath);
+                    var lines = FileUtility.ReadAllLines(filePath);
 
-                // Temporary dictionary to group rects by map and name
-                var tempRegions = new Dictionary<int, Dictionary<string, List<Rect>>>();
+                    // Temporary dictionary to group rects by map and name
+                    var tempRegions = new Dictionary<int, Dictionary<string, List<Rect>>>();
 
-                foreach (var line in lines)
-                {
-                    if (string.IsNullOrWhiteSpace(line) || line.StartsWith('#'))
-                        continue;
-
-                    var parsed = ParseRegionLine(line);
-
-                    if (parsed != null)
+                    foreach (var line in lines)
                     {
-                        var (mapId, name, rect) = parsed.Value;
+                        if (string.IsNullOrWhiteSpace(line) || line.StartsWith('#'))
+                            continue;
 
-                        // Ensure map exists
-                        if (!tempRegions.TryGetValue(mapId, out Dictionary<string, List<Rect>>? value))
+                        var parsed = ParseRegionLine(line);
+
+                        if (parsed != null)
                         {
-                            value = new Dictionary<string, List<Rect>>(StringComparer.OrdinalIgnoreCase);
-                            tempRegions[mapId] = value;
-                        }
+                            var (mapId, name, rect) = parsed.Value;
 
-                        // Ensure region name exists
-                        if (!value.TryGetValue(name, out List<Rect>? value1))
-                        {
-                            value1 = [];
-                            value[name] = value1;
-                        }
+                            // Ensure map exists
+                            if (!tempRegions.TryGetValue(mapId, out Dictionary<string, List<Rect>>? value))
+                            {
+                                value = new Dictionary<string, List<Rect>>(StringComparer.OrdinalIgnoreCase);
+                                tempRegions[mapId] = value;
+                            }
 
-                        value1.Add(rect);
+                            // Ensure region name exists
+                            if (!value.TryGetValue(name, out List<Rect>? value1))
+                            {
+                                value1 = [];
+                                value[name] = value1;
+                            }
+
+                            value1.Add(rect);
+                        }
                     }
-                }
 
-                // Convert to RegionInfo list
-                foreach (var mapKvp in tempRegions)
-                {
-                    _regionsByMap[mapKvp.Key] = [];
-
-                    foreach (var regionKvp in mapKvp.Value)
+                    // Convert to RegionInfo list
+                    foreach (var mapKvp in tempRegions)
                     {
-                        _regionsByMap[mapKvp.Key].Add(new RegionInfo
+                        _regionsByMap[mapKvp.Key] = [];
+
+                        foreach (var regionKvp in mapKvp.Value)
                         {
-                            Name = regionKvp.Key,
-                            MapId = mapKvp.Key,
-                            Rectangles = regionKvp.Value
-                        });
+                            _regionsByMap[mapKvp.Key].Add(new RegionInfo
+                            {
+                                Name = regionKvp.Key,
+                                MapId = mapKvp.Key,
+                                Rectangles = regionKvp.Value
+                            });
+                        }
                     }
-                }
 
-                var totalRegions = _regionsByMap.Values.Sum(list => list.Count);
-                var totalRects = _regionsByMap.Values.Sum(list => list.Sum(r => r.Rectangles.Count));
+                    var totalRegions = _regionsByMap.Values.Sum(list => list.Count);
+                    var totalRects = _regionsByMap.Values.Sum(list => list.Sum(r => r.Rectangles.Count));
 
-                Logger.Info($"Loaded {totalRegions} unique regions with {totalRects} rectangles from UOR_RegionList.txt across {_regionsByMap.Count} maps");
+                    Logger.Info($"Loaded {totalRegions} unique regions with {totalRects} rectangles from UOR_RegionList.txt across {_regionsByMap.Count} maps");
 
-                _isLoaded = true;
+                    _isLoaded = true;
             }
                     catch (Exception ex)
                     {

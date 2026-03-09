@@ -21,8 +21,9 @@ namespace UORespawnApp.Scripts.Utilities
         /// Dictionary of MapId -> MapName
         /// </summary>
         internal static Dictionary<int, string>? MapList { get; private set; }
-        
+
         private static bool _isLoaded = false;
+        private static readonly SemaphoreSlim _loadLock = new(1, 1);
 
         /// <summary>
         /// Clear map list to force reload from file.
@@ -44,49 +45,62 @@ namespace UORespawnApp.Scripts.Utilities
                 return; // Already loaded
             }
 
-            MapList = [];
-
+            await _loadLock.WaitAsync(cancellationToken);
             try
             {
-                var filePath = PathConstants.GetMapListFilePath();
-
-                if (!File.Exists(filePath))
+                if (_isLoaded && MapList != null && MapList.Count > 0)
                 {
-                    Logger.Warning($"Map list file not found at: {filePath}");
-                    LoadDefaultMaps();
-                    _isLoaded = true;
                     return;
                 }
 
-                var lines = await FileUtility.ReadAllLinesAsync(filePath, cancellationToken: cancellationToken);
+                MapList = [];
 
-                foreach (var line in lines)
+                try
                 {
-                    if (string.IsNullOrWhiteSpace(line) || line.StartsWith('#'))
-                        continue;
+                    var filePath = PathConstants.GetMapListFilePath();
 
-                    // Parse format: (MapId, MapName)
-                    var parsed = ParseMapLine(line);
-                    if (parsed.HasValue)
+                    if (!File.Exists(filePath))
                     {
-                        MapList[parsed.Value.MapId] = parsed.Value.MapName;
+                        Logger.Warning($"Map list file not found at: {filePath}");
+                        LoadDefaultMaps();
+                        _isLoaded = true;
+                        return;
                     }
-                }
 
-                if (MapList.Count == 0)
+                    var lines = await FileUtility.ReadAllLinesAsync(filePath, cancellationToken: cancellationToken);
+
+                    foreach (var line in lines)
+                    {
+                        if (string.IsNullOrWhiteSpace(line) || line.StartsWith('#'))
+                            continue;
+
+                        // Parse format: (MapId, MapName)
+                        var parsed = ParseMapLine(line);
+                        if (parsed.HasValue)
+                        {
+                            MapList[parsed.Value.MapId] = parsed.Value.MapName;
+                        }
+                    }
+
+                    if (MapList.Count == 0)
+                    {
+                        Logger.Warning("Map list file was empty, loading defaults");
+                        LoadDefaultMaps();
+                    }
+
+                    _isLoaded = true;
+                    Logger.Info($"Loaded {MapList.Count} maps from map list file");
+                }
+                catch (Exception ex)
                 {
-                    Logger.Warning("Map list file was empty, loading defaults");
+                    Logger.Error("Error loading map list", ex);
                     LoadDefaultMaps();
+                    _isLoaded = true;
                 }
-
-                _isLoaded = true;
-                Logger.Info($"Loaded {MapList.Count} maps from map list file");
             }
-            catch (Exception ex)
+            finally
             {
-                Logger.Error("Error loading map list", ex);
-                LoadDefaultMaps();
-                _isLoaded = true;
+                _loadLock.Release();
             }
         }
 

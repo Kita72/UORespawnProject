@@ -189,7 +189,7 @@ namespace UORespawnApp.Scripts
 
         public static Color BoxColor
         {
-            get => _cachedBoxColor ?? Color.FromArgb("#8B0000");
+            get => _cachedBoxColor ?? DefaultBoxColor;
             set
             {
                 _cachedBoxColor = value;
@@ -531,7 +531,7 @@ namespace UORespawnApp.Scripts
         /// </summary>
         public static void ToggleBestiaryFavorite(string name)
         {
-            if (string.IsNullOrEmpty(name) || BestiaryFavorites == null) return;
+            if (string.IsNullOrEmpty(name)) return;
 
             BestiaryFavorites = ToggleFavorite(name, BestiaryFavorites);
         }
@@ -541,7 +541,7 @@ namespace UORespawnApp.Scripts
         /// </summary>
         public static void ToggleVendorFavorite(string name)
         {
-            if (string.IsNullOrEmpty(name) || VendorFavorites == null) return;
+            if (string.IsNullOrEmpty(name)) return;
 
             VendorFavorites = ToggleFavorite(name, VendorFavorites);
         }

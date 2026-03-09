@@ -1573,7 +1573,7 @@ private List<string> editXmlSpawnNames = [];
             }
             else
             {
-                Logger.Warning($"{currentCategory} spawn list not yet supported in legacy BoxSpawnEntity - upgrade to BoxSpawnEntity coming soon!");
+                Logger.Warning($"Unhandled frequency type in SaveCategoryModal: {editingFrequency}");
             }
 
             // Mark data as dirty - spawn entries changed

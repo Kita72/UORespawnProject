@@ -275,8 +275,8 @@ namespace UORespawnApp.Scripts.Services
             using var stream = FileUtility.OpenRead(filePath);
             using var reader = new BinaryReader(stream);
 
-            int version = reader.ReadInt32();
-            string fileVersion = reader.ReadString();
+            _ = reader.ReadInt32();  // version
+            _ = reader.ReadString(); // fileVersion
 
             int mapCount = reader.ReadInt32();
             int totalBoxes = 0;
@@ -284,7 +284,7 @@ namespace UORespawnApp.Scripts.Services
             for (int m = 0; m < mapCount; m++)
             {
                 int mapId = reader.ReadInt32();
-                string mapName = reader.ReadString();
+                _ = reader.ReadString(); // mapName
                 int boxCount = reader.ReadInt32();
 
                 // Ensure the map entry exists
@@ -459,8 +459,8 @@ namespace UORespawnApp.Scripts.Services
             using var stream = FileUtility.OpenRead(filePath);
             using var reader = new BinaryReader(stream);
 
-            int version = reader.ReadInt32();
-            string fileVersion = reader.ReadString();
+            _ = reader.ReadInt32();  // version
+            _ = reader.ReadString(); // fileVersion
 
             int mapCount = reader.ReadInt32();
             int totalTiles = 0;
@@ -469,7 +469,7 @@ namespace UORespawnApp.Scripts.Services
             for (int m = 0; m < mapCount; m++)
             {
                 int mapId = reader.ReadInt32();
-                string mapName = reader.ReadString();
+                _ = reader.ReadString(); // mapName
                 int tileCount = reader.ReadInt32();
 
                 var value = _spawnDataService.GetOrCreateTileList(mapId);
@@ -647,8 +647,8 @@ namespace UORespawnApp.Scripts.Services
             using var stream = FileUtility.OpenRead(filePath);
             using var reader = new BinaryReader(stream);
 
-            int version = reader.ReadInt32();
-            string fileVersion = reader.ReadString();
+            _ = reader.ReadInt32();  // version
+            _ = reader.ReadString(); // fileVersion
 
             int mapCount = reader.ReadInt32();
             int totalRegions = 0;
@@ -656,7 +656,7 @@ namespace UORespawnApp.Scripts.Services
             for (int m = 0; m < mapCount; m++)
             {
                 int mapId = reader.ReadInt32();
-                string mapName = reader.ReadString();
+                _ = reader.ReadString(); // mapName
                 int regionCount = reader.ReadInt32();
 
                 var value = _spawnDataService.GetOrCreateRegionList(mapId);
@@ -797,7 +797,7 @@ namespace UORespawnApp.Scripts.Services
 
             // Read and validate version
             int version = reader.ReadInt32();
-            string versionString = reader.ReadString();
+            _ = reader.ReadString(); // versionString
 
             if (version > VENDOR_SPAWN_VERSION)
             {
@@ -810,7 +810,7 @@ namespace UORespawnApp.Scripts.Services
             for (int m = 0; m < mapCount; m++)
             {
                 int mapId = reader.ReadInt32();
-                string mapName = reader.ReadString(); // Read but don't use (we derive from MapUtility)
+                _ = reader.ReadString(); // mapName derived from MapUtility
                 int vendorCount = reader.ReadInt32();
 
                 var value = _spawnDataService.GetOrCreateVendorList(mapId);

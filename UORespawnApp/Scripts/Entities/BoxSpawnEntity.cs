@@ -78,15 +78,6 @@ namespace UORespawnApp.Scripts.Entities
         public List<string> RareSpawns { get; set; } = [];
 
         /// <summary>
-        /// Update priority based on position in entity list
-        /// Called when boxes are reordered
-        /// </summary>
-        public void UpdatePriority(List<BoxSpawnEntity> entities)
-        {
-            Priority = entities.Count;
-        }
-
-        /// <summary>
         /// Check if this spawn box has any spawn data configured
         /// </summary>
         public bool HasSpawns()

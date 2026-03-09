@@ -39,7 +39,6 @@ public class MapImageCacheService
                 // Validate cache is still fresh (file hasn't changed)
                 if (cached.FileModifiedTime == currentModified && !string.IsNullOrEmpty(cached.DataUrl))
                 {
-                    Logger.Info($"Map {mapId} loaded from cache");
                     return cached.DataUrl;
                 }
 

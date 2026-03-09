@@ -19,6 +19,7 @@ public static class TileImageUtility
 {
     private const string FALLBACK_IMAGE = "NO_DRAW.png";
     private static readonly Dictionary<string, string> _imageCache = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly Lock _cacheLock = new();
 
     /// <summary>
     /// Tile descriptions for terrain types in Ultima Online.
@@ -230,8 +231,11 @@ public static class TileImageUtility
             return GetFallbackImageDataUrl();
 
         // Check cache first
-        if (_imageCache.TryGetValue(tileName, out var cachedUrl))
-            return cachedUrl;
+        lock (_cacheLock)
+        {
+            if (_imageCache.TryGetValue(tileName, out var cachedUrl))
+                return cachedUrl;
+        }
 
         try
         {
@@ -242,8 +246,11 @@ public static class TileImageUtility
                 var imageBytes = File.ReadAllBytes(imagePath);
                 var base64 = Convert.ToBase64String(imageBytes);
                 var dataUrl = $"data:image/png;base64,{base64}";
-                
-                _imageCache[tileName] = dataUrl;
+
+                lock (_cacheLock)
+                {
+                    _imageCache[tileName] = dataUrl;
+                }
                 return dataUrl;
             }
             
@@ -264,8 +271,11 @@ public static class TileImageUtility
     {
         const string fallbackKey = "__FALLBACK__";
         
-        if (_imageCache.TryGetValue(fallbackKey, out var cachedUrl))
-            return cachedUrl;
+        lock (_cacheLock)
+        {
+            if (_imageCache.TryGetValue(fallbackKey, out var cachedUrl))
+                return cachedUrl;
+        }
 
         try
         {
@@ -276,8 +286,11 @@ public static class TileImageUtility
                 var imageBytes = File.ReadAllBytes(fallbackPath);
                 var base64 = Convert.ToBase64String(imageBytes);
                 var dataUrl = $"data:image/png;base64,{base64}";
-                
-                _imageCache[fallbackKey] = dataUrl;
+
+                lock (_cacheLock)
+                {
+                    _imageCache[fallbackKey] = dataUrl;
+                }
                 return dataUrl;
             }
             
