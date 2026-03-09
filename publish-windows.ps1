@@ -1,7 +1,15 @@
 # UORespawn Windows Publish Script
 # This creates a self-contained .NET 10 Windows executable package
 
-$version = "2.0.0.1"
+# Auto-read version from Utility.cs (single source of truth)
+$utilityPath = "UORespawnApp\Scripts\Utilities\Utility.cs"
+$versionMatch = Select-String -Path $utilityPath -Pattern 'const string Version = "([^"]+)"'
+if (-not $versionMatch) {
+    Write-Host "ERROR: Could not read version from $utilityPath" -ForegroundColor Red
+    exit 1
+}
+$version = $versionMatch.Matches[0].Groups[1].Value
+
 $projectPath = "UORespawnApp"
 $outputBase = ".\Releases"
 $publishOutput = "$outputBase\windows-x64"
@@ -51,10 +59,6 @@ if ($LASTEXITCODE -ne 0) {
 # Verify publish output
 $publishPath = $publishOutput
 
-
-# Verify publish output
-$publishPath = $publishOutput
-
 if (-not (Test-Path $publishPath)) {
     Write-Host ""
     Write-Host "? Publish directory not found!" -ForegroundColor Red
@@ -71,7 +75,7 @@ if (-not (Test-Path "$publishPath\UORespawnApp.exe")) {
 Write-Host ""
 Write-Host "Creating distribution package..." -ForegroundColor Green
 
-$zipName = "UORespawn-v2.0.zip"
+$zipName = "UORespawn-v$version.zip"
 $zipPath = Join-Path $outputBase $zipName
 
 # Remove old ZIP if exists

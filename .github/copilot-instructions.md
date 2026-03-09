@@ -1,5 +1,23 @@
 # Copilot Instructions
 
+## ⚠️ Server Scripts Boundary — Read Before Searching
+
+This repo contains TWO distinct codebases. **Never cross them when answering app questions.**
+
+| Area | Path | Purpose |
+|------|------|---------|
+| **App** ✅ | `UORespawnApp/Scripts/` | .NET 10 MAUI Blazor app — always reference this for app work |
+| **App UI** ✅ | `UORespawnApp/Components/` | Blazor components, layouts, pages |
+| **Server scripts** 🚫 | `UORespawnApp/Data/SERVER/` | ServUO / MUO C# scripts — deployed to game server, never edited for app work |
+
+### Rules for all AI tools
+- When `code_search` or any workspace search returns results, **discard any match whose path contains `Data/SERVER/`** before acting on results.
+- When looking for app utilities, version strings, services, or entities — **only look under `UORespawnApp/Scripts/`**.
+- Never suggest edits to files under `Data/SERVER/` unless the user explicitly asks about server-side script work.
+- The version string lives in **`UORespawnApp/Scripts/Utilities/Utility.cs`** — not in any server utility file.
+
+---
+
 ## Project Overview
 UORespawn is a professional spawn management system for Ultima Online servers running ServUO. Built with .NET 10 MAUI Blazor Hybrid, it provides a **desktop-only** editor (Windows/macOS) for creating and managing creature spawns.
 
@@ -212,10 +230,10 @@ When creating spawn pack ZIPs:
 | Command | Purpose |
 |---------|---------|
 | `[UORespawn` | Opens main spawn management gump |
-| `[ReloadSpawns` | Reloads all spawn data from files |
-| `[RespawnAll` | Forces all spawners to respawn |
-| `[ClearSpawns` | Removes all spawned creatures |
-| `[SpawnStats` | Shows spawn statistics |
+| `[UOR` | Opens main spawn management gump |
+| `[UORAdd` | Adds Staff to System |
+| `[UORDrop` | Drops Staff from System |
+| `[ShowRespawn` | Starts/Stops a Call out for Spawn to Say "I AM RESPAWN" on Loop within range
 
 ### File Generation
 Server **auto-generates** all reference files on startup - no manual commands needed:

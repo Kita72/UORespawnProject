@@ -1,0 +1,10 @@
+# .copilotignore — GitHub Copilot indexing exclusions
+#
+# Server-side scripts (ServUO / MUO) are part of the repo for distribution
+# but are NOT part of the .NET MAUI app codebase. Excluding them prevents
+# AI tools from surfacing server-side code when answering app questions.
+#
+# All app source lives under: UORespawnApp/Scripts/
+# All server scripts live under: UORespawnApp/Data/SERVER/
+
+UORespawnApp/Data/SERVER/
