@@ -1,0 +1,51 @@
+# UORespawn Settings File
+# Version: 2.0.0.8
+# Format: SettingName,Value
+# Lines starting with # are comments
+
+# Scale Modifier
+SCALE_MOD,1
+
+# System Intervals (milliseconds/seconds/minutes as noted)
+SEARCH_INTERVAL,125
+PROCESS_INTERVAL,250
+VALIDATE_INTERVAL,5
+TIMED_INTERVAL,1
+
+# System Limits
+MAX_RECYCLE_TYPE,20
+MAX_RECYCLE_TOTAL,50000
+MAX_SPAWN_CHECKS,3
+MAX_QUEUE_SIZE,5
+MAX_STAT_SIZE,10000
+
+# Spawn Limits
+MAX_SPAWN,25
+MIN_RANGE,30
+MAX_RANGE,80
+MAX_CROWD,3
+
+# Spawn Chances (0.0 to 1.0)
+CHANCE_WATER,0.05
+CHANCE_WEATHER,0.01
+CHANCE_TIMED,0.01
+CHANCE_COMMON,1
+CHANCE_UNCOMMON,0.05
+CHANCE_RARE,0.01
+
+# Spawn Toggles (True/False)
+ENABLE_SCALE_SPAWN,True
+ENABLE_RIFT_SPAWN,False
+ENABLE_TOWN_SPAWN,True
+ENABLE_GRAVE_SPAWN,True
+
+# Vendor Toggles (True/False)
+ENABLE_VENDOR_SPAWN,True
+ENABLE_VENDOR_NIGHT,True
+ENABLE_VENDOR_EXTRA,True
+
+# Effects Toggle
+ENABLE_SPAWN_EFFECTS,True
+
+# Debug Toggle
+ENABLE_DEBUG,False

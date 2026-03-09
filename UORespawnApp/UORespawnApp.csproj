@@ -215,6 +215,17 @@
       </None>
     </ItemGroup>
 
+    <!-- WORKING DIRECTORY: Pre-populated with DefaultPack data so the app ships ready to use on fresh install -->
+    <!-- RefreshLocalDataFromActivePack overwrites these with the active pack on every startup -->
+    <ItemGroup>
+      <MauiAsset Remove="Data\UORespawn\**\*" />
+      <Content Remove="Data\UORespawn\**\*" />
+      <None Include="Data\UORespawn\*.*" Condition="Exists('Data\UORespawn\')">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        <Link>Data\UORespawn\%(Filename)%(Extension)</Link>
+      </None>
+    </ItemGroup>
+
     <!-- Exclude any legacy server-side scripts that may exist in root project folder -->
     <ItemGroup>
       <Compile Remove="UORespawnSystem\**\*.cs" />

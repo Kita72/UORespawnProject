@@ -98,9 +98,9 @@ namespace UORespawnApp.Scripts.Services
         }
 
         /// <summary>
-        /// Initializes the ActivePackDataPath from Settings.CurrentPackFolder.
-        /// Called on startup to ensure edits sync back to the correct pack folder.
-        /// Does NOT copy pack data — use Apply Pack explicitly to load a pack's data.
+        /// Initializes the ActivePackDataPath from Settings.CurrentPackFolder and syncs
+        /// the active pack's files into LocalDataPath so the binary loaders always open
+        /// with the correct pack data on every launch.
         /// </summary>
         private void InitializeActivePackPath()
         {
@@ -138,7 +138,8 @@ namespace UORespawnApp.Scripts.Services
 
                 if (string.IsNullOrEmpty(packFolder) || !Directory.Exists(packFolder))
                 {
-                    Logger.Info("No valid pack folder set - active pack path not initialized");
+                    Logger.Info("No valid pack folder set - applying DefaultPack fallback");
+                    ApplyDefaultPackIfEmpty();
                     return;
                 }
 
@@ -152,9 +153,11 @@ namespace UORespawnApp.Scripts.Services
                     Logger.Info($"Active pack path initialized: {dataPath}");
                 }
 
-                // If LocalDataPath is empty, ensure the approved DefaultPack is applied
-                // so editors are never blank on a fresh install or after a data wipe.
-                ApplyDefaultPackIfEmpty();
+                // Always sync the active pack's files into LocalDataPath on every startup
+                // so the editor opens with the correct data regardless of what LocalDataPath
+                // contained from a previous session (e.g. after switching packs or creating
+                // a new empty pack, the correct pack data is always reflected on next launch).
+                RefreshLocalDataFromActivePack(dataPath ?? packFolder);
             }
             catch (Exception ex)
             {
@@ -186,10 +189,9 @@ namespace UORespawnApp.Scripts.Services
         }
 
         /// <summary>
-        /// Copies the first approved pack (DefaultPack) into LocalDataPath when it is
-        /// genuinely empty — i.e. no spawn .bin files exist yet.
-        /// Approved packs cannot be deleted, so this is always a safe, predictable source.
-        /// Called after EnsureApprovedPacksUnpackedAsync guarantees the folder exists.
+        /// Fallback: copies the first available approved pack (DefaultPack) into LocalDataPath.
+        /// Used when no active pack folder can be resolved on startup.
+        /// Only copies if LocalDataPath has no spawn files, preserving any existing data.
         /// </summary>
         private static void ApplyDefaultPackIfEmpty()
         {
@@ -267,6 +269,49 @@ namespace UORespawnApp.Scripts.Services
             catch (Exception ex)
             {
                 Logger.Error("[DefaultPack] Error applying default pack fallback", ex);
+            }
+        }
+
+        /// <summary>
+        /// Copies all data files from the active pack folder into LocalDataPath, overwriting
+        /// whatever is there. Called on every startup so the editor always opens with the
+        /// active pack's data — not stale or empty data left from a previous session.
+        /// Falls back to ApplyDefaultPackIfEmpty if the pack has no data files.
+        /// </summary>
+        private static void RefreshLocalDataFromActivePack(string packDataPath)
+        {
+            try
+            {
+                var localDataPath = PathConstants.LocalDataPath;
+
+                string[] dataFiles = [PathConstants.SETTINGS_FILENAME, PathConstants.BOX_FILENAME,
+                                      PathConstants.TILE_FILENAME, PathConstants.REGION_FILENAME, PathConstants.VENDOR_FILENAME];
+
+                if (!Directory.Exists(localDataPath))
+                    Directory.CreateDirectory(localDataPath);
+
+                int copied = 0;
+                foreach (var fileName in dataFiles)
+                {
+                    var src = Path.Combine(packDataPath, fileName);
+                    if (File.Exists(src))
+                    {
+                        FileUtility.Copy(src, Path.Combine(localDataPath, fileName), overwrite: true);
+                        copied++;
+                    }
+                }
+
+                if (copied > 0)
+                    Logger.Info($"[Startup] Loaded {copied} data files from active pack into LocalDataPath: {packDataPath}");
+                else
+                {
+                    Logger.Warning($"[Startup] Active pack has no data files ({packDataPath}) — applying DefaultPack fallback");
+                    ApplyDefaultPackIfEmpty();
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("[Startup] Error loading active pack data into LocalDataPath", ex);
             }
         }
 
