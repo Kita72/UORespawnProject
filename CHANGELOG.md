@@ -46,6 +46,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Edge-Pan During Draw** — Moving the mouse near a canvas edge while drawing a spawn box automatically pans the map, allowing boxes larger than the viewport to be drawn without releasing the mouse. Implemented via a `requestAnimationFrame` loop (`_startEdgePan` / `_stopEdgePan`) in `map.js`
 - **OS Cursor Confinement During Draw (Windows)** — While left-click drawing a spawn box, the mouse cursor is physically confined to the canvas using the Win32 `ClipCursor` API. Prevents accidental click-outs during box creation. Released automatically on mouse-up, app deactivation, or component dispose
 
+#### Developer Tooling
+- **`Publish.cmd`** — Double-clickable Windows publish launcher at the solution root
+  - Opens a PowerShell window, runs the full publish pipeline, and keeps the window open on completion
+  - No need to open a terminal — just double-click to build and package
+
 ### Changed
 
 #### Server Integration Card — Redesign & Polish
@@ -86,6 +91,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Getting Started updated** — Server type selection added as explicit step 2; tip generalized from "ServUO folder" to "server folder"
 - **What's New updated** — New entries for MUO support, server type toggle, two-path linking, broken link detection, two-path FTP, animated intro
 
+#### Server Integration Card
+- **Server Type Toggle** — Removed persistent goldenrod border from the server type button; button is now borderless at rest with a clean logo-and-background-only appearance
+  - Hover still shows the golden border and glow for interaction feedback; highlight does not persist after the mouse leaves
+
+#### Publish Script
+- **`publish-windows.ps1`** — Version is now auto-read from `UORespawnApp/Scripts/Utilities/Utility.cs` via regex; no more manual version edits in the script
+  - ZIP output is now named `UORespawn-vX.X.X.X.zip` matching the full 4-part version (e.g. `UORespawn-v2.0.1.3.zip`)
+
 ### Fixed
 
 #### Box Spawn Editor
@@ -113,6 +126,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `map.js startDrawing()` — document-level `pointermove` listener (replaces `mousemove`) with coordinates clamped to canvas bounds for reliable out-of-bounds tracking
 - `map.js redrawAll()` — `box.x ?? box.X ?? 0` nullish coalescing fix; boxes at coordinate 0 now render correctly
 - Build verified with .NET 10 — no warnings or errors
+- `map.js` — all 24 debug `console.log` calls removed; 6 informational logs retained (`Map initialized`, data-count summaries per overlay type, `Map module ready`); all `console.warn` / `console.error` calls preserved
+- `Publish.cmd` — solution-root double-click launcher; delegates to `publish-windows.ps1` via `powershell.exe -ExecutionPolicy Bypass`
+- `publish-windows.ps1` — version sourced from `Utility.cs` `const string Version` via `Select-String` regex; duplicate `$publishPath` assignment removed; ZIP name corrected to full 4-part version
+- `.copilotignore` — `UORespawnApp/Data/SERVER/` excluded from Copilot workspace indexing to prevent server-side scripts from surfacing in AI code searches
+- `.github/copilot-instructions.md` — **Server Scripts Boundary** section added at top; rules cover all AI tooling (search result filtering, version string location, edit restrictions)
 
 ## [2.0.1.2] - 2026-03-06
 

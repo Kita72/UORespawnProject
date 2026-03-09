@@ -1,4 +1,4 @@
-# UORespawn Editor
+﻿# UORespawn Editor
 
 <p align="center">
   <img src="UORespawnApp/Resources/AppIcon/appicon.svg" alt="UORespawn Logo" width="200"/>
@@ -237,7 +237,13 @@ dotnet run
 
 ### Platform-Specific Builds
 
-**Windows:**
+**Windows (quick � double-click):**
+```
+Publish.cmd
+```
+Double-click `Publish.cmd` at the solution root. A PowerShell window opens, builds a self-contained Windows x64 package, and saves the release ZIP to `Releases/` automatically � version name included, no manual edits needed.
+
+**Windows (manual):**
 ```bash
 dotnet publish -f net10.0-windows10.0.19041.0 -c Release
 ```
