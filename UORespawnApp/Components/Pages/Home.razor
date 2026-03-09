@@ -98,8 +98,11 @@ else if (ViewService.CurrentView == "spawnpacks")
             {
                 _videoIndex = Random.Shared.Next(0, 4);
                 _showVideo = true;
+                ViewService.SetIntroVideoPlaying(true);
             }
         }
+
+        ViewService.RequestStopIntroVideo += OnStopIntroVideoRequested;
 
         // Default to home view on startup
         if (string.IsNullOrEmpty(ViewService.CurrentView))
@@ -115,6 +118,14 @@ else if (ViewService.CurrentView == "spawnpacks")
         {
             WebViewService.HideWebView();
         }
+
+        // Stop video if playing when navigating away
+        if (_showVideo)
+        {
+            _ = StopVideoAsync();
+            return;
+        }
+
         StateHasChanged();
     }
 
@@ -132,7 +143,23 @@ else if (ViewService.CurrentView == "spawnpacks")
     public void OnVideoEnded()
     {
         _showVideo = false;
+        ViewService.SetIntroVideoPlaying(false);
         StateHasChanged();
+    }
+
+    private async Task StopVideoAsync()
+    {
+        _showVideo = false;
+        _videoInitialized = false;
+        ViewService.SetIntroVideoPlaying(false);
+        await JS.InvokeVoidAsync("stopSplashVideo");
+        StateHasChanged();
+    }
+
+    private void OnStopIntroVideoRequested()
+    {
+        if (_showVideo)
+            _ = StopVideoAsync();
     }
 
     private void OpenWebsite()
@@ -145,7 +172,11 @@ else if (ViewService.CurrentView == "spawnpacks")
     {
         ViewService.OnViewChanged -= OnViewChanged;
         ViewService.OnMapChanged -= StateHasChanged;
+        ViewService.RequestStopIntroVideo -= OnStopIntroVideoRequested;
         _dotNetRef?.Dispose();
+
+        if (_showVideo)
+            ViewService.SetIntroVideoPlaying(false);
 
         // Ensure WebView is closed when disposing
         if (WebViewService.IsWebViewOpen)

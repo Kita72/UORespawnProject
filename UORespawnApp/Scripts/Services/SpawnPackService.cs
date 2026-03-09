@@ -105,6 +105,7 @@ namespace UORespawnApp.Scripts.Services
                     {
                         // Force IsApproved for packs in Approved folder
                         pack.Metadata.IsApproved = true;
+                        pack.IsModifiedFromOriginal = IsApprovedPackModified(packFolder);
                         packs.Add(pack);
                         Logger.Info($"[SpawnPack] Loaded approved pack: {pack.Metadata.Name}");
                     }
@@ -415,6 +416,107 @@ namespace UORespawnApp.Scripts.Services
             {
                 Logger.Error($"Error deleting spawn pack: {pack.Metadata.Name}", ex);
                 return (false, $"Failed to delete: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Compares each spawn data file in an approved pack folder against the original ZIP backup.
+        /// Returns true if any file differs (i.e. the pack has been edited since it was first extracted).
+        /// Returns false when no ZIP exists, all files match, or on any read error.
+        /// </summary>
+        private static bool IsApprovedPackModified(string packFolderPath)
+        {
+            var zipPath = packFolderPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + ".zip";
+            if (!File.Exists(zipPath))
+            {
+                return false;
+            }
+
+            // Resolve where the .bin files actually live inside the pack folder (may be nested in UOR_DATA/)
+            var dataPath = ResolvePackDataPath(packFolderPath) ?? packFolderPath;
+
+            try
+            {
+                using var zip = ZipFile.OpenRead(zipPath);
+                foreach (var fileName in PackDataFiles)
+                {
+                    var folderFile = Path.Combine(dataPath, fileName);
+                    var entry = zip.GetEntry(fileName);
+
+                    // Both absent — skip (pack may not use this file type)
+                    if (entry == null && !File.Exists(folderFile))
+                    {
+                        continue;
+                    }
+
+                    // One present, one absent — definitely modified
+                    if (entry == null || !File.Exists(folderFile))
+                    {
+                        return true;
+                    }
+
+                    // Quick length check before reading bytes
+                    var folderLength = new FileInfo(folderFile).Length;
+                    if (folderLength != entry.Length)
+                    {
+                        return true;
+                    }
+
+                    // Full byte comparison
+                    using var entryStream = entry.Open();
+                    using var memStream = new MemoryStream((int)entry.Length);
+                    entryStream.CopyTo(memStream);
+                    var zipBytes = memStream.ToArray();
+                    var folderBytes = File.ReadAllBytes(folderFile);
+
+                    if (!zipBytes.AsSpan().SequenceEqual(folderBytes.AsSpan()))
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Logger.Warning($"[SpawnPack] Could not compare pack files for modification check: {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Reverts an approved pack to its original state by re-extracting its ZIP backup.
+        /// The ZIP sidecar lives at PackFolderPath + ".zip" (e.g. Approved/DefaultPack.zip).
+        /// Only approved packs support revert; Created and Imported packs have no backup.
+        /// </summary>
+        public static (bool Success, string? Error) RevertApprovedPack(SpawnPackInfo pack)
+        {
+            if (pack == null || string.IsNullOrWhiteSpace(pack.PackFolderPath))
+            {
+                return (false, "Pack not specified.");
+            }
+
+            if (!pack.Metadata.IsApproved)
+            {
+                return (false, "Only approved packs can be reverted.");
+            }
+
+            var zipPath = pack.PackFolderPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + ".zip";
+            if (!File.Exists(zipPath))
+            {
+                return (false, "No backup ZIP found for this pack.");
+            }
+
+            try
+            {
+                ZipFile.ExtractToDirectory(zipPath, pack.PackFolderPath, overwriteFiles: true);
+                Logger.Info($"Reverted approved pack to original: {pack.Metadata.Name}");
+                return (true, null);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error reverting approved pack: {pack.Metadata.Name}", ex);
+                return (false, $"Failed to revert: {ex.Message}");
             }
         }
 

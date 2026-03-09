@@ -92,7 +92,7 @@ namespace UORespawnApp.Scripts.Services
         /// <summary>
         /// Initializes the ActivePackDataPath from Settings.CurrentPackFolder.
         /// Called on startup to ensure edits sync back to the correct pack folder.
-        /// On first launch (no data files in LocalDataPath), applies the default pack.
+        /// Does NOT copy pack data — use Apply Pack explicitly to load a pack's data.
         /// </summary>
         private void InitializeActivePackPath()
         {
@@ -144,85 +144,13 @@ namespace UORespawnApp.Scripts.Services
                     Logger.Info($"Active pack path initialized: {dataPath}");
                 }
 
-                // Sync pack data files to LocalDataPath
-                // - First launch: Copies all pack data files
-                // - Subsequent launches: Copies any MISSING files (handles upgrades)
-                SyncPackDataToLocalPath(packFolder, dataPath);
+                // If LocalDataPath is empty, ensure the approved DefaultPack is applied
+                // so editors are never blank on a fresh install or after a data wipe.
+                ApplyDefaultPackIfEmpty();
             }
             catch (Exception ex)
             {
                 Logger.Error("Error initializing active pack path", ex);
-            }
-        }
-
-        /// <summary>
-        /// Ensures all pack data files exist in LocalDataPath (Data/UORespawn/).
-        /// - First launch: Copies all pack data files to LocalDataPath
-        /// - Subsequent launches: Copies any MISSING files from pack to LocalDataPath
-        /// This handles upgrades where new file types are added (e.g., VendorSpawn).
-        /// </summary>
-        private static void SyncPackDataToLocalPath(string packFolder, string? packDataPath)
-        {
-            try
-            {
-                var localDataPath = PathConstants.LocalDataPath;
-                var sourcePath = packDataPath ?? packFolder;
-
-                // ALL data files that should exist in LocalDataPath
-                string[] allDataFiles = [PathConstants.SETTINGS_FILENAME, PathConstants.BOX_FILENAME,
-                                         PathConstants.TILE_FILENAME, PathConstants.REGION_FILENAME, PathConstants.VENDOR_FILENAME];
-
-                // Check which files are missing from LocalDataPath
-                var missingFiles = allDataFiles
-                    .Where(fileName => !File.Exists(Path.Combine(localDataPath, fileName)))
-                    .ToList();
-
-                if (missingFiles.Count == 0)
-                {
-                    Logger.Info("LocalDataPath has all pack data files - no sync needed");
-                    return;
-                }
-
-                // Log what we're doing
-                bool isFirstLaunch = missingFiles.Count == allDataFiles.Length || 
-                                     !allDataFiles.Take(4).Any(f => File.Exists(Path.Combine(localDataPath, f))); // No spawn files = first launch
-
-                if (isFirstLaunch)
-                {
-                    Logger.Info($"First launch detected - applying pack data from: {sourcePath}");
-                }
-                else
-                {
-                    Logger.Info($"Syncing {missingFiles.Count} missing file(s) from pack: {sourcePath}");
-                }
-
-                // Copy missing files from pack to LocalDataPath
-                foreach (var fileName in missingFiles)
-                {
-                    var sourceFile = Path.Combine(sourcePath, fileName);
-
-                    if (File.Exists(sourceFile))
-                    {
-                        var destFile = Path.Combine(localDataPath, fileName);
-                        FileUtility.Copy(sourceFile, destFile, overwrite: true);
-
-                        Logger.Info($"  Copied: {fileName}");
-                    }
-                    else
-                    {
-                        // Only warn for spawn files, not settings (settings might be intentionally absent in pack)
-                        if (fileName != PathConstants.SETTINGS_FILENAME)
-                        {
-                            Logger.Warning($"  Missing in pack: {fileName}");
-                        }
-                    }
-                }
-
-                Logger.Info("Pack data sync completed");
-            }
-            catch (Exception ex)
-            {
-                Logger.Error("Error syncing pack data to LocalDataPath", ex);
             }
         }
 
@@ -247,6 +175,91 @@ namespace UORespawnApp.Scripts.Services
             }
 
             return packFolder; // Return pack folder even if no files found yet
+        }
+
+        /// <summary>
+        /// Copies the first approved pack (DefaultPack) into LocalDataPath when it is
+        /// genuinely empty — i.e. no spawn .bin files exist yet.
+        /// Approved packs cannot be deleted, so this is always a safe, predictable source.
+        /// Called after EnsureApprovedPacksUnpackedAsync guarantees the folder exists.
+        /// </summary>
+        private static void ApplyDefaultPackIfEmpty()
+        {
+            try
+            {
+                var localDataPath = PathConstants.LocalDataPath;
+
+                // Only the four spawn .bin files matter — settings absence is fine
+                string[] spawnFiles = [PathConstants.BOX_FILENAME, PathConstants.TILE_FILENAME,
+                                       PathConstants.REGION_FILENAME, PathConstants.VENDOR_FILENAME];
+
+                // If any spawn file already exists, LocalDataPath is not empty — do nothing
+                if (spawnFiles.Any(f => File.Exists(Path.Combine(localDataPath, f))))
+                    return;
+
+                Logger.Info("[DefaultPack] LocalDataPath has no spawn files — applying approved pack as fallback...");
+
+                // Find first approved pack folder that contains spawn data
+                var approvedPath = PathConstants.PacksApprovedPath;
+                if (!Directory.Exists(approvedPath))
+                {
+                    Logger.Warning("[DefaultPack] Approved packs folder not found — cannot apply fallback");
+                    return;
+                }
+
+                string? packFolder = null;
+                string? packDataPath = null;
+
+                foreach (var folder in Directory.GetDirectories(approvedPath))
+                {
+                    if (spawnFiles.Any(f => File.Exists(Path.Combine(folder, f))))
+                    {
+                        packFolder = folder;
+                        packDataPath = folder;
+                        break;
+                    }
+
+                    var nested = Path.Combine(folder, PathConstants.UOR_DATA_SUBFOLDER);
+                    if (Directory.Exists(nested) && spawnFiles.Any(f => File.Exists(Path.Combine(nested, f))))
+                    {
+                        packFolder = folder;
+                        packDataPath = nested;
+                        break;
+                    }
+                }
+
+                if (packFolder == null || packDataPath == null)
+                {
+                    Logger.Warning("[DefaultPack] No approved pack with spawn data found — cannot apply fallback");
+                    return;
+                }
+
+                // Copy all data files (spawn + settings) from approved pack to LocalDataPath
+                string[] allDataFiles = [PathConstants.SETTINGS_FILENAME, PathConstants.BOX_FILENAME,
+                                         PathConstants.TILE_FILENAME, PathConstants.REGION_FILENAME, PathConstants.VENDOR_FILENAME];
+
+                if (!Directory.Exists(localDataPath))
+                    Directory.CreateDirectory(localDataPath);
+
+                foreach (var fileName in allDataFiles)
+                {
+                    var src = Path.Combine(packDataPath, fileName);
+                    if (File.Exists(src))
+                        FileUtility.Copy(src, Path.Combine(localDataPath, fileName), overwrite: true);
+                }
+
+                // Update settings so save-back targets this pack correctly
+                var packName = Path.GetFileName(packFolder);
+                Settings.CurrentPackFolder = packFolder;
+                Settings.CurrentPackName   = packName;
+                PathConstants.ActivePackDataPath = packDataPath;
+
+                Logger.Info($"[DefaultPack] Fallback applied: '{packName}' → LocalDataPath");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("[DefaultPack] Error applying default pack fallback", ex);
+            }
         }
 
         /// <summary>

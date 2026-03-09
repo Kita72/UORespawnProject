@@ -41,6 +41,16 @@
                     <span class="bi bi-trash"></span>
                 </button>
             }
+            @if (ShowRevert && Pack.Metadata.IsApproved)
+            {
+                <button class="btn btn-sm btn-link reset-btn" 
+                        type="button" 
+                        title="Revert to original" 
+                        @onclick:stopPropagation="true" 
+                        @onclick="RevertPack">
+                    <span class="bi bi-arrow-counterclockwise"></span>
+                </button>
+            }
         </div>
     </div>
 </div>
@@ -66,6 +76,12 @@
 
     [Parameter]
     public bool ShowDelete { get; set; } = false;
+
+    [Parameter]
+    public bool ShowRevert { get; set; } = false;
+
+    [Parameter]
+    public EventCallback<SpawnPackInfo> OnRevert { get; set; }
 
     private async Task HandleSelect()
     {
@@ -108,6 +124,19 @@
         if (OnDelete.HasDelegate)
         {
             await OnDelete.InvokeAsync(Pack);
+        }
+    }
+
+    private async Task RevertPack()
+    {
+        if (!Pack.Metadata.IsApproved)
+        {
+            return;
+        }
+
+        if (OnRevert.HasDelegate)
+        {
+            await OnRevert.InvokeAsync(Pack);
         }
     }
 

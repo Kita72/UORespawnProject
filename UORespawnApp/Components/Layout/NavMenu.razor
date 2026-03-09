@@ -83,11 +83,20 @@
     private string themeText => isDarkMode ? "Light Mode" : "Dark Mode";
 
     private bool _splashEnabled = Settings.SplashAnimationEnabled;
-    private string animIcon => _splashEnabled ? "bi-film-nav-menu" : "bi-film-off-nav-menu";
-    private string animTitle => _splashEnabled ? "Disable Intro Animation" : "Enable Intro Animation";
+    private string animIcon => ViewService.IsIntroVideoPlaying
+        ? "bi-stop-circle-fill-nav-menu"
+        : (_splashEnabled ? "bi-film-nav-menu" : "bi-film-off-nav-menu");
+    private string animTitle => ViewService.IsIntroVideoPlaying
+        ? "Stop Intro"
+        : (_splashEnabled ? "Disable Intro Animation" : "Enable Intro Animation");
 
     private void ToggleSplashAnimation()
     {
+        if (ViewService.IsIntroVideoPlaying)
+        {
+            ViewService.StopIntroVideo();
+            return;
+        }
         _splashEnabled = !_splashEnabled;
         Settings.SplashAnimationEnabled = _splashEnabled;
     }
@@ -95,9 +104,15 @@
     protected override void OnInitialized()
     {
         ViewService.OnActivePackChanged += OnPackChanged;
+        ViewService.OnIntroVideoStateChanged += OnIntroVideoStateChanged;
     }
 
     private void OnPackChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnIntroVideoStateChanged()
     {
         InvokeAsync(StateHasChanged);
     }
@@ -187,5 +202,6 @@
     public void Dispose()
     {
         ViewService.OnActivePackChanged -= OnPackChanged;
+        ViewService.OnIntroVideoStateChanged -= OnIntroVideoStateChanged;
     }
 }

@@ -25,3 +25,11 @@ window.initSplashVideo = function (dotnetRef) {
         promise.catch(() => done());
     }
 };
+
+window.stopSplashVideo = function () {
+    const video = document.getElementById('splash-video');
+    if (video) {
+        video.pause();
+        video.currentTime = 0;
+    }
+};

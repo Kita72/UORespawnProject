@@ -23,7 +23,9 @@
         <div class="step-label text-muted small text-center mb-1">Server</div>
         <div class="d-flex justify-content-center mb-3">
             <button class="server-type-btn-single @(selectedServerType == "ServUO" ? "servuo" : "muo")"
-                    @onclick="ToggleServerType">
+                    @onclick="ToggleServerType"
+                    disabled="@IsConfigurationLocked"
+                    title="@(IsConfigurationLocked ? LockReason : "")">
                 @if (selectedServerType == "ServUO")
                 {
                     <img src="SERVUO.png" alt="ServUO" class="server-type-logo" />
@@ -40,18 +42,31 @@
 
         <!-- Step 2: Connection Mode -->
         <div class="step-label text-muted small text-center mb-1">Connection</div>
-        <div class="d-flex justify-content-center mb-4">
+        <div class="d-flex justify-content-center mb-1">
             <div class="connection-type-toggle">
                 <button class="toggle-btn @(connectionType == ConnectionType.Local ? "active-local" : "")"
-                        @onclick="() => SetConnectionType(ConnectionType.Local)">
+                        @onclick="() => SetConnectionType(ConnectionType.Local)"
+                        disabled="@IsConfigurationLocked">
                     <span class="bi bi-pc-display me-2"></span>Local Server
                 </button>
                 <button class="toggle-btn @(connectionType == ConnectionType.Remote ? "active-remote" : "")"
-                        @onclick="() => SetConnectionType(ConnectionType.Remote)">
+                        @onclick="() => SetConnectionType(ConnectionType.Remote)"
+                        disabled="@IsConfigurationLocked">
                     <span class="bi bi-cloud me-2"></span>Remote Server
                 </button>
             </div>
         </div>
+
+        @if (IsConfigurationLocked)
+        {
+            <div class="config-lock-hint mb-3">
+                <span class="bi bi-lock-fill me-1"></span>@LockReason
+            </div>
+        }
+        else
+        {
+            <div class="mb-3"></div>
+        }
 
         <!-- LOCAL LINK SECTION -->
         @if (connectionType == ConnectionType.Local)
@@ -532,6 +547,10 @@
     private string pendingDataFolder = "";
     private string selectedServerType = Settings.ServerType.Length > 0 ? Settings.ServerType : "ServUO";
     private bool CanLink => !string.IsNullOrEmpty(pendingCustomFolder) && !string.IsNullOrEmpty(pendingDataFolder);
+    private bool IsConfigurationLocked => isLocalConfigured || isLinkBroken || (connectionType == ConnectionType.Remote && hasCredentials);
+    private string LockReason => (isLocalConfigured || isLinkBroken)
+        ? "Unlink the server to change these settings"
+        : "Delete credentials to change these settings";
     private string localSetupMessage = "";
     private bool localSetupSuccess = false;
     private bool showVersionWarning = false;
@@ -589,6 +608,7 @@
 
     private void SetConnectionType(ConnectionType type)
     {
+        if (IsConfigurationLocked) return;
         connectionType = type;
         // Clear messages when switching
         localSetupMessage = "";
@@ -599,6 +619,7 @@
 
     private void ToggleServerType()
     {
+        if (IsConfigurationLocked) return;
         selectedServerType = selectedServerType == "ServUO" ? "MUO" : "ServUO";
     }
 

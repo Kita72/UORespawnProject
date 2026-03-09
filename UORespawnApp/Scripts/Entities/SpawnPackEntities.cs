@@ -64,5 +64,12 @@ namespace UORespawnApp.Scripts.Entities
         /// Not stored in pack metadata — persisted in app Preferences keyed by Metadata.Id.
         /// </summary>
         public bool IsFavorite { get; set; }
+
+        /// <summary>
+        /// Whether the approved pack's data files differ from the original ZIP backup.
+        /// Computed at load time by comparing .bin files against the ZIP sidecar.
+        /// Always false for Created/Imported packs (no ZIP backup exists).
+        /// </summary>
+        public bool IsModifiedFromOriginal { get; set; }
     }
 }

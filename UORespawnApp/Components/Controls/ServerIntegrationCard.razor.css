@@ -5,6 +5,17 @@
     text-transform: uppercase;
 }
 
+/* Lock hint shown below the Connection toggle when server/remote is locked */
+.config-lock-hint {
+    text-align: center;
+    font-size: 0.75rem;
+    color: #6c757d;
+}
+
+body.light-theme .config-lock-hint {
+    color: #868e96;
+}
+
 /* Server Type Single Toggle Button */
 .server-type-btn-single {
     display: flex;
@@ -26,6 +37,16 @@
 .server-type-btn-single:hover {
     border-color: goldenrod;
     box-shadow: 0 0 12px rgba(218, 165, 32, 0.35);
+}
+
+.server-type-btn-single:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.server-type-btn-single:disabled:hover {
+    border-color: transparent;
+    box-shadow: none;
 }
 
 .server-type-logo {
@@ -72,6 +93,15 @@
 
 .connection-type-toggle .toggle-btn:hover:not(.active) {
     color: #adb5bd;
+}
+
+.connection-type-toggle .toggle-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.connection-type-toggle .toggle-btn:disabled:hover {
+    color: #6c757d;
 }
 
 .connection-type-toggle .toggle-btn.active-local {

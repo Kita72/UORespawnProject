@@ -55,7 +55,7 @@
                         <div class="spawn-pack-grid">
                             @foreach (var pack in ApprovedPacks)
                             {
-                                <SpawnPackCard Pack="pack" OnSelect="SelectPack" OnApply="ApplyPack" OnInfo="ShowEcologyModal" OnFavorite="HandleFavoriteToggled" />
+                                <SpawnPackCard Pack="pack" OnSelect="SelectPack" OnApply="ApplyPack" OnInfo="ShowEcologyModal" OnFavorite="HandleFavoriteToggled" OnRevert="RevertApprovedPack" ShowRevert="@pack.IsModifiedFromOriginal" />
                             }
                         </div>
                         @if (ApprovedPacks.Count == 0)
@@ -669,6 +669,36 @@
         }
 
         return Task.CompletedTask;
+    }
+
+    private async Task RevertApprovedPack(SpawnPackInfo pack)
+    {
+        Logger.Info($"[SpawnPacks] Revert requested for approved pack: {pack.Metadata.Name}");
+
+        var (success, error) = SpawnPackService.RevertApprovedPack(pack);
+        if (success)
+        {
+            Logger.Info($"[SpawnPacks] Pack reverted successfully: {pack.Metadata.Name}");
+            RefreshPacks();
+
+            // If the reverted pack is currently loaded, re-apply to push original data into LocalDataPath
+            if (pack.PackFolderPath == Settings.CurrentPackFolder)
+            {
+                var refreshedPack = ApprovedPacks.FirstOrDefault(p => p.PackFolderPath == pack.PackFolderPath);
+                if (refreshedPack != null)
+                {
+                    await ApplyPack(refreshedPack);
+                    Logger.Info($"[SpawnPacks] Re-applied reverted pack into working directory: {refreshedPack.Metadata.Name}");
+                }
+            }
+
+            StateHasChanged();
+        }
+        else
+        {
+            Logger.Warning($"[SpawnPacks] Failed to revert pack: {pack.Metadata.Name} - {error}");
+            ToastService.ShowWarning(error ?? "Unable to revert pack.");
+        }
     }
 
     private Task ShowEcologyModal(SpawnPackInfo pack)

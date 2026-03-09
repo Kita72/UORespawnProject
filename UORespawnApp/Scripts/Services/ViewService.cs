@@ -61,6 +61,21 @@ namespace UORespawnApp.Scripts.Services
         public event Action? OnActivePackChanged;
 
         /// <summary>
+        /// Whether the intro video is currently playing
+        /// </summary>
+        public bool IsIntroVideoPlaying { get; private set; }
+
+        /// <summary>
+        /// Event raised when intro video playing state changes (for NavMenu stop button)
+        /// </summary>
+        public event Action? OnIntroVideoStateChanged;
+
+        /// <summary>
+        /// Event raised to request the intro video be stopped immediately (from NavMenu to Home)
+        /// </summary>
+        public event Action? RequestStopIntroVideo;
+
+        /// <summary>
         /// Navigate to a different view
         /// </summary>
         /// <param name="view">View identifier to navigate to</param>
@@ -121,5 +136,19 @@ namespace UORespawnApp.Scripts.Services
             Logger.Info($"[Pack] Active pack changed: {previousPack} → {pack?.Metadata.Name ?? "(none)"}");
             OnActivePackChanged?.Invoke();
         }
+
+        /// <summary>
+        /// Update the intro video playing state and notify subscribers
+        /// </summary>
+        public void SetIntroVideoPlaying(bool isPlaying)
+        {
+            IsIntroVideoPlaying = isPlaying;
+            OnIntroVideoStateChanged?.Invoke();
+        }
+
+        /// <summary>
+        /// Request the intro video stop (raised by NavMenu stop button, handled by Home)
+        /// </summary>
+        public void StopIntroVideo() => RequestStopIntroVideo?.Invoke();
     }
 }
