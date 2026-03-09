@@ -851,7 +851,7 @@ namespace UORespawnApp.Scripts.Services
                     Description = description ?? string.Empty,
                     ImageFileName = imageFileName ?? string.Empty,
                     Version = Utility.Version,
-                    PublishedOn = DateTime.UtcNow,
+                    PublishedOn = DateTime.Now,
                     IsApproved = false
                 };
 

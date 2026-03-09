@@ -592,11 +592,8 @@
         // Save changes
         SaveCurrentTile();
 
-        // Show success message
         if (selectedTile != null)
         {
-            ToastService.ShowSuccess($"Cleared all spawns for {GetTileDisplayName(selectedTile)}");
-
             Logger.Info($"Cleared all spawns for tile: {selectedTile}");
         }
 

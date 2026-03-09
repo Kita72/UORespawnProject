@@ -132,7 +132,7 @@ namespace UORespawnApp.Scripts.Utilities
             MapList[2] = "Ilshenar";
             MapList[3] = "Malas";
             MapList[4] = "Tokuno";
-            MapList[5] = "TerMur";
+            MapList[5] = "Ter Mur";
         }
 
         /// <summary>

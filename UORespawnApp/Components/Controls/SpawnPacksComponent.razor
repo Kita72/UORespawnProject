@@ -597,8 +597,6 @@
             Settings.CurrentPackName = pack.Metadata.Name;
             Settings.CurrentPackFolder = pack.PackFolderPath;
             Logger.Info($"[SpawnPacks] Pack applied: Name='{pack.Metadata.Name}', Folder='{pack.PackFolderPath}', ActivePackDataPath='{PathConstants.ActivePackDataPath}'");
-
-            ToastService.ShowSuccess($"Applied spawn pack: {pack.Metadata.Name}");
         }
         else
         {
@@ -633,7 +631,6 @@
         if (success)
         {
             Logger.Info($"[SpawnPacks] Pack deleted successfully: {pack.Metadata.Name}");
-            ToastService.ShowSuccess($"Deleted spawn pack: {pack.Metadata.Name}");
             RefreshPacks();
             StateHasChanged();
         }
@@ -662,7 +659,6 @@
         if (success)
         {
             Logger.Info($"[SpawnPacks] Created pack deleted successfully: {pack.Metadata.Name}");
-            ToastService.ShowSuccess($"Deleted spawn pack: {pack.Metadata.Name}");
             RefreshPacks();
             StateHasChanged();
         }
@@ -1145,7 +1141,7 @@
                 Description = importDescription,
                 ImageFileName = savedImageName ?? string.Empty,
                 Version = Utility.Version,
-                PublishedOn = DateTime.UtcNow,
+                PublishedOn = DateTime.Now,
                 IsApproved = false  // User imports are never approved
             };
 

@@ -152,7 +152,7 @@ window.mapModule = {
             this.vendorMarkerDwellTimer = null;
         }
 
-        console.log(`? Map initialized: ${imgWidth}x${imgHeight} at ${this.scale}x scale, viewport: ${this.viewportWidth}x${this.viewportHeight}`);
+        console.log(`Map initialized: ${imgWidth}x${imgHeight}, scale: ${this.scale}x`);
         return true;
     },
 
@@ -182,7 +182,6 @@ window.mapModule = {
         this.boxColor = boxColor ?? '#8B0000';
         this.boxLineSize = boxLineSize ?? 2;
         this.boxColorInc = boxColorInc ?? 0.3;
-        console.log(`⚙️ Settings updated: color=${this.boxColor}, lineSize=${this.boxLineSize}, colorInc=${this.boxColorInc}`);
 
         // Redraw with new settings
         this.redrawAll();
@@ -190,7 +189,6 @@ window.mapModule = {
 
     // Set zoom level (1.0 = actual size, 2.0 = 2x, 4.0 = 4x)
     setZoomLevel: function(zoomLevel) {
-        console.log(`🔍 Zoom level changed from ${this.scale}x to ${zoomLevel}x`);
         this.scale = zoomLevel;
 
         // Redraw everything at new scale
@@ -300,8 +298,7 @@ window.mapModule = {
         this.isDrawing = true;
         this.drawStartWorld = { x: world.x, y: world.y };
         this.drawCurrentWorld = { x: world.x, y: world.y };
-        console.log(`✏️ Draw start: world (${world.x}, ${world.y})`);
-        // Document-level listener so mouse is tracked even outside canvas bounds
+        // Document-level listener
         this._docMoveHandler = (e) => {
             if (!this.isDrawing) { this._removeDrawListeners(); return; }
             const r = this.canvas.getBoundingClientRect();
@@ -354,7 +351,6 @@ window.mapModule = {
 
         // Minimum 3x3 world pixels required
         if (width < 3 || height < 3) {
-            console.log('❌ Box too small, rejected');
             this.redrawAll();
             return null;
         }
@@ -366,7 +362,6 @@ window.mapModule = {
             Height: height
         };
         
-        console.log(`✅ Box created: (${x1}, ${y1}) ${width}x${height}`);
         return result;
     },
 
@@ -449,8 +444,6 @@ window.mapModule = {
     },
     
     redraw: function(spawns) {
-        console.log(`🎨 Redraw called with ${spawns ? spawns.length : 0} spawns`);
-        
         // Store spawns for future redraws
         this.currentSpawns = spawns || [];
         this.redrawAll();
@@ -1227,7 +1220,7 @@ window.mapModule = {
     // ============================================
 
     showXMLSpawners: function(spawners) {
-        console.log(`📍 Showing ${spawners.length} XML spawners`);
+        console.log(`XML spawners loaded: ${spawners.length}`);
         this.xmlSpawners = spawners;
         this.hoveredXmlSpawnerId = null;
         this.xmlSpawnerTooltipVisible = false;
@@ -1239,7 +1232,6 @@ window.mapModule = {
     },
 
     hideXMLSpawners: function() {
-        console.log(`📍 Hiding XML spawners`);
         this.xmlSpawners = null;
         this.hoveredXmlSpawnerId = null;
         this.xmlSpawnerTooltipVisible = false;
@@ -1353,13 +1345,12 @@ window.mapModule = {
     // ============================================
 
     showServerSpawns: function(spawnData) {
-        console.log(`📊 Showing ${spawnData.length} server spawn statistics`);
+        console.log(`Server spawn data loaded: ${spawnData.length}`);
         this.serverSpawns = spawnData;
         this.redrawAll();
     },
     
     hideServerSpawns: function() {
-        console.log(`📊 Hiding server spawns`);
         this.serverSpawns = null;
         this.hoveredServerSpawnIdx = -1;
         this.serverSpawnTooltipVisible = false;
@@ -1716,7 +1707,7 @@ window.mapModule = {
 
     // Vendor Marker methods
     showVendorMarkers: function(markers, selectedSignType) {
-        console.log(`🏪 Showing ${markers.length} vendor markers, selected: ${selectedSignType}`);
+        console.log(`Vendor markers loaded: ${markers.length}`);
         this.vendorMarkers = markers;
         this.selectedVendorSignType = selectedSignType || '';
         this.hoveredVendorMarkerIdx = -1;
@@ -1729,7 +1720,6 @@ window.mapModule = {
     },
 
     hideVendorMarkers: function() {
-        console.log(`🏪 Hiding vendor markers`);
         this.vendorMarkers = null;
         this.hoveredVendorMarkerIdx = -1;
         this.vendorMarkerTooltipVisible = false;
@@ -1939,7 +1929,7 @@ window.mapModule = {
     // ============================================
 
     showRegions: function(regions, selectedName, hoveredName) {
-        console.log(`🗺️ Showing ${regions ? regions.length : 0} regions`);
+        console.log(`Regions loaded: ${regions ? regions.length : 0}`);
         this.regions = regions || [];
         this.selectedRegionName = selectedName || '';
         this.hoveredRegionName = hoveredName || '';
@@ -1947,7 +1937,6 @@ window.mapModule = {
     },
 
     hideRegions: function() {
-        console.log(`🗺️ Hiding regions`);
         this.regions = null;
         this.selectedRegionName = '';
         this.hoveredRegionName = '';
@@ -1961,20 +1950,17 @@ window.mapModule = {
     // Set the Blazor helper reference for JS -> C# callbacks
     setBlazorHelper: function(helper) {
         this.blazorHelper = helper;
-        console.log('✅ Blazor helper registered for XML spawner management');
     },
 
     // Set XML toggle state (called from C#)
     setXmlToggleEnabled: function(enabled) {
         this.xmlToggleEnabled = enabled;
-        console.log(`🔧 XML toggle ${enabled ? 'enabled' : 'disabled'}`);
     },
 
     // Handle tilde (`) key down - track that it's being held for add mode
     onTildeKeyDown: function() {
         if (!this.tildeKeyHeld) {
             this.tildeKeyHeld = true;
-            console.log('🔑 Tilde key held - click to add XML spawner');
         }
     },
 
@@ -1982,7 +1968,6 @@ window.mapModule = {
     onTildeKeyUp: function() {
         if (this.tildeKeyHeld) {
             this.tildeKeyHeld = false;
-            console.log('🔑 Tilde key released');
         }
     },
 
@@ -1999,7 +1984,6 @@ window.mapModule = {
             return false;
         }
 
-        console.log(`➕ Requesting XML spawner at (${worldX}, ${worldY})`);
         this.blazorHelper.invokeMethodAsync('OnRequestAddXmlSpawner', worldX, worldY);
         return true;
     },
@@ -2016,7 +2000,6 @@ window.mapModule = {
             return false;
         }
 
-        console.log(`🗑️ Requesting delete of XML spawner: ${serial}`);
         this.blazorHelper.invokeMethodAsync('OnRequestDeleteXmlSpawner', serial, idx);
         return true;
     },
@@ -2028,7 +2011,6 @@ window.mapModule = {
             this.hoveredXmlSpawnerId = -1;
             this.xmlSpawnerTooltipVisible = false;
             this.redrawAll();
-            console.log(`✅ Removed XML spawner at index ${idx} from local view`);
         }
     },
 
@@ -2057,7 +2039,7 @@ window.mapModule = {
     }
 };
 
-console.log('🗺️ Map module loaded');
+console.log('Map module ready');
 
 /**
  * Draw regions on the region map canvas
@@ -2163,5 +2145,3 @@ window.scrollDebugPanel = function() {
         viewport.scrollTop = viewport.scrollHeight;
     }
 };
-
-console.log('Region drawing function loaded');

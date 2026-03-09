@@ -13,7 +13,7 @@
     </div>
 </div>
 
-<div class="nav-scrollable" @onclick="ToggleMenu">
+<div class="nav-scrollable">
     <nav class="flex-column">
         <div class="spawn-section">
             <!-- Active Pack Header — click to manage packs -->
@@ -123,15 +123,6 @@
         }
     }
 
-    /// <summary>
-    /// Placeholder for menu toggle behavior (mobile nav support).
-    /// Currently empty as desktop-only app doesn't require mobile nav.
-    /// </summary>
-    private void ToggleMenu()
-    {
-        // Intentionally empty - mobile nav not used in desktop-only app
-    }
-
     private void ShowHome() => ViewService.SetView("home");
     private void ShowVendorSpawn() => ViewService.SetView("vendorspawn");
     private void ShowBoxSpawn() => ViewService.SetView("boxspawn");
@@ -147,13 +138,6 @@
         if (view == "boxspawn" && ViewService.CurrentView == "mapview") return "active";
         if (view == "tilespawn" && ViewService.CurrentView == "worldspawn") return "active";
         return ViewService.CurrentView == view ? "active" : "";
-    }
-
-    private List<int> GetAvailableMaps()
-    {
-        // Use MapListUtility for dynamic map list from server
-        // Supports custom maps (6+) when server provides them
-        return MapListUtility.GetMapIds().ToList();
     }
 
     private async Task SaveBadge()

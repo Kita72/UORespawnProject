@@ -1066,6 +1066,8 @@
             mapPositions[currentMapTracked] = (panX, panY, zoomLevel);
 
             await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
+            var clamped = await JS.InvokeAsync<double[]>("eval", "window.mapModule.getPan()");
+            if (clamped?.Length == 2) { panX = clamped[0]; panY = clamped[1]; mapPositions[currentMapTracked] = (panX, panY, zoomLevel); }
             if (miniMapRef != null) await miniMapRef.UpdateViewport(panX, panY, zoomLevel);
 
             Logger.Info($"Jumped to region '{region.Name}' area {areaIndex} at ({centerX:F0}, {centerY:F0})");

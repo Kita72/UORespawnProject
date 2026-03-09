@@ -12,7 +12,7 @@
     align-items: center;
     gap: 6px;
     padding: 10px 24px;
-    border: 2px solid goldenrod;
+    border: 2px solid transparent;
     border-radius: 10px;
     background: #1a1a1a;
     cursor: pointer;
@@ -20,10 +20,11 @@
     min-width: 110px;
 }
 
-.server-type-btn-single.servuo { background: #292929; }
+.server-type-btn-single.servuo { background: #000000; }
 .server-type-btn-single.muo    { background: #000000; }
 
 .server-type-btn-single:hover {
+    border-color: goldenrod;
     box-shadow: 0 0 12px rgba(218, 165, 32, 0.35);
 }
 
@@ -233,7 +234,7 @@ body.light-theme .folder-section {
 
 body.light-theme .server-type-btn-single {
     background: #f8f9fa;
-    border-color: goldenrod;
+    border-color: transparent;
 }
 
 body.light-theme .server-type-btn-single.servuo { background: #f0ede8; }
