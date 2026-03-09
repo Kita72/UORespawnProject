@@ -173,31 +173,31 @@
 
                     </div>
 
-                    <!-- SPLIT BUTTON: Install (copies scripts) | Link (existing install only) -->
-                    <div class="d-flex gap-3 justify-content-center flex-wrap mb-3">
-                        <button class="btn btn-info"
-                                style="min-width: 160px;"
-                                @onclick="StartInstall"
-                                disabled="@(!CanLink)">
-                            <span class="bi bi-box-arrow-in-down me-2"></span>Install
-                        </button>
+                    <!-- LINK BUTTON: auto-installs if fresh, warns only on version mismatch -->
+                    <div class="d-flex justify-content-center mb-3">
                         <button class="btn btn-success"
-                                style="min-width: 160px;"
-                                @onclick="LinkOnly"
+                                style="min-width: 180px;"
+                                @onclick="SmartLink"
                                 disabled="@(!CanLink)">
                             <span class="bi bi-link-45deg me-2"></span>Link
                         </button>
                     </div>
 
-                    @if (showInstallWarning)
+                    @if (showVersionWarning)
                     {
                         <div class="alert alert-warning mt-3 text-center" style="max-width: 500px; margin: 12px auto 0;">
-                            <strong><span class="bi bi-exclamation-triangle me-1"></span>Replace Existing Scripts?</strong>
-                            <p class="small mb-2 mt-1">Scripts already installed. Overwrite with v@Utility.Version?</p>
+                            <strong><span class="bi bi-exclamation-triangle me-1"></span>Scripts Version Mismatch</strong>
+                            <p class="small mb-2 mt-1">
+                                Found v@installedVersion installed — editor is v@Utility.Version.<br />
+                                Update the server scripts to the latest version?
+                            </p>
                             <div class="d-flex gap-2 justify-content-center">
-                                <button class="btn btn-sm btn-secondary" @onclick="CancelInstall">Cancel</button>
-                                <button class="btn btn-sm btn-warning" @onclick="ConfirmInstall">
-                                    <span class="bi bi-arrow-repeat me-1"></span>Replace &amp; Install
+                                <button class="btn btn-sm btn-secondary" @onclick="CancelLink">Cancel</button>
+                                <button class="btn btn-sm btn-outline-success" @onclick="LinkKeepExisting">
+                                    <span class="bi bi-link-45deg me-1"></span>Keep &amp; Link
+                                </button>
+                                <button class="btn btn-sm btn-warning" @onclick="UpdateAndLink">
+                                    <span class="bi bi-arrow-repeat me-1"></span>Update &amp; Link
                                 </button>
                             </div>
                         </div>
@@ -534,7 +534,8 @@
     private bool CanLink => !string.IsNullOrEmpty(pendingCustomFolder) && !string.IsNullOrEmpty(pendingDataFolder);
     private string localSetupMessage = "";
     private bool localSetupSuccess = false;
-    private bool showInstallWarning = false;
+    private bool showVersionWarning = false;
+    private string? installedVersion = null;
     private bool showManualTransfer = false;
 
     private string RemoteCustomPathPlaceholder => selectedServerType == "MUO"
@@ -697,27 +698,58 @@
         }
     }
 
-    private void StartInstall()
+    private void SmartLink()
     {
         if (!CanLink) return;
 
+        showVersionWarning = false;
+        installedVersion = null;
+        localSetupMessage = "";
+
         var installStatus = ServerSetupUtility.CheckInstallation(pendingCustomFolder, pendingDataFolder);
-        if (installStatus.IsInstalled)
+
+        if (!installStatus.IsInstalled)
         {
-            showInstallWarning = true;
-            localSetupMessage = "";
+            // Nothing installed — fresh install, no warning needed
+            PerformFullSetup(forceReinstall: false);
+        }
+        else if (!installStatus.NeedsUpdate)
+        {
+            // Matching version already present — just link
+            PerformLinkOnly();
         }
         else
         {
-            PerformInstall(forceReinstall: false);
+            // Version mismatch — let the user decide
+            installedVersion = installStatus.InstalledVersion;
+            showVersionWarning = true;
+            StateHasChanged();
         }
     }
 
-    private void PerformInstall(bool forceReinstall)
+    private void UpdateAndLink() => PerformFullSetup(forceReinstall: true);
+
+    private void LinkKeepExisting()
+    {
+        showVersionWarning = false;
+        installedVersion = null;
+        PerformLinkOnly();
+    }
+
+    private void CancelLink()
+    {
+        showVersionWarning = false;
+        installedVersion = null;
+        localSetupMessage = "";
+        StateHasChanged();
+    }
+
+    private void PerformFullSetup(bool forceReinstall)
     {
         try
         {
-            showInstallWarning = false;
+            showVersionWarning = false;
+            installedVersion = null;
 
             var serverType = selectedServerType == "MUO"
                 ? ServerSetupUtility.ServerType.MUO
@@ -732,13 +764,13 @@
                 Settings.ServerDataFolder = pendingDataFolder;
                 Settings.ServerType = selectedServerType;
 
-                localSetupMessage = "✓ Scripts installed.";
+                localSetupMessage = "✓ Server linked.";
                 localSetupSuccess = true;
 
                 pendingCustomFolder = "";
                 pendingDataFolder = "";
 
-                Logger.Info($"Server installed: Custom={Settings.ScriptsCustomFolder} | Data={Settings.ServerDataFolder}");
+                Logger.Info($"Server installed & linked: Custom={Settings.ScriptsCustomFolder} | Data={Settings.ServerDataFolder}");
             }
             else
             {
@@ -751,26 +783,15 @@
         {
             localSetupMessage = $"✗ Error: {ex.Message}";
             localSetupSuccess = false;
-            Logger.Error("Error during install", ex);
+            Logger.Error("Error during server setup", ex);
             StateHasChanged();
         }
     }
 
-    private void ConfirmInstall() => PerformInstall(forceReinstall: true);
-
-    private void CancelInstall()
-    {
-        showInstallWarning = false;
-        localSetupMessage = "";
-        StateHasChanged();
-    }
-
-    private void LinkOnly()
+    private void PerformLinkOnly()
     {
         try
         {
-            if (!CanLink) return;
-
             var (success, message) = ServerSetupUtility.LinkOnlySetup(pendingCustomFolder, pendingDataFolder);
 
             if (success)
@@ -785,7 +806,7 @@
                 pendingCustomFolder = "";
                 pendingDataFolder = "";
 
-                Logger.Info($"Server linked (link-only): Custom={Settings.ScriptsCustomFolder} | Data={Settings.ServerDataFolder}");
+                Logger.Info($"Server linked: Custom={Settings.ScriptsCustomFolder} | Data={Settings.ServerDataFolder}");
             }
             else
             {
@@ -798,7 +819,7 @@
         {
             localSetupMessage = $"✗ Error: {ex.Message}";
             localSetupSuccess = false;
-            Logger.Error("Error during link-only setup", ex);
+            Logger.Error("Error linking server", ex);
             StateHasChanged();
         }
     }
