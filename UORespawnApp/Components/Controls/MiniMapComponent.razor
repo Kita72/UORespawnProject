@@ -15,13 +15,13 @@
         </button>
         <span class="minimap-title"><span class="bi bi-map me-1"></span>Mini Map</span>
         <button class="btn btn-sm minimap-btn" @onclick="ToggleMiniMap" title="@(isExpanded ? "Collapse Mini Map" : "Expand Mini Map")">
-            <span class="bi @(isExpanded ? "bi-list" : "bi-chevron-down")"></span>
+            <span class="bi @(isExpanded ? "bi-chevron-up" : "bi-chevron-down")"></span>
         </button>
     </div>
     @if (isExpanded)
     {
         <div class="card-body p-2 minimap-body" @key="@("minimap-body")">
-            <canvas id="@CanvasId" width="250" height="188"
+            <canvas id="@CanvasId" width="@ViewportConstants.MiniMapWidth" height="@ViewportConstants.MiniMapHeight"
                     style="cursor:pointer; border:1px solid #333; display:block; image-rendering:pixelated; width: 100%; height: auto;"
                     @onclick="OnCanvasClick" />
             <div class="d-flex gap-2 mt-2">
@@ -113,8 +113,8 @@
                     }}
 
                     const ctx = miniCanvas.getContext('2d');
-                    const canvasWidth = 250;
-                    const canvasHeight = 188;
+                    const canvasWidth = {ViewportConstants.MiniMapWidth};
+                    const canvasHeight = {ViewportConstants.MiniMapHeight};
 
                     // Use ACTUAL image dimensions from the loaded image
                     const imageWidth = mainImg.naturalWidth;

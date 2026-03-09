@@ -23,10 +23,10 @@ public static class ViewportConstants
     // ==================== MINI MAP ====================
 
     /// <summary>Width of the mini map in pixels</summary>
-    public const int MiniMapWidth = 200;
+    public const int MiniMapWidth = 250;
 
     /// <summary>Height of the mini map in pixels</summary>
-    public const int MiniMapHeight = 150;
+    public const int MiniMapHeight = 188;
 
     // ==================== ZOOM ====================
 

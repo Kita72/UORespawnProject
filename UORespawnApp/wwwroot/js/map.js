@@ -179,9 +179,9 @@ window.mapModule = {
 
     // Update settings from C#
     updateSettings: function(boxColor, boxLineSize, boxColorInc) {
-        this.boxColor = boxColor || '#8B0000';
-        this.boxLineSize = boxLineSize || 2;
-        this.boxColorInc = boxColorInc || 0.3;
+        this.boxColor = boxColor ?? '#8B0000';
+        this.boxLineSize = boxLineSize ?? 2;
+        this.boxColorInc = boxColorInc ?? 0.3;
         console.log(`⚙️ Settings updated: color=${this.boxColor}, lineSize=${this.boxLineSize}, colorInc=${this.boxColorInc}`);
 
         // Redraw with new settings

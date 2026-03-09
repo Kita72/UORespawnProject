@@ -92,8 +92,8 @@
                     </ol>
 
                     <div class="alert alert-info mt-3">
-                        <span class="bi bi-lightbulb"></span> <strong>Tip:</strong> Changes are saved when you click 
-                        <strong>Save All</strong> in the navigation menu, or automatically when the application closes. 
+                        <span class="bi bi-lightbulb"></span> <strong>Tip:</strong> Spawn data saves automatically after every change.
+                        Settings are saved via the <strong>Save Settings</strong> button in the Settings page.
                         If you've linked your server folder, files sync automatically.
                     </div>
                 </div>
@@ -117,6 +117,8 @@
                     <h6 class="text-primary mt-4"><span class="bi bi-dpad me-2"></span>Map Controls</h6>
                     <ul>
                         <li><strong>Left-Drag:</strong> Draw spawn box</li>
+                        <li><strong>Edge-Pan:</strong> While drawing, move near a canvas edge to automatically pan the map and reveal more area — draw boxes larger than the viewport without releasing</li>
+                        <li><strong>Cursor Confinement (Windows):</strong> While drawing, the cursor is physically locked to the canvas — no accidental click-outs during box creation</li>
                         <li><strong>Right-Drag:</strong> Pan the map</li>
                         <li><strong>WASD / Arrow Keys:</strong> Pan the map smoothly (supports diagonal movement)</li>
                         <li><strong>Zoom Toggle:</strong> Cycle between 1x, 2x, and 4x zoom levels
@@ -1636,24 +1638,6 @@
                             <br />
                             <small class="text-muted">View source code, report issues, and contribute to the project</small>
                         </li>
-                    </ul>
-
-                    <h6 class="text-primary mt-4"><span class="bi bi-rocket-takeoff me-2"></span>What's New in v2.0</h6>
-                    <ul>
-                        <li><strong>MUO (ModernUO) Support:</strong> Full server type selection — ServUO and ModernUO both supported with matching folder layouts</li>
-                        <li><strong>Server Type Toggle:</strong> Logo button switcher (ServUO / MUO) at the top of Server Integration — changes all folder hints automatically</li>
-                        <li><strong>Two-Path Server Linking:</strong> Separate Custom Scripts Folder and Server Data Folder pickers for precise, flexible linking</li>
-                        <li><strong>Broken Link Detection:</strong> Amber button with auto-repair — walks up parent directories to find and restore broken links automatically</li>
-                        <li><strong>Two-Path FTP:</strong> Remote Custom Scripts Path + Remote Data Exchange Path matching your server type's layout</li>
-                        <li><strong>Binary Serialization:</strong> Faster file loading with .bin format for spawn data</li>
-                        <li><strong>Region Spawn System:</strong> Spawn by named game regions</li>
-                        <li><strong>Vendor Spawn System:</strong> Configure vendors per shop sign/hive location</li>
-                        <li><strong>Auto-Generated Data:</strong> Server creates reference files on startup (no manual commands!)</li>
-                        <li><strong>Control Dashboard:</strong> Professional in-game control panel</li>
-                        <li><strong>Intelligent Recycling:</strong> Better performance through mobile reuse</li>
-                        <li><strong>INPUT/OUTPUT Structure:</strong> Clean separation of editor→server and server→editor files</li>
-                        <li><strong>Spawn Packs:</strong> Import, export, and share spawn configurations</li>
-                        <li><strong>Custom Maps:</strong> Support for maps beyond the default 6 (Map6, Map7, etc.)</li>
                     </ul>
 
                     <div class="alert alert-primary mt-3">

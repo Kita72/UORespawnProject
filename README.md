@@ -35,8 +35,10 @@ UORespawn is a modern .NET MAUI application that provides a comprehensive visual
 ### 🗺️ Box Spawn Editor
 - Visual map-based spawn box creation
 - Draw spawn areas with left-click and drag
+- **Edge-pan during draw** — Map auto-pans when the cursor reaches a canvas edge, allowing boxes larger than the viewport
+- **OS cursor confined to canvas while drawing (Windows)** — Prevents accidental click-outs mid-draw via Win32 `ClipCursor`
 - Pan the map with right-click and drag or WASD/Arrow keys
-- Zoom toggle (1x actual size / 2x zoomed view)
+- Zoom toggle (1x actual size / 2x zoomed / 4x close-up)
 - Mini-map with click-to-navigate
 - Priority-based spawn layering
 - Six frequency tiers (Common, Uncommon, Rare, Water, Weather, Timed)
@@ -182,9 +184,11 @@ Download the latest version from the [Releases](https://github.com/Kita72/UOResp
 ### Box Spawn Controls
 
 - **Left-Drag:** Draw spawn box
+- **Edge-Pan:** Move near a canvas edge while drawing to auto-pan the map
+- **Cursor Lock (Windows):** Cursor is confined to the canvas during draw — no accidental click-outs
 - **Right-Drag:** Pan the map
 - **WASD/Arrow Keys:** Pan the map (supports diagonal movement)
-- **Zoom Button:** Toggle 1x / 2x zoom
+- **Zoom Button:** Toggle 1x / 2x / 4x zoom
 - **Mini-Map Click:** Jump to location
 - **XML Toggle:** Show/hide XML spawners (hover to highlight, click for tooltip)
 - **Spawns Toggle:** Show/hide server spawn stats (hover for player info)

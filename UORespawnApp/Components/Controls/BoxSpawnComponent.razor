@@ -571,6 +571,11 @@ private List<string> editXmlSpawnNames = [];
 
         await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
 
+        // Sync back clamped pan values from JS
+        var clamped = await JS.InvokeAsync<double[]>("eval", "window.mapModule.getPan()");
+        if (clamped?.Length == 2) { panX = clamped[0]; panY = clamped[1]; }
+        mapPositions[currentMapTracked] = (panX, panY, zoomLevel);
+
         // Update the mini map viewport with explicit values
         if (miniMapRef != null)
         {
@@ -603,6 +608,7 @@ private List<string> editXmlSpawnNames = [];
             {
                 isPanning = true;
                 await JS.InvokeVoidAsync("eval", $"window.mapModule.startPanning({e.OffsetX}, {e.OffsetY})");
+                await JS.InvokeVoidAsync("eval", $"document.getElementById('mapCanvas').setPointerCapture({e.PointerId})");
             }
     }
     
@@ -712,7 +718,7 @@ private List<string> editXmlSpawnNames = [];
                 Utility.AddBoxSpawn(Utility.SESSION.CurrentMap, spawn);
 
                 // Calculate priority based on containment
-                CalculateSpawnPriority(spawn);
+                RecalculateAllPriorities();
 
                 selected = spawn;
                 spawnSearchId = spawn.Position; // Sync the search ID to the newly created spawn
@@ -766,6 +772,7 @@ private List<string> editXmlSpawnNames = [];
                 if (miniMapRef != null) await miniMapRef.UpdateViewport(panX, panY, zoomLevel);
                 StateHasChanged();
             }
+            await JS.InvokeVoidAsync("eval", $"document.getElementById('mapCanvas').releasePointerCapture({e.PointerId})");
         }
     }
     
@@ -842,6 +849,10 @@ private List<string> editXmlSpawnNames = [];
 
         // Apply the new pan position
         await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
+
+        // Sync back clamped pan values from JS
+        var clampedZoom = await JS.InvokeAsync<double[]>("eval", "window.mapModule.getPan()");
+        if (clampedZoom?.Length == 2) { panX = clampedZoom[0]; panY = clampedZoom[1]; }
 
         // Save the new zoom level and position for current map
         mapPositions[currentMapTracked] = (panX, panY, zoomLevel);
@@ -1087,13 +1098,6 @@ private List<string> editXmlSpawnNames = [];
         return GetSpawnList().Count;
     }
     
-    private void CalculateSpawnPriority(BoxSpawnEntity spawn)
-    {
-        // This method is now deprecated - use RecalculateAllPriorities instead
-        // Keeping for backwards compatibility but it just triggers a full recalc
-        RecalculateAllPriorities();
-    }
-
     private bool IsCompletelyContained(Rect inner, Rect outer)
     {
         // Check if inner is completely inside outer (not equal)
@@ -1306,10 +1310,15 @@ private List<string> editXmlSpawnNames = [];
         panX = newPanX;
         panY = newPanY;
 
+        await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
+
+        // Sync back clamped pan values from JS
+        var clamped = await JS.InvokeAsync<double[]>("eval", "window.mapModule.getPan()");
+        if (clamped?.Length == 2) { panX = clamped[0]; panY = clamped[1]; }
+
         // Save the new position for the current map (preserve zoom)
         mapPositions[currentMapTracked] = (panX, panY, zoomLevel);
 
-        await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
         if (miniMapRef != null) await miniMapRef.UpdateViewport(panX, panY, zoomLevel);
 
         Logger.Info($"Jumped to Spawn #{spawn.Position} at ({centerX:F0}, {centerY:F0})");

@@ -42,6 +42,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Grey film icon = animation **disabled** (tooltip: *Enable Intro Animation*)
   - Toggle persists across app launches via Settings; defaults to enabled on first run
 
+#### Box Spawn Editor — Draw UX
+- **Edge-Pan During Draw** — Moving the mouse near a canvas edge while drawing a spawn box automatically pans the map, allowing boxes larger than the viewport to be drawn without releasing the mouse. Implemented via a `requestAnimationFrame` loop (`_startEdgePan` / `_stopEdgePan`) in `map.js`
+- **OS Cursor Confinement During Draw (Windows)** — While left-click drawing a spawn box, the mouse cursor is physically confined to the canvas using the Win32 `ClipCursor` API. Prevents accidental click-outs during box creation. Released automatically on mouse-up, app deactivation, or component dispose
+
 ### Changed
 
 #### Server Integration Card — Redesign & Polish
@@ -75,12 +79,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **25-Character Cap** — Region names in the editor are now capped at 25 characters to prevent UI overflow
 
 #### Instructions Page
+- **Section 2 updated** — Map Controls list now includes edge-pan auto-pan and OS cursor confinement entries
+- **What's New removed from Section 15** — "What's New in v2.0" bullet list removed; that content now lives exclusively in CHANGELOG and README
 - **Section 10 fully rewritten** — Covers server type selection (ServUO vs MUO), two-path local link flow with per-type folder hints, broken link detection & auto-repair, side-by-side MUO/ServUO folder structure diagrams, updated FTP two-path flow; auto-detect step removed
 - **Header updated** — Now mentions both ServUO and ModernUO (MUO) support
 - **Getting Started updated** — Server type selection added as explicit step 2; tip generalized from "ServUO folder" to "server folder"
 - **What's New updated** — New entries for MUO support, server type toggle, two-path linking, broken link detection, two-path FTP, animated intro
 
 ### Fixed
+
+#### Box Spawn Editor
+- **Invisible Spawn Boxes at Map Edges** — Boxes positioned at coordinate x=0 or y=0 (map origin) were not rendering. Replaced the falsy `||` check with `??` (nullish coalescing) in `redrawAll()`: `box.x ?? box.X ?? 0` — numeric zero is now treated as a valid coordinate
+- **Mini-Map Not Updating During Edge-Pan** — The mini-map viewport rectangle did not follow the camera while edge-pan was active during box drawing. Fixed by adding a 50ms polling timer (`drawPanTimer`) in `BoxSpawnComponent` that reads the current pan position and pushes updates to the mini-map during active draw sessions
+- **Mouse Escaping Canvas During Draw** — Pointer events could escape the canvas bounds while drawing, breaking the in-progress box. Fixed by switching the document-level listener from `mousemove` to `pointermove` in `startDrawing()` and clamping reported coordinates to canvas bounds
 
 #### Server Integration Light Theme
 - All Server Integration card elements now fully styled for light mode — connection toggle, folder sections, type button, manual transfer section, and status messages all properly contrast in light theme
@@ -97,6 +108,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ServerIntegrationCard.razor` redesigned: server type toggle → local/remote toggle → folder sections → manual transfer collapsible
 - `splash.js` — dedicated splash animation handler; `window.initSplashVideo(dotnetRef)` registers video events and calls `OnVideoEnded` via DotNet interop
 - `NavMenu.razor` — animation toggle button with `bi-film-nav-menu` / `bi-film-off-nav-menu` SVG icon classes (goldenrod / grey)
+- `BoxSpawnComponent.razor` — Win32 `ClipCursor` / `ClipCursorClear` P/Invoke declarations; `ConfineMouseToCanvas(offsetX, offsetY)` calculates canvas screen rect from `GetCursorPos` + `window.devicePixelRatio`; `ReleaseMouseConfinement()` called on mouse-up, `Window.Deactivated`, and `Dispose()`
+- `BoxSpawnComponent.razor` — `StartDrawPanTracking()` / `StopDrawPanTracking()`: 50ms `PeriodicTimer` polling `getPan()` during active box draw, pushing pan position to `miniMapRef.UpdateViewport()`
+- `map.js startDrawing()` — document-level `pointermove` listener (replaces `mousemove`) with coordinates clamped to canvas bounds for reliable out-of-bounds tracking
+- `map.js redrawAll()` — `box.x ?? box.X ?? 0` nullish coalescing fix; boxes at coordinate 0 now render correctly
 - Build verified with .NET 10 — no warnings or errors
 
 ## [2.0.1.2] - 2026-03-06

@@ -48,10 +48,10 @@
                      @onload="OnImageLoaded" />
                 <canvas id="regionMapCanvas" width="@ViewportConstants.ViewportWidth" height="@ViewportConstants.ViewportHeight"
                         style="position:absolute; top:0; left:0; cursor:pointer;"
-                        @onmousedown="OnMouseDown"
-                        @onmousemove="OnMouseMove"
-                        @onmouseup="OnMouseUp"
-                        @onmouseleave="OnMouseLeave"
+                        @onpointerdown="OnPointerDown"
+                        @onpointermove="OnPointerMove"
+                        @onpointerup="OnPointerUp"
+                        @onpointerleave="OnPointerLeave"
                         @oncontextmenu:preventDefault />
             </div>
             <div class="card mt-2 shadow-sm" style="width:@(ViewportConstants.ViewportWidth)px;">
@@ -639,36 +639,37 @@
         StateHasChanged();
     }
 
-    // ===================== MOUSE EVENTS =====================
+    // ===================== POINTER EVENTS =====================
 
-        private async Task OnMouseDown(MouseEventArgs e)
+    private async Task OnPointerDown(PointerEventArgs e)
+    {
+        if (e.Button == 0) // Left-click
         {
-            if (e.Button == 0) // Left-click
+            var coords = await JS.InvokeAsync<int[]>("eval", $"window.mapModule.getWorldCoordinates({e.OffsetX}, {e.OffsetY})");
+            if (coords.Length == 2)
             {
-                var coords = await JS.InvokeAsync<int[]>("eval", $"window.mapModule.getWorldCoordinates({e.OffsetX}, {e.OffsetY})");
-                if (coords.Length == 2)
-                {
-                    mouseWorldX = coords[0];
-                    mouseWorldY = coords[1];
+                mouseWorldX = coords[0];
+                mouseWorldY = coords[1];
 
-                    // Normal region selection
-                    var clickedRegion = RegionListUtility.FindRegionAt(ViewService.CurrentMapId, mouseWorldX, mouseWorldY);
-                    if (clickedRegion != null)
-                    {
-                        // Find which specific area was clicked
-                        var clickedAreaIndex = RegionListUtility.FindAreaIndexAt(clickedRegion, mouseWorldX, mouseWorldY);
-                        await SelectRegion(clickedRegion, clickedAreaIndex);
-                    }
+                // Normal region selection
+                var clickedRegion = RegionListUtility.FindRegionAt(ViewService.CurrentMapId, mouseWorldX, mouseWorldY);
+                if (clickedRegion != null)
+                {
+                    // Find which specific area was clicked
+                    var clickedAreaIndex = RegionListUtility.FindAreaIndexAt(clickedRegion, mouseWorldX, mouseWorldY);
+                    await SelectRegion(clickedRegion, clickedAreaIndex);
                 }
             }
-            else if (e.Button == 2) // Right-click for panning
-            {
-                isPanning = true;
-                await JS.InvokeVoidAsync("eval", $"window.mapModule.startPanning({e.OffsetX}, {e.OffsetY})");
-            }
         }
+        else if (e.Button == 2) // Right-click for panning
+        {
+            isPanning = true;
+            await JS.InvokeVoidAsync("eval", $"window.mapModule.startPanning({e.OffsetX}, {e.OffsetY})");
+            await JS.InvokeVoidAsync("eval", $"document.getElementById('regionMapCanvas').setPointerCapture({e.PointerId})");
+        }
+    }
     
-    private async Task OnMouseMove(MouseEventArgs e)
+    private async Task OnPointerMove(PointerEventArgs e)
     {
         var coords = await JS.InvokeAsync<int[]>("eval", $"window.mapModule.getWorldCoordinates({e.OffsetX}, {e.OffsetY})");
         if (coords.Length == 2)
@@ -718,15 +719,16 @@
         }
     }
 
-    private void OnMouseUp(MouseEventArgs e)
+    private async Task OnPointerUp(PointerEventArgs e)
     {
         if (e.Button == 2)
         {
             isPanning = false;
+            await JS.InvokeVoidAsync("eval", $"document.getElementById('regionMapCanvas').releasePointerCapture({e.PointerId})");
         }
     }
     
-    private async Task OnMouseLeave(MouseEventArgs e)
+    private async Task OnPointerLeave(PointerEventArgs e)
     {
         isPanning = false;
         await JS.InvokeVoidAsync("eval", "window.mapModule.setHoveredRegionArea(null, -1)");
@@ -754,6 +756,11 @@
 
         await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
 
+        // Sync back clamped pan values from JS
+        var clamped = await JS.InvokeAsync<double[]>("eval", "window.mapModule.getPan()");
+        if (clamped?.Length == 2) { panX = clamped[0]; panY = clamped[1]; }
+        mapPositions[currentMapTracked] = (panX, panY, zoomLevel);
+
         // Update the mini map viewport
         if (miniMapRef != null) await miniMapRef.UpdateViewport(panX, panY, zoomLevel);
 
@@ -762,7 +769,7 @@
     }
 
     // ===================== KEYBOARD EVENTS =====================
-    
+
     private void OnMapMouseEnter(MouseEventArgs e)
     {
         mapContainerRef.FocusAsync();
