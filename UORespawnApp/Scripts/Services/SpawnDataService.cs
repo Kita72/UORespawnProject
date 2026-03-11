@@ -80,10 +80,7 @@ public class SpawnDataService
                 _boxSpawns[mapId] = list;
             }
 
-            if (!list.Contains(entity))
-            {
-                list.Add(entity);
-            }
+            list.Add(entity);
         }
     }
 

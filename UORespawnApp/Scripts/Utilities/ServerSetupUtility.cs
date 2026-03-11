@@ -4,8 +4,8 @@ namespace UORespawnApp.Scripts.Utilities
     /// Utility for server integration setup and validation.
     /// Handles folder validation, script installation, version checking, and server configuration.
     ///
-    /// New Two-Path Approach (v2.0.2+):
-    ///   Users now pick TWO explicit folders when linking a server:
+    /// Two-Path Server Linking:
+    ///   Users pick TWO explicit folders when linking a server:
     ///   1. Scripts Custom Folder — the Custom/ directory where UORespawnServer/ scripts are installed
     ///      ServUO example : Scripts/Custom/
     ///      MUO example    : Projects/UOContent/Custom/

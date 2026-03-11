@@ -51,7 +51,7 @@ public class AccountService
                 if (value != null)
                 {
                     value.LastUsedAt = DateTime.Now;
-                    value.SaveToFolder(); // Save updated timestamp to file
+                    SaveAccountTimestampInBackground(value);
                     Preferences.Set(ActiveFolderKey, value.CredentialFolderPath);
                 }
                 else
@@ -61,6 +61,15 @@ public class AccountService
                 ActiveAccountChanged?.Invoke(this, value);
             }
         }
+    }
+
+    private static void SaveAccountTimestampInBackground(UserAccount account)
+    {
+        _ = Task.Run(() =>
+        {
+            try { account.SaveToFolder(); }
+            catch (Exception ex) { Logger.Error("Failed to save account timestamp", ex); }
+        });
     }
 
     /// <summary>

@@ -127,7 +127,7 @@ public class MapImageCacheService
     /// <summary>
     /// Preloads map images into cache (call during background loading).
     /// </summary>
-    public void PreloadMaps(IEnumerable<int> mapIds)
+    public async Task PreloadMapsAsync(IEnumerable<int> mapIds)
     {
         foreach (var mapId in mapIds)
         {
@@ -141,7 +141,7 @@ public class MapImageCacheService
 
             try
             {
-                LoadAndCacheMap(mapId);
+                await Task.Run(() => LoadAndCacheMap(mapId));
             }
             finally
             {

@@ -19,6 +19,8 @@ public static class Logger
     private static readonly Channel<string> _channel = Channel.CreateUnbounded<string>(
         new UnboundedChannelOptions { SingleReader = true, AllowSynchronousContinuations = false });
 
+    private static readonly Task _drainTask;
+
     /// <summary>
     /// Reference to DebugService for in-app log visualization.
     /// Set during app startup from MauiProgram.
@@ -30,7 +32,7 @@ public static class Logger
         LogDirectory = PathConstants.LogsPath;
 
         // Background writer: drains the channel and appends to the log file
-        Task.Run(async () =>
+        _drainTask = Task.Run(async () =>
         {
             await foreach (var entry in _channel.Reader.ReadAllAsync())
             {
@@ -163,10 +165,12 @@ public static class Logger
 
     /// <summary>
     /// Signals the background drain task to complete after flushing all queued entries.
+    /// Blocks until all pending log entries are written to disk (up to 5 seconds).
     /// Call once on app shutdown after all data has been saved.
     /// </summary>
     public static void Shutdown()
     {
         _channel.Writer.Complete();
+        _drainTask.Wait(TimeSpan.FromSeconds(5));
     }
 }

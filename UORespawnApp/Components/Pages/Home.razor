@@ -27,12 +27,15 @@
         </video>
     }
 
-    <!-- Open Website Button (always visible, WebView covers it when open) -->
-    <button @onclick="OpenWebsite" 
-            style="position: fixed; bottom: 16px; right: 32px; z-index: 10; background: transparent; border: none; cursor: pointer; padding: 0;"
-            title="Black Box Programming">
-        <span class="bi bi-box-fill" style="font-size: 50px; color: black;"></span>
-    </button>
+    <!-- Open Website Button (hidden while intro video plays, WebView covers it when open) -->
+    @if (!_showVideo)
+    {
+        <button @onclick="OpenWebsite" 
+                style="position: fixed; bottom: 16px; right: 32px; z-index: 10; background: transparent; border: none; cursor: pointer; padding: 0;"
+                title="Black Box Programming">
+            <span class="bi bi-box-fill" style="font-size: 50px; color: black;"></span>
+        </button>
+    }
 }
 else if (ViewService.CurrentView == "boxspawn" || ViewService.CurrentView == "mapview") // Support both for backward compatibility
 {

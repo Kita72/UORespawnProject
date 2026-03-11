@@ -10,7 +10,7 @@ public static class ErrorHandler
     /// Reference to ToastService for user-facing error notifications.
     /// Set during app startup via Utility.SetServices().
     /// </summary>
-    public static Scripts.Services.ToastService? ToastService { get; set; }
+    public static Scripts.Services.ToastService? ToastService { get; internal set; }
 
     /// <summary>
     /// Handles an exception by logging it and optionally notifying the user.

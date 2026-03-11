@@ -44,6 +44,10 @@ namespace UORespawnApp.Scripts
         private static Color? _cachedBoxColor;
         private static double? _cachedBoxColorInc;
         private static int? _cachedBoxLineSize;
+        private static double? _cachedTimedChance;
+        private static double? _cachedCommonChance;
+        private static double? _cachedUnCommonChance;
+        private static double? _cachedRareChance;
 
         // Initialize cache on first access
         static Settings()
@@ -86,8 +90,8 @@ namespace UORespawnApp.Scripts
 
         private static void LoadCache()
         {
-            // Migration: Clear old single-path ServerFolder setting (pre-2.0.2)
-            // Users must re-link using the new two-path approach (Custom folder + Data folder)
+            // Migration: Clear old single-path ServerFolder setting (legacy single-path linking)
+            // Users must re-link using the two-path approach (Custom folder + Data folder)
             if (Preferences.ContainsKey("ServerFolder"))
             {
                 Preferences.Remove("ServerFolder");
@@ -112,6 +116,10 @@ namespace UORespawnApp.Scripts
 
             _cachedBoxColorInc = Preferences.Get("BoxColorInc", 0.3);
             _cachedBoxLineSize = Preferences.Get("BoxLineSize", 2);
+            _cachedTimedChance = Preferences.Get("TimedChance", 0.01);
+            _cachedCommonChance = Preferences.Get("CommonChance", 1.0);
+            _cachedUnCommonChance = Preferences.Get("UnCommonChance", 0.1);
+            _cachedRareChance = Preferences.Get("RareChance", 0.01);
         }
 
         /// <summary>
@@ -220,26 +228,42 @@ namespace UORespawnApp.Scripts
 
         public static double TimedChance
         {
-            get => Preferences.Get("TimedChance", 0.01);
-            set => Preferences.Set("TimedChance", Math.Clamp(value, 0.0, 1.0));
+            get => _cachedTimedChance ?? Preferences.Get("TimedChance", 0.01);
+            set
+            {
+                _cachedTimedChance = Math.Clamp(value, 0.0, 1.0);
+                Preferences.Set("TimedChance", _cachedTimedChance.Value);
+            }
         }
 
         public static double CommonChance
         {
-            get => Preferences.Get("CommonChance", 1.0);
-            set => Preferences.Set("CommonChance", Math.Clamp(value, 0.0, 1.0));
+            get => _cachedCommonChance ?? Preferences.Get("CommonChance", 1.0);
+            set
+            {
+                _cachedCommonChance = Math.Clamp(value, 0.0, 1.0);
+                Preferences.Set("CommonChance", _cachedCommonChance.Value);
+            }
         }
 
         public static double UnCommonChance
         {
-            get => Preferences.Get("UnCommonChance", 0.1);
-            set => Preferences.Set("UnCommonChance", Math.Clamp(value, 0.0, 1.0));
+            get => _cachedUnCommonChance ?? Preferences.Get("UnCommonChance", 0.1);
+            set
+            {
+                _cachedUnCommonChance = Math.Clamp(value, 0.0, 1.0);
+                Preferences.Set("UnCommonChance", _cachedUnCommonChance.Value);
+            }
         }
 
         public static double RareChance
         {
-            get => Preferences.Get("RareChance", 0.01);
-            set => Preferences.Set("RareChance", Math.Clamp(value, 0.0, 1.0));
+            get => _cachedRareChance ?? Preferences.Get("RareChance", 0.01);
+            set
+            {
+                _cachedRareChance = Math.Clamp(value, 0.0, 1.0);
+                Preferences.Set("RareChance", _cachedRareChance.Value);
+            }
         }
 
         public static System.Collections.Specialized.StringCollection Bestiary

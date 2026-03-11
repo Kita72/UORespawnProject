@@ -19,7 +19,7 @@ namespace UORespawnApp.Scripts.Utilities;
 /// </summary>
 public static class Utility
 {
-    internal const string Version = "2.0.1.3";
+    internal const string Version = "2.0.1.4";
 
     // ==================== SERVICE REFERENCES ====================
     // These get set during app startup from DI container

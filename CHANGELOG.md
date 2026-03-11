@@ -5,6 +5,44 @@ All notable changes to UORespawn will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1.4] - 2026-03-11
+
+### Performance
+
+#### Server — Hot-Path Spawn Optimizations (ServUO & MUO)
+- **O(1) Serial Ownership in `UOR_Spawner`** — Added a non-serialized `HashSet<int> _serialsSet` shadow alongside the serializable spawn list. `Claim()` now uses `HashSet.Add()` (O(1)) instead of `List.Contains()` (O(n)); set is rebuilt from the list on every `Deserialize` — no serialization format change
+- **Allocation-Free Swimmer Count** — New `CountSwimmers()` static on `UOR_MobSpawner` (backed by `CountCanSwim()` on the base `UOR_Spawner`) iterates the owned serial list directly. Replaces the `GetAllSpawn().Count(bc => bc.CanSwim)` call in `IsWaterLimit()` that allocated a full spawn list on every water-tile check
+- **Single-Pass `ValidateAndTrim()`** — `SpawnQueryService` replaced 6 multi-pass O(n×m) methods (`GetTypeCount`, `GetExcessSpawn`, `TrimExcess`, `GetTotalSpawnCount`, `IsAtTotalLimit`, `GetAllSpawnTypes`) with one single-pass scan that groups all spawn by type and trims excess in-place with pre-projected distances
+- **Zero-Alloc `GetRespawners()`** — `UOR_Core.GetRespawners()` return type changed from `List<RespawnerEntity>` to `IReadOnlyCollection<RespawnerEntity>` backed directly by `.Values` — eliminates a `ToList()` allocation on every 250ms `ProcessTimer` tick
+- **O(1) Tile Dedup in `GameManager.GenTileList()`** — `List<string>.Contains()` O(n²) deduplication over 65k tile IDs replaced with `HashSet<string>.Add()` O(1) per item
+
+### Changed
+
+#### Server — `ProcessTimer` & `ControlService`
+- Updated to consume `IReadOnlyCollection<RespawnerEntity>`; indexed `for` loops replaced with `foreach`
+
+#### Server — `ValidateService`
+- `Validate()` reduced to a single `queryService.ValidateAndTrim(MAX_RECYCLE_TYPE)` call; constructor visibility corrected from `public` to `internal`
+
+### Removed
+
+#### Server
+- **`MAX_RECYCLE_TOTAL`** computed property removed — total spawn volume is now naturally bounded by the per-type limit (`MAX_RECYCLE_TYPE`), which scales with unique creature type count; no global cap needed
+
+### Technical
+- `UOR_Spawner` — `HashSet<int> _serialsSet` synced at all 4 mutation points (`Claim`, `Release`, `CleanupAll`, `Deserialize`); no binary format change
+- `UOR_MobSpawner.CountSwimmers()` / `UOR_Spawner.CountCanSwim()` — replaces hot-path `GetAllSpawn().Count(CanSwim)` allocation
+- `SpawnQueryService` — 6 superseded methods removed; `ValidateAndTrim()` is now the sole trim API
+- `UOR_Core.GetRespawners()` — return type `IReadOnlyCollection<RespawnerEntity>`; zero allocation per timer tick
+- `GameManager.GenTileList()` — O(n²) → O(n) deduplication via `HashSet<string>`
+- `SearchTimer` — removed redundant `else` branch after unconditional `return`
+- Culture-safe comparisons: `ToLowerInvariant()` in `ControlService`, `ToUpperInvariant()` in `XMLManager`
+- `ProcessService` — town extra spawn now selects via `GetBestSpawnPoint` instead of `GetSpawnPoint`
+- `UOR_Settings.ApplySettingCommand` — dispatches on normalized key instead of raw input key
+- Build verified — no warnings or errors (ServUO .NET Framework 4.8 + MUO .NET 10)
+
+---
+
 ## [2.0.1.3] - 2026-03-08
 
 ### Added

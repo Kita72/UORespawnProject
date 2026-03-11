@@ -23,7 +23,7 @@
 
 UORespawn is a modern .NET MAUI application that provides a comprehensive visual interface for creating and managing spawn systems in Ultima Online servers running **ServUO** or **ModernUO (MUO)**. It offers four complementary spawn methods to populate your world with creatures and NPCs.
 
-**Version:** 2.0.1.3  
+**Version:** 2.0.1.4
 **Platform:** Windows, macOS  
 **Framework:** .NET 10 MAUI with Blazor  
 **License:** MIT
@@ -64,7 +64,7 @@ UORespawn is a modern .NET MAUI application that provides a comprehensive visual
 - Six frequency tiers for precise control
 - Applies globally to all maps
 
-### ⚙️ Server Integration (v2.0.1.3+)
+### ⚙️ Server Integration (v2.0.1.4+)
 
 #### 🖼️ Step 1 — Choose Server Type
 - **ServUO or ModernUO (MUO)** — Logo toggle at the top of the Server Integration card
