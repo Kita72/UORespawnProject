@@ -19,6 +19,7 @@ namespace Server.Custom.UORespawnServer.Spawners
         // Track spawned creature serials for serialization
         // Mobile.Spawner is NOT saved by ServUO, so we must track and re-claim
         private List<int> _spawnedSerials = new List<int>();
+        private HashSet<int> _serialsSet = new HashSet<int>(); // shadow for O(1) Contains
 
         /// <summary>
         /// Display name for logging purposes.
@@ -60,6 +61,7 @@ namespace Server.Custom.UORespawnServer.Spawners
         public UOR_Spawner(Serial serial) : base(serial)
         {
             _spawnedSerials = new List<int>();
+            _serialsSet = new HashSet<int>();
         }
 
         /// <summary>
@@ -93,6 +95,7 @@ namespace Server.Custom.UORespawnServer.Spawners
             if (spawn is Mobile m)
             {
                 _spawnedSerials.Remove(m.Serial.Value);
+                _serialsSet.Remove(m.Serial.Value);
             }
         }
 
@@ -120,10 +123,11 @@ namespace Server.Custom.UORespawnServer.Spawners
             creature.Home = homeLocation != default ? homeLocation : creature.Location;
             creature.RangeHome = DefaultHomeRange;
 
-            // Track for serialization
-            if (!_spawnedSerials.Contains(creature.Serial.Value))
+            // Track for serialization — O(1) duplicate check via HashSet shadow
+            if (!_serialsSet.Contains(creature.Serial.Value))
             {
                 _spawnedSerials.Add(creature.Serial.Value);
+                _serialsSet.Add(creature.Serial.Value);
             }
         }
 
@@ -139,6 +143,7 @@ namespace Server.Custom.UORespawnServer.Spawners
             {
                 creature.Spawner = null;
                 _spawnedSerials.Remove(creature.Serial.Value);
+                _serialsSet.Remove(creature.Serial.Value);
             }
         }
 
@@ -169,6 +174,7 @@ namespace Server.Custom.UORespawnServer.Spawners
             foreach (int serial in toRemove)
             {
                 _spawnedSerials.Remove(serial);
+                _serialsSet.Remove(serial);
             }
 
             return reclaimed;
@@ -212,8 +218,27 @@ namespace Server.Custom.UORespawnServer.Spawners
                 }
             }
 
-            // NOTE: Reclaim is NOT done here - UOR_Core.OnServerStarted handles it
+            _serialsSet = new HashSet<int>(_spawnedSerials);
+
+            // NOTE: Reclaim is NOT done here
             // to ensure proper ordering: Reclaim → Cleanup → Vendor Init → Services
+        }
+
+        /// <summary>
+        /// Counts creatures owned by this spawner that can swim.
+        /// Iterates serial list — O(n) but avoids full World.Mobiles scan.
+        /// </summary>
+        protected int CountCanSwim()
+        {
+            int count = 0;
+
+            foreach (int serial in _spawnedSerials)
+            {
+                if (World.FindMobile(serial) is BaseCreature bc && !bc.Deleted && bc.CanSwim)
+                    count++;
+            }
+
+            return count;
         }
 
         #region Static Query Methods
@@ -442,6 +467,14 @@ namespace Server.Custom.UORespawnServer.Spawners
             }
 
             return instance._cachedCount;
+        }
+
+        /// <summary>
+        /// Counts mob spawn that can swim. Uses serial list — avoids full World.Mobiles scan.
+        /// </summary>
+        public static int CountSwimmers()
+        {
+            return Instance.CountCanSwim();
         }
 
         /// <summary>

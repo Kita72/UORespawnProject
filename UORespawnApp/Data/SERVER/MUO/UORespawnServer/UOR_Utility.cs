@@ -173,32 +173,56 @@ internal static class UOR_Utility
         return null;
     }
 
+    private static Dictionary<string, List<(int, Point3D)>> _StaticIndex;
+
     internal static List<(int, Point3D)> GetStaticList(string name)
     {
-        List<(int, Point3D)> locations = [];
+        _StaticIndex ??= BuildStaticIndex();
+
+        return _StaticIndex.TryGetValue(name, out var list) ? list : [];
+    }
+
+    private static Dictionary<string, List<(int, Point3D)>> BuildStaticIndex()
+    {
+        var index = new Dictionary<string, List<(int, Point3D)>>(StringComparer.OrdinalIgnoreCase);
 
         for (int m = 0; m < Map.Maps.Length; m++)
         {
-            if (Map.Maps[m] == null || Map.Maps[m] == Map.Internal)
+            var map = Map.Maps[m];
+
+            if (map == null || map == Map.Internal)
             {
                 continue;
             }
 
-            for (int w = 0; w < Map.Maps[m].Width; w++)
+            for (int x = 0; x < map.Width; x++)
             {
-                for (int h = 0; h < Map.Maps[m].Height; h++)
+                for (int y = 0; y < map.Height; y++)
                 {
-                    var staticTarg = GetStatic(Map.Maps[m], new Point3D(w, h, 0), name);
-
-                    if (staticTarg?.Name == name)
+                    foreach (var tile in map.Tiles.GetStaticTiles(x, y))
                     {
-                        locations.Add((m, staticTarg.Location));
+                        var tileName = GetStaticTarget(new Point3D(x, y, 0), tile.ID).Name;
+
+                        if (string.IsNullOrEmpty(tileName))
+                        {
+                            continue;
+                        }
+
+                        if (!index.TryGetValue(tileName, out var list))
+                        {
+                            list = [];
+                            index[tileName] = list;
+                        }
+
+                        list.Add((m, new Point3D(x, y, 0)));
                     }
                 }
             }
         }
 
-        return locations;
+        SendMsg(ConsoleColor.Cyan, $"STATICS-[Indexed {index.Count} unique tile names]");
+
+        return index;
     }
 
     internal static SpawnEntity Locate(RespawnerEntity respawner, LocationEntity entity)
@@ -213,11 +237,13 @@ internal static class UOR_Utility
         try
         {
             // 1. Single Loop Strategy: Keep looking until VALID or MAX_ATTEMPTS
+            bool wantWater = entity.CHANCE < UOR_Settings.CHANCE_WATER;
+
             while (entity.ATTEMPTS++ < UOR_Settings.MAX_SPAWN_CHECKS)
             {
-                entity.LOCATION = GetSpawnPoint(pm.Location, min, max, pm.Map, out bool isWater, out lava);
+                entity.LOCATION = GetBestSpawnPoint(pm.Map, pm.Location, min, max, wantWater, out bool isWater, out lava);
 
-                if (entity.CHANCE < UOR_Settings.CHANCE_WATER && !IsWaterLimit(isWater))
+                if (wantWater && IsWaterLimit(isWater))
                 {
                     if (UOR_Settings.ENABLE_DEBUG)
                     {
@@ -298,17 +324,39 @@ internal static class UOR_Utility
 
     private static bool IsWaterLimit(bool isWater)
     {
-        if (isWater)
+        if (!isWater)
         {
-            return GetAllSpawn().Count(bc => bc.CanSwim) > (UOR_Settings.MAX_CROWD * UOR_Settings.SCALE_MOD);
+            return true; // land tile — skip for water-seeking spawn
         }
 
-        return isWater;
+        return UOR_MobSpawner.CountSwimmers() >= (UOR_Settings.MAX_CROWD * UOR_Settings.SCALE_MOD);
     }
 
     internal static Rectangle2D GetSpawnBox(Point3D loc, int rad)
     {
         return new Rectangle2D(loc.X - rad, loc.Y - rad, rad * 2, rad * 2);
+    }
+
+    /// <summary>
+    /// Cache-first spawn point selection.
+    /// Pass <paramref name="wantWater"/> = true to request a water tile.
+    /// Falls back to the random-donut scan on a cache miss.
+    /// </summary>
+    internal static Point3D GetBestSpawnPoint(Map map, Point3D center, int min, int max, bool wantWater, out bool isWater, out bool isLava)
+    {
+        if (!SpawnLocationCache.IsReady)
+            return GetSpawnPoint(center, min, max, map, out isWater, out isLava);
+
+        Point3D cached = SpawnLocationCache.GetInRange(map, center, min, max, wantWater);
+
+        if (cached != Point3D.Zero)
+        {
+            isWater = wantWater;
+            isLava  = false;
+            return cached;
+        }
+
+        return GetSpawnPoint(center, min, max, map, out isWater, out isLava);
     }
 
     internal static Point3D GetSpawnPoint(Point3D center, int min, int max, Map map, out bool isWater, out bool isLava)

@@ -87,97 +87,77 @@ namespace Server.Custom.UORespawnServer.Services
         }
 
         /// <summary>
-        /// Gets the count of a specific spawn type currently on all maps.
+        /// Single-pass validate and trim.
+        /// Groups all spawn by type in one scan, then trims out-of-sight excess
+        /// for any type that exceeds <paramref name="typeLimit"/>.
+        /// Returns total number of spawns deleted.
         /// </summary>
-        internal int GetTypeCount(string typeName)
+        internal int ValidateAndTrim(int typeLimit)
         {
-            if (string.IsNullOrEmpty(typeName))
+            var allSpawn = UOR_MobSpawner.GetAllSpawn();
+
+            if (allSpawn == null || allSpawn.Count == 0)
                 return 0;
 
-            var allSpawn = UOR_MobSpawner.GetAllSpawn();
+            // Group spawn by type in a single pass
+            var byType = new Dictionary<string, List<BaseCreature>>(StringComparer.OrdinalIgnoreCase);
 
-            return allSpawn.Count(bc => bc != null && 
-                                        !bc.Deleted && 
-                                        bc.GetType().Name.Equals(typeName, StringComparison.OrdinalIgnoreCase));
-        }
-
-        /// <summary>
-        /// Gets spawns of a type that exceed the limit, sorted by furthest from players first.
-        /// Only returns spawns that are out-of-sight for safe trimming.
-        /// </summary>
-        /// <param name="typeName">The type name to check</param>
-        /// <param name="limit">Max allowed count (from MAX_RECYCLE_TYPE)</param>
-        /// <returns>List of excess spawns to trim, furthest first</returns>
-        internal List<BaseCreature> GetExcessSpawn(string typeName, int limit)
-        {
-            var result = new List<BaseCreature>();
-
-            if (string.IsNullOrEmpty(typeName))
-                return result;
-
-            var allSpawn = UOR_MobSpawner.GetAllSpawn();
-
-            // Get all of this type
-            var typeSpawn = allSpawn
-                .Where(bc => bc != null && 
-                             !bc.Deleted && 
-                             bc.Alive &&
-                             bc.GetType().Name.Equals(typeName, StringComparison.OrdinalIgnoreCase))
-                .ToList();
-
-            int excess = typeSpawn.Count - limit;
-
-            if (excess <= 0)
-                return result;
-
-            // Get out-of-sight candidates, sorted by furthest from players
-            var candidates = typeSpawn
-                .Where(bc => IsOutOfSight(bc))
-                .Select(bc => new { Creature = bc, DistSq = GetMinPlayerDistanceSquared(bc) })
-                .OrderByDescending(x => x.DistSq)
-                .Take(excess)
-                .Select(x => x.Creature)
-                .ToList();
-
-            return candidates;
-        }
-
-        /// <summary>
-        /// Trims excess spawn of a specific type. Deletes furthest out-of-sight first.
-        /// </summary>
-        /// <returns>Number of spawns trimmed</returns>
-        internal int TrimExcess(string typeName, int limit)
-        {
-            var excess = GetExcessSpawn(typeName, limit);
-            int trimmed = 0;
-
-            foreach (var spawn in excess)
+            foreach (var bc in allSpawn)
             {
-                if (spawn != null && !spawn.Deleted)
+                if (bc == null || bc.Deleted || !bc.Alive)
+                    continue;
+
+                string typeName = bc.GetType().Name;
+
+                if (!byType.TryGetValue(typeName, out var list))
                 {
-                    spawn.Delete();
-                    trimmed++;
-                    _TotalTrimmed++;
+                    list = new List<BaseCreature>();
+                    byType[typeName] = list;
+                }
+
+                list.Add(bc);
+            }
+
+            int totalTrimmed = 0;
+
+            foreach (var kvp in byType)
+            {
+                int excess = kvp.Value.Count - typeLimit;
+
+                if (excess <= 0)
+                    continue;
+
+                // Collect out-of-sight candidates with pre-projected distance
+                var candidates = new List<(BaseCreature Creature, int DistSq)>();
+
+                foreach (var bc in kvp.Value)
+                {
+                    if (IsOutOfSight(bc))
+                        candidates.Add((bc, GetMinPlayerDistanceSquared(bc)));
+                }
+
+                // Sort furthest-from-players first
+                candidates.Sort((a, b) => b.DistSq.CompareTo(a.DistSq));
+
+                int toTrim = Math.Min(excess, candidates.Count);
+
+                for (int i = 0; i < toTrim; i++)
+                {
+                    if (!candidates[i].Creature.Deleted)
+                    {
+                        candidates[i].Creature.Delete();
+                        totalTrimmed++;
+                        _TotalTrimmed++;
+                    }
+                }
+
+                if (UOR_Settings.ENABLE_DEBUG && toTrim > 0)
+                {
+                    UOR_Utility.SendMsg(ConsoleColor.Yellow, $"VALIDATE-[{kvp.Key}: {kvp.Value.Count}->{kvp.Value.Count - toTrim}]");
                 }
             }
 
-            return trimmed;
-        }
-
-        /// <summary>
-        /// Gets total spawn count across all maps (for MAX_RECYCLE_TOTAL check).
-        /// </summary>
-        internal int GetTotalSpawnCount()
-        {
-            return UOR_MobSpawner.GetCount();
-        }
-
-        /// <summary>
-        /// Checks if spawn count exceeds the total limit.
-        /// </summary>
-        internal bool IsAtTotalLimit()
-        {
-            return GetTotalSpawnCount() >= UOR_Settings.MAX_RECYCLE_TOTAL;
+            return totalTrimmed;
         }
 
         /// <summary>
@@ -223,24 +203,5 @@ namespace Server.Custom.UORespawnServer.Services
             return minDistSq;
         }
 
-        /// <summary>
-        /// Gets all unique type names currently spawned.
-        /// Used by ValidateService for trimming passes.
-        /// </summary>
-        internal HashSet<string> GetAllSpawnTypes()
-        {
-            var types = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var allSpawn = UOR_MobSpawner.GetAllSpawn();
-
-            foreach (var spawn in allSpawn)
-            {
-                if (spawn != null && !spawn.Deleted)
-                {
-                    types.Add(spawn.GetType().Name);
-                }
             }
-
-            return types;
         }
-    }
-}

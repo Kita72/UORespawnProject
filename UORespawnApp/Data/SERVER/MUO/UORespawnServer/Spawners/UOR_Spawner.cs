@@ -53,6 +53,7 @@ public abstract partial class UOR_Spawner : Item, ISpawner
     {
         _spawnerGuid = Guid.NewGuid();
         _spawnedSerials = [];
+        _serialsSet = [];
 
         Visible = false;
         Movable = false;
@@ -60,10 +61,14 @@ public abstract partial class UOR_Spawner : Item, ISpawner
         MoveToWorld(Point3D.Zero, Map.Internal);
     }
 
+    // Non-serialized O(1) shadow set — rebuilt from _spawnedSerials on every deserialization
+    private HashSet<uint> _serialsSet;
+
     [AfterDeserialization]
     private void AfterDeserialization()
     {
         _spawnedSerials ??= [];
+        _serialsSet = new HashSet<uint>(_spawnedSerials);
     }
 
     /// <summary>
@@ -82,7 +87,9 @@ public abstract partial class UOR_Spawner : Item, ISpawner
     {
         if (spawn is Mobile m)
         {
-            _spawnedSerials.Remove(m.Serial.Value);
+            uint serialVal = m.Serial.Value;
+            _spawnedSerials.Remove(serialVal);
+            _serialsSet.Remove(serialVal);
         }
     }
 
@@ -103,7 +110,7 @@ public abstract partial class UOR_Spawner : Item, ISpawner
         creature.RangeHome = DefaultHomeRange;
 
         uint serialVal = creature.Serial.Value;
-        if (!_spawnedSerials.Contains(serialVal))
+        if (_serialsSet.Add(serialVal))
         {
             _spawnedSerials.Add(serialVal);
         }
@@ -122,7 +129,9 @@ public abstract partial class UOR_Spawner : Item, ISpawner
         if (creature.Spawner == this)
         {
             creature.Spawner = null;
-            _spawnedSerials.Remove(creature.Serial.Value);
+            uint serialVal = creature.Serial.Value;
+            _spawnedSerials.Remove(serialVal);
+            _serialsSet.Remove(serialVal);
         }
     }
 
@@ -152,6 +161,7 @@ public abstract partial class UOR_Spawner : Item, ISpawner
         foreach (uint serial in toRemove)
         {
             _spawnedSerials.Remove(serial);
+            _serialsSet.Remove(serial);
         }
 
         return reclaimed;
@@ -245,6 +255,24 @@ public abstract partial class UOR_Spawner : Item, ISpawner
     public static bool IsUORSpawn(BaseCreature creature)
     {
         return creature?.Spawner is UOR_Spawner;
+    }
+
+    /// <summary>
+    /// Counts tracked creatures matching a swim condition — allocation-free.
+    /// </summary>
+    protected int CountCanSwim()
+    {
+        int count = 0;
+
+        foreach (uint serial in _spawnedSerials)
+        {
+            if (World.FindMobile((Serial)serial) is BaseCreature { Deleted: false, CanSwim: true })
+            {
+                count++;
+            }
+        }
+
+        return count;
     }
 
     /// <summary>
@@ -386,6 +414,11 @@ public sealed partial class UOR_MobSpawner : UOR_Spawner
 
         return instance._cachedCount;
     }
+
+    /// <summary>
+    /// Counts active swimmer spawn — allocation-free, no intermediate list.
+    /// </summary>
+    public static int CountSwimmers() => Instance.CountCanSwim();
 
     /// <summary>
     /// Finds a mob spawn by serial. O(1) lookup.

@@ -7,7 +7,7 @@ namespace Server.Custom.UORespawnServer
 {
     internal static class UOR_Settings
     {
-        internal const string VERSION = "2.0.1.3";
+        internal const string VERSION = "2.0.1.4";
 
         // System Scaler (exposed for ControlService)
         internal static double SCALE_MOD { get; private set; } = 1.0;
@@ -20,19 +20,6 @@ namespace Server.Custom.UORespawnServer
 
         // System Limits
         internal static int MAX_RECYCLE_TYPE { get; set; } = 20; // Max mobs cached per type
-
-        /// <summary>
-        /// Maximum total spawn allowed in world.
-        /// Dynamically calculated as BestiaryCount × MAX_RECYCLE_TYPE.
-        /// </summary>
-        internal static int MAX_RECYCLE_TOTAL
-        {
-            get
-            {
-                int bestiaryCount = GameManager.BestiaryCount;
-                return bestiaryCount > 0 ? bestiaryCount * MAX_RECYCLE_TYPE : 50000;
-            }
-        }
 
         internal static int MAX_SPAWN_CHECKS { get; set; } = 3; // Max mobs checked when searching
         internal static int MAX_QUEUE_SIZE { get; set; } = 5; // Max mobs qued

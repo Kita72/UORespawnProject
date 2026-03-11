@@ -69,11 +69,11 @@ namespace Server.Custom.UORespawnServer
         {
             if (!string.IsNullOrEmpty(name))
             {
-                if (name.ToLower().EndsWith(" quest")) return false;
+                if (name.EndsWith(" quest", StringComparison.OrdinalIgnoreCase)) return false;
 
-                if (name.ToLower().EndsWith(" skill")) return false;
+                if (name.EndsWith(" skill", StringComparison.OrdinalIgnoreCase)) return false;
 
-                if (name.ToLower().StartsWith("khaldun ")) return false;
+                if (name.StartsWith("khaldun ", StringComparison.OrdinalIgnoreCase)) return false;
 
                 return true;
             }
@@ -166,55 +166,77 @@ namespace Server.Custom.UORespawnServer
             return null;
         }
 
-        private static Dictionary<int, List<StaticTarget>> AllStatics;
+        // Cache: name → all (mapId, location) hits found during scan.
+        // Each name is scanned once and results are reused for all future calls.
+        private static Dictionary<string, List<(int mapId, Point3D location)>> _StaticCache;
 
-        internal static List<(int, Point3D)> GetStaticList(string name)
+        /// <summary>
+        /// Finds every baked-in static tile whose TileData name matches <paramref name="name"/>
+        /// across all spawnable maps. Results are cached per name — first call scans, subsequent
+        /// calls return instantly.
+        /// </summary>
+        internal static List<(int mapId, Point3D location)> FindStaticLocations(string name)
         {
-            List<(int, Point3D)> locations = new List<(int, Point3D)>();
+            if (string.IsNullOrEmpty(name))
+                return new List<(int, Point3D)>();
 
-            StaticTarget staticTarg;
+            if (_StaticCache == null)
+                _StaticCache = new Dictionary<string, List<(int, Point3D)>>(StringComparer.OrdinalIgnoreCase);
 
-            if (AllStatics == null)
+            if (_StaticCache.TryGetValue(name, out var cached))
+                return cached;
+
+            // Step 1: Build a HashSet of tile IDs whose TileData name matches.
+            // This is O(65k) once and avoids per-tile string comparisons during the map scan.
+            var targetIds = new HashSet<int>();
+
+            for (int id = 0; id < TileData.ItemTable.Length; id++)
             {
-                AllStatics = new Dictionary<int, List<StaticTarget>>();
+                if (string.Equals(TileData.ItemTable[id].Name, name, StringComparison.OrdinalIgnoreCase))
+                    targetIds.Add(id);
+            }
 
-                for (int m = 0; m < Map.Maps.Length; m++)
+            var results = new List<(int, Point3D)>();
+
+            if (targetIds.Count == 0)
+            {
+                SendMsg(ConsoleColor.Yellow, $"STATICS-[No tile IDs match '{name}' in TileData]");
+                _StaticCache[name] = results;
+                return results;
+            }
+
+            // Step 2: Walk every spawnable map's static tiles using the ID set.
+            // GetStaticTiles() reads pre-loaded mul data — O(1) per cell.
+            // ID comparison via HashSet is O(1) — no string allocation per tile.
+            for (int m = 0; m < Map.Maps.Length; m++)
+            {
+                var map = Map.Maps[m];
+
+                if (map == null || map == Map.Internal)
+                    continue;
+
+                for (int x = 0; x < map.Width; x++)
                 {
-                    if (Map.Maps[m] == null || Map.Maps[m] == Map.Internal)
-                        continue;
-
-                    AllStatics.Add(m, new List<StaticTarget>());
-
-                    for (int w = 0; w < Map.Maps[m].Width; w++)
+                    for (int y = 0; y < map.Height; y++)
                     {
-                        for (int h = 0; h < Map.Maps[m].Height; h++)
+                        var tiles = map.Tiles.GetStaticTiles(x, y);
+
+                        for (int i = 0; i < tiles.Length; i++)
                         {
-                            staticTarg = GetStatic(Map.Maps[m], new Point3D(w, h, 0), name);
-
-                            AllStatics[m].Add(staticTarg);
-
-                            if (staticTarg?.Name == name)
+                            if (targetIds.Contains(tiles[i].ID & TileData.MaxItemValue))
                             {
-                                locations.Add((m, staticTarg.Location));
+                                results.Add((m, new Point3D(x, y, tiles[i].Z)));
                             }
                         }
                     }
                 }
             }
-            else
-            {
-                for (int m = 0; m < AllStatics.Count; m++)
-                {
-                    staticTarg = AllStatics[m].Find(s => s.Name == name);
 
-                    if (staticTarg?.Name == name)
-                    {
-                        locations.Add((m, staticTarg.Location));
-                    }
-                }
-            }
+            _StaticCache[name] = results;
 
-            return locations;
+            SendMsg(ConsoleColor.Cyan, $"STATICS-['{name}': {results.Count} locations found across {Map.Maps.Length} maps]");
+
+            return results;
         }
 
         internal static SpawnEntity Locate(RespawnerEntity respawner, LocationEntity entity)
@@ -229,11 +251,13 @@ namespace Server.Custom.UORespawnServer
             try
             {
                 // 1. Single Loop Strategy: Keep looking until VALID or MAX_ATTEMPTS
+                bool wantWater = entity.CHANCE < UOR_Settings.CHANCE_WATER;
+
                 while (entity.ATTEMPTS++ < UOR_Settings.MAX_SPAWN_CHECKS)
                 {
-                    entity.LOCATION = GetSpawnPoint(pm.Location, min, max, pm.Map, out bool isWater, out lava);
+                    entity.LOCATION = GetBestSpawnPoint(pm.Map, pm.Location, min, max, wantWater, out bool isWater, out lava);
 
-                    if (entity.CHANCE < UOR_Settings.CHANCE_WATER && !IsWaterLimit(isWater))
+                    if (wantWater && IsWaterLimit(isWater))
                     {
                         if (UOR_Settings.ENABLE_DEBUG) entity.REASON = "[Skipped-Water]";
                         continue;
@@ -258,11 +282,6 @@ namespace Server.Custom.UORespawnServer
                         if (UOR_Settings.ENABLE_DEBUG) entity.REASON = "[X-Qued]";
                         continue;
                     }
-                    //else if (SpawnInRange(pm.Map, entity.LOCATION, UOR_Settings.MIN_RANGE) > 0)
-                    //{
-                    //    if (UOR_Settings.ENABLE_DEBUG) entity.REASON = "[X-Qued]";
-                    //    continue;
-                    //}
 
                     // If we reached here, the location is valid!
                     entity.VALID = true;
@@ -304,17 +323,38 @@ namespace Server.Custom.UORespawnServer
 
         private static bool IsWaterLimit(bool isWater)
         {
-            if (isWater)
-            {
-                return GetAllSpawn().Count(bc => bc.CanSwim) > (UOR_Settings.MAX_CROWD * UOR_Settings.SCALE_MOD);
-            }
+            if (!isWater) return true; // not a water tile — skip for water-seeking spawn
 
-            return isWater;
+            return UOR_MobSpawner.CountSwimmers() >= (UOR_Settings.MAX_CROWD * UOR_Settings.SCALE_MOD);
         }
 
         internal static Rectangle2D GetSpawnBox(Point3D loc, int rad)
         {
             return new Rectangle2D(loc.X - rad, loc.Y - rad, rad * 2, rad * 2);
+        }
+
+        /// <summary>
+        /// Cache-first spawn point selection.
+        /// Pass <paramref name="wantWater"/> = true to request a water tile.
+        /// Falls back to the random-donut scan on a cache miss.
+        /// </summary>
+        internal static Point3D GetBestSpawnPoint(Map map, Point3D center, int min, int max, bool wantWater, out bool isWater, out bool isLava)
+        {
+            if (!SpawnLocationCache.IsReady)
+                return GetSpawnPoint(center, min, max, map, out isWater, out isLava);
+
+            Point3D cached = SpawnLocationCache.GetInRange(map, center, min, max, wantWater);
+
+            if (cached != Point3D.Zero)
+            {
+                isWater = wantWater;
+                isLava  = false;
+
+                return cached;
+            }
+
+            // Cache miss — fall back to live random scan
+            return GetSpawnPoint(center, min, max, map, out isWater, out isLava);
         }
 
         internal static Point3D GetSpawnPoint(Point3D center, int min, int max, Map map, out bool isWater, out bool isLava)
@@ -420,7 +460,7 @@ namespace Server.Custom.UORespawnServer
         {
             var spawns = map.GetMobilesInRange(location, range);
 
-            var count = spawns.Where(m => !(m is BaseVendor) || m is WanderingHealer).ToList().Count;
+            var count = spawns.Count(m => !(m is BaseVendor) || m is WanderingHealer);
 
             spawns.Free();
 

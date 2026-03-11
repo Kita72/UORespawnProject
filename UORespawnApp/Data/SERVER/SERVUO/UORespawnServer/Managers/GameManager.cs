@@ -315,13 +315,14 @@ namespace Server.Custom.UORespawnServer.Managers
 
         private static void GenTileList()
         {
-            List<string> tileNames = new List<string>();
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var tileNames = new List<string>();
 
             for (int i = 0; i < TileData.MaxLandValue; i++)
             {
                 var name = TileHelper.GetTileName(i, Map.Felucca, Point3D.Zero);
 
-                if (!tileNames.Contains(name) && IsValidTile(name))
+                if (IsValidTile(name) && seen.Add(name))
                 {
                     tileNames.Add(name);
                 }

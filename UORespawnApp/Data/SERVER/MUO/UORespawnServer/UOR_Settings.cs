@@ -6,7 +6,7 @@ using Server.Custom.UORespawnServer.Managers;
 namespace Server.Custom.UORespawnServer;
 internal static class UOR_Settings
 {
-    internal const string VERSION = "2.0.1.3";
+    internal const string VERSION = "2.0.1.4";
 
     // System Scaler (exposed for ControlService)
     internal static double SCALE_MOD { get; private set; } = 1.0;
@@ -19,19 +19,6 @@ internal static class UOR_Settings
 
     // System Limits
     internal static int MAX_RECYCLE_TYPE { get; set; } = 20; // Max mobs cached per type
-
-    /// <summary>
-    /// Maximum total spawn allowed in world.
-    /// Dynamically calculated as BestiaryCount × MAX_RECYCLE_TYPE.
-    /// </summary>
-    internal static int MAX_RECYCLE_TOTAL
-    {
-        get
-        {
-            int bestiaryCount = GameManager.BestiaryCount;
-            return bestiaryCount > 0 ? bestiaryCount * MAX_RECYCLE_TYPE : 50000;
-        }
-    }
 
     internal static int MAX_SPAWN_CHECKS { get; set; } = 3; // Max mobs checked when searching
     internal static int MAX_QUEUE_SIZE { get; set; } = 5; // Max mobs qued
@@ -422,7 +409,6 @@ internal static class UOR_Settings
             case "VALIDATE_INTERVAL":
             case "TIMED_INTERVAL":
             case "MAX_RECYCLE_TYPE":
-            case "MAX_RECYCLE_TOTAL":
             case "MAX_SPAWN_CHECKS":
             case "MAX_QUEUE_SIZE":
             case "MAX_STAT_SIZE":
@@ -445,7 +431,7 @@ internal static class UOR_Settings
             case "ENABLE_VENDOR_EXTRA":
             case "ENABLE_SPAWN_EFFECTS":
             case "ENABLE_DEBUG":
-                ApplySetting(key, value);
+                ApplySetting(normalizedKey, value);
                 return true;
             default:
                 UOR_Utility.SendMsg(ConsoleColor.Yellow, $"SETTINGS COMMAND-[Unknown setting: {key}]");

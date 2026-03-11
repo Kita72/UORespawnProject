@@ -124,7 +124,7 @@ internal class SpawnEntity
             return;
         }
 
-        if (UOR_Utility.GetTime(Facet, Location) == TimeType && DiceRoll < UOR_Settings.CHANCE_TIMED)
+        if (DiceRoll < UOR_Settings.CHANCE_TIMED)
         {
             FrequencyType = FrequencyTypes.Timed;
         }

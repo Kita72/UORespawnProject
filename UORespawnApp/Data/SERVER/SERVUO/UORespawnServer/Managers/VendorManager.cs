@@ -219,7 +219,7 @@ namespace Server.Custom.UORespawnServer.Managers
             }
             else
             {
-                var hiveList = UOR_Utility.GetStaticList("beehive"); // ITEMID 2330
+                var hiveList = UOR_Utility.FindStaticLocations("beehive"); // ITEMID 2330
 
                 if (hiveList != null && hiveList.Count > 0)
                 {

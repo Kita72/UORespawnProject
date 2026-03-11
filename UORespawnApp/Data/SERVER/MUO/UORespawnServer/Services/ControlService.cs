@@ -98,9 +98,9 @@ internal class ControlService
 
         if (UOR_Core.GetRespawners(out var list))
         {
-            for (int i = 0; i < list.Count; i++)
+            foreach (var entity in list)
             {
-                total += list[i].GetQueCount();
+                total += entity.GetQueCount();
             }
         }
 
@@ -405,7 +405,7 @@ internal class ControlService
 
     private static bool TryByDecorName(PlayerMobile pm, StaticTarget decor)
     {
-        switch (decor.Name.ToLower())
+        switch (decor.Name.ToLowerInvariant())
         {
             case "beehive": // Vendors
                 {

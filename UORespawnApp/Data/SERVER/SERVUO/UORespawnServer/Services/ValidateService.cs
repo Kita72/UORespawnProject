@@ -52,7 +52,7 @@ namespace Server.Custom.UORespawnServer.Services
         /// </summary>
         internal void Validate()
         {
-            if (IsCalling && UOR_Core.GetRespawners(out List<RespawnerEntity> list))
+            if (IsCalling && UOR_Core.GetRespawners(out IReadOnlyCollection<RespawnerEntity> list))
             {
                 foreach (var spawner in list)
                 {
@@ -65,40 +65,7 @@ namespace Server.Custom.UORespawnServer.Services
             if (queryService == null)
                 return;
 
-            // Check total spawn limit first
-            int totalSpawn = queryService.GetTotalSpawnCount();
-            int totalLimit = UOR_Settings.MAX_RECYCLE_TOTAL;
-
-            if (totalSpawn > totalLimit)
-            {
-                UOR_Utility.SendMsg(ConsoleColor.Yellow, $"VALIDATE-[Total: {totalSpawn}/{totalLimit} - Trimming excess]");
-            }
-
-            // Get all unique spawn types currently in world
-            var spawnTypes = queryService.GetAllSpawnTypes();
-            int totalTrimmed = 0;
-            int typeLimit = UOR_Settings.MAX_RECYCLE_TYPE;
-
-            foreach (var typeName in spawnTypes)
-            {
-                int typeCount = queryService.GetTypeCount(typeName);
-
-                // Only trim if over limit
-                if (typeCount > typeLimit)
-                {
-                    int trimmed = queryService.TrimExcess(typeName, typeLimit);
-
-                    if (trimmed > 0)
-                    {
-                        totalTrimmed += trimmed;
-
-                        if (UOR_Settings.ENABLE_DEBUG)
-                        {
-                            UOR_Utility.SendMsg(ConsoleColor.Yellow, $"VALIDATE-[{typeName}: {typeCount}->{typeCount - trimmed}]");
-                        }
-                    }
-                }
-            }
+            int totalTrimmed = queryService.ValidateAndTrim(UOR_Settings.MAX_RECYCLE_TYPE);
 
             if (totalTrimmed > 0)
             {

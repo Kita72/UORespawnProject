@@ -39,6 +39,9 @@ namespace Server.Custom.UORespawnServer
         internal static readonly string SIGN_DATA_FILE = Path.Combine(OUTPUT_DIR, "UOR_SignData.txt");
         internal static readonly string HIVE_DATA_FILE = Path.Combine(OUTPUT_DIR, "UOR_HiveData.txt");
 
+        // Cache Files (Server builds on first run, loads on subsequent starts)
+        internal static readonly string SPAWN_LOCATION_CACHE_FILE = Path.Combine(SYSTEM_DIR, "UOR_SpawnLocations.bin");
+
         // System Files
         internal static readonly string LOG_DEBUG_FILE = Path.Combine(SYSTEM_DIR, "UOR_DebugLog.txt");
 

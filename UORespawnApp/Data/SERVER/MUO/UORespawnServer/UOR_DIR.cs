@@ -40,6 +40,7 @@ internal static class UOR_DIR
 
     // System Files
     internal static readonly string LOG_DEBUG_FILE = Path.Combine(SYSTEM_DIR, "UOR_DebugLog.txt");
+    internal static readonly string SPAWN_LOCATION_CACHE_FILE = Path.Combine(SYSTEM_DIR, "UOR_SpawnLocations.bin");
 
     private static string GetValidDir(string dir, string route)
     {

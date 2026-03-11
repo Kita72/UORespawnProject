@@ -160,7 +160,7 @@ internal class ProcessService
 
         if (UOR_Settings.ENABLE_TOWN_SPAWN && entity.IsTown)
         {
-            entity.Location = UOR_Utility.GetSpawnPoint(entity.Location, 3, 10, entity.Facet, out bool isWater, out _);
+            entity.Location = UOR_Utility.GetBestSpawnPoint(entity.Facet, entity.Location, 3, 10, false, out bool isWater, out _);
 
             if (!isWater)
             {

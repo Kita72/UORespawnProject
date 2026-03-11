@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Text;
 using System.Collections.Generic;
 
 using Server.Mobiles;
@@ -49,10 +50,14 @@ internal class StatsService
         {
             int count = _spawnStats.Count;
 
+            var lines = new StringBuilder();
+
             foreach (var spawn in _spawnStats)
             {
-                File.AppendAllText(GetFileName(), spawn.ToString());
+                lines.Append(spawn.ToString());
             }
+
+            File.AppendAllText(GetFileName(), lines.ToString());
 
             _spawnStats.Clear();
 

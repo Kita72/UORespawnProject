@@ -53,9 +53,9 @@ namespace Server.Custom.UORespawnServer.Helpers
             {
                 case WeatherTypes.Storm:    return nameof(Jwilson);
                 case WeatherTypes.Blizzard: return nameof(RiftMob);
-            }
 
-            return string.Empty;
+                default: return string.Empty;
+            }
         }
     }
 }

@@ -104,9 +104,9 @@ namespace Server.Custom.UORespawnServer.Services
 
             if (UOR_Core.GetRespawners(out var list))
             {
-                for (int i = 0; i < list.Count; i++)
+                foreach (var entity in list)
                 {
-                    total += list[i].GetQueCount();
+                    total += entity.GetQueCount();
                 }
             }
 

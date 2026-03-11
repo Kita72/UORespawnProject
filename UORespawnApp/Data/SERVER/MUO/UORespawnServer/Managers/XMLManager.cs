@@ -55,7 +55,7 @@ internal static class XMLManager
                     continue;
                 }
 
-                string command = parts[0].ToUpper();
+                string command = parts[0].ToUpperInvariant();
 
                 switch (command)
                 {

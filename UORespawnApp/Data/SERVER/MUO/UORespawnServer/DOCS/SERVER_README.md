@@ -1,9 +1,9 @@
 # UORespawnServer — Server Documentation
 
-> **Version:** 2.0.1.3
+> **Version:** 2.0.1.4
 > **Platform:** ModernUO
 > **Runtime:** C# 14 / .NET 10
-> **Last Updated:** March 2026
+> **Last Updated:** March 10, 2026
 
 ---
 
@@ -25,7 +25,8 @@
 14. [Event System](#event-system)
 15. [Runtime Power Toggle](#runtime-power-toggle)
 16. [Troubleshooting](#troubleshooting)
-17. [Contact & Links](#contact--links)
+17. [Changelog](#changelog)
+18. [Contact & Links](#contact--links)
 
 ---
 
@@ -113,7 +114,7 @@ Instantiated in `InitializeServices()` after world load.
 | Service | Purpose |
 |---------|---------|
 | `ProcessService` | Spawns or relocates mobs from the per-player queue |
-| `SpawnQueryService` | On-map queries for relocation candidates and trimming excess |
+| `SpawnQueryService` | On-map queries for relocation candidates; single-pass type validation and trimming via `ValidateAndTrim()` |
 | `ValidateService` | Periodically validates existing spawn, removes invalid entries |
 | `TimedService` | Triggers day/night spawn updates and vendor night cycle |
 | `StatsService` | Collects and saves per-player spawn statistics |
@@ -369,7 +370,7 @@ VALIDATE_INTERVAL,5        # sec — existing spawn validation rate
 TIMED_INTERVAL,1           # min — day/night transition check rate
 
 # System Limits
-MAX_RECYCLE_TYPE,20        # max spawn per creature type (used for relocation)
+MAX_RECYCLE_TYPE,20        # per-type spawn cap (relocation and trim limit)
 MAX_SPAWN_CHECKS,3         # max attempts to find a valid spawn point
 MAX_QUEUE_SIZE,5           # max locations queued per player
 MAX_STAT_SIZE,10000        # max stat entries before rollover
@@ -403,16 +404,6 @@ ENABLE_VENDOR_EXTRA,False  # spawn extra TownNPCs alongside vendors
 ENABLE_SPAWN_EFFECTS,True  # visual spawn effect NPCs
 ENABLE_DEBUG,False         # verbose console + log output
 ```
-
-### Dynamic Settings
-
-`MAX_RECYCLE_TOTAL` is **not a CSV setting** — it is calculated at runtime as:
-
-```
-MAX_RECYCLE_TOTAL = BestiaryCount × MAX_RECYCLE_TYPE
-```
-
-This means the total spawn cap scales automatically as you add or remove creature types from the server.
 
 ### Settings Validation
 
@@ -491,9 +482,10 @@ ValidateTimer (5s): scan and remove invalid spawn entries
 
 `UOR_MobSpawner` and `UOR_VendorSpawner` are both singletons that extend `UOR_Spawner`, which:
 
-- Saves a `List<uint>` of spawned serials via `[SerializableField]`
+- Saves a `List<uint>` of spawned serials via `[SerializableField]`; a parallel `HashSet<uint>` provides O(1) duplicate checks in `Claim()` and is rebuilt from the list on every load
 - Reclaims all `Mobile.Spawner` references on `OnServerStarted()` → `ReclaimAll()`
 - Provides `GetAllSpawn()` for on-demand queries against `World.Mobiles`
+- Provides `CountCanSwim()` — allocation-free swimmer count; exposed as `UOR_MobSpawner.CountSwimmers()`
 - Provides `CleanupAll()` for complete teardown
 
 Benefits:
@@ -930,9 +922,39 @@ Staff can also add themselves to the spawn system manually:
 
 ---
 
+## Changelog
+
+### 2.0.1.4 — March 10, 2026
+
+#### Removed
+
+- **`MAX_RECYCLE_TOTAL`** removed entirely. Spawn volume is now auto-limited by the per-type count setting (`MAX_RECYCLE_TYPE`, default 20), which scales naturally with the number of unique creature types registered on the server. No global total cap is applied.
+
+#### Performance
+
+- **`UOR_Spawner` — O(1) serial ownership via `HashSet` shadow** — A non-serialized `HashSet<uint> _serialsSet` is maintained alongside the serializable `List<uint> _spawnedSerials`. `Claim()` uses `_serialsSet.Add()` (O(1)) instead of `List.Contains()` (O(n)). The `HashSet` is rebuilt from the list on every load via `[AfterDeserialization]`. No serialization format change; no version bump required.
+- **`UOR_MobSpawner.CountSwimmers()`** — New allocation-free method counts active swimmer spawn by iterating `_spawnedSerials` directly. Replaces the `GetAllSpawn().Count(bc => bc.CanSwim)` call in `IsWaterLimit()` that allocated a full spawn list on every water-tile check.
+- **`SpawnQueryService.ValidateAndTrim()`** — Replaces the prior N+1 query pattern (one `GetAllSpawn()` call per unique spawn type per validate cycle) with a single pass that groups all spawn by type and trims excess in-place.
+- **`GetRespawners()`** — Return type changed from `List<RespawnerEntity>` to `IReadOnlyCollection<RespawnerEntity>` backed directly by `_RespawnerList.Values`. Eliminates a `ToList()` allocation on every 250 ms `ProcessTimer` tick.
+- **`GameManager.GenTileList()`** — Duplicate tile name deduplication changed from `List.Contains` (O(n) per item) to `HashSet<string>.Add` (O(1) per item), reducing overall deduplication from O(n²) to O(n).
+
+#### Code Health
+
+- Removed 6 dead `SpawnQueryService` methods (`GetTypeCount`, `GetExcessSpawn`, `TrimExcess`, `GetTotalSpawnCount`, `IsAtTotalLimit`, `GetAllSpawnTypes`) — all superseded by `ValidateAndTrim`.
+- `ValidateService.Validate()` simplified to a single `queryService.ValidateAndTrim(MAX_RECYCLE_TYPE)` call.
+- `ProcessTimer` and `ControlService` for-loops converted to `foreach` (consistent with `IReadOnlyCollection<T>` which has no indexer).
+- `SearchTimer` — Removed redundant `else` branch after unconditional `return`.
+- `ValidateService` constructor visibility corrected from `public` to `internal`.
+- `ControlService` — `.ToLower()` replaced with `.ToLowerInvariant()` for culture-safe key normalization.
+- `XMLManager` — `.ToUpper()` replaced with `.ToUpperInvariant()`.
+- `ProcessService` — Town extra spawn now selects spawn point via `GetBestSpawnPoint` instead of `GetSpawnPoint`.
+- `UOR_Settings.ApplySettingCommand` — Now dispatches on the normalized key instead of the raw input key.
+
+---
+
 ## Contact & Links
 
-The UORespawnServer package is developed and maintained for private use. The broader UORespawn project (including the companion Editor) is distributed via the ServUO community forums. For support, bug reports, or the latest release:
+The UORespawnServer package is developed
 
 - **ServUO Forums** — https://www.servuo.com (project thread)
 - **ModernUO GitHub** — https://github.com/modernuo/ModernUO (server platform)
@@ -941,4 +963,4 @@ For server-side issues, check `SYS/UOR_DebugLog.txt` first. It contains a full s
 
 ---
 
-*Generated from source — reflects actual codebase state as of version 2.0.1.3.*
+*Generated from source — reflects actual codebase state as of version 2.0.1.4.*

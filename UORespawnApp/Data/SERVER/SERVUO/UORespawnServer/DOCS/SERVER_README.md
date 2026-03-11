@@ -1,8 +1,8 @@
 # UORespawnServer - Server Documentation
 
-> **Version:** 2.0.1.3
+> **Version:** 2.0.1.4
 > **Target:** .NET Framework 4.8  
-> **Last Updated:** March 2026
+> **Last Updated:** June 2025
 
 ---
 
@@ -34,7 +34,7 @@ UORespawnServer is a dynamic player-centric spawn system for ServUO. Instead of 
 - **Player-Centric Spawning** - Mobs spawn near active players, not fixed locations
 - **Multi-Layer Spawn Resolution** - Box → Region → Tile priority system
 - **O(1) Spatial Lookups** - SpatialGridManager provides instant box lookups
-- **On-Map Spawn Management** - SpawnQueryService relocates and trims spawn on the live map
+- **On-Map Spawn Management** - SpawnQueryService trims excess spawn in a single pass via `ValidateAndTrim()`
 - **Weather/Time Spawns** - Conditional spawns based on environment
 - **Vendor System** - Dynamic NPC vendor spawning at sign locations
 - **Unified Logging Pipeline** - `UOR_Utility.SendMsg` drives console + file logging by color
@@ -116,7 +116,7 @@ The server and editor work in a **synchronized partnership**:
 | Service | Purpose |
 |---------|---------|
 | `ProcessService` | Main spawn processing and mob creation |
-| `SpawnQueryService` | On-map spawn queries for relocation and trimming |
+| `SpawnQueryService` | Single-pass `ValidateAndTrim()` for excess spawn trimming; `FindRelocatable()` for mob relocation |
 | `TrackService` | Placeholder for future tracking features |
 | `ValidateService` | Spawn validation using ISpawner on-demand queries |
 | `TimedService` | Time-based spawn updates (day/night) |
@@ -124,12 +124,13 @@ The server and editor work in a **synchronized partnership**:
 | `VendorService` | Vendor NPC runtime operations (reset, time updates) |
 | `ControlService` | In-game settings gump interface |
 
-### Managers (5 total)
+### Managers (6 total)
 
 | Manager | Purpose |
 |---------|---------|
 | `SpawnManager` | Loads and manages all spawn data from binary files |
 | `SpatialGridManager` | O(1) spatial grid for box spawn lookups |
+| `SpawnLocationCache` | Pre-computed binary cache of walkable spawn points per map, with `IsWater` flag |
 | `GameManager` | Generates server data lists for Editor |
 | `VendorManager` | Sign and hive location management |
 | `LogManager` | Session log buffering, color-level tagging, and shutdown flush |
@@ -153,6 +154,8 @@ The server and editor work in a **synchronized partnership**:
 The ISpawner pattern provides:
 - **On-demand queries** - `GetAllSpawn()` finds all owned creatures instantly
 - **Automatic cleanup** - `CleanupAll()` deletes all owned spawn
+- **O(1) duplicate tracking** - `HashSet<int> _serialsSet` shadows the serialization list so `Claim()` never scans the list
+- **Allocation-free swimmer count** - `CountSwimmers()` iterates the owned serial list instead of allocating a full `List<BaseCreature>` on the hot path
 - **No tracking lists** - Game's existing Mobile collection handles persistence
 - **Leak-proof** - Spawn keeps ISpawner reference even when recycled
 
@@ -219,20 +222,17 @@ Respawn-[2/2]
 Respawn-[Waiting for ServerStarted...]
 ... (ServUO startup messages) ...
 Respawn-[ServerStarted - Beginning Full Init]
-RECLAIM-[Mobs: 0, Vendors: 125]
-Respawn-[1/5]
-CLEANUP-[0 Mobs Deleted - Fresh World Ready]
-Respawn-[2/5]
+Respawn-[1/6]
+SPAWN-[0 Reclaimed]
+Respawn-[2/6]
+SPAWN-[0 Deleted]
+Fresh World Ready!
+Respawn-[3/6]
 VENDORS-[125 persisted from save]
-Respawn-[3/5]
-SERVICES-[Initialized]
-Respawn-[4/5]
-EVENTS-[Subscribed]
-Respawn-[5/5]
-TIMERS-[Initialized]
+Respawn-[4/6]
+Respawn-[5/6]
+Respawn-[6/6]
 Respawn-[Sequence Complete]
-FLAGS-[0 Deleted]
-GATES-[0 Deleted]
 STARTED - Running ...
 ```
 
@@ -384,7 +384,6 @@ TIMED_INTERVAL,1
 
 # System Limits
 MAX_RECYCLE_TYPE,20
-MAX_RECYCLE_TOTAL,50000
 MAX_SPAWN_CHECKS,3
 MAX_QUEUE_SIZE,5
 MAX_STAT_SIZE,10000
@@ -437,7 +436,6 @@ ENABLE_DEBUG,False
 | Setting | Default | Description |
 |---------|---------|-------------|
 | `MAX_RECYCLE_TYPE` | 20 | Max spawn allowed per creature type |
-| `MAX_RECYCLE_TOTAL` | *dynamic* | Calculated as `BestiaryCount × MAX_RECYCLE_TYPE` (can be overridden) |
 | `MAX_SPAWN_CHECKS` | 3 | Max attempts to find valid spawn point |
 | `MAX_QUEUE_SIZE` | 5 | Max locations queued per player |
 | `MAX_STAT_SIZE` | 10000 | Max statistics entries |
@@ -488,7 +486,6 @@ All settings are automatically validated on load to prevent invalid values from 
 | `VALIDATE_INTERVAL` | 1 - 60 sec | Must be >= 1 |
 | `TIMED_INTERVAL` | 1 - 60 min | Must be >= 1 |
 | `MAX_RECYCLE_TYPE` | 1 - 100 | Per-type spawn limit, must be >= 1 |
-| `MAX_RECYCLE_TOTAL` | 1 - 100000 | Total spawn limit (if override set) |
 | `MAX_SPAWN_CHECKS` | 1 - 10 | Spawn point search attempts |
 | `MAX_QUEUE_SIZE` | 1 - 10 | Queue slots per player |
 | `MAX_STAT_SIZE` | 100 - 10000 | Statistics buffer size |
@@ -1136,6 +1133,21 @@ Events are subscribed only once via `_EventsSubscribed` flag. The `UnsubscribeEv
 
 | Version | Changes |
 |---------|---------|
+| 2.0.1.4 | **PERF:** `UOR_Spawner` — added `HashSet<int> _serialsSet` shadow for O(1) `Claim()` duplicate check (synced at all 4 mutation points; rebuilt on `Deserialize`) |
+| 2.0.1.4 | **PERF:** Added `CountCanSwim()` protected method to `UOR_Spawner` + `CountSwimmers()` static on `UOR_MobSpawner` — iterates owned serial list, avoids full `World.Mobiles` scan |
+| 2.0.1.4 | **PERF:** `IsWaterLimit()` now calls `UOR_MobSpawner.CountSwimmers()` — eliminates `GetAllSpawn().Count(CanSwim)` allocation on hot path |
+| 2.0.1.4 | **PERF:** `SpawnQueryService` — replaced 6 multi-pass O(n×m) methods with single-pass `ValidateAndTrim(int typeLimit)` (one scan, pre-projected distances, in-place sort) |
+| 2.0.1.4 | **REMOVED:** `MAX_RECYCLE_TOTAL` computed property — total-limit check consolidated into per-type trimming |
+| 2.0.1.4 | **PERF:** `ValidateService.Validate()` reduced to single `queryService.ValidateAndTrim()` call |
+| 2.0.1.4 | **PERF:** `UOR_Core.GetRespawners()` returns `IReadOnlyCollection<RespawnerEntity>` via `.Values` directly — zero allocation per 250ms tick |
+| 2.0.1.4 | **PERF:** `ProcessTimer` and `ControlService` updated to `IReadOnlyCollection`; indexed `for` loops replaced with `foreach` |
+| 2.0.1.4 | **PERF:** `GameManager.GenTileList()` — `List<string>.Contains()` O(n²) replaced with `HashSet<string>.Add()` O(1) dedup over 65k tile IDs |
+| 2.0.1.3 | **FIX:** `IsWaterLimit()` logic inverted — water spawn now correctly fires when tile is water and swimmer count is under limit |
+| 2.0.1.3 | **FIX:** `IsCrowded()` / `SpawnInRange()` threshold changed from `> 0` to `> MAX_CROWD` — crowd limit setting now takes effect |
+| 2.0.1.3 | **PERF:** `StatsService.Save()` — replaced N individual file opens with single `StringBuilder` batch write |
+| 2.0.1.3 | **PERF:** `SpawnInRange()` — removed `.ToList().Count` hot-path allocation; uses `.Count()` directly on `MobilesInRange` |
+| 2.0.1.3 | **NEW:** `FindStaticLocations(string name)` — TileData ID-first lookup + per-name result cache replaces O(n×all_maps) `GetStaticList()` |
+| 2.0.1.3 | **NEW:** `SpawnLocationCache` — pre-computed binary cache of walkable spawn points per map with `IsWater` flag; water tiles now included |
 | 2.0.1.2 | **NEW:** Settings validation with range clamping for all values |
 | 2.0.1.2 | **FIX:** ValidateService IsCalling loop now processes each player once |
 | 2.0.1.1 | **REFACTOR:** RecycleService replaced with SpawnQueryService (on-map relocation) |

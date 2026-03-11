@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using System.Collections.Generic;
 
 using Server.Mobiles;
@@ -61,11 +60,11 @@ namespace Server.Custom.UORespawnServer
 
         private static Dictionary<Serial, RespawnerEntity> _RespawnerList;
 
-        internal static bool GetRespawners(out List<RespawnerEntity> list)
+        internal static bool GetRespawners(out IReadOnlyCollection<RespawnerEntity> list)
         {
             if (_RespawnerList.Count > 0)
             {
-                list = _RespawnerList.Values.ToList();
+                list = _RespawnerList.Values;
 
                 return true;
             }
@@ -170,6 +169,9 @@ namespace Server.Custom.UORespawnServer
             XMLManager.ProcessCommands();
 
             UOR_Utility.SendMsg(ConsoleColor.Yellow, $"Respawn-[4/6]");
+
+            // PHASE 4.5: Build or load the pre-computed spawn location cache
+            SpawnLocationCache.Initialize();
 
             // PHASE 5: Create services
             InitializeServices();

@@ -34,19 +34,17 @@ namespace Server.Custom.UORespawnServer.Timers
                 return;
             }
 
-            if (UOR_Core.GetRespawners(out List<RespawnerEntity> list))
+            if (UOR_Core.GetRespawners(out IReadOnlyCollection<RespawnerEntity> list))
             {
                 int spawnedThisTick = 0;
 
-                for (int i = 0; i < list.Count; i++)
+                foreach (var entity in list)
                 {
-                    RespawnerEntity entity = list[i];
-
                     var spawn = UOR_Utility.SpawnInRange(entity._Player.Map, entity._Player.Location, UOR_Settings.MAX_RANGE);
 
                     if (spawn < UOR_Settings.MAX_SPAWN)
                     {
-                        _Service.Spawn(entity._Player, list[i].Pop());
+                        _Service.Spawn(entity._Player, entity.Pop());
 
                         spawnedThisTick++;
 

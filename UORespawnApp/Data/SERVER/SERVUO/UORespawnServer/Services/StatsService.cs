@@ -50,10 +50,12 @@ namespace Server.Custom.UORespawnServer.Services
             {
                 int count = SpawnStats.Count;
 
+                var lines = new System.Text.StringBuilder();
+
                 foreach (var spawn in SpawnStats)
-                {
-                    File.AppendAllText(GetFileName(), spawn.ToString());
-                }
+                    lines.Append(spawn.ToString());
+
+                File.AppendAllText(GetFileName(), lines.ToString());
 
                 SpawnStats.Clear();
 

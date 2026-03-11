@@ -60,8 +60,9 @@ namespace Server.Custom.UORespawnServer.Managers
 
         internal static void ReLoadSpawns()
         {
-            // Clear spatial grid before reload
+            // Clear spatial grids before reload
             SpatialGridManager.Clear();
+            SpawnLocationCache.Clear();
 
             // Reload all spawn data (including fresh vendor data)
             LoadSpawns("Reloading");

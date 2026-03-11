@@ -35,18 +35,15 @@ internal class SearchTimer : Timer
 
             return;
         }
-        else
+        if (_Entity.GetQueCount() < UOR_Settings.MAX_QUEUE_SIZE)
         {
-            if (_Entity.GetQueCount() < UOR_Settings.MAX_QUEUE_SIZE)
+            _Entity.Push(UOR_Utility.Locate(_Entity, new LocationEntity(_Player)));
+
+            _LocationsPushed++;
+
+            if (_LocationsPushed % 50 == 0)
             {
-                _Entity.Push(UOR_Utility.Locate(_Entity, new LocationEntity(_Player)));
-
-                _LocationsPushed++;
-
-                if (_LocationsPushed % 50 == 0)
-                {
-                    UOR_Utility.SendMsg(ConsoleColor.Yellow, $"SEARCH-[{_Player.Name}: {_LocationsPushed} locations pushed, queue: {_Entity.GetQueCount()}]");
-                }
+                UOR_Utility.SendMsg(ConsoleColor.Yellow, $"SEARCH-[{_Player.Name}: {_LocationsPushed} locations pushed, queue: {_Entity.GetQueCount()}]");
             }
         }
     }
