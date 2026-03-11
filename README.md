@@ -64,7 +64,7 @@ UORespawn is a modern .NET MAUI application that provides a comprehensive visual
 - Six frequency tiers for precise control
 - Applies globally to all maps
 
-### ⚙️ Server Integration (v2.0.1.4+)
+### ⚙️ Server Integration (v2.0.1.4)
 
 #### 🖼️ Step 1 — Choose Server Type
 - **ServUO or ModernUO (MUO)** — Logo toggle at the top of the Server Integration card

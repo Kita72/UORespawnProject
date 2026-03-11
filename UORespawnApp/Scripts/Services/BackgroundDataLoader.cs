@@ -74,6 +74,7 @@ namespace UORespawnApp.Scripts.Services
         private readonly SpawnDataService _spawnDataService;
         private readonly SpawnPackService _spawnPackService;
         private readonly SpawnPackSyncService _spawnPackSyncService;
+        private readonly MapImageCacheService _mapImageCacheService;
 
         public BackgroundDataLoader(
             CommandService commandService,
@@ -81,7 +82,8 @@ namespace UORespawnApp.Scripts.Services
             BinarySerializationService binarySerializationService,
             SpawnDataService spawnDataService,
             SpawnPackService spawnPackService,
-            SpawnPackSyncService spawnPackSyncService)
+            SpawnPackSyncService spawnPackSyncService,
+            MapImageCacheService mapImageCacheService)
         {
             _commandService = commandService;
             _serverUpdateService = serverUpdateService;
@@ -89,6 +91,7 @@ namespace UORespawnApp.Scripts.Services
             _spawnDataService = spawnDataService;
             _spawnPackService = spawnPackService;
             _spawnPackSyncService = spawnPackSyncService;
+            _mapImageCacheService = mapImageCacheService;
 
             // Forward server update events to our own event for MainLayout
             _serverUpdateService.OnServerUpdateAvailable += (sender, info) =>
@@ -423,6 +426,10 @@ namespace UORespawnApp.Scripts.Services
 
                 // Step 13: Verify Map Files exist in Data/MAPS
                 await CopyMapFilesAsync(token);
+                token.ThrowIfCancellationRequested();
+
+                // Step 13.5: Preload map images into cache so spawn pages are instantly responsive
+                await PreloadMapImagesAsync(token);
                 token.ThrowIfCancellationRequested();
 
                 // Step 14: Start DataWatcher (LAST - after all data is loaded)
@@ -1107,6 +1114,33 @@ namespace UORespawnApp.Scripts.Services
             catch (Exception ex)
             {
                 Logger.Error("[Startup Step 13/14] Error checking map files", ex);
+            }
+        }
+
+        private async Task PreloadMapImagesAsync(CancellationToken cancellationToken = default)
+        {
+            Logger.Info("[Startup] Preloading map images into cache...");
+            try
+            {
+                var mapIds = MapUtility.GetAvailableMaps();
+
+                if (mapIds.Count == 0)
+                {
+                    Logger.Warning("[Startup] No map images found to preload");
+                    return;
+                }
+
+                await _mapImageCacheService.PreloadMapsAsync(mapIds);
+
+                Logger.Info($"[Startup] Map image preload complete ({mapIds.Count} maps cached)");
+            }
+            catch (OperationCanceledException)
+            {
+                Logger.Info("[Startup] Map image preload cancelled");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("[Startup] Error preloading map images", ex);
             }
         }
 

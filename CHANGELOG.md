@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.0.1.4] - 2026-03-11
 
+### Fixed
+
+#### Editor — Bug Fixes
+- **Logger shutdown log loss** — `Logger.Shutdown()` now stores the background drain `Task` in a static field and calls `.Wait(TimeSpan.FromSeconds(5))` before the process exits. Previously, `Writer.Complete()` was called but the drain task was never awaited, meaning log entries queued near shutdown were silently dropped
+- **`SpawnDataService.AddBoxSpawn()` duplicate guard** — Removed a `List.Contains()` reference-equality check that was always `false` for deserialized entities (which never share object references). The silent no-op could mask load-path issues; `list.Add(entity)` is now called unconditionally
+
+### Performance
+
+#### Editor — Settings Cache
+- **Chance properties now cached** — `TimedChance`, `CommonChance`, `UnCommonChance`, `RareChance` each gain a private `_cached*` nullable `double` backing field loaded once in `LoadCache()`. Eliminates repeated `Preferences.Get()` calls on every property access, matching the existing cache pattern for all other settings
+
+#### Editor — Map Image Loading
+- **`PreloadMaps()` → `PreloadMapsAsync()`** — Disk I/O in `MapImageCacheService.PreloadMaps()` was synchronous and blocked the calling thread. Renamed to `PreloadMapsAsync()`, returns `Task`, and wraps each `LoadAndCacheMap()` call in `await Task.Run()` so the thread pool handles the multi-MB BMP reads
+- **Startup map preloading** — `BackgroundDataLoader` now injects `MapImageCacheService` and runs a new Step 13.5 (`PreloadMapImagesAsync`) between map-file verification and DataWatcher start. All available map BMP files are decoded and cached during the background load sequence. All three spawn-page components (`BoxSpawnComponent`, `RegionSpawnComponent`, `VendorSpawnComponent`) now get instant cache hits on first render instead of blocking on-demand disk reads
+
+### Changed
+
+#### Editor — AccountService
+- **Non-blocking `ActiveAccount` setter** — `value.SaveToFolder()` (synchronous file I/O) removed from the `ActiveAccount` property setter. Replaced with `SaveAccountTimestampInBackground()`, a private static helper that dispatches to a thread-pool `Task` with full error logging. The setter is now non-blocking
+
+#### Editor — Project Identity
+- **Application ID corrected** — `ApplicationId` updated from the template placeholder `com.companyname.uorespawnapp` to `com.uorespawn.editor`
+- **Application version aligned** — `ApplicationDisplayVersion` updated from `1.0` to `2.0.1.5`; `ApplicationVersion` from `1` to `2015`
+
+### Technical
+- `ErrorHandler.ToastService` — setter visibility narrowed from `public set` to `internal set`; prevents external assemblies from replacing the wired service reference
+- `StringExtensions` — namespace corrected from root `UORespawnApp` to `UORespawnApp.Scripts.Helpers` (matches folder location); `_Imports.razor` updated with `@using UORespawnApp.Scripts.Helpers` to maintain availability across all Blazor components
+- `ServerSetupUtility` / `Settings.cs` — stale `v2.0.2+` and `pre-2.0.2` version references removed from comments; replaced with version-agnostic descriptions
+
+---
+
+## [2.0.1.4] - 2026-03-11
+
 ### Performance
 
 #### Server — Hot-Path Spawn Optimizations (ServUO & MUO)

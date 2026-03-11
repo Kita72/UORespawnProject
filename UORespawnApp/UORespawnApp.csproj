@@ -51,7 +51,7 @@
 
         <!-- Versions -->
         <ApplicationDisplayVersion>2.0.1.4</ApplicationDisplayVersion>
-        <ApplicationVersion>2014</ApplicationVersion>
+        <ApplicationVersion>2015</ApplicationVersion>
 
         <!-- To develop, package, and publish an app to the Microsoft Store, see: https://aka.ms/MauiTemplateUnpackaged -->
         <WindowsPackageType>None</WindowsPackageType>
