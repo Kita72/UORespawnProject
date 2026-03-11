@@ -46,6 +46,7 @@ dotnet publish $projectPath `
 -c Release `
 -r win-x64 `
 --self-contained true `
+-p:TargetFrameworks=net10.0-windows10.0.19041.0 `
 -p:RuntimeIdentifierOverride=win10-x64 `
 -p:UseMonoRuntime=false `
 -o $publishOutput
