@@ -372,8 +372,10 @@ private List<string> editXmlSpawnNames = [];
         }
 
         ViewService.OnMapChanged += HandleMapChanged;
+#if WINDOWS || MACCATALYST
         if (Application.Current?.Windows.Count > 0)
             Application.Current.Windows[0].Deactivated += OnWindowDeactivated;
+#endif
     }
 
     private void OnMapChanged(int mapId)
@@ -1971,8 +1973,10 @@ private List<string> editXmlSpawnNames = [];
 
     public void Dispose()
     {
+#if WINDOWS || MACCATALYST
         if (Application.Current?.Windows.Count > 0)
             Application.Current.Windows[0].Deactivated -= OnWindowDeactivated;
+#endif
         ViewService.OnMapChanged -= HandleMapChanged;
         keyPanTimer?.Dispose();
         drawPanTimer?.Dispose();

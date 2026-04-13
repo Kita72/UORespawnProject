@@ -1,6 +1,8 @@
 @using System.IO.Compression
 @using UORespawnApp.Scripts.Constants
+@using UORespawnApp.Scripts.Services.Platform
 @using UORespawnApp.Scripts.Utilities
+@inject IPlatformDialogService PlatformDialogs
 
 <div class="card bg-dark text-light spawn-pack-export-card">
     <div class="card-body">
@@ -75,7 +77,6 @@
                 }
             }
 
-#if WINDOWS
             var downloadsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", "UORespawn_SpawnPack.zip");
             FileUtility.Copy(tempPath, downloadsPath, overwrite: true);
 
@@ -84,31 +85,9 @@
 
             try
             {
-                System.Diagnostics.Process.Start("explorer.exe", Path.GetDirectoryName(downloadsPath) ?? "");
+                PlatformDialogs.OpenInFileManager(downloadsPath);
             }
-            catch (Exception openEx) { Logger.Warning($"Could not open explorer: {openEx.Message}"); }
-#elif MACCATALYST
-            var downloadsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", "UORespawn_SpawnPack.zip");
-            FileUtility.Copy(tempPath, downloadsPath, overwrite: true);
-
-            exportMessage = $"Spawn pack exported to Downloads folder:\n{downloadsPath}";
-            exportSuccess = true;
-
-            try
-            {
-                System.Diagnostics.Process.Start("open", Path.GetDirectoryName(downloadsPath) ?? "");
-            }
-            catch (Exception openEx) { Logger.Warning($"Could not open Finder: {openEx.Message}"); }
-#else
-            await Share.Default.RequestAsync(new ShareFileRequest
-            {
-                Title = "UORespawn Spawn Pack",
-                File = new ShareFile(tempPath)
-            });
-
-            exportMessage = "Spawn pack ready to share!";
-            exportSuccess = true;
-#endif
+            catch (Exception openEx) { Logger.Warning($"Could not open file manager: {openEx.Message}"); }
         }
         catch (Exception ex)
         {

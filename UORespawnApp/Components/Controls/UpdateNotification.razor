@@ -86,8 +86,9 @@
         try
         {
             var url = updateInfo?.ReleaseUrl ?? "https://github.com/Kita72/UORespawnProject/releases";
-            await Launcher.OpenAsync(new Uri(url));
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
             Logger.Info($"Opened releases page: {url}");
+            await Task.CompletedTask;
         }
         catch (Exception ex)
         {

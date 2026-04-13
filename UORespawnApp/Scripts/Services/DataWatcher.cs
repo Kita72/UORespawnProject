@@ -15,7 +15,7 @@ namespace UORespawnApp.Scripts.Services
         private CancellationTokenSource? _commandsDelayTokenSource;
         private const int DELAY_MILLISECONDS = 1000;
 
-        public static bool IsSupported => OperatingSystem.IsWindows() || OperatingSystem.IsMacOS();
+        public static bool IsSupported => OperatingSystem.IsWindows() || OperatingSystem.IsMacOS() || OperatingSystem.IsLinux();
         public bool IsActive => _outputWatcher != null || _commandsWatcher != null;
 
         public DataWatcher(BinarySerializationService binarySerializationService, SpawnPackSyncService spawnPackSyncService, Action? onDataChanged = null, Action? onCommandsDetected = null)

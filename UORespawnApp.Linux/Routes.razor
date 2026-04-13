@@ -1,0 +1,9 @@
+@using UORespawnApp.Components.Layout
+
+<Router AppAssembly="@typeof(UORespawnApp.Linux.Program).Assembly"
+        AdditionalAssemblies="new[] { typeof(UORespawnApp.Components.Layout.MainLayout).Assembly }">
+    <Found Context="routeData">
+        <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
+        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+    </Found>
+</Router>

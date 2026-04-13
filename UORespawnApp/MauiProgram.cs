@@ -1,6 +1,150 @@
 ﻿using Microsoft.Extensions.Logging;
 using UORespawnApp.Scripts.Services;
-using UORespawnApp.Scripts.Utilities;
+using UORespawnApp.Scripts.Services.Platform;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</Project>  </ItemGroup>    </Content>      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>    <Content Include="../UORespawnApp/Resources/Raw/UOR_TileList.txt" Link="Resources/Raw/UOR_TileList.txt">    </Content>      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>    <Content Include="../UORespawnApp/Resources/Raw/UOR_MapList.txt" Link="Resources/Raw/UOR_MapList.txt">    </Content>      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>    <Content Include="../UORespawnApp/Resources/Raw/UOR_HiveData.txt" Link="Resources/Raw/UOR_HiveData.txt">    </Content>      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>    <Content Include="../UORespawnApp/Resources/Raw/UOR_SignData.txt" Link="Resources/Raw/UOR_SignData.txt">    </Content>      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>    <Content Include="../UORespawnApp/Resources/Raw/UOR_VendorList.txt" Link="Resources/Raw/UOR_VendorList.txt">    </Content>      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>    <Content Include="../UORespawnApp/Resources/Raw/UOR_BestiaryList.txt" Link="Resources/Raw/UOR_BestiaryList.txt">    </Content>      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>    <Content Include="../UORespawnApp/Resources/Raw/UOR_RegionList.txt" Link="Resources/Raw/UOR_RegionList.txt">    </Content>      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>    <Content Include="../UORespawnApp/Resources/Raw/UOR_SpawnerList.txt" Link="Resources/Raw/UOR_SpawnerList.txt">  <ItemGroup>  <!-- Resource/Raw reference data files -->  </ItemGroup>    </None>      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>          Link="Data/UORespawn/%(Filename)%(Extension)">          Condition="Exists('../UORespawnApp/Data/UORespawn/')"    <None Include="../UORespawnApp/Data/UORespawn/*.*"    <!-- Working data directory -->    </None>      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>          Link="Data/SERVER/MUO/UORespawnServer.zip">          Condition="Exists('../UORespawnApp/Data/SERVER/MUO/UORespawnServer.zip')"    <None Include="../UORespawnApp/Data/SERVER/MUO/UORespawnServer.zip"    </None>      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>          Link="Data/SERVER/SERVUO/UORespawnServer.zip">          Condition="Exists('../UORespawnApp/Data/SERVER/SERVUO/UORespawnServer.zip')"    <None Include="../UORespawnApp/Data/SERVER/SERVUO/UORespawnServer.zip"    <!-- Server scripts (for export feature) -->    </None>      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>          Link="Data/PACKS/Created/.gitkeep">          Condition="Exists('../UORespawnApp/Data/PACKS/Created/.gitkeep')"    <None Include="../UORespawnApp/Data/PACKS/Created/.gitkeep"    </None>      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>          Link="Data/PACKS/Imported/.gitkeep">          Condition="Exists('../UORespawnApp/Data/PACKS/Imported/.gitkeep')"    <None Include="../UORespawnApp/Data/PACKS/Imported/.gitkeep"    </None>      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>          Link="Data/PACKS/Approved/.gitkeep">          Condition="Exists('../UORespawnApp/Data/PACKS/Approved/.gitkeep')"    <None Include="../UORespawnApp/Data/PACKS/Approved/.gitkeep"    </None>      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>          Link="Data/PACKS/Approved/DefaultPack/%(RecursiveDir)%(Filename)%(Extension)">          Condition="Exists('../UORespawnApp/Data/PACKS/Approved/DefaultPack/')"    <None Include="../UORespawnApp/Data/PACKS/Approved/DefaultPack/**/*.*"    </None>      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>          Link="Data/PACKS/Approved/DefaultPack.zip">          Condition="Exists('../UORespawnApp/Data/PACKS/Approved/DefaultPack.zip')"    <None Include="../UORespawnApp/Data/PACKS/Approved/DefaultPack.zip"    <!-- Packs: DefaultPack -->    </None>      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>    <None Include="../UORespawnApp/Data/TILES/*.png" Link="Data/TILES/%(Filename)%(Extension)">    <!-- Tiles -->    </None>      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>    <None Include="../UORespawnApp/Data/MAPS/*.bmp" Link="Data/MAPS/%(Filename)%(Extension)">    <!-- Maps -->    <Compile Remove="Data/**/*.cs" />    <!-- Exclude server .cs files from compilation -->  <ItemGroup>  <!-- Data files (maps, packs, tiles, server scripts) -->  </ItemGroup>             Exclude="../UORespawnApp/wwwroot/index.html" />             CopyToOutputDirectory="PreserveNewest"             Link="wwwroot/%(RecursiveDir)%(Filename)%(Extension)"    <Content Include="../UORespawnApp/wwwroot/**/*.*"  <ItemGroup>  <!-- wwwroot static assets (JS, CSS, fonts, videos) -->  </ItemGroup>             Link="Components/%(RecursiveDir)%(Filename)%(Extension)" />    <Content Include="../UORespawnApp/Components/**/*.razor.css"  <ItemGroup>  <!-- Scoped CSS for components -->  </ItemGroup>             Exclude="../UORespawnApp/Components/Routes.razor" />             Link="Components/%(RecursiveDir)%(Filename)%(Extension)"    <Content Include="../UORespawnApp/Components/**/*.razor"  <ItemGroup>  <!-- Blazor Components: All .razor files -->  </ItemGroup>             Exclude="../UORespawnApp/Scripts/Services/Platform/Maui*.cs" />             Link="Scripts/%(RecursiveDir)%(Filename)%(Extension)"    <Compile Include="../UORespawnApp/Scripts/**/*.cs"  <ItemGroup>  <!-- Scripts: All business logic, entities, services, utilities -->  <!-- ==================== Shared Source Files (linked from MAUI project) ==================== -->  </ItemGroup>    <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.3" />    <PackageReference Include="Microsoft.Maui.Graphics" Version="10.0.41" />    <PackageReference Include="FluentFTP" Version="53.0.2" />    <PackageReference Include="Photino.Blazor" Version="4.0.13" />  <ItemGroup>  <!-- ==================== NuGet Packages ==================== -->  </PropertyGroup>    <Description>UORespawn Editor - Linux build via Photino.Blazor</Description>    <Product>UORespawn</Product>    <AssemblyTitle>UORespawn Editor (Linux)</AssemblyTitle>    <!-- Application metadata -->    <EnableDefaultCssItems>false</EnableDefaultCssItems>    <Nullable>enable</Nullable>    <ImplicitUsings>enable</ImplicitUsings>    <RootNamespace>UORespawnApp</RootNamespace>    <OutputType>Exe</OutputType>    <TargetFramework>net10.0</TargetFramework>using UORespawnApp.Scripts.Utilities;
 using UORespawnApp.Scripts.Constants;
 using UORespawnApp.Scripts;
 
@@ -28,6 +172,13 @@ namespace UORespawnApp
                 });
 
             builder.Services.AddMauiBlazorWebView();
+
+            // Platform abstraction services (MAUI implementations)
+            var mauiPrefs = new MauiPreferencesService();
+            PreferencesProvider.Initialize(mauiPrefs);
+            builder.Services.AddSingleton<IPreferencesService>(mauiPrefs);
+            builder.Services.AddSingleton<IPlatformDialogService, MauiDialogService>();
+
             builder.Services.AddSingleton<ViewService>();
             builder.Services.AddSingleton<ToastService>();
             builder.Services.AddSingleton<CommandService>();

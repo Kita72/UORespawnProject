@@ -9,6 +9,7 @@
 @inject FtpCredentialService CredentialService
 @inject FtpConnectionService ConnectionService
 @inject FtpSyncService SyncService
+@inject IPlatformDialogService PlatformDialogs
 
 <div class="card map-card mb-3">
     <div class="card-header text-center">
@@ -629,25 +630,13 @@
     {
         try
         {
-#if WINDOWS
-            var folderPicker = new Windows.Storage.Pickers.FolderPicker();
-            var window = (Application.Current?.Windows[0]?.Handler?.PlatformView as Microsoft.UI.Xaml.Window);
-            if (window != null)
+            var folderPath = await PlatformDialogs.PickFolderAsync();
+            if (!string.IsNullOrEmpty(folderPath))
             {
-                var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(window);
-                WinRT.Interop.InitializeWithWindow.Initialize(folderPicker, hwnd);
-            }
-
-            folderPicker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.ComputerFolder;
-            folderPicker.FileTypeFilter.Add("*");
-
-            var folder = await folderPicker.PickSingleFolderAsync();
-            if (folder != null)
-            {
-                var validation = ServerSetupUtility.ValidateCustomFolder(folder.Path);
+                var validation = ServerSetupUtility.ValidateCustomFolder(folderPath);
                 if (validation.IsValid)
                 {
-                    pendingCustomFolder = folder.Path;
+                    pendingCustomFolder = folderPath;
                     localSetupMessage = "";
                 }
                 else
@@ -657,11 +646,6 @@
                 }
                 StateHasChanged();
             }
-#else
-            localSetupMessage = "✗ Folder picker not available on this platform.";
-            localSetupSuccess = false;
-            await Task.CompletedTask;
-#endif
         }
         catch (Exception ex)
         {
@@ -676,25 +660,13 @@
     {
         try
         {
-#if WINDOWS
-            var folderPicker = new Windows.Storage.Pickers.FolderPicker();
-            var window = (Application.Current?.Windows[0]?.Handler?.PlatformView as Microsoft.UI.Xaml.Window);
-            if (window != null)
+            var folderPath = await PlatformDialogs.PickFolderAsync();
+            if (!string.IsNullOrEmpty(folderPath))
             {
-                var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(window);
-                WinRT.Interop.InitializeWithWindow.Initialize(folderPicker, hwnd);
-            }
-
-            folderPicker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.ComputerFolder;
-            folderPicker.FileTypeFilter.Add("*");
-
-            var folder = await folderPicker.PickSingleFolderAsync();
-            if (folder != null)
-            {
-                var validation = ServerSetupUtility.ValidateDataFolder(folder.Path);
+                var validation = ServerSetupUtility.ValidateDataFolder(folderPath);
                 if (validation.IsValid)
                 {
-                    pendingDataFolder = folder.Path;
+                    pendingDataFolder = folderPath;
                     localSetupMessage = "";
                 }
                 else
@@ -704,11 +676,6 @@
                 }
                 StateHasChanged();
             }
-#else
-            localSetupMessage = "✗ Folder picker not available on this platform.";
-            localSetupSuccess = false;
-            await Task.CompletedTask;
-#endif
         }
         catch (Exception ex)
         {
@@ -1108,34 +1075,16 @@
             ZipFile.CreateFromDirectory(scriptsSourcePath, tempZipPath);
 
             // Let user save it
-#if WINDOWS
-            var savePicker = new Windows.Storage.Pickers.FileSavePicker();
-            var window = (Application.Current?.Windows[0]?.Handler?.PlatformView as Microsoft.UI.Xaml.Window);
-            if (window != null)
+            var savePath = await PlatformDialogs.SaveFileAsync("UORespawnServer", "ZIP Archive", new[] { ".zip" });
+            if (!string.IsNullOrEmpty(savePath))
             {
-                var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(window);
-                WinRT.Interop.InitializeWithWindow.Initialize(savePicker, hwnd);
-            }
-
-            savePicker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.Downloads;
-            savePicker.SuggestedFileName = "UORespawnServer";
-            savePicker.FileTypeChoices.Add("ZIP Archive", new List<string> { ".zip" });
-
-            var saveFile = await savePicker.PickSaveFileAsync();
-            if (saveFile != null)
-            {
-                FileUtility.Copy(tempZipPath, saveFile.Path, overwrite: true);
-                exportMessage = $"Scripts exported to: {saveFile.Name}";
+                FileUtility.Copy(tempZipPath, savePath, overwrite: true);
+                exportMessage = $"Scripts exported to: {Path.GetFileName(savePath)}";
                 exportSuccess = true;
             }
 
             // Cleanup temp file
             FileUtility.Delete(tempZipPath);
-#else
-            exportMessage = "Export not available on this platform.";
-            exportSuccess = false;
-            await Task.CompletedTask;
-#endif
         }
         catch (Exception ex)
         {

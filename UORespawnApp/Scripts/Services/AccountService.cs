@@ -1,4 +1,5 @@
 using UORespawnApp.Scripts.Entities;
+using UORespawnApp.Scripts.Services.Platform;
 using UORespawnApp.Scripts.Utilities;
 
 namespace UORespawnApp.Scripts.Services;
@@ -52,11 +53,11 @@ public class AccountService
                 {
                     value.LastUsedAt = DateTime.Now;
                     SaveAccountTimestampInBackground(value);
-                    Preferences.Set(ActiveFolderKey, value.CredentialFolderPath);
+                    PreferencesProvider.Set(ActiveFolderKey, value.CredentialFolderPath);
                 }
                 else
                 {
-                    Preferences.Remove(ActiveFolderKey);
+                    PreferencesProvider.Remove(ActiveFolderKey);
                 }
                 ActiveAccountChanged?.Invoke(this, value);
             }
@@ -275,7 +276,7 @@ public class AccountService
             _accounts = [];
 
             // Get stored folder paths
-            var pathsString = Preferences.Get(FolderPathsKey, "");
+            var pathsString = PreferencesProvider.Get(FolderPathsKey, "");
             if (string.IsNullOrEmpty(pathsString))
             {
                 Logger.Info("No account folders registered");
@@ -305,14 +306,14 @@ public class AccountService
             // Update stored paths to only valid ones
             if (validPaths.Count != folderPaths.Length)
             {
-                Preferences.Set(FolderPathsKey, string.Join(PathSeparator, validPaths));
+                PreferencesProvider.Set(FolderPathsKey, string.Join(PathSeparator, validPaths));
             }
 
             // Sort by last used
             _accounts = [.. _accounts.OrderByDescending(a => a.LastUsedAt)];
 
             // Restore active account
-            var activeFolderPath = Preferences.Get(ActiveFolderKey, "");
+            var activeFolderPath = PreferencesProvider.Get(ActiveFolderKey, "");
             if (!string.IsNullOrEmpty(activeFolderPath))
             {
                 _activeAccount = _accounts.FirstOrDefault(a => 
@@ -321,7 +322,7 @@ public class AccountService
                 if (_activeAccount == null)
                 {
                     // Active account folder was deleted
-                    Preferences.Remove(ActiveFolderKey);
+                    PreferencesProvider.Remove(ActiveFolderKey);
                 }
             }
 
@@ -339,7 +340,7 @@ public class AccountService
         try
         {
             var paths = _accounts.Select(a => a.CredentialFolderPath);
-            Preferences.Set(FolderPathsKey, string.Join(PathSeparator, paths));
+            PreferencesProvider.Set(FolderPathsKey, string.Join(PathSeparator, paths));
         }
         catch (Exception ex)
         {

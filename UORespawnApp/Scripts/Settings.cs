@@ -1,3 +1,4 @@
+using UORespawnApp.Scripts.Services.Platform;
 using UORespawnApp.Scripts.Utilities;
 
 namespace UORespawnApp.Scripts
@@ -35,7 +36,7 @@ namespace UORespawnApp.Scripts
     /// </summary>
     internal static class Settings
     {
-        // Cache for frequently accessed settings to avoid repeated Preferences.Get() calls
+        // Cache for frequently accessed settings to avoid repeated PreferencesProvider.Get() calls
         private static string? _cachedScriptsCustomFolder;
         private static string? _cachedServerDataFolder;
         private static string? _cachedServerType;
@@ -92,34 +93,34 @@ namespace UORespawnApp.Scripts
         {
             // Migration: Clear old single-path ServerFolder setting (legacy single-path linking)
             // Users must re-link using the two-path approach (Custom folder + Data folder)
-            if (Preferences.ContainsKey("ServerFolder"))
+            if (PreferencesProvider.ContainsKey("ServerFolder"))
             {
-                Preferences.Remove("ServerFolder");
+                PreferencesProvider.Remove("ServerFolder");
                 Logger.Info("Cleared legacy ServerFolder setting - server must be re-linked with new two-path setup");
             }
 
-            if (Preferences.ContainsKey("ServUODataFolder"))
+            if (PreferencesProvider.ContainsKey("ServUODataFolder"))
             {
-                Preferences.Remove("ServUODataFolder");
+                PreferencesProvider.Remove("ServUODataFolder");
             }
 
-            _cachedScriptsCustomFolder = Preferences.Get("ScriptsCustomFolder", "");
-            _cachedServerDataFolder = Preferences.Get("ServerDataFolder", "");
-            _cachedServerType = Preferences.Get("ServerType", "ServUO");
-            _cachedCurrentPackName = Preferences.Get("CurrentPackName", DefaultPackName);
-            _cachedCurrentPackFolder = Preferences.Get("CurrentPackFolder", "");
+            _cachedScriptsCustomFolder = PreferencesProvider.Get("ScriptsCustomFolder", "");
+            _cachedServerDataFolder = PreferencesProvider.Get("ServerDataFolder", "");
+            _cachedServerType = PreferencesProvider.Get("ServerType", "ServUO");
+            _cachedCurrentPackName = PreferencesProvider.Get("CurrentPackName", DefaultPackName);
+            _cachedCurrentPackFolder = PreferencesProvider.Get("CurrentPackFolder", "");
 
-            var colorString = Preferences.Get("BoxColor", DefaultBoxColorHex);
+            var colorString = PreferencesProvider.Get("BoxColor", DefaultBoxColorHex);
             _cachedBoxColor = colorString == DefaultBoxColorHex 
                 ? DefaultBoxColor 
                 : (Color.TryParse(colorString, out var parsed) ? parsed : DefaultBoxColor);
 
-            _cachedBoxColorInc = Preferences.Get("BoxColorInc", 0.3);
-            _cachedBoxLineSize = Preferences.Get("BoxLineSize", 2);
-            _cachedTimedChance = Preferences.Get("TimedChance", 0.01);
-            _cachedCommonChance = Preferences.Get("CommonChance", 1.0);
-            _cachedUnCommonChance = Preferences.Get("UnCommonChance", 0.1);
-            _cachedRareChance = Preferences.Get("RareChance", 0.01);
+            _cachedBoxColorInc = PreferencesProvider.Get("BoxColorInc", 0.3);
+            _cachedBoxLineSize = PreferencesProvider.Get("BoxLineSize", 2);
+            _cachedTimedChance = PreferencesProvider.Get("TimedChance", 0.01);
+            _cachedCommonChance = PreferencesProvider.Get("CommonChance", 1.0);
+            _cachedUnCommonChance = PreferencesProvider.Get("UnCommonChance", 0.1);
+            _cachedRareChance = PreferencesProvider.Get("RareChance", 0.01);
         }
 
         /// <summary>
@@ -133,7 +134,7 @@ namespace UORespawnApp.Scripts
             set
             {
                 _cachedScriptsCustomFolder = value;
-                Preferences.Set("ScriptsCustomFolder", value);
+                PreferencesProvider.Set("ScriptsCustomFolder", value);
             }
         }
 
@@ -148,7 +149,7 @@ namespace UORespawnApp.Scripts
             set
             {
                 _cachedServerDataFolder = value;
-                Preferences.Set("ServerDataFolder", value);
+                PreferencesProvider.Set("ServerDataFolder", value);
             }
         }
 
@@ -162,7 +163,7 @@ namespace UORespawnApp.Scripts
             set
             {
                 _cachedServerType = value;
-                Preferences.Set("ServerType", value);
+                PreferencesProvider.Set("ServerType", value);
             }
         }
 
@@ -177,7 +178,7 @@ namespace UORespawnApp.Scripts
             set
             {
                 _cachedCurrentPackName = value;
-                Preferences.Set("CurrentPackName", value);
+                PreferencesProvider.Set("CurrentPackName", value);
             }
         }
 
@@ -191,7 +192,7 @@ namespace UORespawnApp.Scripts
             set
             {
                 _cachedCurrentPackFolder = value;
-                Preferences.Set("CurrentPackFolder", value);
+                PreferencesProvider.Set("CurrentPackFolder", value);
             }
         }
 
@@ -202,7 +203,7 @@ namespace UORespawnApp.Scripts
             {
                 _cachedBoxColor = value;
                 var hex = $"#{(int)(value.Red * 255):X2}{(int)(value.Green * 255):X2}{(int)(value.Blue * 255):X2}";
-                Preferences.Set("BoxColor", hex);
+                PreferencesProvider.Set("BoxColor", hex);
             }
         }
 
@@ -212,7 +213,7 @@ namespace UORespawnApp.Scripts
             set
             {
                 _cachedBoxColorInc = Math.Clamp(value, 0.0, 1.0);
-                Preferences.Set("BoxColorInc", _cachedBoxColorInc.Value);
+                PreferencesProvider.Set("BoxColorInc", _cachedBoxColorInc.Value);
             }
         }
 
@@ -222,47 +223,47 @@ namespace UORespawnApp.Scripts
             set
             {
                 _cachedBoxLineSize = Math.Clamp(value, 1, 10);
-                Preferences.Set("BoxLineSize", _cachedBoxLineSize.Value);
+                PreferencesProvider.Set("BoxLineSize", _cachedBoxLineSize.Value);
             }
         }
 
         public static double TimedChance
         {
-            get => _cachedTimedChance ?? Preferences.Get("TimedChance", 0.01);
+            get => _cachedTimedChance ?? PreferencesProvider.Get("TimedChance", 0.01);
             set
             {
                 _cachedTimedChance = Math.Clamp(value, 0.0, 1.0);
-                Preferences.Set("TimedChance", _cachedTimedChance.Value);
+                PreferencesProvider.Set("TimedChance", _cachedTimedChance.Value);
             }
         }
 
         public static double CommonChance
         {
-            get => _cachedCommonChance ?? Preferences.Get("CommonChance", 1.0);
+            get => _cachedCommonChance ?? PreferencesProvider.Get("CommonChance", 1.0);
             set
             {
                 _cachedCommonChance = Math.Clamp(value, 0.0, 1.0);
-                Preferences.Set("CommonChance", _cachedCommonChance.Value);
+                PreferencesProvider.Set("CommonChance", _cachedCommonChance.Value);
             }
         }
 
         public static double UnCommonChance
         {
-            get => _cachedUnCommonChance ?? Preferences.Get("UnCommonChance", 0.1);
+            get => _cachedUnCommonChance ?? PreferencesProvider.Get("UnCommonChance", 0.1);
             set
             {
                 _cachedUnCommonChance = Math.Clamp(value, 0.0, 1.0);
-                Preferences.Set("UnCommonChance", _cachedUnCommonChance.Value);
+                PreferencesProvider.Set("UnCommonChance", _cachedUnCommonChance.Value);
             }
         }
 
         public static double RareChance
         {
-            get => _cachedRareChance ?? Preferences.Get("RareChance", 0.01);
+            get => _cachedRareChance ?? PreferencesProvider.Get("RareChance", 0.01);
             set
             {
                 _cachedRareChance = Math.Clamp(value, 0.0, 1.0);
-                Preferences.Set("RareChance", _cachedRareChance.Value);
+                PreferencesProvider.Set("RareChance", _cachedRareChance.Value);
             }
         }
 
@@ -271,7 +272,7 @@ namespace UORespawnApp.Scripts
             get
             {
                 var list = new System.Collections.Specialized.StringCollection();
-                var value = Preferences.Get("Bestiary", "");
+                var value = PreferencesProvider.Get("Bestiary", "");
 
                 if (!string.IsNullOrEmpty(value))
                 {
@@ -279,25 +280,25 @@ namespace UORespawnApp.Scripts
                 }
                 return list;
             }
-            set => Preferences.Set("Bestiary", string.Join(",", value.Cast<string>()));
+            set => PreferencesProvider.Set("Bestiary", string.Join(",", value.Cast<string>()));
         }
 
         public static bool EnableRiftSpawn
         {
-            get => Preferences.Get("EnableRiftSpawn", false);
-            set => Preferences.Set("EnableRiftSpawn", value);
+            get => PreferencesProvider.Get("EnableRiftSpawn", false);
+            set => PreferencesProvider.Set("EnableRiftSpawn", value);
         }
 
         public static bool EnableDebugSpawn
         {
-            get => Preferences.Get("EnableDebugSpawn", false);
-            set => Preferences.Set("EnableDebugSpawn", value);
+            get => PreferencesProvider.Get("EnableDebugSpawn", false);
+            set => PreferencesProvider.Set("EnableDebugSpawn", value);
         }
 
         public static bool EnableVendorSpawn
         {
-            get => Preferences.Get("EnableVendorSpawn", false);
-            set => Preferences.Set("EnableVendorSpawn", value);
+            get => PreferencesProvider.Get("EnableVendorSpawn", false);
+            set => PreferencesProvider.Set("EnableVendorSpawn", value);
         }
 
         /// <summary>
@@ -306,8 +307,8 @@ namespace UORespawnApp.Scripts
         /// </summary>
         public static bool EnableVendorNight
         {
-            get => Preferences.Get("EnableVendorNight", false);
-            set => Preferences.Set("EnableVendorNight", value);
+            get => PreferencesProvider.Get("EnableVendorNight", false);
+            set => PreferencesProvider.Set("EnableVendorNight", value);
         }
 
         /// <summary>
@@ -316,32 +317,32 @@ namespace UORespawnApp.Scripts
         /// </summary>
         public static bool EnableVendorExtra
         {
-            get => Preferences.Get("EnableVendorExtra", false);
-            set => Preferences.Set("EnableVendorExtra", value);
+            get => PreferencesProvider.Get("EnableVendorExtra", false);
+            set => PreferencesProvider.Set("EnableVendorExtra", value);
         }
 
         public static int MaxMobs
         {
-            get => Preferences.Get("MaxMobs", 25);
-            set => Preferences.Set("MaxMobs", Math.Clamp(value, MinMobsValue, MaxMobsValue));
+            get => PreferencesProvider.Get("MaxMobs", 25);
+            set => PreferencesProvider.Set("MaxMobs", Math.Clamp(value, MinMobsValue, MaxMobsValue));
         }
 
         public static int MinRange
         {
-            get => Preferences.Get("MinRange", 30);
-            set => Preferences.Set("MinRange", Math.Clamp(value, MinRangeValue, MaxMinRangeValue));
+            get => PreferencesProvider.Get("MinRange", 30);
+            set => PreferencesProvider.Set("MinRange", Math.Clamp(value, MinRangeValue, MaxMinRangeValue));
         }
 
         public static int MaxRange
         {
-            get => Preferences.Get("MaxRange", 80);
-            set => Preferences.Set("MaxRange", Math.Clamp(value, MinRangeValue, MaxMaxRangeValue));
+            get => PreferencesProvider.Get("MaxRange", 80);
+            set => PreferencesProvider.Set("MaxRange", Math.Clamp(value, MinRangeValue, MaxMaxRangeValue));
         }
 
         public static int MaxCrowd
         {
-            get => Preferences.Get("MaxCrowd", 3);
-            set => Preferences.Set("MaxCrowd", Math.Clamp(value, MinCrowdValue, MaxCrowdValue));
+            get => PreferencesProvider.Get("MaxCrowd", 3);
+            set => PreferencesProvider.Set("MaxCrowd", Math.Clamp(value, MinCrowdValue, MaxCrowdValue));
         }
 
         // ==================== NEW SETTINGS (Server 2.0.0.7) ====================
@@ -352,100 +353,100 @@ namespace UORespawnApp.Scripts
         /// </summary>
         public static double ScaleMod
         {
-            get => Preferences.Get("ScaleMod", 1.0);
-            set => Preferences.Set("ScaleMod", Math.Clamp(value, 0.1, 3.0));
+            get => PreferencesProvider.Get("ScaleMod", 1.0);
+            set => PreferencesProvider.Set("ScaleMod", Math.Clamp(value, 0.1, 3.0));
         }
 
         // System Intervals
         /// <summary>How often to search for spawn locations per player (milliseconds)</summary>
         public static int SearchInterval
         {
-            get => Preferences.Get("SearchInterval", 125);
-            set => Preferences.Set("SearchInterval", Math.Clamp(value, MinIntervalValue, MaxIntervalValue));
+            get => PreferencesProvider.Get("SearchInterval", 125);
+            set => PreferencesProvider.Set("SearchInterval", Math.Clamp(value, MinIntervalValue, MaxIntervalValue));
         }
 
         /// <summary>How often to process the spawn queue (milliseconds)</summary>
         public static int ProcessInterval
         {
-            get => Preferences.Get("ProcessInterval", 250);
-            set => Preferences.Set("ProcessInterval", Math.Clamp(value, MinIntervalValue, MaxIntervalValue));
+            get => PreferencesProvider.Get("ProcessInterval", 250);
+            set => PreferencesProvider.Set("ProcessInterval", Math.Clamp(value, MinIntervalValue, MaxIntervalValue));
         }
 
         /// <summary>How often to validate existing spawns (seconds)</summary>
         public static int ValidateInterval
         {
-            get => Preferences.Get("ValidateInterval", 5);
-            set => Preferences.Set("ValidateInterval", Math.Clamp(value, 1, 60));
+            get => PreferencesProvider.Get("ValidateInterval", 5);
+            set => PreferencesProvider.Set("ValidateInterval", Math.Clamp(value, 1, 60));
         }
 
         /// <summary>How often to check time-based spawns (minutes)</summary>
         public static int TimedInterval
         {
-            get => Preferences.Get("TimedInterval", 1);
-            set => Preferences.Set("TimedInterval", Math.Clamp(value, 1, 60));
+            get => PreferencesProvider.Get("TimedInterval", 1);
+            set => PreferencesProvider.Set("TimedInterval", Math.Clamp(value, 1, 60));
         }
 
         // System Limits
         /// <summary>Max mobs cached per type in recycle pool</summary>
         public static int MaxRecycleType
         {
-            get => Preferences.Get("MaxRecycleType", 20);
-            set => Preferences.Set("MaxRecycleType", Math.Clamp(value, 1, 100));
+            get => PreferencesProvider.Get("MaxRecycleType", 20);
+            set => PreferencesProvider.Set("MaxRecycleType", Math.Clamp(value, 1, 100));
         }
 
         /// <summary>Max attempts to find valid spawn point</summary>
         public static int MaxSpawnChecks
         {
-            get => Preferences.Get("MaxSpawnChecks", 3);
-            set => Preferences.Set("MaxSpawnChecks", Math.Clamp(value, 1, 10));
+            get => PreferencesProvider.Get("MaxSpawnChecks", 3);
+            set => PreferencesProvider.Set("MaxSpawnChecks", Math.Clamp(value, 1, 10));
         }
 
         /// <summary>Max locations queued per player</summary>
         public static int MaxQueueSize
         {
-            get => Preferences.Get("MaxQueueSize", 5);
-            set => Preferences.Set("MaxQueueSize", Math.Clamp(value, 1, 10));
+            get => PreferencesProvider.Get("MaxQueueSize", 5);
+            set => PreferencesProvider.Set("MaxQueueSize", Math.Clamp(value, 1, 10));
         }
 
         /// <summary>Max statistics entries</summary>
         public static int MaxStatSize
         {
-            get => Preferences.Get("MaxStatSize", 10000);
-            set => Preferences.Set("MaxStatSize", Math.Clamp(value, 100, 10000));
+            get => PreferencesProvider.Get("MaxStatSize", 10000);
+            set => PreferencesProvider.Set("MaxStatSize", Math.Clamp(value, 100, 10000));
         }
 
         // New Spawn Toggles
         /// <summary>Allow spawns in town regions</summary>
         public static bool EnableTownSpawn
         {
-            get => Preferences.Get("EnableTownSpawn", true);
-            set => Preferences.Set("EnableTownSpawn", value);
+            get => PreferencesProvider.Get("EnableTownSpawn", true);
+            set => PreferencesProvider.Set("EnableTownSpawn", value);
         }
 
         /// <summary>Enable grave spawn effects</summary>
         public static bool EnableGraveSpawn
         {
-            get => Preferences.Get("EnableGraveSpawn", true);
-            set => Preferences.Set("EnableGraveSpawn", value);
+            get => PreferencesProvider.Get("EnableGraveSpawn", true);
+            set => PreferencesProvider.Set("EnableGraveSpawn", value);
         }
 
         /// <summary>Show spawn visual effects</summary>
         public static bool EnableSpawnEffects
         {
-            get => Preferences.Get("EnableSpawnEffects", true);
-            set => Preferences.Set("EnableSpawnEffects", value);
+            get => PreferencesProvider.Get("EnableSpawnEffects", true);
+            set => PreferencesProvider.Set("EnableSpawnEffects", value);
         }
 
         public static double WaterChance
         {
-            get => Preferences.Get("WaterChance", 0.05);
-            set => Preferences.Set("WaterChance", Math.Clamp(value, 0.0, 1.0));
+            get => PreferencesProvider.Get("WaterChance", 0.05);
+            set => PreferencesProvider.Set("WaterChance", Math.Clamp(value, 0.0, 1.0));
         }
 
         public static double WeatherChance
         {
-            get => Preferences.Get("WeatherChance", 0.01);
-            set => Preferences.Set("WeatherChance", Math.Clamp(value, 0.0, 1.0));
+            get => PreferencesProvider.Get("WeatherChance", 0.01);
+            set => PreferencesProvider.Set("WeatherChance", Math.Clamp(value, 0.0, 1.0));
         }
 
         /// <summary>
@@ -453,8 +454,8 @@ namespace UORespawnApp.Scripts
         /// </summary>
         public static bool IsScaleSpawn
         {
-            get => Preferences.Get("IsScaleSpawn", false);
-            set => Preferences.Set("IsScaleSpawn", value);
+            get => PreferencesProvider.Get("IsScaleSpawn", false);
+            set => PreferencesProvider.Set("IsScaleSpawn", value);
         }
 
         /// <summary>
@@ -462,8 +463,8 @@ namespace UORespawnApp.Scripts
         /// </summary>
         public static bool IsDebugMode
         {
-            get => Preferences.Get("IsDebugMode", false);
-            set => Preferences.Set("IsDebugMode", value);
+            get => PreferencesProvider.Get("IsDebugMode", false);
+            set => PreferencesProvider.Set("IsDebugMode", value);
         }
 
         /// <summary>
@@ -472,8 +473,8 @@ namespace UORespawnApp.Scripts
         /// </summary>
         public static bool SplashAnimationEnabled
         {
-            get => Preferences.Get("SplashAnimationEnabled", true);
-            set => Preferences.Set("SplashAnimationEnabled", value);
+            get => PreferencesProvider.Get("SplashAnimationEnabled", true);
+            set => PreferencesProvider.Set("SplashAnimationEnabled", value);
         }
 
         /// <summary>
@@ -484,8 +485,8 @@ namespace UORespawnApp.Scripts
         /// </summary>
         public static string SkipServerUpdateUntilVersion
         {
-            get => Preferences.Get("SkipServerUpdateUntilVersion", "");
-            set => Preferences.Set("SkipServerUpdateUntilVersion", value);
+            get => PreferencesProvider.Get("SkipServerUpdateUntilVersion", "");
+            set => PreferencesProvider.Set("SkipServerUpdateUntilVersion", value);
         }
 
         /// <summary>
@@ -496,12 +497,12 @@ namespace UORespawnApp.Scripts
         {
             get
             {
-                var value = Preferences.Get("BestiaryFavorites", "");
+                var value = PreferencesProvider.Get("BestiaryFavorites", "");
                 if (string.IsNullOrEmpty(value))
                     return [];
                 return [.. value.Split(',', StringSplitOptions.RemoveEmptyEntries)];
             }
-            set => Preferences.Set("BestiaryFavorites", string.Join(",", value));
+            set => PreferencesProvider.Set("BestiaryFavorites", string.Join(",", value));
         }
 
         /// <summary>
@@ -512,12 +513,12 @@ namespace UORespawnApp.Scripts
         {
             get
             {
-                var value = Preferences.Get("VendorFavorites", "");
+                var value = PreferencesProvider.Get("VendorFavorites", "");
                 if (string.IsNullOrEmpty(value))
                     return [];
                 return [.. value.Split(',', StringSplitOptions.RemoveEmptyEntries)];
             }
-            set => Preferences.Set("VendorFavorites", string.Join(",", value));
+            set => PreferencesProvider.Set("VendorFavorites", string.Join(",", value));
         }
 
         /// <summary>
@@ -529,12 +530,12 @@ namespace UORespawnApp.Scripts
         {
             get
             {
-                var value = Preferences.Get("FavoritePackIds", "");
+                var value = PreferencesProvider.Get("FavoritePackIds", "");
                 if (string.IsNullOrEmpty(value))
                     return [];
                 return [.. value.Split(',', StringSplitOptions.RemoveEmptyEntries)];
             }
-            private set => Preferences.Set("FavoritePackIds", string.Join(",", value));
+            private set => PreferencesProvider.Set("FavoritePackIds", string.Join(",", value));
         }
 
         /// <summary>
@@ -595,8 +596,8 @@ namespace UORespawnApp.Scripts
         /// </summary>
         public static void ClearAllPreferences()
         {
-            // Use Preferences.Clear() to remove ALL preferences at once
-            Preferences.Clear();
+            // Use PreferencesProvider.Clear() to remove ALL preferences at once
+            PreferencesProvider.Clear();
 
             // Reset the cache to default values
             _cachedScriptsCustomFolder = "";
