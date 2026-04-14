@@ -77,7 +77,9 @@
                 }
             }
 
-            var downloadsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", "UORespawn_SpawnPack.zip");
+            var downloadsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
+            Directory.CreateDirectory(downloadsDirectory);
+            var downloadsPath = Path.Combine(downloadsDirectory, "UORespawn_SpawnPack.zip");
             FileUtility.Copy(tempPath, downloadsPath, overwrite: true);
 
             exportMessage = $"Spawn pack exported to Downloads folder:\n{downloadsPath}";
