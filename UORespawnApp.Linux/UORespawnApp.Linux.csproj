@@ -17,6 +17,7 @@
   <!-- ==================== NuGet Packages ==================== -->
   <ItemGroup>
     <PackageReference Include="Photino.Blazor" Version="4.0.13" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="10.0.5" />
     <PackageReference Include="FluentFTP" Version="53.0.2" />
     <PackageReference Include="Microsoft.Maui.Graphics" Version="10.0.41" />
     <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.3" />
@@ -44,13 +45,10 @@
              Link="Components/%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 
-  <!-- wwwroot static assets (JS, CSS, fonts, videos) -->
-  <ItemGroup>
-    <Content Include="../UORespawnApp/wwwroot/**/*.*"
-             Link="wwwroot/%(RecursiveDir)%(Filename)%(Extension)"
-             CopyToOutputDirectory="PreserveNewest"
-             Exclude="../UORespawnApp/wwwroot/index.html" />
-  </ItemGroup>
+  <!-- wwwroot static assets: symlinks in wwwroot/ point to ../UORespawnApp/wwwroot/ -->
+  <!-- No need to link them via csproj - symlinks handle resolution for both build and runtime -->
+  <!-- The static web assets manifest will resolve these via the source wwwroot/ directory -->
+  
 
   <!-- Data files (maps, packs, tiles, server scripts) -->
   <ItemGroup>

@@ -17,9 +17,13 @@ public class Program
     [STAThread]
     public static void Main(string[] args)
     {
+        // Ensure wwwroot exists in output dir — Photino.Blazor creates a PhysicalFileProvider for it.
+        // The actual assets are resolved via the static web assets manifest (pointing to source symlinks).
+        Directory.CreateDirectory(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "wwwroot"));
+
         var builder = PhotinoBlazorAppBuilder.CreateDefault(args);
 
-        builder.RootComponents.Add<Routes>("app");
+        builder.RootComponents.Add<Routes>("#app");
 
         // Platform abstraction services (Linux implementations)
         var linuxPrefs = new LinuxPreferencesService();
@@ -96,7 +100,8 @@ public class Program
             .SetTitle("UORespawn Editor")
             .SetUseOsDefaultSize(false)
             .SetSize(1600, 900)
-            .SetResizable(true);
+            .SetResizable(true)
+            .SetDevToolsEnabled(true);
 
         // Save data on window closing
         app.MainWindow.WindowClosing += (sender, e) =>
