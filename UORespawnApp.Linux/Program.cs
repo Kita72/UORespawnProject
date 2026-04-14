@@ -101,12 +101,18 @@ public class Program
 
         // Configure the Photino window
         var iconPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "appicon.png");
+#if DEBUG
+        var enableDevTools = true;
+#else
+        var enableDevTools = false;
+#endif
+
         app.MainWindow
             .SetTitle("UORespawn Editor")
             .SetUseOsDefaultSize(false)
             .SetSize(1600, 900)
             .SetResizable(true)
-            .SetDevToolsEnabled(true)
+            .SetDevToolsEnabled(enableDevTools)
             .SetIconFile(iconPath);
 
         // Save data on window closing
