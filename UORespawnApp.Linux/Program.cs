@@ -100,12 +100,14 @@ public class Program
         mapImageCache.SetPlatformService(platformService);
 
         // Configure the Photino window
+        var iconPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logo.png");
         app.MainWindow
             .SetTitle("UORespawn Editor")
             .SetUseOsDefaultSize(false)
             .SetSize(1600, 900)
             .SetResizable(true)
-            .SetDevToolsEnabled(true);
+            .SetDevToolsEnabled(true)
+            .SetIconFile(iconPath);
 
         // Save data on window closing
         app.MainWindow.WindowClosing += (sender, e) =>

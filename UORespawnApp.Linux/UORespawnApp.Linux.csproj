@@ -92,22 +92,50 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
 
-    <!-- Server scripts (for export feature) -->
+    <!-- SERVER: Pre-packaged server scripts ZIPs + folder contents for server linking -->
+    <!-- Structure: Data/SERVER/{ServerType}/UORespawnServer/ + UORespawnServer.zip -->
+
+    <!-- ── SERVUO ── -->
+    <!-- ZIP for export/release -->
     <None Include="../UORespawnApp/Data/SERVER/SERVUO/UORespawnServer.zip"
           Condition="Exists('../UORespawnApp/Data/SERVER/SERVUO/UORespawnServer.zip')"
           Link="Data/SERVER/SERVUO/UORespawnServer.zip">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <!-- Exclude raw .cs files in Release builds (ZIP is used instead) -->
+    <None Remove="../UORespawnApp/Data/SERVER/SERVUO/UORespawnServer/**/*.*" Condition="'$(Configuration)' == 'Release'" />
+    <!-- Copy folder contents for Debug (server linking without ZIP extraction) -->
+    <None Include="../UORespawnApp/Data/SERVER/SERVUO/UORespawnServer/**/*.*" Condition="'$(Configuration)' != 'Release'">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>Data/SERVER/SERVUO/UORespawnServer/%(RecursiveDir)%(Filename)%(Extension)</Link>
+    </None>
+
+    <!-- ── MUO ── -->
+    <!-- ZIP for export/release -->
     <None Include="../UORespawnApp/Data/SERVER/MUO/UORespawnServer.zip"
           Condition="Exists('../UORespawnApp/Data/SERVER/MUO/UORespawnServer.zip')"
           Link="Data/SERVER/MUO/UORespawnServer.zip">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <!-- Exclude raw .cs files in Release builds (ZIP is used instead) -->
+    <None Remove="../UORespawnApp/Data/SERVER/MUO/UORespawnServer/**/*.*" Condition="'$(Configuration)' == 'Release'" />
+    <!-- Copy folder contents for Debug (server linking without ZIP extraction) -->
+    <None Include="../UORespawnApp/Data/SERVER/MUO/UORespawnServer/**/*.*" Condition="'$(Configuration)' != 'Release'">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>Data/SERVER/MUO/UORespawnServer/%(RecursiveDir)%(Filename)%(Extension)</Link>
     </None>
 
     <!-- Working data directory -->
     <None Include="../UORespawnApp/Data/UORespawn/*.*"
           Condition="Exists('../UORespawnApp/Data/UORespawn/')"
           Link="Data/UORespawn/%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <!-- App icon for window/taskbar -->
+  <ItemGroup>
+    <None Include="../UORespawnApp/wwwroot/logo.png" Link="logo.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
