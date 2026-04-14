@@ -203,4 +203,16 @@ public class LinuxDialogService : IPlatformDialogService
         var patterns = string.Join(" ", extensions.Select(e => $"*{e}"));
         return $"{patterns}|Files";
     }
+
+    // ==================== File URL Support ====================
+    // Photino serves static content from wwwroot/ via the app:// scheme.
+    // Map BMPs symlinked into wwwroot/maps/ can be loaded by URL,
+    // avoiding the expensive base64 encoding + IPC transfer.
+
+    public bool SupportsFileUrls => true;
+
+    public string? GetFileUrl(string relativePath)
+    {
+        return relativePath;
+    }
 }

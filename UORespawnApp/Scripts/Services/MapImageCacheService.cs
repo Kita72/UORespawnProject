@@ -1,4 +1,5 @@
 using UORespawnApp.Scripts.Constants;
+using UORespawnApp.Scripts.Services.Platform;
 using UORespawnApp.Scripts.Utilities;
 
 namespace UORespawnApp.Scripts.Services;
@@ -7,6 +8,9 @@ namespace UORespawnApp.Scripts.Services;
 /// Caches map images as base64 data URLs to avoid repeated disk reads.
 /// Map images (BMP files) can be several megabytes each - reading and converting
 /// to base64 on every map switch causes noticeable lag.
+/// 
+/// On platforms that support file URLs (e.g., Photino/Linux), returns a direct
+/// URL instead of base64, which is dramatically faster for large images.
 /// 
 /// Cache is invalidated when:
 /// - A map image file is replaced via Settings
@@ -20,14 +24,36 @@ public class MapImageCacheService
     private readonly Dictionary<int, CachedMapImage> _cache = [];
     private readonly HashSet<int> _preloading = [];
     private readonly Lock _lock = new();
+    private IPlatformDialogService? _platformService;
+
+    /// <summary>
+    /// Sets the platform service for file URL support.
+    /// Call after DI container is built.
+    /// </summary>
+    public void SetPlatformService(IPlatformDialogService platformService)
+    {
+        _platformService = platformService;
+    }
 
     /// <summary>
     /// Gets the base64 data URL for a map image, using cache when available.
+    /// On platforms supporting file URLs, returns a direct URL instead.
     /// </summary>
     /// <param name="mapId">The map ID to load</param>
-    /// <returns>Base64 data URL (data:image/bmp;base64,...) or empty string if not found</returns>
+    /// <returns>Base64 data URL (data:image/bmp;base64,...), file URL, or empty string if not found</returns>
     public string GetMapImageDataUrl(int mapId)
     {
+        // Fast path: if platform supports file URLs, return URL directly (no base64 needed)
+        if (_platformService?.SupportsFileUrls == true)
+        {
+            var filePath = MapUtility.GetMapImagePath(mapId);
+            if (File.Exists(filePath))
+            {
+                var url = _platformService.GetFileUrl($"maps/Map{mapId}.bmp");
+                if (url != null) return url;
+            }
+        }
+
         lock (_lock)
         {
             // Check cache first

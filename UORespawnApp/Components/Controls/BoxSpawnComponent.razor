@@ -37,14 +37,14 @@
                     </button>
                 </div>
             </div>
-            <div style="position:relative; overflow:hidden; width:@(ViewportConstants.ViewportWidth)px; height:@(ViewportConstants.ViewportHeight)px; background:#1a1a1a; border:1px solid #333;" 
+            <div style="position:relative; overflow:hidden; contain:paint; width:@(ViewportConstants.ViewportWidth)px; height:@(ViewportConstants.ViewportHeight)px; background:#1a1a1a; border:1px solid #333;" 
                  tabindex="0" 
                  @onkeydown="OnKeyDown"
                  @onkeyup="OnKeyUp"
                  @onmouseenter="OnMapMouseEnter"
                  @ref="mapContainerRef">
                 <img id="mapImg" src="@imageSrc" 
-                     style="position:absolute; left:0; top:0; image-rendering:pixelated; transform-origin: top left; transform: scale(@(zoomLevel.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)));"
+                     style="position:absolute; left:0; top:0; image-rendering:pixelated; pointer-events:none; transform-origin: top left; transform: scale(@(zoomLevel.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)));"
                      @onload="OnImageLoaded" />
                 <canvas id="mapCanvas" width="@ViewportConstants.ViewportWidth" height="@ViewportConstants.ViewportHeight"
                         style="position:absolute; top:0; left:0; cursor:crosshair;"

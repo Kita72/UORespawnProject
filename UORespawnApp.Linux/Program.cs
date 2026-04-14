@@ -95,6 +95,10 @@ public class Program
         var toastService = app.Services.GetRequiredService<ToastService>();
         Utility.SetServices(spawnDataService, sessionService, mapImageCache, binarySerializationService, toastService);
 
+        // Enable file URL support for map images (avoids expensive base64 encoding)
+        var platformService = app.Services.GetRequiredService<IPlatformDialogService>();
+        mapImageCache.SetPlatformService(platformService);
+
         // Configure the Photino window
         app.MainWindow
             .SetTitle("UORespawn Editor")

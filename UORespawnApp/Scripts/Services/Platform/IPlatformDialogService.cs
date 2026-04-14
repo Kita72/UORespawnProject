@@ -46,4 +46,19 @@ public interface IPlatformDialogService
     /// Linux: Reads from app base directory.
     /// </summary>
     Task<Stream> OpenAppResourceAsync(string relativePath);
+
+    /// <summary>
+    /// Whether the platform can serve local files via URL (e.g., Photino static content).
+    /// When true, map images can be loaded via URL instead of base64 data URLs,
+    /// which is dramatically faster for large BMP files.
+    /// </summary>
+    bool SupportsFileUrls => false;
+
+    /// <summary>
+    /// Gets a URL that the WebView can use to load a local file.
+    /// Only meaningful when SupportsFileUrls is true.
+    /// </summary>
+    /// <param name="relativePath">Path relative to the content root (e.g., "maps/Map0.bmp")</param>
+    /// <returns>URL the WebView can load, or null if not supported</returns>
+    string? GetFileUrl(string relativePath) => null;
 }
