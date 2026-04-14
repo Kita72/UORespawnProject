@@ -646,6 +646,12 @@
                 }
                 StateHasChanged();
             }
+            else
+            {
+                localSetupMessage = "✗ No Custom folder was selected, or the folder picker is unavailable on this platform.";
+                localSetupSuccess = false;
+                StateHasChanged();
+            }
         }
         catch (Exception ex)
         {
