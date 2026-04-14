@@ -83,22 +83,15 @@
     
     private void OpenReleases()
     {
+        var url = updateInfo?.ReleaseUrl ?? "https://github.com/Kita72/UORespawnProject/releases";
+
         try
         {
-            var url = updateInfo?.ReleaseUrl ?? "https://github.com/Kita72/UORespawnProject/releases";
-
-            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
-            {
-                Logger.Error($"Invalid releases URL: {url}");
-                return;
-            }
-
-            await Microsoft.Maui.ApplicationModel.Launcher.Default.OpenAsync(uri);
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
             Logger.Info($"Opened releases page: {url}");
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
             Logger.Error("Error opening releases page", ex);
         }
     }
