@@ -291,6 +291,10 @@
 }
 
 @code {
+// Locale-safe formatting for JavaScript eval interpolation (avoids comma decimal separators in pt-BR, de-DE, etc.)
+private static readonly System.Globalization.CultureInfo IC = System.Globalization.CultureInfo.InvariantCulture;
+private static string F(double v) => v.ToString(IC);
+
 private string imageSrc = "";
 private string imageDim = "Loading...";
 private double panX = 0;
@@ -486,7 +490,7 @@ private List<string> editXmlSpawnNames = [];
                     await SyncSettingsToJavaScript();
 
                     // Apply the restored (or reset) pan position BEFORE minimap init
-                    await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
+                    await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({F(panX)}, {F(panY)})");
 
                     // Initialize the mini map component AFTER pan is applied, passing current values
                     if (miniMapRef != null)
@@ -552,7 +556,7 @@ private List<string> editXmlSpawnNames = [];
             var colorHex = $"#{(int)(color.Red * 255):X2}{(int)(color.Green * 255):X2}{(int)(color.Blue * 255):X2}";
             
             await JS.InvokeVoidAsync("eval", $@"
-                window.mapModule.updateSettings('{colorHex}', {Settings.BoxLineSize}, {Settings.BoxColorInc});
+                window.mapModule.updateSettings('{colorHex}', {Settings.BoxLineSize}, {F(Settings.BoxColorInc)});
             ");
             
             Logger.Info($"Settings synced to JavaScript: {colorHex}, {Settings.BoxLineSize}px, inc {Settings.BoxColorInc}");
@@ -571,7 +575,7 @@ private List<string> editXmlSpawnNames = [];
         // Save the new position for the current map (preserve zoom)
         mapPositions[currentMapTracked] = (panX, panY, zoomLevel);
 
-        await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
+        await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({F(panX)}, {F(panY)})");
 
         // Sync back clamped pan values from JS
         var clamped = await JS.InvokeAsync<double[]>("eval", "window.mapModule.getPan()");
@@ -600,7 +604,7 @@ private List<string> editXmlSpawnNames = [];
             if (e.Button == 0) // Left click - draw mode
             {
                 isDrawing = true;
-                await JS.InvokeVoidAsync("eval", $"window.mapModule.startDrawing({e.OffsetX}, {e.OffsetY})");
+                await JS.InvokeVoidAsync("eval", $"window.mapModule.startDrawing({F(e.OffsetX)}, {F(e.OffsetY)})");
                 // Capture pointer so pointermove/pointerup fire even when mouse leaves canvas
                 await JS.InvokeVoidAsync("eval", $"document.getElementById('mapCanvas').setPointerCapture({e.PointerId})");
                 StartDrawPanTracking();
@@ -609,7 +613,7 @@ private List<string> editXmlSpawnNames = [];
             else if (e.Button == 2) // Right - pan
             {
                 isPanning = true;
-                await JS.InvokeVoidAsync("eval", $"window.mapModule.startPanning({e.OffsetX}, {e.OffsetY})");
+                await JS.InvokeVoidAsync("eval", $"window.mapModule.startPanning({F(e.OffsetX)}, {F(e.OffsetY)})");
                 await JS.InvokeVoidAsync("eval", $"document.getElementById('mapCanvas').setPointerCapture({e.PointerId})");
             }
     }
@@ -624,11 +628,11 @@ private List<string> editXmlSpawnNames = [];
 
         if (isDrawing)
         {
-            await JS.InvokeVoidAsync("eval", $"window.mapModule.updateDrawing({sx}, {sy})");
+            await JS.InvokeVoidAsync("eval", $"window.mapModule.updateDrawing({F(sx)}, {F(sy)})");
         }
         else if (isPanning)
         {
-            await JS.InvokeVoidAsync("eval", $"window.mapModule.updatePanning({e.OffsetX}, {e.OffsetY})");
+            await JS.InvokeVoidAsync("eval", $"window.mapModule.updatePanning({F(e.OffsetX)}, {F(e.OffsetY)})");
 
             // Get updated pan position and sync minimap (match Region/Vendor behavior)
             var panCoords = await JS.InvokeAsync<double[]>("eval", "window.mapModule.getPan()");
@@ -648,13 +652,13 @@ private List<string> editXmlSpawnNames = [];
             // Update XML spawner hover (for dwell-based tooltip, like server spawns)
             if (ViewService.ShowXMLSpawners)
             {
-                await JS.InvokeVoidAsync("eval", $"window.mapModule.updateXmlSpawnerHover({sx}, {sy})");
+                await JS.InvokeVoidAsync("eval", $"window.mapModule.updateXmlSpawnerHover({F(sx)}, {F(sy)})");
             }
 
             // Update server spawn hover (for dwell-based tooltip)
             if (ViewService.ShowServerSpawns)
             {
-                await JS.InvokeVoidAsync("eval", $"window.mapModule.updateServerSpawnHover({sx}, {sy})");
+                await JS.InvokeVoidAsync("eval", $"window.mapModule.updateServerSpawnHover({F(sx)}, {F(sy)})");
             }
         }
     }
@@ -663,7 +667,7 @@ private List<string> editXmlSpawnNames = [];
     {
         try
         {
-            var result = await JS.InvokeAsync<string>("eval", $"JSON.stringify(window.mapModule.screenToWorld({screenX}, {screenY}))");
+            var result = await JS.InvokeAsync<string>("eval", $"JSON.stringify(window.mapModule.screenToWorld({F(screenX)}, {F(screenY)}))");
             if (!string.IsNullOrEmpty(result))
             {
                 var coords = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, int>>(result);
@@ -816,7 +820,7 @@ private List<string> editXmlSpawnNames = [];
         mapPositions.Remove(currentMapTracked);
         Logger.Info($"Reset position and zoom for {currentMapTracked} to (0, 0) @ 1x");
 
-        await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
+        await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({F(panX)}, {F(panY)})");
         if (miniMapRef != null) await miniMapRef.UpdateViewport(panX, panY, zoomLevel);
         StateHasChanged();
     }
@@ -850,7 +854,7 @@ private List<string> editXmlSpawnNames = [];
         await JS.InvokeVoidAsync("eval", $"window.mapModule.setZoomLevel({zoomLevel.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)})");
 
         // Apply the new pan position
-        await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
+        await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({F(panX)}, {F(panY)})");
 
         // Sync back clamped pan values from JS
         var clampedZoom = await JS.InvokeAsync<double[]>("eval", "window.mapModule.getPan()");
@@ -1149,7 +1153,7 @@ private List<string> editXmlSpawnNames = [];
         try
         {
             // Convert screen coordinates to world coordinates using JS
-            var result = await JS.InvokeAsync<string>("eval", $"JSON.stringify(window.mapModule.screenToWorld({screenX}, {screenY}))");
+            var result = await JS.InvokeAsync<string>("eval", $"JSON.stringify(window.mapModule.screenToWorld({F(screenX)}, {F(screenY)}))");
             if (string.IsNullOrEmpty(result)) return;
 
             var coords = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, int>>(result);
@@ -1165,7 +1169,7 @@ private List<string> editXmlSpawnNames = [];
                 if (xmlIdx >= 0)
                 {
                     // Toggle XML spawner selection - pass screen coordinates for tooltip
-                    await JS.InvokeVoidAsync("eval", $"window.mapModule.handleXmlSpawnerClick({xmlIdx}, {screenX}, {screenY})");
+                    await JS.InvokeVoidAsync("eval", $"window.mapModule.handleXmlSpawnerClick({xmlIdx}, {F(screenX)}, {F(screenY)})");
                     return; // Don't select spawn boxes when clicking XML spawners
                 }
                 else
@@ -1229,7 +1233,7 @@ private List<string> editXmlSpawnNames = [];
         try
         {
             // Convert screen coordinates to world coordinates
-            var result = await JS.InvokeAsync<string>("eval", $"JSON.stringify(window.mapModule.screenToWorld({screenX}, {screenY}))");
+            var result = await JS.InvokeAsync<string>("eval", $"JSON.stringify(window.mapModule.screenToWorld({F(screenX)}, {F(screenY)}))");
             if (string.IsNullOrEmpty(result)) return;
 
             var coords = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, int>>(result);
@@ -1312,7 +1316,7 @@ private List<string> editXmlSpawnNames = [];
         panX = newPanX;
         panY = newPanY;
 
-        await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
+        await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({F(panX)}, {F(panY)})");
 
         // Sync back clamped pan values from JS
         var clamped = await JS.InvokeAsync<double[]>("eval", "window.mapModule.getPan()");

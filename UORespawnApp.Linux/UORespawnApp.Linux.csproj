@@ -133,9 +133,9 @@
     </None>
   </ItemGroup>
 
-  <!-- App icon for window/taskbar -->
+  <!-- App icon for window/taskbar (cropped 256x256 for proper taskbar display) -->
   <ItemGroup>
-    <None Include="../UORespawnApp/wwwroot/logo.png" Link="logo.png">
+    <None Include="appicon.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

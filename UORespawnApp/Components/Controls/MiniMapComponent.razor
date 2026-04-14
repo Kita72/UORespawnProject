@@ -223,6 +223,13 @@
             double viewportWorldX = -panX / zoom;
             double viewportWorldY = -panY / zoom;
 
+            // Use InvariantCulture to avoid locale decimal separator issues (e.g. pt-BR uses comma)
+            var ic = System.Globalization.CultureInfo.InvariantCulture;
+            var vwxStr = viewportWorldX.ToString(ic);
+            var vwyStr = viewportWorldY.ToString(ic);
+            var vwwStr = viewportWidthWorld.ToString(ic);
+            var vwhStr = viewportHeightWorld.ToString(ic);
+
             await JS.InvokeVoidAsync("eval", $@"
                 (function() {{
                     const miniCanvas = document.getElementById('{CanvasId}');
@@ -243,10 +250,10 @@
                     ctx.drawImage(mainImg, dims.offsetX, dims.offsetY, dims.drawWidth, dims.drawHeight);
 
                     // Calculate viewport position on mini-map
-                    const vpX = dims.offsetX + ({viewportWorldX} * dims.scale);
-                    const vpY = dims.offsetY + ({viewportWorldY} * dims.scale);
-                    const vpW = {viewportWidthWorld} * dims.scale;
-                    const vpH = {viewportHeightWorld} * dims.scale;
+                    const vpX = dims.offsetX + ({vwxStr} * dims.scale);
+                    const vpY = dims.offsetY + ({vwyStr} * dims.scale);
+                    const vpW = {vwwStr} * dims.scale;
+                    const vpH = {vwhStr} * dims.scale;
 
                     // Draw viewport rectangle
                     ctx.strokeStyle = '#00FF00';

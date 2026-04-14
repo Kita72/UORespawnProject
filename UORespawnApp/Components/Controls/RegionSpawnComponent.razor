@@ -296,6 +296,10 @@
 }
 
 @code {
+    // Locale-safe formatting for JavaScript eval interpolation (avoids comma decimal separators in pt-BR, de-DE, etc.)
+    private static readonly System.Globalization.CultureInfo IC = System.Globalization.CultureInfo.InvariantCulture;
+    private static string F(double v) => v.ToString(IC);
+
     private string imageSrc = "";
     private string imageDim = "Loading...";
     private double panX = 0;
@@ -475,7 +479,7 @@
                     await JS.InvokeVoidAsync("eval", $"window.mapModule.setZoomLevel({zoomLevel.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)})");
 
                     // Apply pan position AFTER zoom is set, BEFORE minimap init
-                    await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
+                    await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({F(panX)}, {F(panY)})");
 
                     // Initialize the mini map component AFTER pan is applied, passing current values
                     if (miniMapRef != null)
@@ -613,7 +617,7 @@
         await JS.InvokeVoidAsync("eval", $"window.mapModule.setZoomLevel({zoomLevel.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)})");
 
         // Apply the new pan position
-        await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
+        await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({F(panX)}, {F(panY)})");
 
         // Save the new zoom level and position for current map
         mapPositions[currentMapTracked] = (panX, panY, zoomLevel);
@@ -645,7 +649,7 @@
     {
         if (e.Button == 0) // Left-click
         {
-            var coords = await JS.InvokeAsync<int[]>("eval", $"window.mapModule.getWorldCoordinates({e.OffsetX}, {e.OffsetY})");
+            var coords = await JS.InvokeAsync<int[]>("eval", $"window.mapModule.getWorldCoordinates({F(e.OffsetX)}, {F(e.OffsetY)})");
             if (coords.Length == 2)
             {
                 mouseWorldX = coords[0];
@@ -664,14 +668,14 @@
         else if (e.Button == 2) // Right-click for panning
         {
             isPanning = true;
-            await JS.InvokeVoidAsync("eval", $"window.mapModule.startPanning({e.OffsetX}, {e.OffsetY})");
+            await JS.InvokeVoidAsync("eval", $"window.mapModule.startPanning({F(e.OffsetX)}, {F(e.OffsetY)})");
             await JS.InvokeVoidAsync("eval", $"document.getElementById('regionMapCanvas').setPointerCapture({e.PointerId})");
         }
     }
     
     private async Task OnPointerMove(PointerEventArgs e)
     {
-        var coords = await JS.InvokeAsync<int[]>("eval", $"window.mapModule.getWorldCoordinates({e.OffsetX}, {e.OffsetY})");
+        var coords = await JS.InvokeAsync<int[]>("eval", $"window.mapModule.getWorldCoordinates({F(e.OffsetX)}, {F(e.OffsetY)})");
         if (coords.Length == 2)
         {
             mouseWorldX = coords[0];
@@ -681,13 +685,13 @@
             // Update XML spawner hover (for dwell-based tooltip, like server spawns)
             if (ViewService.ShowXMLSpawners)
             {
-                await JS.InvokeVoidAsync("eval", $"window.mapModule.updateXmlSpawnerHover({e.OffsetX}, {e.OffsetY})");
+                await JS.InvokeVoidAsync("eval", $"window.mapModule.updateXmlSpawnerHover({F(e.OffsetX)}, {F(e.OffsetY)})");
             }
 
             // Update server spawn hover (for dwell-based tooltip)
             if (ViewService.ShowServerSpawns)
             {
-                await JS.InvokeVoidAsync("eval", $"window.mapModule.updateServerSpawnHover({e.OffsetX}, {e.OffsetY})");
+                await JS.InvokeVoidAsync("eval", $"window.mapModule.updateServerSpawnHover({F(e.OffsetX)}, {F(e.OffsetY)})");
             }
 
             // Detect hovered region and area for visual feedback
@@ -705,7 +709,7 @@
 
         if (isPanning)
         {
-            await JS.InvokeVoidAsync("eval", $"window.mapModule.updatePanning({e.OffsetX}, {e.OffsetY})");
+            await JS.InvokeVoidAsync("eval", $"window.mapModule.updatePanning({F(e.OffsetX)}, {F(e.OffsetY)})");
 
             // Get updated pan position
             var panCoords = await JS.InvokeAsync<double[]>("eval", "window.mapModule.getPan()");
@@ -754,7 +758,7 @@
         // Save the new position for the current map (preserve zoom)
         mapPositions[currentMapTracked] = (panX, panY, zoomLevel);
 
-        await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
+        await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({F(panX)}, {F(panY)})");
 
         // Sync back clamped pan values from JS
         var clamped = await JS.InvokeAsync<double[]>("eval", "window.mapModule.getPan()");
@@ -1065,7 +1069,7 @@
             // Save the new position for the current map (preserve zoom)
             mapPositions[currentMapTracked] = (panX, panY, zoomLevel);
 
-            await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({panX}, {panY})");
+            await JS.InvokeVoidAsync("eval", $"window.mapModule.applyPan({F(panX)}, {F(panY)})");
             var clamped = await JS.InvokeAsync<double[]>("eval", "window.mapModule.getPan()");
             if (clamped?.Length == 2) { panX = clamped[0]; panY = clamped[1]; mapPositions[currentMapTracked] = (panX, panY, zoomLevel); }
             if (miniMapRef != null) await miniMapRef.UpdateViewport(panX, panY, zoomLevel);
