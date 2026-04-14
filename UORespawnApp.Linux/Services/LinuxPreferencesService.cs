@@ -104,7 +104,7 @@ public class LinuxPreferencesService : IPreferencesService
             if (File.Exists(PrefsFile))
             {
                 var json = File.ReadAllText(PrefsFile);
-                var doc = JsonDocument.Parse(json);
+                using var doc = JsonDocument.Parse(json);
                 var result = new Dictionary<string, JsonElement>();
                 foreach (var prop in doc.RootElement.EnumerateObject())
                 {
