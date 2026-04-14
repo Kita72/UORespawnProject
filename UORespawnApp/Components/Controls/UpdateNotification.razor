@@ -81,7 +81,7 @@
         }
     }
     
-    private async Task OpenReleases()
+    private void OpenReleases()
     {
         try
         {
@@ -98,6 +98,7 @@
         }
         catch (Exception ex)
         {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
             Logger.Error("Error opening releases page", ex);
         }
     }
