@@ -21,9 +21,10 @@
     @if (isExpanded)
     {
         <div class="card-body p-2 minimap-body" @key="@("minimap-body")">
-            <canvas id="@CanvasId" width="@ViewportConstants.MiniMapWidth" height="@ViewportConstants.MiniMapHeight"
-                    style="cursor:pointer; border:1px solid #333; display:block; image-rendering:pixelated; width: 100%; height: auto;"
-                    @onclick="OnCanvasClick" />
+            <div id="@(CanvasId)_wrapper" style="position:relative; cursor:pointer; border:1px solid #333;">
+                <canvas id="@CanvasId" width="@ViewportConstants.MiniMapWidth" height="@ViewportConstants.MiniMapHeight"
+                        style="display:block; image-rendering:pixelated; width:100%; height:auto; pointer-events:none;" />
+            </div>
             <div class="d-flex gap-2 mt-2">
                 <button class="btn btn-sm w-50 @(ViewService.ShowXMLSpawners ? "btn-success" : "btn-danger")" 
                         @onclick="ToggleXMLSpawners" title="Toggle XML Spawners">
@@ -58,6 +59,7 @@
     private bool isExpanded = true;
     private bool isInitialized = false; // Track if InitializeAsync has been called
     private string dimensionsKey => $"miniMapDimensions_{CanvasId}";
+    private DotNetObjectReference<MiniMapComponent>? dotNetRef;
 
     // Cache the last known dimensions from the actual image (set in InitializeAsync)
     private int lastImgWidth = 0;
@@ -175,6 +177,9 @@
 
                 isInitialized = true;
 
+                // Register native JS click handler on wrapper div (bypasses WebKitGTK canvas hit-test bug)
+                await RegisterJsClickHandler();
+
                 // Draw initial viewport with the passed values
                 await UpdateViewportWithValues(usePanX, usePanY, useZoom);
             }
@@ -218,6 +223,13 @@
             double viewportWorldX = -panX / zoom;
             double viewportWorldY = -panY / zoom;
 
+            // Use InvariantCulture to avoid locale decimal separator issues (e.g. pt-BR uses comma)
+            var ic = System.Globalization.CultureInfo.InvariantCulture;
+            var vwxStr = viewportWorldX.ToString(ic);
+            var vwyStr = viewportWorldY.ToString(ic);
+            var vwwStr = viewportWidthWorld.ToString(ic);
+            var vwhStr = viewportHeightWorld.ToString(ic);
+
             await JS.InvokeVoidAsync("eval", $@"
                 (function() {{
                     const miniCanvas = document.getElementById('{CanvasId}');
@@ -238,10 +250,10 @@
                     ctx.drawImage(mainImg, dims.offsetX, dims.offsetY, dims.drawWidth, dims.drawHeight);
 
                     // Calculate viewport position on mini-map
-                    const vpX = dims.offsetX + ({viewportWorldX} * dims.scale);
-                    const vpY = dims.offsetY + ({viewportWorldY} * dims.scale);
-                    const vpW = {viewportWidthWorld} * dims.scale;
-                    const vpH = {viewportHeightWorld} * dims.scale;
+                    const vpX = dims.offsetX + ({vwxStr} * dims.scale);
+                    const vpY = dims.offsetY + ({vwyStr} * dims.scale);
+                    const vpW = {vwwStr} * dims.scale;
+                    const vpH = {vwhStr} * dims.scale;
 
                     // Draw viewport rectangle
                     ctx.strokeStyle = '#00FF00';
@@ -275,91 +287,96 @@
         await OnResetView.InvokeAsync();
     }
 
-    private async Task OnCanvasClick(MouseEventArgs e)
+    /// <summary>
+    /// Register a native JavaScript pointerdown handler on the canvas wrapper div.
+    /// The wrapper div doesn't have WebKitGTK's CSS-scaled canvas hit-test bug.
+    /// Uses getBoundingClientRect of the CANVAS for coordinate mapping.
+    /// All coordinate math is done in JS; only final world coords are sent to .NET.
+    /// </summary>
+    private async Task RegisterJsClickHandler()
     {
         try
         {
-            // Get minimap dimensions from JavaScript
-            var dimsJson = await JS.InvokeAsync<string>("eval", $@"
-                (function() {{
-                    const canvas = document.getElementById('{CanvasId}');
-                    const dims = window['{dimensionsKey}'];
-                    if (!canvas || !dims) return '';
+            dotNetRef ??= DotNetObjectReference.Create(this);
 
-                    return JSON.stringify({{
-                        displayWidth: canvas.offsetWidth,
-                        displayHeight: canvas.offsetHeight,
-                        canvasWidth: dims.canvasWidth,
-                        canvasHeight: dims.canvasHeight,
-                        drawWidth: dims.drawWidth,
-                        drawHeight: dims.drawHeight,
-                        offsetX: dims.offsetX,
-                        offsetY: dims.offsetY,
-                        imageWidth: dims.imageWidth,
-                        imageHeight: dims.imageHeight,
-                        scale: dims.scale
-                    }});
-                }})()
+            // Define the registration function if not already defined
+            await JS.InvokeVoidAsync("eval", @"
+                if (!window._registerMiniMapClick) {
+                    window._registerMiniMapClick = function(canvasId, dimsKey, dotNetRef) {
+                        const wrapper = document.getElementById(canvasId + '_wrapper');
+                        const canvas = document.getElementById(canvasId);
+                        if (!wrapper || !canvas) return;
+
+                        // Remove previous handler if any (prevents double registration)
+                        if (wrapper._miniMapHandler) {
+                            wrapper.removeEventListener('pointerdown', wrapper._miniMapHandler);
+                        }
+
+                        wrapper._miniMapHandler = function(e) {
+                            if (e.button !== 0) return; // Only left click
+
+                            const dims = window[dimsKey];
+                            if (!dims || !dims.initialized) return;
+
+                            // Use canvas getBoundingClientRect for coordinate mapping
+                            const rect = canvas.getBoundingClientRect();
+                            const displayClickX = e.clientX - rect.left;
+                            const displayClickY = e.clientY - rect.top;
+
+                            // Scale from CSS display size to canvas internal resolution
+                            const scaleX = dims.canvasWidth / rect.width;
+                            const scaleY = dims.canvasHeight / rect.height;
+                            const canvasClickX = displayClickX * scaleX;
+                            const canvasClickY = displayClickY * scaleY;
+
+                            // Bounds check: ignore clicks outside the drawn map area
+                            if (canvasClickX < dims.offsetX || canvasClickX > dims.offsetX + dims.drawWidth ||
+                                canvasClickY < dims.offsetY || canvasClickY > dims.offsetY + dims.drawHeight) {
+                                return;
+                            }
+
+                            // Convert to world coordinates
+                            const worldX = (canvasClickX - dims.offsetX) / dims.scale;
+                            const worldY = (canvasClickY - dims.offsetY) / dims.scale;
+
+                            // Invoke .NET callback with world coordinates
+                            dotNetRef.invokeMethodAsync('OnCanvasClickFromJS', worldX, worldY);
+                        };
+
+                        wrapper.addEventListener('pointerdown', wrapper._miniMapHandler);
+                    };
+                }
             ");
 
-            if (string.IsNullOrEmpty(dimsJson)) return;
+            // Call the registration function, passing the DotNetObjectReference as a proper JS interop parameter
+            await JS.InvokeVoidAsync("_registerMiniMapClick", CanvasId, dimensionsKey, dotNetRef);
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"MiniMap [{CanvasId}] failed to register JS click handler", ex);
+        }
+    }
 
-            var dims = JsonSerializer.Deserialize<Dictionary<string, double>>(dimsJson);
-            if (dims == null) return;
-
-            // Scale click from display coords to canvas coords
-            // (the canvas may be displayed at a different size than its internal resolution)
-            double displayToCanvasX = dims["canvasWidth"] / dims["displayWidth"];
-            double displayToCanvasY = dims["canvasHeight"] / dims["displayHeight"];
-
-            double canvasClickX = e.OffsetX * displayToCanvasX;
-            double canvasClickY = e.OffsetY * displayToCanvasY;
-
-            // Check if click is within the drawn map area
-            double mapLeft = dims["offsetX"];
-            double mapTop = dims["offsetY"];
-            double mapRight = mapLeft + dims["drawWidth"];
-            double mapBottom = mapTop + dims["drawHeight"];
-
-            if (canvasClickX < mapLeft || canvasClickX > mapRight ||
-                canvasClickY < mapTop || canvasClickY > mapBottom)
-            {
-                // Click was in the dark border area, ignore
-                return;
-            }
-
-            // Convert canvas click to position within drawn map area
-            double mapClickX = canvasClickX - mapLeft;
-            double mapClickY = canvasClickY - mapTop;
-
-            // Convert to world coordinates using the scale factor
-            // scale = drawSize / imageSize, so imageCoord = drawCoord / scale
-            double scale = dims["scale"];
-            double worldX = mapClickX / scale;
-            double worldY = mapClickY / scale;
-
-            // Get image dimensions for clamping
-            double imageWidth = dims["imageWidth"];
-            double imageHeight = dims["imageHeight"];
-
+    /// <summary>
+    /// Called from JavaScript when the canvas is clicked.
+    /// Receives world coordinates already computed by JS.
+    /// </summary>
+    [JSInvokable]
+    public async Task OnCanvasClickFromJS(double worldX, double worldY)
+    {
+        try
+        {
             // Calculate pan position to center the viewport on this world position
-            // Pan formula: panX = -(worldX * zoom) + viewportCenterX
             double newPanX = -(worldX * ZoomLevel) + ViewportConstants.ViewportHalfWidth;
             double newPanY = -(worldY * ZoomLevel) + ViewportConstants.ViewportHalfHeight;
 
             // Clamp pan so viewport stays within map bounds
-            // Viewport dimensions in world coords
-            // Max pan (showing top-left corner): panX = 0, panY = 0
-            // Min pan (showing bottom-right corner)
-            double minPanX = -(imageWidth * ZoomLevel - ViewportConstants.ViewportWidth);
-            double minPanY = -(imageHeight * ZoomLevel - ViewportConstants.ViewportHeight);
+            double minPanX = -(lastImgWidth * ZoomLevel - ViewportConstants.ViewportWidth);
+            double minPanY = -(lastImgHeight * ZoomLevel - ViewportConstants.ViewportHeight);
 
-            // Clamp: don't let pan go positive (would show past top-left)
-            // and don't let pan go below minimum (would show past bottom-right)
             newPanX = Math.Min(0, Math.Max(minPanX, newPanX));
             newPanY = Math.Min(0, Math.Max(minPanY, newPanY));
 
-            // Notify parent of new pan position
             await OnMiniMapClick.InvokeAsync((newPanX, newPanY));
         }
         catch (Exception ex)
@@ -543,5 +560,6 @@
     {
         ViewService.OnXMLSpawnersChanged -= HandleXMLSpawnersChanged;
         ViewService.OnServerSpawnsChanged -= HandleServerSpawnsChanged;
+        dotNetRef?.Dispose();
     }
 }

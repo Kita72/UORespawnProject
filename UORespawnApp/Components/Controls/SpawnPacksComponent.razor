@@ -1,17 +1,16 @@
-@using Microsoft.Maui.ApplicationModel.Communication
-@using Microsoft.Maui.ApplicationModel
+@using System.Diagnostics
 @using System.IO.Compression
 @using System.Text.Json
-@using Microsoft.Maui.Devices
-@using Microsoft.Maui.Storage
 @using UORespawnApp.Scripts
 @using UORespawnApp.Scripts.Constants
 @using UORespawnApp.Scripts.Entities
 @using UORespawnApp.Scripts.Services
+@using UORespawnApp.Scripts.Services.Platform
 @using UORespawnApp.Scripts.Utilities
 @inject SpawnPackService SpawnPackService
 @inject ToastService ToastService
 @inject ViewService ViewService
+@inject IPlatformDialogService PlatformDialogs
 
 <div class="container-fluid p-2 spawn-packs-page">
     <div class="alert alert-dark mb-2 text-center shadow-sm">
@@ -749,18 +748,7 @@
     {
         try
         {
-            var imageTypes = new FilePickerFileType(new Dictionary<DevicePlatform, IEnumerable<string>>
-            {
-                { DevicePlatform.WinUI, new[] { ".png", ".jpg", ".jpeg" } },
-                { DevicePlatform.macOS, new[] { "png", "jpg", "jpeg" } },
-                { DevicePlatform.MacCatalyst, new[] { "png", "jpg", "jpeg" } }
-            });
-
-            var result = await FilePicker.Default.PickAsync(new PickOptions
-            {
-                PickerTitle = "Select Pack Image",
-                FileTypes = imageTypes
-            });
+            var result = await PlatformDialogs.PickFileAsync("Select Pack Image", new[] { ".png", ".jpg", ".jpeg" });
 
             if (result != null)
             {
@@ -888,18 +876,7 @@
     {
         try
         {
-            var imageTypes = new FilePickerFileType(new Dictionary<DevicePlatform, IEnumerable<string>>
-            {
-                { DevicePlatform.WinUI, new[] { ".png", ".jpg", ".jpeg" } },
-                { DevicePlatform.macOS, new[] { "png", "jpg", "jpeg" } },
-                { DevicePlatform.MacCatalyst, new[] { "png", "jpg", "jpeg" } }
-            });
-
-            var result = await FilePicker.Default.PickAsync(new PickOptions
-            {
-                PickerTitle = "Select Preview Image",
-                FileTypes = imageTypes
-            });
+            var result = await PlatformDialogs.PickFileAsync("Select Preview Image", new[] { ".png", ".jpg", ".jpeg" });
 
             if (result != null)
             {
@@ -953,9 +930,9 @@
             // Open the folder containing the zip so user can easily drag it into the email
             try
             {
-                System.Diagnostics.Process.Start("explorer.exe", $"/select,\"{zipPath}\"");
+                PlatformDialogs.OpenInFileManager(zipPath);
             }
-            catch (Exception openEx) { Logger.Warning($"Could not open explorer: {openEx.Message}"); }
+            catch (Exception openEx) { Logger.Warning($"Could not open file manager: {openEx.Message}"); }
         }
         catch (Exception ex)
         {
@@ -972,8 +949,9 @@
 
     private static Task OpenMailtoAsync(string subject, string body)
     {
-        var uri = new Uri($"mailto:blackboxprogramming@gmail.com?subject={Uri.EscapeDataString(subject)}&body={Uri.EscapeDataString(body)}");
-        return Launcher.Default.OpenAsync(uri);
+        var uri = $"mailto:blackboxprogramming@gmail.com?subject={Uri.EscapeDataString(subject)}&body={Uri.EscapeDataString(body)}";
+        Process.Start(new ProcessStartInfo(uri) { UseShellExecute = true });
+        return Task.CompletedTask;
     }
 
     private static async Task<string?> CreateSubmissionZipAsync(string? imagePath = null)
@@ -1023,18 +1001,7 @@
     {
         try
         {
-            var zipTypes = new FilePickerFileType(new Dictionary<DevicePlatform, IEnumerable<string>>
-            {
-                { DevicePlatform.WinUI, new[] { ".zip" } },
-                { DevicePlatform.macOS, new[] { "zip" } },
-                { DevicePlatform.MacCatalyst, new[] { "zip" } }
-            });
-
-            var result = await FilePicker.Default.PickAsync(new PickOptions
-            {
-                PickerTitle = "Select Spawn Pack Zip",
-                FileTypes = zipTypes
-            });
+            var result = await PlatformDialogs.PickFileAsync("Select Spawn Pack Zip", new[] { ".zip" });
 
             if (result != null)
             {
@@ -1069,18 +1036,7 @@
     {
         try
         {
-            var imageTypes = new FilePickerFileType(new Dictionary<DevicePlatform, IEnumerable<string>>
-            {
-                { DevicePlatform.WinUI, new[] { ".png", ".jpg", ".jpeg" } },
-                { DevicePlatform.macOS, new[] { "png", "jpg", "jpeg" } },
-                { DevicePlatform.MacCatalyst, new[] { "png", "jpg", "jpeg" } }
-            });
-
-            var result = await FilePicker.Default.PickAsync(new PickOptions
-            {
-                PickerTitle = "Select Pack Image",
-                FileTypes = imageTypes
-            });
+            var result = await PlatformDialogs.PickFileAsync("Select Pack Image", new[] { ".png", ".jpg", ".jpeg" });
 
             if (result != null)
             {

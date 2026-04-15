@@ -3,6 +3,7 @@
 @using UORespawnApp.Scripts.Utilities
 
 @inject AccountService AccountService
+@inject IPlatformDialogService PlatformDialogs
 
 @if (IsVisible)
 {
@@ -202,32 +203,12 @@
     {
         try
         {
-#if WINDOWS
-            // Use Windows folder picker
-            var folderPicker = new Windows.Storage.Pickers.FolderPicker();
-
-            // Get the current window handle
-            var window = (Application.Current?.Windows[0]?.Handler?.PlatformView as Microsoft.UI.Xaml.Window);
-            if (window != null)
+            var folder = await PlatformDialogs.PickFolderAsync();
+            if (!string.IsNullOrEmpty(folder))
             {
-                var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(window);
-                WinRT.Interop.InitializeWithWindow.Initialize(folderPicker, hwnd);
-            }
-
-            folderPicker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.DocumentsLibrary;
-            folderPicker.FileTypeFilter.Add("*");
-
-            var folder = await folderPicker.PickSingleFolderAsync();
-            if (folder != null)
-            {
-                newAccountFolder = folder.Path;
+                newAccountFolder = folder;
                 StateHasChanged();
             }
-#else
-            // Platform not supported - show message
-            errorMessage = "Folder picker not available on this platform.";
-            await Task.CompletedTask;
-#endif
         }
         catch (Exception ex)
         {

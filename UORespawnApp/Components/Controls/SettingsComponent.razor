@@ -744,10 +744,12 @@
 @inject SpawnPackService SpawnPackService
 @inject AccountService AccountService
 @inject MapImageCacheService MapImageCache
+@inject IPlatformDialogService PlatformDialogs
 @using UORespawnApp.Scripts
 @using UORespawnApp.Scripts.Constants
 @using UORespawnApp.Scripts.Utilities
 @using UORespawnApp.Scripts.Services
+@using UORespawnApp.Scripts.Services.Platform
 @using UORespawnApp.Scripts.Entities
 @using UORespawnApp.Components.Controls
 @implements IDisposable
@@ -950,22 +952,10 @@ private bool showAdvancedSettings = false;
     {
         try
         {
-            var customFileType = new FilePickerFileType(new Dictionary<DevicePlatform, IEnumerable<string>>
-            {
-                { DevicePlatform.WinUI, new[] { ".bmp" } },
-                { DevicePlatform.macOS, new[] { "bmp" } },
-            });
-
-            var options = new PickOptions
-            {
-                PickerTitle = "Select Map BMP Image",
-                FileTypes = customFileType
-            };
-
-            var result = await FilePicker.Default.PickAsync(options);
+            var result = await PlatformDialogs.PickFileAsync("Select Map BMP Image", new[] { ".bmp" });
             if (result != null)
             {
-                await ProcessMapUpload(result);
+                await ProcessMapUpload(result.FullPath, result.FileName);
             }
         }
         catch (Exception ex)
@@ -976,11 +966,11 @@ private bool showAdvancedSettings = false;
         }
     }
     
-    private async Task ProcessMapUpload(FileResult file)
+    private async Task ProcessMapUpload(string fullPath, string fileName)
     {
         try
         {
-            Logger.Info($"Processing map upload: {file.FileName} (Mode: {(isAddingCustomMap ? "Add" : "Replace")})");
+            Logger.Info($"Processing map upload: {fileName} (Mode: {(isAddingCustomMap ? "Add" : "Replace")})");
 
             // Extract map ID from selectedMapToReplace (e.g., "Map6" -> 6)
             if (!int.TryParse(selectedMapToReplace.Substring(3), out int mapId))
@@ -992,17 +982,17 @@ private bool showAdvancedSettings = false;
             }
 
             // STEP 1: VALIDATE FILE EXTENSION
-            if (!file.FileName.EndsWith(".bmp", StringComparison.OrdinalIgnoreCase))
+            if (!fileName.EndsWith(".bmp", StringComparison.OrdinalIgnoreCase))
             {
                 mapUploadMessage = "Error: File must be a BMP image (.bmp extension)";
                 mapUploadSuccess = false;
-                Logger.Warning($"Invalid file extension: {file.FileName}");
+                Logger.Warning($"Invalid file extension: {fileName}");
                 StateHasChanged();
                 return;
             }
 
             // STEP 2: VALIDATE BMP FILE FORMAT
-            using var stream = await file.OpenReadAsync();
+            using var stream = File.OpenRead(fullPath);
 
             // Check file size (must be at least 54 bytes for BMP header)
             if (stream.Length < 54)

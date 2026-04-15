@@ -24,8 +24,8 @@
 UORespawn is a modern .NET MAUI application that provides a comprehensive visual interface for creating and managing spawn systems in Ultima Online servers running **ServUO** or **ModernUO (MUO)**. It offers four complementary spawn methods to populate your world with creatures and NPCs.
 
 **Version:** 2.0.1.4
-**Platform:** Windows, macOS  
-**Framework:** .NET 10 MAUI with Blazor  
+**Platform:** Windows, macOS, Linux  
+**Framework:** .NET 10 MAUI with Blazor (Windows/macOS), Photino.Blazor (Linux)  
 **License:** MIT
 
 ---
@@ -141,6 +141,7 @@ Download the latest version from the [Releases](https://github.com/Kita72/UOResp
 ### Platform Support
 - **Windows 10/11** - x64
 - **macOS** - Apple Silicon & Intel
+- **Linux** - x64 (Ubuntu, Debian, Fedora, Arch, etc.)
 
 ---
 
@@ -157,6 +158,27 @@ Download the latest version from the [Releases](https://github.com/Kita72/UOResp
 2. Move to Applications folder
 3. Run the application
 4. (Optional) Link your server folder in Settings for auto-sync
+
+### Linux
+1. Install dependencies:
+   ```bash
+   # Ubuntu/Debian
+   sudo apt install libwebkit2gtk-4.1-dev zenity
+
+   # Fedora
+   sudo dnf install webkit2gtk4.1-devel zenity
+
+   # Arch
+   sudo pacman -S webkit2gtk-4.1 zenity
+   ```
+2. Download the Linux release or build from source
+3. Run the application:
+   ```bash
+   ./UORespawnApp.Linux
+   ```
+4. (Optional) Link your server folder in Settings for auto-sync
+
+> **Note:** `zenity` provides native file/folder picker dialogs (GTK). KDE users can install `kdialog` instead.
 
 ### First Run
 
@@ -218,6 +240,7 @@ Add these predefined NPCs from the bestiary:
 - Workloads:
   - .NET Multi-platform App UI development
   - ASP.NET and web development
+- **Linux only:** `libwebkit2gtk-4.1-dev` and `zenity` (or `kdialog`)
 
 ### Clone and Build
 
@@ -253,14 +276,26 @@ dotnet publish -f net10.0-windows10.0.19041.0 -c Release
 dotnet publish -f net10.0-maccatalyst -c Release
 ```
 
+**Linux:**
+```bash
+# Build
+dotnet build UORespawnApp.Linux/UORespawnApp.Linux.csproj
+
+# Run
+dotnet run --project UORespawnApp.Linux/UORespawnApp.Linux.csproj
+
+# Publish (self-contained executable)
+dotnet publish UORespawnApp.Linux/UORespawnApp.Linux.csproj -c Release -r linux-x64 --self-contained
+```
+
 ---
 
 ## 📁 Project Structure
 
 ```
 UORespawnProject/
-├── UORespawnApp/              # Main MAUI application
-│   ├── Components/            # Blazor components
+├── UORespawnApp/              # Main MAUI application (Windows/macOS)
+│   ├── Components/            # Blazor components (shared)
 │   │   ├── Layout/           # Navigation and layout
 │   │   └── Controls/         # Reusable components
 │   │       ├── BoxSpawnComponent.razor
@@ -269,10 +304,14 @@ UORespawnProject/
 │   │       ├── SpawnPacksComponent.razor
 │   │       ├── SettingsComponent.razor
 │   │       └── InstructionsComponent.razor
-│   ├── Scripts/              # C# utility scripts
+│   ├── Scripts/              # C# utility scripts (shared)
 │   ├── UORespawnServer/      # Server-side scripts for ServUO
 │   ├── wwwroot/              # Web assets (JS, CSS)
 │   └── Resources/            # App resources
+├── UORespawnApp.Linux/        # Linux build (Photino.Blazor)
+│   ├── Program.cs            # Linux entry point
+│   ├── Services/             # Linux platform services
+│   └── wwwroot/              # Linux HTML host
 ├── README.md
 ├── LICENSE
 └── UORespawnProject.sln
